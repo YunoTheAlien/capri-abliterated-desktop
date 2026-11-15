@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Drawing;
@@ -41,7 +41,7 @@ namespace CapriDesktop
         private static readonly FontFamily Heavy = Family("Bahnschrift SemiBold SemiConden");
         private static readonly FontFamily Narrow = Family("Bahnschrift SemiBold Condensed");
         private const int Wide = 380;
-        private const int Tall = 734;
+        private const int Tall = 766;
         private static readonly int[] Gaps = { 10, 15, 30, 60, 90, 120, 180, 300, 600 };
         private static readonly string[] GapNames = { "10 s", "15 s", "30 s", "1 min", "1.5 min", "2 min", "3 min", "5 min", "10 min" };
         private const int SetupHeight = 118;
@@ -651,7 +651,10 @@ namespace CapriDesktop
             help.AccessibleName = "Help: ask Capri on the website";
             Key quit = Lower(Make("Quit Capri", 256, 250 + v, 100, 28, delegate { capri.Quit(); }));
             quit.Accent = Hot;
-            updateNote = Lower(Caption("", 28, 288 + v, small, Faint));
+            // The full width of the row above it, from Check for updates to Quit Capri.
+            Key abliterated = Lower(Make("Abliterated updates", 28, 282 + v, 328, 28, delegate { capri.OpenAbliterated(); }));
+            abliterated.AccessibleName = "Abliterated updates: opens the folder the uncensored builds are kept in";
+            updateNote = Lower(Caption("", 28, 320 + v, small, Faint));
             for (int i = header; i < Controls.Count; i++) mainLeft.Add(new KeyValuePair<Control, int>(Controls[i], Controls[i].Left));
             int first = Controls.Count;
             // Settings: a setting to a row, its name on the left in red and its value in a box on the right, as on Cyberpunk
@@ -1138,7 +1141,10 @@ namespace CapriDesktop
         {
             try
             {
-                using (NoteWindow dialog = new NoteWindow(Brain.OpenNote(memories), memories ? "Her memories" : "Her notes about you")) dialog.ShowDialog(this);
+                // me.md is one of her own files, so it opens in her editor on its own tab like the rest. Only her
+                // memories still use the plain window, since that one is not in the editor's list.
+                if (!memories) { capri.OpenFiles(1); return; }
+                using (NoteWindow dialog = new NoteWindow(Brain.OpenNote(memories), "Her memories")) dialog.ShowDialog(this);
             }
             catch (System.IO.IOException) { Notice.Tell(this, "Couldn't read this note. Try opening it again.", "Her notes", true); }
             catch (UnauthorizedAccessException) { Notice.Tell(this, "Couldn't read this note. Check access to its folder.", "Her notes", true); }
@@ -1184,6 +1190,9 @@ namespace CapriDesktop
         internal ContextMenuStrip MiniChoices()
         {
             ContextMenuStrip games = Dropdown();
+            // Her own music sits with the other things she can play, so Play means Play.
+            games.Items.Add(Choice("Music", false, delegate { capri.PlayMyMusic(); }));
+            games.Items.Add(new ToolStripSeparator());
             string[] names = { "chess", "connect_four", "tic_tac_toe", "rock_paper_scissors" };
             string[] titles = { "Chess", "Connect four", "Tic-tac-toe", "Rock, paper, scissors" };
             for (int i = 0; i < names.Length; i++)
@@ -2050,8 +2059,8 @@ namespace CapriDesktop
         private static void Pulse(double ms, out float swell, out float beat)
         {
             double t = ms % BeatMs / BeatMs;
-            swell = (float)Between(t, new[] { 0, .04, .08, .12, .16 }, new[] { 1, 1.22, 1, 1.12, 1 });
-            beat = (float)Between(t, new[] { 0, .05, .13, .22 }, new[] { 0, 1, 1, 0.0 });
+            swell = (float)Between(t, new[] { 0,.04,.08,.12,.16 }, new[] { 1, 1.22, 1, 1.12, 1 });
+            beat = (float)Between(t, new[] { 0,.05,.13,.22 }, new[] { 0, 1, 1, 0.0 });
         }
 
         private static double Between(double t, double[] at, double[] value)
@@ -4937,6 +4946,9 @@ namespace CapriDesktop
         private void ShowPersonalityMenu()
         {
             personalityMenu.Items.Clear();
+            // The same block her right-click menu uses, built once in Companion so the two cannot drift again.
+            capri.FillPersonality(personalityMenu.Items);
+            personalityMenu.Items.Add(new ToolStripSeparator());
             personalityMenu.Items.Add(Choice("Edit personality.md", false, delegate { capri.OpenPersonality(); }));
             ToolStripMenuItem reset = Choice("Reset to her default", false, delegate { capri.ResetPersonality(); });
             reset.Enabled = Brain.PersonalityPath != null && System.IO.File.Exists(Brain.PersonalityPath);
@@ -5583,7 +5595,7 @@ namespace CapriDesktop
                 Neon.Clip(drop, 10 * s, 4 * s);
             }
 
-            // A menu taller than its screen: WinForms fits it to the screen with scroll buttons, but on .NET Framework they're 9 px
+            // A menu taller than its screen: WinForms fits it to the screen with scroll buttons, but on.NET Framework they're 9 px
             // strips with a black arrow, lost on her dark panel, and the wheel scrolled the Mainframe behind it instead, so a long
             // model list looked cut off at the bottom of the screen (Ashy, 6 Nov). Her menus get her own arrows, scroll on the
             // wheel and while the mouse rests on an arrow, and open with the ticked choice in view.
@@ -5881,6 +5893,7 @@ namespace CapriDesktop
             private readonly Entry address;
             private readonly Entry key;
             private readonly Key saved;
+            private readonly Key ollama;
             private readonly Label note;
             internal readonly float Zoom;
 
@@ -5899,7 +5912,8 @@ namespace CapriDesktop
                 BackColor = Ground;
                 ForeColor = White;
                 DoubleBuffered = true;
-                ClientSize = new Size(Wide, 356);
+                // A row taller than it was, for the Ollama button. Crowded() fails on any overlap, so it gets its own line.
+                ClientSize = new Size(Wide, 392);
                 Heading(this, "BRAIN PROVIDER >", new Point(24, 15), Display(14f), Rose, 0);
                 Key close = Make("", 330, 20, 26, delegate { Close(); });
                 close.Height = 22;
@@ -5921,7 +5935,10 @@ namespace CapriDesktop
                 saved = Make("Use saved", 140, 240, 104, delegate { key.Box.Clear(); owner.capri.UseSavedProvider(); });
                 Key forget = Make("Forget", 252, 240, 104, delegate { key.Box.Clear(); address.Box.Clear(); owner.capri.ForgetProvider(); });
                 forget.Accent = Hot;
-                note = Caption("", 280, 60, Faint);
+                ollama = Make("Use Ollama on this PC", 28, 276, 328, delegate { UseOllama(); });
+                ollama.Accent = Cyan;
+                ollama.AccessibleName = "Find Ollama on this computer and connect to it";
+                note = Caption("", 316, 60, Faint);
                 AcceptButton = connect;
                 key.Box.KeyDown += delegate(object sender, KeyEventArgs e) { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; Connect(); } };
                 FormClosed += delegate { key.Box.Clear(); };
@@ -5974,6 +5991,150 @@ namespace CapriDesktop
                 string url = address.Box.Text, secret = key.Box.Text;
                 key.Box.Clear();
                 owner.capri.UseProvider(url, secret);
+            }
+
+            // Ollama in one button. Its port is fixed at 11434 unless OLLAMA_HOST says otherwise, so where it lives can
+            // be worked out rather than typed. /api/tags both proves something is answering and says which models are
+            // installed, so a blank model list is told apart from Ollama not running at all.
+            private void UseOllama()
+            {
+                string where = OllamaHome();
+                ollama.Enabled = false;
+                ollama.Text = "Starting Ollama...";
+                ollama.Invalidate();
+                note.Text = "";
+                System.Threading.ThreadPool.QueueUserWorkItem(delegate
+                {
+                    string models = null, trouble = null;
+                    try { models = Asked(where + "/api/tags"); }
+                    catch (Exception bad) { trouble = bad.Message; }
+
+                    // Nothing answered, but it is installed: start it rather than telling them to go and do it.
+                    // Found through PATH first, because Ollama puts itself there and people move the install off the
+                    // default folder, as this machine does.
+                    if (models == null)
+                    {
+                        string exe = OllamaExe();
+                        if (exe != null && Serve(exe))
+                        {
+                            for (int wait = 0; wait < 24 && models == null; wait++)
+                            {
+                                System.Threading.Thread.Sleep(500);
+                                try { models = Asked(where + "/api/tags"); trouble = null; }
+                                catch (Exception bad) { trouble = bad.Message; }
+                            }
+                        }
+                    }
+                    string[] named = models == null ? new string[0] : Models(models);
+                    try
+                    {
+                        BeginInvoke((MethodInvoker)delegate
+                        {
+                            ollama.Enabled = true;
+                            ollama.Text = "Use Ollama on this PC";
+                            ollama.Invalidate();
+                            if (models == null)
+                            {
+                                note.Text = "Nothing answered at " + where + ".\nStart Ollama, then press this again."
+                                    + (trouble == null ? "" : "\n" + trouble);
+                                return;
+                            }
+                            address.Box.Text = where + "/v1";
+                            key.Box.Clear();
+                            note.Text = named.Length == 0
+                                ? "Ollama is running at " + where + " but has no models yet.\nRun: ollama pull qwen2.5:7b"
+                                : "Ollama found, " + named.Length + " model" + (named.Length == 1 ? "" : "s") + ": "
+                                    + string.Join(", ", named, 0, Math.Min(3, named.Length)) + (named.Length > 3 ? "..." : "");
+                            if (named.Length > 0) Connect();
+                        });
+                    }
+                    catch (Exception) { }
+                });
+            }
+
+            // OLLAMA_HOST can be "11434", "host:port" or a full address. All three come back as a base URL.
+            private static string OllamaHome()
+            {
+                string set = null;
+                try { set = Environment.GetEnvironmentVariable("OLLAMA_HOST"); }
+                catch (Exception) { }
+                set = (set ?? "").Trim();
+                if (set.Length == 0) return "http://127.0.0.1:11434";
+                if (set.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || set.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                    return set.TrimEnd('/');
+                if (set.IndexOf(':') < 0) return "http://127.0.0.1:" + set;
+                return "http://" + set.TrimEnd('/');
+            }
+
+            // Where ollama.exe is. PATH first, then the usual install folders.
+            private static string OllamaExe()
+            {
+                try
+                {
+                    string path = Environment.GetEnvironmentVariable("PATH") ?? "";
+                    foreach (string piece in path.Split(';'))
+                    {
+                        string dir = piece.Trim().Trim('"');
+                        if (dir.Length == 0) continue;
+                        try
+                        {
+                            string full = System.IO.Path.Combine(dir, "ollama.exe");
+                            if (System.IO.File.Exists(full)) return full;
+                        }
+                        catch (Exception) { }
+                    }
+                }
+                catch (Exception) { }
+
+                string[] guesses =
+                {
+                    System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Programs\Ollama\ollama.exe"),
+                    System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"Ollama\ollama.exe"),
+                    System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), @"Ollama\ollama.exe")
+                };
+                foreach (string guess in guesses)
+                    try { if (System.IO.File.Exists(guess)) return guess; } catch (Exception) { }
+                return null;
+            }
+
+            // Starts it quietly. Its own window would be a console box in their face, and it keeps running after her.
+            private static bool Serve(string exe)
+            {
+                try
+                {
+                    System.Diagnostics.ProcessStartInfo how = new System.Diagnostics.ProcessStartInfo(exe, "serve");
+                    how.UseShellExecute = false;
+                    how.CreateNoWindow = true;
+                    how.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+                    how.WorkingDirectory = System.IO.Path.GetDirectoryName(exe) ?? "";
+                    System.Diagnostics.Process started = System.Diagnostics.Process.Start(how);
+                    return started != null;
+                }
+                catch (Exception) { return false; }
+            }
+
+            private static string Asked(string url)
+            {
+                System.Net.HttpWebRequest ask = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(url);
+                ask.Method = "GET";
+                ask.Timeout = 4000;
+                ask.ReadWriteTimeout = 4000;
+                ask.Proxy = null;   // a system proxy has no business in a loopback call, and stalls it
+                using (System.Net.WebResponse got = ask.GetResponse())
+                using (System.IO.StreamReader read = new System.IO.StreamReader(got.GetResponseStream()))
+                    return read.ReadToEnd();
+            }
+
+            private static string[] Models(string json)
+            {
+                List<string> found = new List<string>();
+                foreach (System.Text.RegularExpressions.Match one in
+                    System.Text.RegularExpressions.Regex.Matches(json, "\"name\"\\s*:\\s*\"([^\"]+)\""))
+                {
+                    string named = one.Groups[1].Value;
+                    if (!found.Contains(named)) found.Add(named);
+                }
+                return found.ToArray();
             }
 
             internal string Crowded()
@@ -6478,13 +6639,13 @@ namespace CapriDesktop
             {
                 using (OpenFileDialog dialog = new OpenFileDialog())
                 {
-                    dialog.Title = "Pick a voice model: its .tar.bz2, or the .onnx in its folder";
+                    dialog.Title = "Pick a voice model: its.tar.bz2, or the.onnx in its folder";
                     dialog.Filter = "Voice models (*.tar.bz2;*.zip;*.onnx)|*.tar.bz2;*.zip;*.onnx|All files (*.*)|*.*";
                     if (dialog.ShowDialog(this) == DialogResult.OK) Take(dialog.FileName);
                 }
             }
 
-            // An .onnx is used where it is. An archive is unpacked into her models folder first, off the UI thread.
+            // An.onnx is used where it is. An archive is unpacked into her models folder first, off the UI thread.
             internal void Take(string path)
             {
                 if (path.EndsWith(".onnx", StringComparison.OrdinalIgnoreCase))
@@ -7168,7 +7329,7 @@ namespace CapriDesktop
                 Sync();
             }
 
-            // Half steps from -12 to +12 semitones: "-12", "-11.5", ... "Same", ... "+12".
+            // Half steps from -12 to +12 semitones: "-12", "-11.5",... "Same",... "+12".
             private static string[] PitchLabels()
             {
                 string[] names = new string[(int)(VoiceFx.Layering.MostPitch * 4) + 1];

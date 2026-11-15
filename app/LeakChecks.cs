@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
@@ -111,8 +111,8 @@ namespace CapriDesktop
                 "In a table, each header cell is a <th",
                 // Code that looks like her tools: numpy's clip, CSS classes, one-word functions, a sentence after a tool's name.
                 "np.clip(a=arr, a_min=0, a_max=1) keeps every value between 0 and 1.",
-                "Add .clip { overflow: hidden; } to your stylesheet.",
-                "Add .media { display: flex; } and it lines up.",
+                "Add.clip { overflow: hidden; } to your stylesheet.",
+                "Add.media { display: flex; } and it lines up.",
                 "Your component: video-clip {display: block;}",
                 "In Python, power(base=2, exp=10) is 1024.",
                 "stream(url=\"https://x.y\") opens the feed.",
@@ -124,7 +124,7 @@ namespace CapriDesktop
                 if (Brain.Clean(line) != System.Text.RegularExpressions.Regex.Replace(line, @"\s+", " ") || Leaks.Unmused(line) != line || Leaks.Kinds(line).Count != 0)
                     throw new Exception("An honest reply lost words: " + Voice.Quote(line) + " became " + Voice.Quote(Brain.Clean(line)));
             string python = "Here's how:\n```python\nx = np.clip(a=x, a_min=0, a_max=1)\n```";
-            if (Leaks.Taken(python).Count != 0 || Leaks.Taken("Add .clip { overflow: hidden; } to your stylesheet.").Count != 0) throw new Exception("Code in an honest reply was taken for one of her tools and would run.");
+            if (Leaks.Taken(python).Count != 0 || Leaks.Taken("Add.clip { overflow: hidden; } to your stylesheet.").Count != 0) throw new Exception("Code in an honest reply was taken for one of her tools and would run.");
             if (Leaks.Taken("On it. open_app{\"name\": \"Steam\"}").Count != 1) throw new Exception("A call taken out of her words didn't run.");
             // Replies that are long or built to be slow never hold her up.
             string[] slow =

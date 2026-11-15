@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -122,7 +122,7 @@ namespace CapriDesktop
             bool add = Regex.IsMatch(plain, @"^add\b|\badd (?:it|this|that)(?: (?:to|on)\b|$)", RegexOptions.IgnoreCase);
             bool adding = add && Active() && !Regex.IsMatch(plain, @"\b(?:to|on|in) (?:my|the|a)(?: \w+)? (?:list|cart|basket|calendar|playlist|queue|notes?|reminders?|to-?do)\b|^add (?:a |an )?(?:reminder|note|event|song|bookmark|friend|contact)\b", RegexOptions.IgnoreCase);
             bool diagram = Diagram.IsMatch(plain);
-            bool drawing = diagram || adding || Regex.IsMatch(plain, @"^(?:draw|sketch|doodle|circle|underline|point at)\b|^show me where to click\b|^write .+ on (?:my|the) (?:screen|desktop)$|^add (?:a |an |another )?(?:circle|box|arrow|line|drawing|path|text)\b|^add .+ (?:to (?:your|the|that|this) drawing|on (?:my|the) screen)$", RegexOptions.IgnoreCase);
+            bool drawing = diagram || adding || Regex.IsMatch(plain, @"^(?:draw|sketch|doodle|circle|underline|point at)\b|^show me where to click\b|^write.+ on (?:my|the) (?:screen|desktop)$|^add (?:a |an |another )?(?:circle|box|arrow|line|drawing|path|text)\b|^add.+ (?:to (?:your|the|that|this) drawing|on (?:my|the) screen)$", RegexOptions.IgnoreCase);
             if (!drawing) return null;
             bool screen = adding || (!diagram && Regex.IsMatch(plain, @"^(?:circle|underline|point at|show me where to click)\b|\b(?:around|under|over|to|at) (?:the|that|this|my)\b|\b(?:button|taskbar|clock|that word|this word)\b|\b(?:and|then) (?:open|click|type|press|send|play)\b", RegexOptions.IgnoreCase));
             return new ToolArguments { Action = add ? "add" : "replace", Description = screen ? null : plain, Task = screen ? text : null };

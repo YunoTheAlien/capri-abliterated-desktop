@@ -290,9 +290,9 @@ namespace CapriDesktop
             for (int i = 0; i < Strands.Length; i++)
             {
                 Strand strand = Strands[i];
-                double grown = 1 - Math.Pow(1 - Clamp((t - strand.Leaves * Gather) / (Gather * (1 - strand.Leaves))), 3);
+                double senpai = 1 - Math.Pow(1 - Clamp((t - strand.Leaves * Gather) / (Gather * (1 - strand.Leaves))), 3);
                 double since = going ? (t - trip.GoAt) / trip.Travel - strand.Leaves : -1;
-                double head = since > 0 ? since : -strand.Lasts * (1 - grown), tail = Math.Max(-strand.Lasts, head - strand.Lasts);
+                double head = since > 0 ? since : -strand.Lasts * (1 - senpai), tail = Math.Max(-strand.Lasts, head - strand.Lasts);
                 double from = Along(tail, strand.Lasts), to = Along(head, strand.Lasts);
                 if (to - from < 0.004) continue;
                 // They run into the middle of the ball she forms from, each from a little off it and from its own side.

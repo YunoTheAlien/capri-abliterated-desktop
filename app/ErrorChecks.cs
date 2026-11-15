@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -202,7 +202,7 @@ namespace CapriDesktop
 
         // What she says and shows of a tool result leaves out her brain's own instructions and tool names, like "Call ask and
         // say..." or "list_windows names its program", while her brain still gets every word. A guard rail in a job shows them
-        // a plain line of its own in the task panel and in "Hit a snag: ...".
+        // a plain line of its own in the task panel and in "Hit a snag:...".
         private static void SmokeBrainOnlyText(List<string> checks, string output)
         {
             string[,] spoken =
@@ -380,7 +380,7 @@ namespace CapriDesktop
                 Brain.LogPath = logWas;
                 try { Directory.Delete(folder, true); } catch (IOException) { }
             }
-            checks.Add("PASS a damaged reminders.json, routines.json or websites.json is kept as .unreadable.json before anything saves over it, she says so once in her next reply about it, errors.txt names only the error's kind, a bad reminder keeps the good ones, and each list saves again");
+            checks.Add("PASS a damaged reminders.json, routines.json or websites.json is kept as.unreadable.json before anything saves over it, she says so once in her next reply about it, errors.txt names only the error's kind, a bad reminder keeps the good ones, and each list saves again");
         }
 
         // The task panel keeps the fix in a long ending or snag: the ending gets five rows and the newest failed step three,
@@ -717,7 +717,7 @@ namespace CapriDesktop
         }
 
         // Wording: brain lines name the service or say "the" instead of "their", download lines start with a capital and drop
-        // their "Try again." when she retries herself, and Windows' and .NET's own words become plain lines with theirs in errors.txt.
+        // their "Try again." when she retries herself, and Windows' and.NET's own words become plain lines with theirs in errors.txt.
         private void SmokeWordingFixes(List<string> checks, string output)
         {
             foreach (string line in new[] { Brain.Down, Brain.NoCredits, Brain.Blocked })
@@ -794,7 +794,7 @@ namespace CapriDesktop
         // The owner's smaller wording flags: each line keeps its cause and its fix inside the note that shows it.
         private void SmokeSmallWording(List<string> checks)
         {
-            // A14: her brain's and HD voice's server zips pass their checksum first, so a missing .exe means antivirus took it.
+            // A14: her brain's and HD voice's server zips pass their checksum first, so a missing.exe means antivirus took it.
             foreach (string gone in new[] { Engine.ServerGone, QwenVoice.ServerGone })
                 if (gone.Length > 70 || !gone.StartsWith("Your antivirus", StringComparison.Ordinal) || !gone.EndsWith(" Allow it, then try again.", StringComparison.Ordinal))
                     throw new Exception("A missing server line doesn't name the antivirus and the fix inside its note: " + gone);

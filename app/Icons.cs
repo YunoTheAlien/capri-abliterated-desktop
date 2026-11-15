@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -1136,7 +1136,14 @@ namespace CapriDesktop
             List<IconCopy> read = new List<IconCopy>();
             try
             {
-                foreach (IconItem item in Wanted) read.Add(new IconCopy(item.Name, item.At, IconPictures.Get(item, Size), Size, dpi));
+                // On camera nothing of theirs is drawn: not the picture, not the name under it. The positions are still
+                // the real ones, since that is what makes the rampage land on the icons, but every label and every
+                // picture is one of ours. See StreamSafe.
+                int stand = 0;
+                foreach (IconItem item in Wanted)
+                    read.Add(StreamSafe.On
+                        ? new IconCopy(StreamSafe.Label(stand), item.At, StreamSafe.Picture(stand++, Size), Size, dpi)
+                        : new IconCopy(item.Name, item.At, IconPictures.Get(item, Size), Size, dpi));
                 int best = 0;
                 foreach (Rectangle area in Monitors())
                 {
@@ -1697,7 +1704,13 @@ namespace CapriDesktop
                 return Lines.Pick(new[] { "Say that again. I dare you.", "Wrong answer, choom. Watch your icons.", "Oh, you're funny. Hold on to your desktop.", "Smasher couldn't even catch me. Your icons, though." });
             }
             bool hide = action == "hide";
-            if (!StartIconChaos(hide)) return "Couldn't get at your desktop icons just now, choom.";
+            // Measured: the desktop list is there with 55 icons in it and reads fine, but its own
+            // WS_VISIBLE is clear, which is what "Show desktop icons" being off looks like. That is not something she
+            // can work around, so it is worth saying rather than blaming the read.
+            if (!StartIconChaos(hide))
+                return DesktopIcons.Hidden(DesktopIcons.Target())
+                    ? "Your desktop icons are turned off, choom. Right-click the desktop, View, Show desktop icons, then ask me again."
+                    : "Couldn't get at your desktop icons just now, choom.";
             if (hide || (iconChaos != null && iconChaos.Vanishing)) return "Poof. Your icons are gone... I'll put them back in a sec.";
             return "Messing with your icons, choom. They'll go back on their own in a few seconds.";
         }

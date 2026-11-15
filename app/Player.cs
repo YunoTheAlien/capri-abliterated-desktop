@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -73,6 +73,9 @@ namespace CapriDesktop
         [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr window, int command);
 
         internal static double Now { get { return clock.Elapsed.TotalSeconds; } }
+
+        // Set by Capri: her folder playlist's current song, or null when it is not the thing playing.
+        internal static Func<Tune> Own;
 
         // What's playing, or null. Tests swap it out.
         internal static Func<Tune> Read = ReadSession;
@@ -166,6 +169,22 @@ namespace CapriDesktop
                 double now = Now, pressed;
                 lock (pressing) pressed = pressedAt;
                 if (shared != null && now - sharedAt < 0.9 && sharedAt >= pressed + 0.3) return shared;
+                // <<< PATCH: her own folder playlist is a session as far as everything here is concerned, so her mini player,
+                // her dancing and her "what's playing" all see it. Windows never hears about MediaPlayer, so without this
+                // the player stayed hidden while her playlist was playing.
+                Func<Tune> mine = Own;
+                if (mine != null)
+                {
+                    Tune ours = null;
+                    try { ours = mine(); } catch (Exception) { ours = null; }
+                    if (ours != null)
+                    {
+                        shared = new List<Tune> { ours };
+                        sharedAt = now;
+                        return shared;
+                    }
+                }
+                // <<< END PATCH
                 shared = Sessions();
                 sharedAt = now;
                 return shared;
@@ -335,11 +354,35 @@ namespace CapriDesktop
             finally { Pressed(); }
         }
 
+        // The session kept in a Tune is a snapshot taken when the song was read. It goes dead whenever the app drops and
+        // remakes its session, which Spotify does on a track change, or whenever the manager is rebuilt after an error,
+        // and a call on a dead one just returns false. Nothing showed that, so the buttons looked like they did nothing.
+        // The live session for the same app is looked up at press time and tried first; the snapshot is the fallback.
+        private static GlobalSystemMediaTransportControlsSession Live(Tune tune)
+        {
+            if (tune == null) return null;
+            try
+            {
+                GlobalSystemMediaTransportControlsSessionManager sessions = Manager();
+                if (sessions == null) return null;
+                string want = tune.App ?? "";
+                if (want.Length > 0)
+                    foreach (GlobalSystemMediaTransportControlsSession one in sessions.GetSessions())
+                        if (string.Equals(one.SourceAppUserModelId ?? "", want, StringComparison.OrdinalIgnoreCase)) return one;
+                return sessions.GetCurrentSession();
+            }
+            catch (Exception) { manager = null; return null; }
+        }
+
         private static bool SendNow(Tune tune, string what)
         {
             if (what == "like" || what == "unlike") return LikeOnSpotify(what == "like");
-            GlobalSystemMediaTransportControlsSession session = tune == null ? null : tune.Session as GlobalSystemMediaTransportControlsSession;
-            if (session != null)
+            GlobalSystemMediaTransportControlsSession kept = tune == null ? null : tune.Session as GlobalSystemMediaTransportControlsSession;
+            GlobalSystemMediaTransportControlsSession fresh = Live(tune);
+            List<GlobalSystemMediaTransportControlsSession> tries = new List<GlobalSystemMediaTransportControlsSession>();
+            if (fresh != null) tries.Add(fresh);
+            if (kept != null && !ReferenceEquals(kept, fresh)) tries.Add(kept);
+            foreach (GlobalSystemMediaTransportControlsSession session in tries)
             {
                 try
                 {
@@ -369,8 +412,12 @@ namespace CapriDesktop
                 }
                 catch (Exception) { }
             }
-            // An app that won't take it from its session still hears the media keys, which go to the app Windows picked.
+            // An app that won't take it from either session still hears the media keys, which go to the app Windows picked.
             byte key = what == "previous" ? (byte)0xB1 : what == "next" ? (byte)0xB0 : what == "play" || what == "pause" ? (byte)0xB3 : (byte)0;
+            // Said once per press that got this far, because a button that does nothing with nothing in the log is the
+            // hardest kind of fault to report: on a PC whose media keys go nowhere, this is the whole story.
+            try { Brain.Log("player", -1, what + " was refused by " + (tries.Count == 0 ? "no session at all" : tries.Count + " session(s)") + " for " + (tune == null ? "nothing" : Tunes.AppName(tune.App)) + (key == 0 ? "; no media key for it" : "; falling back to the media key")); }
+            catch (Exception) { }
             if (key == 0) return false;
             Hands.Press(key);
             return true;
@@ -481,7 +528,7 @@ namespace CapriDesktop
     // The mini player's parts. The plate itself drags it.
     internal static class PlayerPart
     {
-        internal const int Menu = 1, Previous = 2, PlayPause = 3, Next = 4, Heart = 5, Seek = 6, Close = 7;
+        internal const int Menu = 1, Previous = 2, PlayPause = 3, Next = 4, Heart = 5, Seek = 6, Close = 7, Shuffle = 8, Loop = 9;
     }
 
     // Her mini player (Lachy's ask, 28 Oct): what's playing, from Windows' media session, on a small black plate with her pink
@@ -771,8 +818,23 @@ namespace CapriDesktop
             if (part == PlayerPart.Close) { Raise("close"); return; }
             if (shown == null) return;
             double now = Tunes.Now;
-            if (part == PlayerPart.Previous && shown.CanBack) Raise("previous");
-            else if (part == PlayerPart.Next && shown.CanSkip) Raise("next");
+            // Plenty of apps report no skip while skipping fine, so the press goes through and the app is free to ignore
+            // it. Greying these out meant the two most used buttons on the face did nothing at all.
+            if (part == PlayerPart.Previous) Raise("previous");
+            else if (part == PlayerPart.Next) Raise("next");
+            else if (part == PlayerPart.Shuffle)
+            {
+                bool on = !(shown.Shuffle ?? false);
+                shown.Shuffle = on;
+                Raise(on ? "shuffle:on" : "shuffle:off");
+            }
+            else if (part == PlayerPart.Loop)
+            {
+                string was = shown.Repeat ?? "off";
+                string now2 = was == "off" ? "all" : was == "all" ? "one" : "off";
+                shown.Repeat = now2;
+                Raise("repeat:" + now2);
+            }
             else if (part == PlayerPart.PlayPause)
             {
                 shown.Position = shown.At(now);
@@ -833,6 +895,8 @@ namespace CapriDesktop
                 case PlayerPart.Heart: return Around(Wide - 30, ControlsY, 34, 34, s);
                 case PlayerPart.Seek: return new RectangleF(10 * s, (SeekY - 9) * s, (Wide - 20) * s, 18 * s);
                 case PlayerPart.Close: return Around(Wide - 18, 17, 26, 26, s);
+                case PlayerPart.Shuffle: return Around(Wide / 2 - 98, ControlsY, 32, 32, s);
+                case PlayerPart.Loop: return Around(Wide / 2 + 98, ControlsY, 32, 32, s);
             }
             return RectangleF.Empty;
         }
@@ -846,7 +910,7 @@ namespace CapriDesktop
         // The part at a point on the plate, or 0 for the plate itself. The heart is only there for Spotify.
         internal static int PartAt(PointF spot, float s, bool heart)
         {
-            for (int part = PlayerPart.Menu; part <= PlayerPart.Close; part++)
+            for (int part = PlayerPart.Menu; part <= PlayerPart.Loop; part++)
                 if ((part != PlayerPart.Heart || heart) && Box(part, s).Contains(spot)) return part;
             return 0;
         }
@@ -948,15 +1012,19 @@ namespace CapriDesktop
                     using (Brush halo = new SolidBrush(Color.FromArgb(lit ? 90 : 60, lit ? Look.Cyan : Look.Pink))) graphics.FillEllipse(halo, x - r * 1.9f, barY - r * 1.9f, r * 3.8f, r * 3.8f);
                     using (Brush knob = new SolidBrush(Look.Ink)) graphics.FillEllipse(knob, x - r, barY - r, r * 2, r * 2);
                 }
-                foreach (int part in new[] { PlayerPart.Menu, PlayerPart.Previous, PlayerPart.Next, PlayerPart.Heart })
+                foreach (int part in new[] { PlayerPart.Menu, PlayerPart.Previous, PlayerPart.Next, PlayerPart.Heart, PlayerPart.Shuffle, PlayerPart.Loop })
                 {
                     if (hover != part || (part == PlayerPart.Heart && !tune.Spotify)) continue;
                     PointF lit = Middle(part, s);
                     using (Brush glowing = new SolidBrush(Color.FromArgb(30, 255, 255, 255))) graphics.FillEllipse(glowing, lit.X - 15 * s, lit.Y - 15 * s, 30 * s, 30 * s);
                 }
                 DrawMenu(graphics, Middle(PlayerPart.Menu, s), s, hover == PlayerPart.Menu ? Look.Cyan : Look.Ink);
-                DrawSkip(graphics, Middle(PlayerPart.Previous, s), s, !tune.CanBack ? Look.Dim : hover == PlayerPart.Previous ? Look.Cyan : Look.Ink, false);
-                DrawSkip(graphics, Middle(PlayerPart.Next, s), s, !tune.CanSkip ? Look.Dim : hover == PlayerPart.Next ? Look.Cyan : Look.Ink, true);
+                DrawSkip(graphics, Middle(PlayerPart.Previous, s), s, hover == PlayerPart.Previous ? Look.Cyan : Look.Ink, false);
+                DrawSkip(graphics, Middle(PlayerPart.Next, s), s, hover == PlayerPart.Next ? Look.Cyan : Look.Ink, true);
+                bool mixing = tune.Shuffle ?? false;
+                string over = tune.Repeat ?? "off";
+                DrawShuffle(graphics, Middle(PlayerPart.Shuffle, s), s, mixing ? Look.Pink : hover == PlayerPart.Shuffle ? Look.Cyan : Look.Dim);
+                DrawLoop(graphics, Middle(PlayerPart.Loop, s), s, over != "off" ? Look.Pink : hover == PlayerPart.Loop ? Look.Cyan : Look.Dim, over == "one");
                 DrawPlay(graphics, Middle(PlayerPart.PlayPause, s), s, hover == PlayerPart.PlayPause, tune.Playing);
                 if (tune.Spotify) DrawHeart(graphics, Middle(PlayerPart.Heart, s), s, hover == PlayerPart.Heart, liked);
                 DrawClose(graphics, Middle(PlayerPart.Close, s), s, hover == PlayerPart.Close);
@@ -1045,6 +1113,42 @@ namespace CapriDesktop
         }
 
         // Her white disc, split pink and cyan at its edges.
+        // Two crossing arrows. Lit pink while it is on, so the state reads at a glance without a label.
+        private static void DrawShuffle(Graphics graphics, PointF c, float s, Color colour)
+        {
+            using (Pen line = new Pen(colour, 1.7f * s))
+            {
+                line.StartCap = LineCap.Round;
+                line.EndCap = LineCap.Round;
+                float w = 8 * s, h = 5 * s;
+                graphics.DrawLine(line, c.X - w, c.Y - h, c.X + w, c.Y + h);
+                graphics.DrawLine(line, c.X - w, c.Y + h, c.X + w, c.Y - h);
+                foreach (int side in new[] { -1, 1 })
+                {
+                    PointF tip = new PointF(c.X + w, c.Y + side * h);
+                    graphics.DrawLine(line, tip, new PointF(tip.X - 3.4f * s, tip.Y - side * 3.4f * s));
+                    graphics.DrawLine(line, tip, new PointF(tip.X - 3.4f * s, tip.Y + side * 0.6f * s));
+                }
+            }
+        }
+
+        // A ring with a break and an arrow head, and a dot in the middle when it is repeating this one song.
+        private static void DrawLoop(Graphics graphics, PointF c, float s, Color colour, bool one)
+        {
+            using (Pen line = new Pen(colour, 1.7f * s))
+            {
+                line.StartCap = LineCap.Round;
+                line.EndCap = LineCap.Round;
+                float r = 7 * s;
+                graphics.DrawArc(line, c.X - r, c.Y - r, r * 2, r * 2, 40, 285);
+                PointF tip = new PointF(c.X + r * 0.77f, c.Y + r * 0.64f);
+                graphics.DrawLine(line, tip, new PointF(tip.X - 4 * s, tip.Y - 1.4f * s));
+                graphics.DrawLine(line, tip, new PointF(tip.X + 0.6f * s, tip.Y + 4 * s));
+            }
+            if (!one) return;
+            using (Brush dot = new SolidBrush(colour)) graphics.FillEllipse(dot, c.X - 1.8f * s, c.Y - 1.8f * s, 3.6f * s, 3.6f * s);
+        }
+
         private static void DrawPlay(Graphics graphics, PointF c, float s, bool lit, bool playing)
         {
             float r = 17 * s;

@@ -129,8 +129,6 @@ Beware that Capri may try to take over your human CPU. We take no responsibility
 
 Linux can hear one English turn at a time through **TALK** once you set up her offline ears below. Calls and wake words are Windows only for now.
 
-On Linux, streaming computer-use jobs are unavailable when Capri has to use her fallback desktop controls. Other computer-use jobs are unchanged.
-
 1. Download [Mac (Apple Silicon)](https://github.com/lachydotmcg/capri-desktop/releases/latest/download/Capri-mac-apple-silicon.zip), [Mac (Intel)](https://github.com/lachydotmcg/capri-desktop/releases/latest/download/Capri-mac-intel.zip), [Linux (AppImage)](https://github.com/lachydotmcg/capri-desktop/releases/latest/download/Capri-linux-x64.AppImage) or [Linux (tar.gz)](https://github.com/lachydotmcg/capri-desktop/releases/latest/download/Capri-linux-x64.tar.gz)
 2. For her brain, open **Capri Mainframe > BRAIN**: use a free NVIDIA, Gemini or OpenRouter key, your own OpenAI, Claude or DeepSeek key, or any OpenAI-compatible provider with a key. Or install [Ollama](https://ollama.com) and run `ollama pull gemma4:e4b`
 3. **Mac:** unzip it, drag Capri into Applications, then open Terminal and run this once. Needs macOS 15 or newer
@@ -255,8 +253,6 @@ Just ask her for things, like "open Spotify", "play Blinding Lights", "pause", "
 | Ctrl + Alt + T | open her typing box from anywhere |
 | Ctrl + Alt + H | hide or show her |
 | Ctrl + Alt + P | Quiet: no comments, pop-ins or check-ins until you press it again. She still answers you |
-| Ctrl + Alt + M | open her Mainframe, or close it when it's in front (Windows) |
-| In the Mainframe | S, M and H open Settings, Mods and the main page; Tab jumps between sections, the arrow keys move through options, Enter picks and Esc goes back |
 | Call mode (beta) | in her typing box: she hears your call, and you say Capri for your requests (Windows) |
 | Esc | stop a job she's doing |
 | Ctrl + Alt + C | get her off your cursor |

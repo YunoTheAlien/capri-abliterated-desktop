@@ -150,23 +150,6 @@ namespace CapriDesktop
             return path;
         }
 
-        internal static bool Marked(Control control) { return TopLevel.GetTopLevel(control) is MainframeWindow window && window.Marks(control); }
-        internal static void Ring(DrawingContext context, Rect around, double tr = 0, double br = 5, double bl = 0)
-        {
-            Ring(context, RingPoints(around, tr, br, bl));
-        }
-        internal static Point[] RingPoints(Rect around, double tr = 0, double br = 5, double bl = 0)
-        {
-            var b = new Rect(around.X + 1, around.Y + 1, Math.Max(0, around.Width - 2), Math.Max(0, around.Height - 2));
-            double trim = 1 - Math.Sqrt(0.5);
-            tr = tr > 0 ? tr - trim : 0; br = br > 0 ? br - trim : 0; bl = bl > 0 ? bl - trim : 0;
-            return new[] { b.TopLeft, new Point(b.Right - tr, b.Top), new Point(b.Right, b.Top + tr),
-                new Point(b.Right, b.Bottom - br), new Point(b.Right - br, b.Bottom), new Point(b.Left + bl, b.Bottom), new Point(b.Left, b.Bottom - bl), b.TopLeft };
-        }
-        internal static void Ring(DrawingContext context, Point[] points)
-        {
-            context.DrawGeometry(null, new Pen(White, 2), Mark(points));
-        }
         internal static Geometry Mark(params Point[] points)
         {
             var path = new StreamGeometry();
@@ -312,7 +295,6 @@ namespace CapriDesktop
                 var pen = new Pen(hot ? Glyph == 2 ? MainframeTheme.Hot : MainframeTheme.Cyan : MainframeTheme.Faint, 1.5);
                 if (Glyph == 1) context.DrawLine(pen, new Point(x - 5, y), new Point(x + 5, y));
                 else { context.DrawLine(pen, new Point(x - 4.5, y - 4.5), new Point(x + 4.5, y + 4.5)); context.DrawLine(pen, new Point(x - 4.5, y + 4.5), new Point(x + 4.5, y - 4.5)); }
-                if (MainframeTheme.Marked(this)) MainframeTheme.Ring(context, new Rect(Bounds.Size), br: 4);
                 return;
             }
             IBrush face, rim, ink;
@@ -331,11 +313,9 @@ namespace CapriDesktop
                 using (context.PushTransform(Matrix.CreateTranslation(-6, -5.6) * Matrix.CreateScale(Swell, Swell) * Matrix.CreateTranslation(left + 6, y)))
                     context.DrawGeometry(MainframeTheme.Rose, null, HeartShape);
                 MainframeTheme.Write(context, Text, new Rect(left + 17, 0, wide + 2, h), ink, TextSize);
-                if (MainframeTheme.Marked(this)) MainframeTheme.Ring(context, new Rect(Bounds.Size));
                 return;
             }
             MainframeTheme.Write(context, Text, Chevron ? new Rect(10, 0, Math.Max(0, w - 32), h) : new Rect(Bounds.Size), ink, TextSize, false, Chevron ? TextAlignment.Left : TextAlignment.Center);
-            if (MainframeTheme.Marked(this)) MainframeTheme.Ring(context, new Rect(Bounds.Size));
         }
         private static IBrush Toward(Color from, Color to, double amount)
         {
@@ -362,8 +342,6 @@ namespace CapriDesktop
             PropertyChanged += (_, _) => InvalidateVisual();
         }
         internal void Flip() { OnClick(); }
-        internal Point[] MarkPoints { get { return MainframeTheme.RingPoints(new Rect(Bounds.Width - Switch, 0, Switch, Bounds.Height), bl: 5); } }
-        internal static bool FocusLine(bool focused, bool marked) { return focused && !marked; }
         // Its clicks and its OFF and ON halves go through Program.Guard, like a button's.
         protected override void OnClick() { Program.Guard(() => base.OnClick()); }
         protected override void OnPointerMoved(PointerEventArgs e)
@@ -409,9 +387,7 @@ namespace CapriDesktop
             context.DrawGeometry(onFill, new Pen(onRim, 1), MainframeTheme.Cut(on));
             MainframeTheme.Write(context, "OFF", off, offInk, 35.0 / 3, true, TextAlignment.Center);
             MainframeTheme.Write(context, "ON", on, onInk, 35.0 / 3, true, TextAlignment.Center);
-            bool marked = MainframeTheme.Marked(this);
-            if (FocusLine(IsKeyboardFocusWithin, marked)) context.DrawGeometry(null, new Pen(MainframeTheme.Cyan, 1), MainframeTheme.Cut(new Rect(start - 2, 0.5, Switch + 1.5, h - 1)));
-            if (marked) MainframeTheme.Ring(context, MarkPoints);
+            if (IsKeyboardFocusWithin) context.DrawGeometry(null, new Pen(MainframeTheme.Cyan, 1), MainframeTheme.Cut(new Rect(start - 2, 0.5, Switch + 1.5, h - 1)));
             double room = start - 10;
             MainframeTheme.Write(context, Text, new Rect(0, 0, room, h), MainframeTheme.Rose);
             double after = MainframeTheme.Words(Text).Width + 10;
@@ -436,7 +412,6 @@ namespace CapriDesktop
             double after = 32 + MainframeTheme.Words(Text, bold: true).Width;
             if (Hint != null) MainframeTheme.Write(context, Hint, new Rect(after, 0, Math.Max(0, w - after), h), MainframeTheme.Faint, 12);
             if (Flag != null) MainframeTheme.Write(context, Flag, new Rect(0, 0, w - 6, h), MainframeTheme.Yellow, 12, align: TextAlignment.Right);
-            if (MainframeTheme.Marked(this)) MainframeTheme.Ring(context, new Rect(Bounds.Size));
         }
         internal override string TextFits()
         {
@@ -550,7 +525,6 @@ namespace CapriDesktop
                 MainframeTheme.Write(context, Shown, new Rect(26, 0, w - 52, h - 4), MainframeTheme.Cyan, align: TextAlignment.Center);
                 double dash = Choices.Length <= 4 ? 11 : 8, left = w / 2 - (Choices.Length * dash + (Choices.Length - 1) * 3) / 2;
                 for (int i = 0; i < Choices.Length; i++) context.DrawRectangle(i == value ? MainframeTheme.Lit : MainframeTheme.Dash, null, new Rect(left + i * (dash + 3), h - 5.5, dash, 1.5));
-                if (MainframeTheme.Marked(this)) MainframeTheme.Ring(context, new Rect(Bounds.Size), tr: 5);
                 return;
             }
             double travel = w - 12, knob = 1 + travel * value / Math.Max(1, Choices.Length - 1);
@@ -565,7 +539,6 @@ namespace CapriDesktop
                 using (context.PushClip(new Rect(knob, 0, 10, h))) MainframeTheme.Write(context, Shown, new Rect(Bounds.Size), MainframeTheme.Brush("#28060C"), align: TextAlignment.Center);
             }
             context.DrawGeometry(null, new Pen(rim, 1), shape);
-            if (MainframeTheme.Marked(this)) MainframeTheme.Ring(context, new Rect(Bounds.Size));
         }
         internal string TextFits()
         {
@@ -604,7 +577,6 @@ namespace CapriDesktop
         {
             context.DrawGeometry(MainframeTheme.Well, new Pen(Box.IsKeyboardFocusWithin ? MainframeTheme.Cyan : MainframeTheme.WellEdge, 1), MainframeTheme.Cut(new Rect(0.5, 0.5, Bounds.Width - 1, Bounds.Height - 1)));
             if (Chevron) MainframeTheme.Drop(context, Bounds.Width - 19, Bounds.Height / 2, IsPointerOver);
-            if (MainframeTheme.Marked(this)) MainframeTheme.Ring(context, new Rect(Bounds.Size));
         }
         internal string TextFits() { return MainframeTheme.Words(Cue).Width > Width - (Chevron ? 38 : 20) + 0.5 ? Cue : null; }
     }
@@ -618,7 +590,6 @@ namespace CapriDesktop
         internal bool[] Greyed = Array.Empty<bool>();
         internal event Action<int> Changed;
         internal string[] Choices { get { return choices; } }
-        internal bool MenuOpen { get { return popup != null && popup.IsOpen; } }
         private bool IsGreyed(int at) { return at < Greyed.Length && Greyed[at]; }
         internal int Selected { get { return selected; } set { selected = Math.Clamp(value, 0, Math.Max(0, choices.Length - 1)); Text = choices.Length == 0 ? "None" : choices[selected]; } }
         internal NeonPicker() { Chevron = true; Click += (_, _) => Open(); }
@@ -654,7 +625,7 @@ namespace CapriDesktop
                 int at = i;
                 var row = new NeonChoice { Text = choices[i], Checked = Check && i == selected, Width = wide, Height = 26, IsEnabled = !IsGreyed(i) };
                 AutomationProperties.SetName(row, choices[i]);
-                row.Click += (_, _) => { Pick(at); (target is NeonEntry entry ? entry.Box : target).Focus(); };
+                row.Click += (_, _) => Pick(at);
                 row.KeyDown += (_, e) =>
                 {
                     if (e.Key == Key.Down || e.Key == Key.Up)

@@ -262,7 +262,7 @@ namespace CapriDesktop
             return Through(window.TryGetPlatformHandle(), through);
         }
 
-        internal static bool Through(IPlatformHandle handle, bool through = true)
+        private static bool Through(IPlatformHandle handle, bool through = true)
         {
             IntPtr native = handle is IMacOSTopLevelPlatformHandle mac ? mac.NSWindow : handle != null && handle.HandleDescriptor == "NSWindow" ? handle.Handle : IntPtr.Zero;
             if (native == IntPtr.Zero) return false;

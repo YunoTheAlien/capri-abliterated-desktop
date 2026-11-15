@@ -9,3 +9,6 @@ node_modules/
 *.pyc
 cross/native/capri-input
 worker/.codes-secret
+
+# Built programs staged for the Releases page, never committed.
+release/

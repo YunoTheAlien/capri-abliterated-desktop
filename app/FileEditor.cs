@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -68,7 +68,7 @@ namespace CapriDesktop
         private readonly Doc[] docs;
         private readonly Pacer pacer = new Pacer();
         private readonly Stopwatch clock = new Stopwatch();
-        private readonly string version = Assembly.GetExecutingAssembly().GetName().Version.ToString(3) + "V";
+        private readonly string version = Companion.Built + "V";
         private Stage stage = Stage.Waiting;
         private double frame, untyped, ticked, stepped;
         private int drawnLetters = -1, frostWaited;
@@ -85,11 +85,11 @@ namespace CapriDesktop
         private Point pressedAt, startedAt;
         private Action after;
 
-        internal FileEditor(float scale = 0, float art = 0)
+        internal FileEditor(float scale = 0, float art = 0, bool personalities = false)
         {
             forcedScale = scale;
             forcedArt = art;
-            Text = "Capri file editor";
+            Text = personalities ? "Capri personality editor" : "Capri file editor";
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false;
             StartPosition = FormStartPosition.Manual;
@@ -99,8 +99,26 @@ namespace CapriDesktop
             docs = new[]
             {
                 new Doc("personality.md", delegate { if (!Brain.MakePersonality()) throw new IOException("No personality.md."); return Brain.OpenPersonality(); }),
-                new Doc("me.md", delegate { return Brain.OpenNote(false); })
+                new Doc("me.md", delegate { return Brain.OpenNote(false); }),
+                // Her Twitch rules are hers to edit too, so they open here rather than in whatever Windows has for.md.
+                new Doc(TwitchRules.FileName, delegate { return TwitchRules.Open(); }),
+                new Doc(Commands.FileName, delegate { Commands.Write(); return Commands.Open(); }),
+                new Doc(Playlist.FileName, delegate { return Playlist.OpenNote(); }),
+                new Doc(SysLines.FileName, delegate { return SysLines.Open(); }),
+                new Doc(Sayings.FileName, delegate { return Sayings.Open(); })
             };
+            // Only with Uncensored on, and the tab is absent rather than disabled, so censored shows no trace of it.
+            if (!personalities && Interests.Shown)
+            {
+                Doc[] senpai = new Doc[docs.Length + 1];
+                Array.Copy(docs, senpai, docs.Length);
+                senpai[docs.Length] = new Doc(Interests.FileName, delegate { return Interests.Open(); });
+                docs = senpai;
+            }
+            // Her personalities open in her own editor rather than whatever Windows has for.md, which was Notepad
+            //. Order: who she is right now, then the dynamic settings, then the rest, then her moods.
+            // The tab strip already wraps, so three rows of them is fine.
+            if (personalities) docs = PersonalityDocs();
             frost = new Frost();
             page = new Page(this);
         }
@@ -451,6 +469,7 @@ namespace CapriDesktop
             Finish();
             page.Keep();
             current = which;
+            page.ShowTab(current);
             page.Take(docs[current]);
         }
 
@@ -678,6 +697,9 @@ namespace CapriDesktop
             RectangleF ruleBox = RectangleF.FromLTRB(Sx(PanelArt.RuleLeft), Sy(PanelArt.RuleTop), Sx(Math.Max(rule, PanelArt.RuleLeft)), Sy(PanelArt.RuleBottom));
             RectangleF blockBox = RectangleF.FromLTRB(Sx(PanelArt.RuleLeft), Sy(PanelArt.BlockTop), Sx(Math.Max(block, PanelArt.RuleLeft)), Sy(PanelArt.BlockBottom));
             PointF versionAt = new PointF(Ax(PanelArt.RuleLeft), Ay(67)), nameAt = new PointF(Ax(PanelArt.RuleLeft), Ay(83)), projectAt = new PointF(Ax(PanelArt.BlockEnd + 8), Ay(PanelArt.BlockTop - 0.5f));
+            // The open file's name sits under HER FILES now, where there was room, rather than over the tabs.
+            string openFile = docs != null && current >= 0 && current < docs.Length ? docs[current].Name : "";
+            PointF openAt = new PointF(Ax(PanelArt.BlockEnd + 8), Ay(PanelArt.BlockTop + 13.5f));
             PaintShadow(pen, spineShape, sheetShape, sheetAlpha, ruleBox, blockBox, topVersion, versionAt, name, nameAt, project, projectAt);
             if (sheetShape != null)
             {
@@ -691,7 +713,7 @@ namespace CapriDesktop
             }
             using (Brush body = new SolidBrush(PanelArt.Spine)) pen.FillPolygon(body, spineShape);
             LayGrain(pen, spineShape);
-            if (spine > PanelArt.TickY + 2) using (Brush tick = new SolidBrush(Color.FromArgb((int)(170 * PanelArt.Grown(frame, 6, 14)), Black))) pen.FillRectangle(tick, Sx(141), Sy(PanelArt.TickY), Math.Max(1, Sx(148) - Sx(141)), Math.Max(1, (float)Math.Round(a)));
+            if (spine > PanelArt.TickY + 2) using (Brush tick = new SolidBrush(Color.FromArgb((int)(170 * PanelArt.Senpai(frame, 6, 14)), Black))) pen.FillRectangle(tick, Sx(141), Sy(PanelArt.TickY), Math.Max(1, Sx(148) - Sx(141)), Math.Max(1, (float)Math.Round(a)));
             using (Brush solid = new SolidBrush(PanelArt.Rule))
             {
                 if (ruleBox.Width > 0) pen.FillRectangle(solid, ruleBox);
@@ -703,6 +725,7 @@ namespace CapriDesktop
                 Say(pen, topVersion, smallFont, red, versionAt);
                 Say(pen, name, nameFont, red, nameAt);
                 Say(pen, project, smallFont, red, projectAt);
+                if (project.Length == ProjectName.Length) Say(pen, openFile, smallFont, red, openAt);
             }
             if (versionWords.Length > 0 && spine > 500)
             {
@@ -765,8 +788,8 @@ namespace CapriDesktop
         private PointF[] SpineShape(float end)
         {
             List<PointF> points = new List<PointF>();
-            float crown = PanelArt.Crown, left = PanelArt.SpineLeft, right = PanelArt.SpineRight, step = crown + 4.5f * PanelArt.Grown(frame, 3, 8);
-            float slit = 2.5f * PanelArt.Grown(frame, 11, 14), cut = PanelArt.Grown(frame, 4, 12);
+            float crown = PanelArt.Crown, left = PanelArt.SpineLeft, right = PanelArt.SpineRight, step = crown + 4.5f * PanelArt.Senpai(frame, 3, 8);
+            float slit = 2.5f * PanelArt.Senpai(frame, 11, 14), cut = PanelArt.Senpai(frame, 4, 12);
             points.Add(new PointF(left, step));
             points.Add(new PointF(144.5f, step));
             points.Add(new PointF(150.5f, crown));
@@ -1125,6 +1148,55 @@ namespace CapriDesktop
         }
 
         // One of her files: what's on disk, through her own note code, and what's in the box, with the box's line ends.
+        // Her personality files, newest-first in the order that matters: the one she is being now, the dynamic
+        // settings that drive the moods, every other personality, then the moods themselves.
+        private static Doc[] PersonalityDocs()
+        {
+            // Grouped and in order, rather than whoever she happens to be first: the settings, then her character,
+            // then every personality A to Z, then every mood A to Z. Mixing them and floating the current one to the
+            // top made the list unreadable.
+            List<Doc> found = new List<Doc>();
+            List<string> taken = new List<string>();
+
+            Add(found, taken, Dynamics.Kept, "");
+
+            // personality.md is her character rather than a temperament, so it sits with them but is not one of them.
+            found.Add(new Doc("personality.md", delegate
+                { if (!Brain.MakePersonality()) throw new IOException("No personality.md."); return Brain.OpenPersonality(); }));
+
+            // P_ and M_ in the tab only. The files keep their own names, since the folder they are in
+            // already says which they are and renaming them would break every saved pick.
+            foreach (string each in Sorted(Personalities.Folder)) Add(found, taken, each, "P_");
+            foreach (string each in Sorted(Dynamics.Folder)) Add(found, taken, each, "M_");
+            return found.ToArray();
+        }
+
+        private static string[] Sorted(string folder)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) return new string[0];
+                string[] found = Directory.GetFiles(folder, "*.md");
+                Array.Sort(found, StringComparer.OrdinalIgnoreCase);
+                return found;
+            }
+            catch (Exception) { return new string[0]; }
+        }
+
+        private static void Add(List<Doc> into, List<string> taken, string path, string role)
+        {
+            if (string.IsNullOrEmpty(path)) return;
+            string full;
+            try { full = Path.GetFullPath(path); } catch (Exception) { return; }
+            foreach (string had in taken) if (string.Equals(had, full, StringComparison.OrdinalIgnoreCase)) return;
+            if (!File.Exists(full)) return;
+            taken.Add(full);
+            string label = Path.GetFileName(full);
+            into.Add(new Doc(role + label, delegate { return new WrittenNote(full, "", personalityGate); }));
+        }
+
+        private static readonly object personalityGate = new object();
+
         private sealed class Doc
         {
             internal readonly string Label;
@@ -1198,7 +1270,9 @@ namespace CapriDesktop
                 box.KeyDown += delegate { panel.Finish(); };
                 box.MouseDown += delegate { panel.Finish(); };
                 box.TextChanged += delegate { if (!loading) Typed(); Freshen(); };
-                tabs = new[] { new Ink { Tag = 0 }, new Ink { Tag = 1 } };
+                // STOCK 0.9.0: tabs = new[] { new Ink { Tag = 0 }, new Ink { Tag = 1 } };
+                tabs = new Ink[panel.docs.Length];
+                for (int made = 0; made < tabs.Length; made++) tabs[made] = new Ink { Tag = made };
                 foreach (Ink tab in tabs)
                 {
                     Ink press = tab;
@@ -1214,10 +1288,13 @@ namespace CapriDesktop
                 keep.Click += delegate { panel.GuardKeep(); };
                 status = new Note { BackColor = Red, ForeColor = Salmon, AutoEllipsis = true, UseMnemonic = false, TextAlign = ContentAlignment.MiddleLeft };
                 cover = new Veil(panel, this) { Visible = false };
-                Controls.AddRange(new Control[] { cover, close, tabs[0], tabs[1], box, bar, status, keep, reload, save });
+                Controls.AddRange(new Control[] { cover, close, box, bar, status, keep, reload, save });
+                Controls.AddRange(tabs);
                 cover.BringToFront();
                 int order = 0;
-                foreach (Control next in new Control[] { box, save, reload, keep, tabs[0], tabs[1], close }) next.TabIndex = order++;
+                foreach (Control next in new Control[] { box, save, reload, keep }) next.TabIndex = order++;
+                foreach (Ink tab in tabs) tab.TabIndex = order++;
+                close.TabIndex = order++;
                 foreach (Control grip in new Control[] { this, status })
                 {
                     grip.MouseDown += delegate(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) panel.Pressed(); };
@@ -1236,7 +1313,42 @@ namespace CapriDesktop
             internal string Words { get { return box.Text; } set { box.Text = value; } }
             internal int BoxHeight { get { return box.Height; } }
             internal string BoxFont { get { return box.Font.Name; } }
-            internal string[] Labels { get { return new[] { tabs[0].Text, tabs[1].Text }; } }
+            // Which file the side column starts at, and how many fit. Only used when the tabs run down the side.
+            private int tabFirst, tabShown;
+
+            // Off. The side layout itself is sound, but this page is not a normal form: it is a layered window that
+            // paints itself twice through WM_PRINT, once on white and once on black, and subtracts the two to get its
+            // alpha. Something about running that with this many child buttons leaves them rendering as plain white
+            // boxes, and neither GDI exhaustion (140 objects, limit 10000) nor the skipped Fit tail explained it.
+            //
+            // A cramped editor beats a broken one, so this is off until the tabs are drawn into the page's own
+            // surface rather than being 28 child controls, which is the fix that actually suits this design
+            //.
+            private bool SideTabs { get { return true; } }
+
+            // The wheel over the column moves the list, not the text.
+            internal bool WheelTabs(Point at, int notches)
+            {
+                if (!SideTabs || tabs.Length == 0) return false;
+                Point mine = PointToClient(at);
+                if (tabs[0].Bounds.Left - Scaled(6) > mine.X || mine.X > tabs[0].Bounds.Right + Scaled(6)) return false;
+                int was = tabFirst;
+                tabFirst = Math.Max(0, Math.Min(tabFirst - notches, Math.Max(0, tabs.Length - Math.Max(1, tabShown))));
+                if (tabFirst == was) return true;
+                Fit();
+                Invalidate();
+                return true;
+            }
+
+            // Keeps the open file in view when it is picked from somewhere other than the column.
+            private void SeeTab(int which)
+            {
+                if (!SideTabs || tabShown <= 0) return;
+                if (which < tabFirst) tabFirst = which;
+                else if (which >= tabFirst + tabShown) tabFirst = which - tabShown + 1;
+            }
+
+            internal string[] Labels { get { string[] shown = new string[tabs.Length]; for (int i = 0; i < tabs.Length; i++) shown[i] = tabs[i].Text; return shown; } }
             internal string Scrolled { get { return bar.Shown; } }
             internal Control TextArea { get { return box; } }
             internal bool Unsure { get { return keep.Visible; } }
@@ -1250,7 +1362,8 @@ namespace CapriDesktop
                 statusFont = Look.Mono(13 * s, FontStyle.Regular, GraphicsUnit.Pixel);
                 box.Font = Look.Mono(BodySize * s, FontStyle.Regular, GraphicsUnit.Pixel);
                 status.Font = statusFont;
-                foreach (Ink ink in new[] { tabs[0], tabs[1], close, save, reload, keep }) ink.Font = buttonFont;
+                foreach (Ink ink in new[] { close, save, reload, keep }) ink.Font = buttonFont;
+                foreach (Ink tab in tabs) tab.Font = buttonFont;
             }
 
             internal void Fit()
@@ -1259,59 +1372,122 @@ namespace CapriDesktop
                 Rectangle place = panel.pageBox;
                 Bounds = new Rectangle(panel.Left + place.X, panel.Top + place.Y, place.Width, place.Height);
                 ClientSize = place.Size;
-                int pad = Scaled(18), row = Scaled(52), foot = Scaled(48), gap = Scaled(8);
-                close.Bounds = new Rectangle(Width - pad - Scaled(28), Scaled(12), Scaled(28), Scaled(28));
+                int pad = Scaled(18), row = Scaled(44), foot = Scaled(48), gap = Scaled(8);
+                close.Bounds = new Rectangle(Width - pad - Scaled(28), Scaled(6), Scaled(28), Scaled(28));
                 int right = close.Left - Scaled(12);
-                tabs[1].Text = panel.docs[1].Label;
-                tabs[0].Text = panel.docs[0].Label;
+                for (int i = 0; i < tabs.Length; i++) tabs[i].Text = panel.docs[i].Label;
+                // <<< PATCH: tabs wrap onto another line instead of running into her title
+                // Three files fitted on one row. With her commands and her playlist there are five, so they are laid out
+                // right to left and dropped onto a new line when the next one would reach her title, and the text below
+                // starts further down by however many lines that took.
+                int textLeft = pad;
+                // Down the side instead of across the top once there are more files than a couple of rows can hold.
+                // The personality editor opens with close to twenty, and wrapped rows of buttons ate the page
+                //. Scrolls with the wheel rather than wrapping, like a browser's vertical tabs.
+                if (SideTabs)
+                {
+                    int sideHigh = Scaled(26), sideGap = Scaled(3), sideTop = Scaled(44), sideWide = Scaled(132);
+                    int roomFor = Math.Max(1, (Height - foot - sideTop - Scaled(6)) / (sideHigh + sideGap));
+                    tabFirst = Math.Max(0, Math.Min(tabFirst, Math.Max(0, tabs.Length - roomFor)));
+                    tabShown = roomFor;
+                    for (int i = 0; i < tabs.Length; i++)
+                    {
+                        int slot = i - tabFirst;
+                        bool seen = slot >= 0 && slot < roomFor;
+                        tabs[i].Visible = seen;
+                        if (!seen) continue;
+                        tabs[i].Bounds = new Rectangle(pad, sideTop + slot * (sideHigh + sideGap), sideWide, sideHigh);
+                    }
+                    // The text column starts beside them. Everything after this is shared with the top strip: the
+                    // first version of this returned here instead, which skipped cover.Bounds, bar.Sync() and
+                    // Freshen(), so the veil was never sized and the tabs never got their text. That is what the
+                    // white boxes were.
+                    textLeft = pad + sideWide + gap;
+                }
+                else
+                {
+                int tabHigh = Scaled(28), tabTop = Scaled(6), rows = 1;
+                // No title any more, so the tabs own the whole line. It only ever showed the name of the file already
+                // highlighted in a tab, and with five of them it squashed to "CO..." and pushed one onto a second row
+                //.
+                int leftStop = pad;
                 for (int i = tabs.Length - 1; i >= 0; i--)
                 {
                     int wide = TextRenderer.MeasureText(tabs[i].Text + " *", buttonFont).Width + Scaled(24);
-                    tabs[i].Bounds = new Rectangle(right - wide, Scaled(12), wide, Scaled(28));
+                    if (right - wide < leftStop && right < close.Left - Scaled(12))
+                    {
+                        rows++;
+                        right = close.Left - Scaled(12);
+                        tabTop += tabHigh + Scaled(4);
+                    }
+                    tabs[i].Bounds = new Rectangle(right - wide, tabTop, wide, tabHigh);
                     right -= wide + gap;
                 }
-                titleBox = new Rectangle(pad, Scaled(4), Math.Max(Scaled(40), right - pad), row - Scaled(6));
+                    row += (rows - 1) * (tabHigh + Scaled(4));
+                }
+                // Kept as an empty box so the veil and the title painter have something harmless to work with.
+                titleBox = new Rectangle(pad, Scaled(4), 0, Scaled(44) - Scaled(6));
+                // <<< END PATCH: wrapping tabs
                 int top = row, bottom = Height - foot, barWide = Scaled(8);
                 lineTop = row - Scaled(6);
                 lineFoot = bottom + Scaled(2);
                 // Whole lines only, so the last one isn't cut through above the buttons.
                 int line = TextRenderer.MeasureText("Ag", box.Font, Size.Empty, TextFormatFlags.NoPadding).Height;
-                box.Bounds = new Rectangle(pad, top, Width - pad * 2 - barWide - gap, (bottom - top) / line * line);
+                box.Bounds = new Rectangle(textLeft, top, Width - textLeft - pad - barWide - gap, (bottom - top) / line * line);
                 Native.SendMessage(box.Handle, 0x00D3, new IntPtr(3), IntPtr.Zero);
                 bar.Line = line;
                 bar.Bounds = new Rectangle(Width - pad - barWide, top, barWide, box.Height);
                 int buttonHigh = Scaled(30), buttonTop = bottom + (foot - buttonHigh) / 2;
-                int at = Width - pad;
+                // Left to right from the left edge, matching PlaceFoot. This still said Width - pad from when the
+                // buttons were right-aligned, which with the new left-to-right PlaceButton ran them off the edge.
+                int at = pad;
                 at = PlaceButton(save, at, buttonTop, buttonHigh, gap);
                 at = PlaceButton(reload, at, buttonTop, buttonHigh, gap);
                 at = PlaceButton(keep, at, buttonTop, buttonHigh, gap);
-                status.Bounds = new Rectangle(pad, buttonTop, Math.Max(Scaled(40), at - pad), buttonHigh);
+                status.Bounds = new Rectangle(at, buttonTop, Math.Max(Scaled(40), Width - pad - at), buttonHigh);
+                // Drawn in OnPaint rather than rendered as a control. As a child Label it came out of the page's
+                // white and black passes as a solid white block with a cross through it, which is what was sitting
+                // beside Save and Reload. Its Bounds are still set above, to say where to draw it.
+                status.Visible = false;
                 cover.Bounds = new Rectangle(0, 0, Width, Height);
                 bar.Sync();
                 Invalidate(true);
                 Freshen();
             }
 
-            private int PlaceButton(Ink ink, int right, int top, int high, int gap)
+            // Left to right from the left edge, so the buttons sit under the text they act on rather than away in the
+            // far corner. Save first, since it is the one being reached for.
+            private int PlaceButton(Ink ink, int left, int top, int high, int gap)
             {
-                if (!ink.Visible && ink != keep) return right;
+                if (!ink.Visible && ink != keep) return left;
                 int wide = TextRenderer.MeasureText(ink.Text, buttonFont).Width + Scaled(26);
-                ink.Bounds = new Rectangle(right - wide, top, wide, high);
-                return right - wide - gap;
+                ink.Bounds = new Rectangle(left, top, wide, high);
+                return left + wide + gap;
             }
 
             private void PlaceFoot()
             {
-                int pad = Scaled(18), gap = Scaled(8), at = Width - pad;
+                int pad = Scaled(18), gap = Scaled(8), at = pad;
                 at = PlaceButton(save, at, save.Top, save.Height, gap);
                 at = PlaceButton(reload, at, save.Top, save.Height, gap);
                 if (keep.Visible) at = PlaceButton(keep, at, save.Top, save.Height, gap);
-                status.Bounds = new Rectangle(pad, save.Top, Math.Max(Scaled(40), at - pad), save.Height);
+                status.Bounds = new Rectangle(at, save.Top, Math.Max(Scaled(40), Width - pad - at), save.Height);
             }
 
             private int Scaled(float value) { return (int)Math.Round(value * panel.s); }
 
             // Shows this file, reading it first.
+            // Scrolls the side column so the file being opened is one you can see.
+            internal void ShowTab(int which)
+            {
+                if (!SideTabs || tabShown <= 0) return;
+                // Only when the file is actually off the visible run. Laying the column out again on every click
+                // moved the tabs under the cursor mid-press, which swallowed clicks now and then.
+                int was = tabFirst;
+                SeeTab(which);
+                if (tabFirst != was) Fit();
+            }
+
             internal void Take(Doc doc)
             {
                 panel.Read(doc);
@@ -1646,14 +1822,14 @@ namespace CapriDesktop
 
             internal void PaintCover(Graphics pen, bool clear)
             {
-                int wide = shown == null ? titleBox.Width : Math.Min(titleBox.Width, TextRenderer.MeasureText(shown.Name, titleFont, Size.Empty, TitleWidth).Width);
-                panel.PaintVeil(pen, Size, titleBox, wide, clear);
+                panel.PaintVeil(pen, Size, titleBox, 0, clear);
             }
 
             protected override void OnPaint(PaintEventArgs e)
             {
                 base.OnPaint(e);
-                if (shown != null) TextRenderer.DrawText(e.Graphics, shown.Name, titleFont, titleBox, Salmon, TitleLine);
+                // The name is on its own tab, lit up, so drawing it again here only cost room.
+                // STOCK 0.9.0: if (shown != null) TextRenderer.DrawText(e.Graphics, shown.Name, titleFont, titleBox, Salmon, TitleLine);
                 // Thin red rules under the title and over the buttons, like the lines between the reference panel's fields.
                 using (Brush rule = new SolidBrush(Color.FromArgb(200, Red)))
                 {
@@ -1661,6 +1837,10 @@ namespace CapriDesktop
                     e.Graphics.FillRectangle(rule, Scaled(6), lineTop, Width - Scaled(6), thick);
                     e.Graphics.FillRectangle(rule, Scaled(6), lineFoot, Width - Scaled(6), thick);
                 }
+                string footer = status == null ? "" : status.Text;
+                if (!string.IsNullOrEmpty(footer))
+                    TextRenderer.DrawText(e.Graphics, footer, status.Font, status.Bounds, status.ForeColor,
+                        TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
             }
 
             protected override bool ProcessCmdKey(ref Message message, Keys keys)
@@ -1683,6 +1863,13 @@ namespace CapriDesktop
                     return;
                 }
                 if (message.Msg == 0x02E0) return;
+                // WM_MOUSEWHEEL over the side column scrolls the file list rather than the text.
+                if (message.Msg == 0x020A)
+                {
+                    int turned = (short)((message.WParam.ToInt64() >> 16) & 65535);
+                    Point where = new Point((short)(message.LParam.ToInt64() & 65535), (short)((message.LParam.ToInt64() >> 16) & 65535));
+                    if (WheelTabs(where, turned / 120)) return;
+                }
                 base.WndProc(ref message);
                 if (message.Msg == 0x000F) Freshen();
             }
@@ -2204,7 +2391,7 @@ namespace CapriDesktop
         }
 
         // 0 up to one frame, 1 from another, for a detail that comes in between them.
-        internal static float Grown(double frame, int from, int to) { return (float)Math.Max(0, Math.Min(1, (frame - from) / (to - from))); }
+        internal static float Senpai(double frame, int from, int to) { return (float)Math.Max(0, Math.Min(1, (frame - from) / (to - from))); }
 
         // The sheet's alpha partway down her artist's curve, landing on the glass's alpha instead of the art's.
         internal static double Glassy(double art)
@@ -2221,3 +2408,4 @@ namespace CapriDesktop
         }
     }
 }
+

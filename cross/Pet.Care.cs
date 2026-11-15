@@ -145,27 +145,22 @@ namespace CapriDesktop
             if (line != null) Reply(asking, "(follow-up)", line, null, true);
         }
 
-        internal bool ShowReply(int ticket, string heard, string said, double seconds, string after, bool following, int input, int answer, RemoteTurn phone = null)
+        internal bool ShowReply(int ticket, string heard, string said, double seconds, string after, bool following, int input, int answer)
         {
-            try
-            {
-                if (ticket != asking || following && (!FollowAllowed || input != inputTurn || answer != answerTurn)) return false;
-                if (HoldNews(ticket)) return false;
-                if (!RemoteReply(ticket, heard, said, following, phone)) return false;
-                bool current = answer == answerTurn;
-                Talk.Answer(heard, said, seconds);
-                selfTools.Replied(ticket);
-                if (ticket == newsTicket) KeepNews();
-                if (following) Brain.Followed(said);
-                else if (current && input == inputTurn && FollowAllowed) HoldFollowUp(after);
-                return true;
-            }
-            finally { if (!following) RemoteEnd(phone); }
+            if (ticket != asking || following && (!FollowAllowed || input != inputTurn || answer != answerTurn)) return false;
+            if (HoldNews(ticket)) return false;
+            bool current = answer == answerTurn;
+            Talk.Answer(heard, said, seconds);
+            selfTools.Replied(ticket);
+            if (ticket == newsTicket) KeepNews();
+            if (following) Brain.Followed(said);
+            else if (current && input == inputTurn && FollowAllowed) HoldFollowUp(after);
+            return true;
         }
 
-        internal void PresentReply(int ticket, string heard, string said, double seconds, string after, bool following, int input, int answer, Action shown, RemoteTurn phone = null)
+        internal void PresentReply(int ticket, string heard, string said, double seconds, string after, bool following, int input, int answer, Action shown)
         {
-            if (!following) { if (ShowReply(ticket, heard, said, seconds, after, false, input, answer, phone)) shown(); return; }
+            if (!following) { if (ShowReply(ticket, heard, said, seconds, after, false, input, answer)) shown(); return; }
             Func<double> read = Idle;
             FollowQueue(delegate
             {
@@ -177,7 +172,7 @@ namespace CapriDesktop
                 {
                     if (quiet < 0 || double.IsNaN(quiet) || double.IsInfinity(quiet)) return;
                     ObserveInput(from, until, quiet);
-                    if (ShowReply(ticket, heard, said, seconds, after, true, input, answer, phone)) shown();
+                    if (ShowReply(ticket, heard, said, seconds, after, true, input, answer)) shown();
                 };
                 if (Dispatcher.UIThread.CheckAccess()) finish(); else Dispatcher.UIThread.Post(finish);
             });

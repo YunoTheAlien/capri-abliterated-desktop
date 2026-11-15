@@ -349,19 +349,19 @@ namespace CapriDesktop
             bool[] strong = (bool[])keep.Clone();
             for (int pass = 0; pass < 2; pass++)
             {
-                bool[] grown = (bool[])keep.Clone();
+                bool[] senpai = (bool[])keep.Clone();
                 for (int at = 0; at < count; at++)
                 {
                     if (keep[at] || diff[at] <= 10 || ((top[at] >> 24) & 255) == 0) continue;
                     int x = at % width, y = at / width;
-                    for (int dy = -1; dy <= 1 && !grown[at]; dy++)
+                    for (int dy = -1; dy <= 1 && !senpai[at]; dy++)
                         for (int dx = -1; dx <= 1; dx++)
                         {
                             int nx = x + dx, ny = y + dy;
-                            if (nx >= 0 && ny >= 0 && nx < width && ny < height && keep[ny * width + nx]) { grown[at] = true; break; }
+                            if (nx >= 0 && ny >= 0 && nx < width && ny < height && keep[ny * width + nx]) { senpai[at] = true; break; }
                         }
                 }
-                keep = grown;
+                keep = senpai;
             }
             Array.Clear(seen, 0, count);
             for (int start = 0; start < count; start++)

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -139,7 +139,7 @@ namespace CapriDesktop
         private static string RunFolder(string run) { return Path.Combine(run, Guid.NewGuid().ToString("N").Substring(0, 8)); }
 
         // Below its root, Workspace writes paths up to 122 letters long: undo\<chat>\<turn>\manifest.json and the
-        // .<id>.tmp name it's written through. Past Windows' 259 letters that save fails, and a check fails somewhere
+        //.<id>.tmp name it's written through. Past Windows' 259 letters that save fails, and a check fails somewhere
         // far from the cause, so a run folder that leaves no room for the deepest root a section makes stops here instead.
         private static void RoomUnder(string run, string deepestRoot)
         {
@@ -1609,7 +1609,7 @@ namespace CapriDesktop
             checks.Add("PASS Workspace puts each run of tool calls behind one closed line worded by what finished (commands ran, files read, edited and written, searches, web lookups, agents, MCP calls), marks a failed or denied call on that line and names what's running while it shines; the shine's clock runs only while a running call is seen and stops when it finishes or the window is minimised");
         }
 
-        // The user's open and save dialog history (HKCU ...\Explorer\ComDlg32: the last folder per program, and recent files
+        // The user's open and save dialog history (HKCU...\Explorer\ComDlg32: the last folder per program, and recent files
         // per file type), read before a smoke opens real dialogs and put back after: values the run added go, values it changed
         // get their old contents back. Nothing outside that key is touched.
         private sealed class DialogMemory
@@ -2088,19 +2088,19 @@ namespace CapriDesktop
             expect("the added file", reads(spec), true);
             expect("the added file in other case", reads(spec.ToUpperInvariant()), true);
             expect("the added file with forward slashes", reads(spec.Replace('\\', '/')), true);
-            expect("the added file by a .. route", reads(Path.Combine(work, "..", "loose", "spec.md")), true);
+            expect("the added file by a.. route", reads(Path.Combine(work, "..", "loose", "spec.md")), true);
             expect("a relative path", reads(@"sub\a.txt"), true);
             expect("a folder in other case", reads(Path.Combine(work.ToUpperInvariant(), "a.txt")), true);
             expect("forward slashes", reads(work.Replace('\\', '/') + "/sub/a.txt"), true);
             expect("a file beside the added file", reads(beside), false);
             expect("the added file's folder", inside("Grep", HuskJson.Map("pattern", "x", "path", loose)), false);
             expect("a glob in the added file's folder", inside("Glob", HuskJson.Map("pattern", Path.Combine(loose, "*.md"))), false);
-            expect("a .. out of the folder", reads(Path.Combine(work, "..", "workshop", "secret.txt")), false);
-            expect("a relative .. out", reads(@"..\workshop\secret.txt"), false);
+            expect("a.. out of the folder", reads(Path.Combine(work, "..", "workshop", "secret.txt")), false);
+            expect("a relative.. out", reads(@"..\workshop\secret.txt"), false);
             expect("a folder that starts with the first one's name", reads(secret), false);
             expect("a name that starts with the first one's name", reads(work + "shop\\secret.txt"), false);
             expect("forward slashes out", reads(shop.Replace('\\', '/') + "/secret.txt"), false);
-            expect("a \\\\?\\ path with .. out", reads(@"\\?\" + work + @"\..\workshop\secret.txt"), false);
+            expect("a \\\\?\\ path with.. out", reads(@"\\?\" + work + @"\..\workshop\secret.txt"), false);
             expect("a stream beside it", reads(beside + ":hidden"), false);
             expect("a glob that climbs out after a wildcard", inside("Glob", HuskJson.Map("pattern", "**/../../workshop/*")), false);
             expect("a glob with a path outside", inside("Glob", HuskJson.Map("pattern", "*.txt", "path", shop)), false);
@@ -2129,7 +2129,7 @@ namespace CapriDesktop
             }
             finally { if (Directory.Exists(link)) Directory.Delete(link); }
             if (wrong.Count > 0) throw new Exception("Workspace's hook got these wrong: " + string.Join("; ", wrong.ToArray()));
-            checks.Add("PASS Workspace hook paths: .., case, forward slashes, \\\\?\\, 8.3 names, streams, junctions out, a file beside an added one, C:\\work against C:\\workshop, and globs that climb out are all judged by where they really are");
+            checks.Add("PASS Workspace hook paths:.., case, forward slashes, \\\\?\\, 8.3 names, streams, junctions out, a file beside an added one, C:\\work against C:\\workshop, and globs that climb out are all judged by where they really are");
         }
 
         // Explorer's own pickers, opened for real on the smoke's hidden desktop and driven by messages from another thread:

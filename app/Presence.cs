@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -128,7 +128,7 @@ namespace CapriDesktop
         }
 
         // Windows: the pipes discord-ipc-0 to 9. Mac and Linux: sockets with those names in Discord's runtime or temp
-        // folder, or where its Flatpak and Snap apps put them, as full paths, which .NET opens as Unix sockets.
+        // folder, or where its Flatpak and Snap apps put them, as full paths, which.NET opens as Unix sockets.
         internal static List<string> Names()
         {
             List<string> names = new List<string>();

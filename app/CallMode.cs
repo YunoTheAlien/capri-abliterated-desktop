@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Drawing;
@@ -1598,7 +1598,7 @@ namespace CapriDesktop
 
         private static bool HuskTerminal(string program) { return Regex.IsMatch(program ?? "", @"terminal|powershell|pwsh|cmd|wezterm|alacritty|code|cursor|codex|claude|opencode", RegexOptions.IgnoreCase); }
 
-        // OpenCode's terminal is titled "OC | ...", and a browser tab about OpenCode isn't where it runs.
+        // OpenCode's terminal is titled "OC |...", and a browser tab about OpenCode isn't where it runs.
         internal static bool HuskAssistant(string source, string program, string title)
         {
             if (source == "opencode") return HuskTerminal(program) && Regex.IsMatch(title ?? "", @"\AOC \||\bOpenCode\b", RegexOptions.IgnoreCase);

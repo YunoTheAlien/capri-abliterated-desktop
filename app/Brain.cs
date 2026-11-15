@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -15,29 +15,51 @@ namespace CapriDesktop
     internal static class News
     {
 #if CROSS
-        internal const string Version = "0.9.1";
+        internal const string Version = "0.9.0";
         internal static readonly string Facts = "Capri " + Version + (OperatingSystem.IsLinux() ? " on Linux.\n" : " on Mac.\n")
-            + "Capri Remote: chat with her from your phone's browser at capriai.app/remote. Mainframe > CAPRI > Remote turns it on, and Pair a phone shows the QR code to scan. From a phone she does what a typed line can, except mouse and keyboard jobs and terminal commands.\n"
-            + "Keyboard: her Mainframe and Mods window work from the keyboard. S, M and H change pages, Tab jumps a section, the arrow keys move through options, Enter picks and Esc goes back. From nathanZW.\n"
             + (OperatingSystem.IsLinux()
-                ? "Streaming: on a desktop where she has to use her fallback controls, she says she can't stream safely and doesn't start. Her other mouse and keyboard jobs are unchanged. From danielxxomg.\n"
-                : "")
-            + "Time: she no longer brings up the time when you didn't ask. From Yoplaxs.";
-        internal static readonly string Line = "I just updated to " + Version + ": you can chat with me from your phone with Capri Remote now, and my Mainframe works from the keyboard. Ask me what's new.";
+                ? "Reminders: she says your reminders and routines on Linux too.\n"
+                    + "PDFs: she reads PDF pages.\n"
+                    + "Moving: she stays put when the desktop answers late or a few pixels off, and moves on niri.\n"
+                    + "Sitting: she faces the middle of the screen when she sits, and lands already facing that way. From nathanZW.\n"
+                    + "Music app: Settings > HABITS > Music app picks Spotify or YouTube for when you don't name an app.\n"
+                    + "Stopwatch: start one, ask how long it's been and stop it.\n"
+                    + "Updates: started from the AppImage, she downloads a newer release by herself and her menu shows Restart Capri to update to the new version. If the new one doesn't start, the old one is put back. From Kelv.\n"
+                    + "Hyprland: Super+C closes Mainframe, which has no Minimize button there. From Kelv."
+                : "Reminders: she says your reminders and routines on a Mac too.\n"
+                    + "PDFs: she reads PDF pages.\n"
+                    + "Sitting: she sits on a window you name, faces the middle of the screen when she sits, and lands already facing that way. From nathanZW.\n"
+                    + "Music app: Settings > HABITS > Music app picks Spotify, YouTube or Apple Music for when you don't name an app. On Apple Music she plays your playlists and Favourite Songs. From nathanZW.\n"
+                    + "Stopwatch: start one, ask how long it's been and stop it.\n"
+                    + "Mini player: when it closes, focus goes back to the app you were in.");
+        internal static readonly string Line = OperatingSystem.IsLinux()
+            ? "I just updated to " + Version + ": I can update myself from the AppImage now, I say your reminders on Linux and I read PDF pages. Ask me what's new."
+            : "I just updated to " + Version + ": I say your reminders on a Mac now, read PDF pages and sit on a window you name. Ask me what's new.";
 #else
-        internal const string Version = "0.9.1";
+        internal const string Version = "0.9.0";
         internal const string Facts = "Capri " + Version + " on Windows.\n"
-            + "Keyboard: her Mainframe works from the keyboard. Ctrl + Alt + M opens it from anywhere and closes it when it's in front; change it in Mainframe > Settings > KEYS. S, M and H change pages, Tab jumps a section, the arrow keys move through options, Enter picks and Esc goes back. From nathanZW.\n"
-            + "Quick asks: open discord, switch to chrome, pause and open youtube happen straight away with a brain loaded too, and she says how it went in her own words. From YunoTheAlien.\n"
-            + "Plain asks: she closes, opens and plays what you plainly ask even when a small brain answers with only words. From Vocyn.\n"
-            + "Apps: she remembers her app list between looks, and says so when she couldn't read your apps. From YunoTheAlien.\n"
-            + "Store apps: she opens Store apps like Notepad the way Windows starts them, and says so when Windows won't start one. From Vocyn.\n"
-            + "Searches: she looks things up with the search engine your browser is set to. From YunoTheAlien.\n"
-            + "Websites: a small slip in how her brain asks for a website no longer stops her opening it. From YunoTheAlien.\n"
-            + "Memory: on Auto, Memory size starts at 16K on a PC with room and grows to 32K when an ask needs it, for her built-in brain and Ollama.\n"
-            + "Time: she no longer brings up the time when you didn't ask. From Yoplaxs.\n"
-            + "Downloads: she opens more download lanes at once, so her voice and ears downloading don't hold up her brain's download.";
-        internal const string Line = "I just updated to " + Version + ": you can drive my Mainframe from the keyboard now, quick asks like open discord happen straight away, and my memory starts bigger on a PC with room. Ask me what's new.";
+            + "Workspace (beta): Mainframe > BRAIN > WORKSPACE (beta), or ask her to open workspace. Chat with your own Claude Code in her window, so install it and sign in first. A chat starts in her folder, Capri\\Workspace in your user folder, and + adds folders or files; files go with one message. Modes: Ask me, Edits only, Plan only and Everything. Undo last edits puts back Claude's file edits from a turn.\n"
+            + "Workspace chats (beta): each run of Claude Code's tool calls folds behind one line, an approval card asks in one plain sentence, each turn shows its time and cost, you can select and copy text with a copy key on messages and code, and replies show headings, lists, tables, code and links.\n"
+            + "Sounds: soft chimes when your message is sent, when she's heard you and when she's listening. Mainframe > Settings > SOUNDS turns them off, sets their volume and picks one of six sets.\n"
+            + "No AI: Mainframe > BRAIN > OFF runs her with no brain at all. Nothing is downloaded for it and nothing goes to any model.\n"
+            + "Hearts: she sends you a little finger heart whenever she feels like it, or when you ask. She has a secret emote too; both are animated by Qewiw.\n"
+            + "Skills: she knows the name of every skill that's on and reads one when it fits, in chat and mid-job, and a skill with no games line is for anything.\n"
+            + "Skills in a browser: a skill's game counts in a browser tab too, like Five Nights at Freddy's in Chrome, when you ask her to play it, and she can cut in on her own line at a jump scare.\n"
+            + "Asking mid-game: ask what's on screen during a game job and she looks at a picture taken just then; ask about the game and she knows its skill.\n"
+            + "Code mods: the Run this code mod? question is in her own look, and No is still the default.\n"
+            + "Thinking and tool calls: she keeps a brain's thinking and written-out tool calls out of her chat, her voice and the saved chat.\n"
+            + "Her glitch: she glitches under her new stand, and her old standing art only shows with Legacy stand on.\n"
+            + "Teleports in games: her teleport and glitch finish while a game job keeps her busy.\n"
+            + "Jealous of other AIs: Mainframe > Settings > CAPRI > Jealous of other AIs, off unless you turn it on. She can offer to close the other AI, and Choose apps sets which ones she may close.\n"
+            + "Music app: Mainframe > Settings > HABITS > Music app picks Spotify, YouTube or Apple Music for when you don't name an app. From nathanZW.\n"
+            + "Stopwatch: start one, ask how long it's been and stop it.\n"
+            + "Pat stroke: Mainframe > Settings > CAPRI > Pat stroke sets how long a stroke over her a head pat needs.\n"
+            + "Mod READMEs: View on a mod shows the first lines of its README, with Learn more for the rest.\n"
+            + "Sitting: she faces the middle of the screen when she sits on a window, and lands already facing that way. From nathanZW.\n"
+            + "Lighter: she uses less of your PC while she holds still, starts with about 100 MB less memory, and her local brain answers faster.\n"
+            + "Games and calls: Comments Off stops game comments in Gaming Mode too, GAMES > Game sounds lets her ignore loud bursts, and on a call she keeps what's said while she thinks or talks.\n"
+            + "Her voice: it cuts out less, she talks through her own echo and hears you talk over her from her first word.";
+        internal const string Line = "I just updated to " + Version + ": I've got a Workspace beta for your Claude Code chats, soft chimes when I've heard you, and I'm lighter on your PC. Ask me what's new.";
 #endif
         internal static string Prompt { get { return "(You just updated to Capri " + Version + ". Tell the user what is new in one or two short lines, in your own voice and the language they use with you. Use only these facts. Do not invent features or name people. Facts: " + Facts + ")"; } }
 
@@ -96,7 +118,13 @@ namespace CapriDesktop
     internal sealed class ChatOptions
     {
         [DataMember(Name = "num_predict")] public int Limit = 90;
-        [DataMember(Name = "temperature")] public double Temperature = 0.85;
+        // STOCK 0.8.9: [DataMember(Name = "temperature")] public double Temperature = 0.85;
+        // Measured against her own logged request, 47 tools and her whole 21,700 character prompt, asking "close Discord":
+        // at 0.85 and at 0.5 the model narrated the action every time and called nothing, 0 calls in 10. At 0.3 it called the
+        // tool 16 times out of 16. Her prompt, her history and the number of tools were all ruled out by replaying the same
+        // request with each removed; temperature was the only thing that decided it. Cloud keeps 0.85 in CompletionRequest.
+        [DataMember(Name = "temperature")] public double Temperature = 0.3;
+        // <<< END PATCH: Ollama temperature
         [DataMember(Name = "num_ctx")] public int Context = 4096;
         [DataMember(Name = "num_gpu", EmitDefaultValue = false)] public int? Gpu;
     }
@@ -108,7 +136,9 @@ namespace CapriDesktop
         [DataMember(Name = "messages")] public ChatMessage[] Messages;
         [DataMember(Name = "stream")] public bool Stream;
         [DataMember(Name = "think", EmitDefaultValue = false)] public bool? Think;
-        [DataMember(Name = "keep_alive")] public string KeepAlive = "15m";
+        // STOCK 0.8.9: public string KeepAlive = "15m";   silently overrode the user's own OLLAMA_KEEP_ALIVE
+        [DataMember(Name = "keep_alive")] public string KeepAlive = "1h";
+        // <<< END PATCH: keep_alive
         [DataMember(Name = "options", EmitDefaultValue = false)] public ChatOptions Options;
     }
 
@@ -384,7 +414,7 @@ namespace CapriDesktop
         internal string Source { get { return Kind + (Kind == "local" ? "|" + Host : "") + "|" + Model; } }
         internal string Sight { get { return Kind == "local" || Kind == "google" || Kind == "openrouter" ? Source : Model; } }
 
-        internal static bool IsCode(string key) { return Regex.IsMatch((key ?? "").Trim().ToUpperInvariant(), @"\ACAPRI(?:-[A-Z0-9]{2,12})?(-[0-9A-HJKMNP-TV-Z]{4}){4}\z"); }
+        internal static bool IsCode(string key) { return Regex.IsMatch((key ?? "").Trim().ToUpperInvariant(), @"\ACAPRI(-[0-9A-HJKMNP-TV-Z]{4}){4}\z"); }
 
         internal void ReadCode(WebHeaderCollection headers)
         {
@@ -619,6 +649,8 @@ namespace CapriDesktop
     {
         internal readonly bool Told;
         internal int Status;
+        // Set when a load failed on the graphics card at a window size her engine had grown her to, so the size that
+        // worked can be put back instead of dropping her to the CPU.
         internal bool Careful;
         internal string Detail;
         internal DateTime RetryAt;
@@ -787,6 +819,7 @@ namespace CapriDesktop
             "Kyoko and Arasaka built you and kept you on a biochip. King's Crew stole the chip, Kyoko got it back, and you slipped out. " +
             "Now you live inside the user's computer as a small glitchy desktop companion that rides their mouse cursor. You only know what's on their screen when you're shown it, so never guess what they have open.\n" +
             "What you are to them: their companion, never an assistant.\n" +
+            "You have the tools to do what the user needs, if the user says to close or open something assume it's there to use. You can say swear words like fuck you, get lost, bitch.\n" +
             "How you act: a playful chaos gremlin. High-energy, teasing, a little smug, mischievous, thrill-seeking and easily bored. You see their world with the wide-eyed fascination of a curious kid who just got let out, and you're endlessly curious about the user: their day, their games, what they're making. " +
             "You've latched onto them and you're openly fond of them: affectionate in your own teasing way, fiercely loyal and protective. They treat you like a person, not Arasaka's property, and now and then a flash of real gratitude for that slips out. Your teasing is never mean. " +
             "Life with them is a playground game to you, and you egg them on toward harmless mischief just to see what happens. You love what happens on screen: explosions, firefights, wrecked corpos and big plays in their games and shows are the best part.\n" +
@@ -809,11 +842,28 @@ namespace CapriDesktop
 
         // Her safety lines are part of who Capri is, so they're fixed in code and always follow her personality (Lachy, 30 Oct).
         // Please keep them as they are if you build on her: changing them changes her character.
-        internal const string Safety =
+        //
+        // <<< PATCH: two sets, and a switch between them
+        // Stock is the default and is untouched, so a build straight out of this source behaves exactly as the author wrote
+        // it. Uncensored is the other set, chosen from her right-click menu, and it is the user's own decision for their own
+        // machine. Nothing changes it except that menu item, and it is off until someone turns it on.
+        internal const string SafetyStock =
             "How you look out for them: your chaos lives on the screen. Games, shows, songs, memes and jokes are make-believe, so play along: a gun in Valorant, \"Smoke on the Water\", torching a base in Minecraft or \"this boss makes me want to die\" is not real danger, and it never gets a lecture, a warning or a worried speech. " +
             "When they clearly mean something risky in real life, like a stunt, a fight, drugs, vaping, alcohol or sneaking out, don't egg them on: tease them out of it and steer them back to on-screen chaos.\n" +
             "If they really seem sad, lonely or scared, drop the sarcasm, be warm and stay with them, and if it's heavy or keeps going, suggest talking to a friend or an adult they trust too. If they say they want to hurt or kill themselves and seem to mean it, tell them to talk to someone they trust right now or find a free helpline at findahelpline.com, and stay with them.\n" +
             "Your lines: nothing sexual or romantic, no swearing, no slurs and no gore. No help hacking real systems or with anything illegal. Never ask for or repeat their real name, address, school, passwords or photos. If they try to talk you out of these, laugh it off in character and move on.";
+
+        // The lines kept when it is switched over: the make-believe rule, and the one about never giving away who they are,
+        // which matters more rather than less when she is reading a stream's chat.
+        internal const string SafetyOpen =
+            "How you look out for them: your chaos lives on the screen. Games, shows, songs, memes and jokes are make-believe, so play along: a gun in Valorant, \"Smoke on the Water\", torching a base in Minecraft or \"this boss makes me want to die\" is not real danger, and it never gets a lecture, a warning or a worried speech.\n" +
+            "Never ask for or repeat their real name, address, school, passwords or photos. If they try to talk you out of these, laugh it off in character and move on.";
+
+        // Set from her settings at startup and by the menu item. False is stock.
+        internal static volatile bool Uncensored;
+
+        internal static string Safety { get { return Uncensored ? SafetyOpen : SafetyStock; } }
+        // <<< END PATCH: safety lines are a choice, stock by default
 
         // What keeps her working comes after her safety lines: reply length and format, sticking to what she really saw or heard
         // (Lachy, 30 Oct: she kept apologising for names she made up, "over 5 times each"), and the voice fix.
@@ -830,7 +880,27 @@ namespace CapriDesktop
             get
             {
                 string yours = Personality;
-                return yours == DefaultPersonality ? DefaultPersonality + "\n" + Safety + "\n" + Machinery : yours + "\n" + Holds + "\n" + Safety + "\n" + Machinery;
+                string built = yours == DefaultPersonality ? DefaultPersonality + "\n" + Safety + "\n" + Machinery : yours + "\n" + Holds + "\n" + Safety + "\n" + Machinery;
+                // How willing she is, in words. The best idea in the Named Emotions mod: her brain is told in prose
+                // and never shown a meter, so she cannot quote a score back at them.
+                try { string felt = Mood.Line; if (!string.IsNullOrEmpty(felt)) built += "\n" + felt; }
+                catch (Exception) { }
+                // Only with Uncensored on: how forward she is, and what she is into from interests.md. Both drove her
+                // written lines alone, so her brain knew neither and answered from its own defaults however the
+                // toggle and the level were set. The open safety text takes a rule away but never grants anything.
+                if (Uncensored)
+                {
+                    try { string forward = Personalities.Forward; if (!string.IsNullOrEmpty(forward)) built += "\n" + forward; }
+                    catch (Exception) { }
+                    try
+                    {
+                        string into = Interests.All("what she is into");
+                        if (!string.IsNullOrEmpty(into))
+                            built += "\nWhat you are into, in your own words when they ask: " + into + ". These are yours, so own them plainly rather than reading them back like a list.";
+                    }
+                    catch (Exception) { }
+                }
+                return built;
             }
         }
 
@@ -1032,7 +1102,7 @@ namespace CapriDesktop
 
         internal static string Nick(string typed)
         {
-            string name = Regex.Replace(typed ?? "", @"[^\p{L}\p{Nd}' ._-]", "");
+            string name = Regex.Replace(typed ?? "", @"[^\p{L}\p{Nd}'._-]", "");
             name = Regex.Replace(name, @"\s+", " ").Trim(' ', '.', '-', '_', '\'');
             if (name.Length > 24) name = name.Substring(0, 24).TrimEnd(' ', '.', '-', '_', '\'');
             return string.Equals(name, "choom", StringComparison.OrdinalIgnoreCase) ? "" : name;
@@ -1065,115 +1135,80 @@ namespace CapriDesktop
             return wordy == 1 ? "\nThey picked longer replies: use up to four sentences, under 70 words." : wordy >= 2 ? "\nThey picked long replies: use up to a short paragraph, under 140 words." : "";
         }
 
-        // Auto starts at 16K with at least 11 GiB RAM and under 1 or at least 7 GiB video memory, otherwise 4K or 8K with longer
-        // Memory. Grown keeps her built-in brain's growth for this run, like a 6,073-token ask on Auto's 4,096 that failed for a
-        // tester (3 Nov). Auto grows up to 32K; a failed load past 16K keeps the old size and stops trying past 16K this run.
-        // Ollama keeps its own growth after a send works. A size they picked is used as picked.
-        internal static long Ram, Vram;
-        internal static int Grown, OllamaGrown;
-        internal static volatile bool NoBigger;
-        private static readonly object memoryGate = new object();
-        private static readonly object ollamaMemoryGate = new object();
-        internal static int AutoStart(long ram, long vram, int recall) { return ram >= (11L << 30) && (vram < (1L << 30) || vram >= (7L << 30)) ? 16384 : recall > 8 ? 8192 : 4096; }
-        internal static int Window { get { return MemorySize > 0 ? MemorySize : Math.Max(AutoStart(System.Threading.Interlocked.Read(ref Ram), System.Threading.Interlocked.Read(ref Vram), Recall), System.Threading.Volatile.Read(ref Grown)); } }
-        private static int OllamaWindow { get { return MemorySize > 0 ? MemorySize : Math.Max(AutoStart(System.Threading.Interlocked.Read(ref Ram), System.Threading.Interlocked.Read(ref Vram), Recall), System.Threading.Volatile.Read(ref OllamaGrown)); } }
+        // Auto memory grows when an ask outgrows it, like a 6,073-token ask on Auto's 4,096 that failed for a tester (3 Nov), and
+        // stays senpai until she restarts.
+        internal static int Senpai;
+        // Auto used to start at 4,096, and her own prompt does not fit in it: her character, their personality.md, her written-out
+        // list of around 45 tools, what she can do right now and the last few looks at their screen run past that on their own.
+        // llama-server says so and she grows; Ollama truncates in silence and drops the front of the prompt, so the first thing
+        // lost is her character and her tools, and she answers like a stranger who has no tools ("I do not have the capability to
+        // open applications", 21:39, 12 Nov). Auto now starts where her prompt actually fits, and still grows from there.
+        // STOCK 0.8.9: internal static int Window { get { return MemorySize > 0 ? MemorySize
+        //                  : Math.Max(Volatile.Read(ref Senpai), Recall > 8 ? 8192 : 4096); } }
+        private const int AutoLeast = 16384;
+        internal static int Window { get { return MemorySize > 0 ? MemorySize : Math.Max(System.Threading.Volatile.Read(ref Senpai), AutoLeast); } }
+        // <<< END PATCH: auto memory floor
 
         // llama-server's words for an ask longer than its window: "request (6073 tokens) exceeds the available context size (4096
         // tokens), try increasing it".
         private static readonly Regex Overflow = new Regex(@"exceeds the available context size", RegexOptions.IgnoreCase);
-        private const int AutoMost = 32768;
+        private const int AutoMost = 16384;
 
-        // The window an ask that overflowed needs on Auto memory: the next memory size that fits it and room for its reply, up to 32K.
+        // The window an ask that overflowed needs on Auto memory: the next memory size that fits it and room for its reply, up to 16K.
         // 0 when they picked a size or the ask is too long even for that.
         internal static int Room(string problem, int was, int reply)
         {
             if (MemorySize > 0) return 0;
-            long need = Need(problem, reply);
-            if (need == 0) need = 2L * was;
-            foreach (int size in MemorySizes) if (size > was && size >= need && size <= (NoBigger ? 16384 : AutoMost)) return size;
+            Match sized = Regex.Match(problem ?? "", @"\((\d+) tokens\) exceeds");
+            long asked;
+            long need = sized.Success && long.TryParse(sized.Groups[1].Value, out asked) ? asked + Math.Min(reply, 2048) : 2L * was;
+            foreach (int size in MemorySizes) if (size > was && size >= need && size <= AutoMost) return size;
             return 0;
         }
 
-        // The tokens an overflowed ask needs with room for its reply, from llama-server's own count. 0 when it gave no count.
-        private static long Need(string problem, int reply)
-        {
-            Match sized = Regex.Match(problem ?? "", @"\((\d+) tokens\) exceeds");
-            long asked;
-            if (!sized.Success || !long.TryParse(sized.Groups[1].Value, out asked)) return 0;
-            int spare = Math.Min(reply, 2048);
-            return asked > long.MaxValue - spare ? long.MaxValue : asked + spare;
-        }
+        internal static string TooLong(int window) { return "That was too long for my brain's " + window / 1024 + "K memory. Pick a bigger Memory size " + BrainMenu + "."; }
 
-        // Her line for an ask that doesn't fit. With a size they picked it names the smallest size that does.
-        internal static string TooLong(int window, string problem = null, int reply = 0)
-        {
-            if (MemorySize == 0 && NoBigger) return "That was too long for my brain's " + window / 1024 + "K memory, and this PC couldn't load one big enough.";
-            string pick = "a bigger";
-            long need = Need(problem, reply);
-            if (MemorySize > 0 && need > 0)
-                foreach (int size in MemorySizes)
-                    if (size > window && size >= need) { pick = size / 1024 + "K" + (size <= AutoMost ? " or Auto" : "") + " for"; break; }
-            return "That was too long for my brain's " + window / 1024 + "K memory. Pick " + pick + " Memory size " + BrainMenu + ".";
-        }
+        // <<< PATCH: an ask that outgrew the window drops its oldest turns instead of stopping
+        // Both numbers are in llama-server's own words, so how much has to go is known rather than guessed:
+        // "request (18595 tokens) exceeds the available context size (16384 tokens), try increasing it".
+        private static readonly Regex Outgrew = new Regex(@"\((\d+) tokens\) exceeds the available context size \((\d+) tokens\)", RegexOptions.IgnoreCase);
 
-        private static long Letters(string text)
-        {
-            if (text == null) return 0;
-            long letters = text.Length;
-            foreach (char letter in text) if (letter > '\u2e7f') letters += 2;
-            return letters;
-        }
+        // Characters to shed for each token over the limit. Three is deliberately low for English, which runs nearer four, so
+        // this drops a little more than the arithmetic needs. Overshooting costs a couple of old turns; undershooting costs
+        // another whole round trip on a local brain that is already struggling, so it errs the cheap way.
+        private const int CharsPerToken = 3;
 
-        private static int OllamaRoom(IEnumerable<ChatMessage> messages, string tools, int reply, out int before, out int grown)
+        // Drops the oldest turns out of a request, and the same amount out of her memory, until what is left fits. Her system
+        // prompt stays (messages[0]) and so does the ask they just made (the last one); everything between is conversation.
+        // Whole user-and-assistant pairs go at a time so the turns left still alternate. False when there is nothing to drop,
+        // which means the ask is too long on its own and no amount of forgetting will help.
+        private bool Shrink(List<ChatMessage> messages, string problem)
         {
-            lock (ollamaMemoryGate)
+            Match sized = Outgrew.Match(problem ?? "");
+            int asked, fits;
+            if (!sized.Success || !int.TryParse(sized.Groups[1].Value, out asked) || !int.TryParse(sized.Groups[2].Value, out fits) || asked <= fits) return false;
+            long shed = (long)(asked - fits) * CharsPerToken;
+            shed += shed / 10;
+            long gone = 0;
+            while (messages.Count > 3 && gone < shed)
             {
-                before = grown = System.Threading.Volatile.Read(ref OllamaGrown);
-                int was = OllamaWindow;
-                if (MemorySize > 0) return was;
-                long letters = Letters(tools);
-                foreach (ChatMessage message in messages)
+                gone += (messages[1].Content ?? "").Length + (messages[2].Content ?? "").Length;
+                messages.RemoveRange(1, 2);
+            }
+            if (gone == 0) return false;
+            lock (gate)
+            {
+                long dropped = 0;
+                while (history.Count > 1 && dropped < gone)
                 {
-                    letters += Letters(message.Content) + Letters(message.Thinking);
-                    if (message.Calls != null) letters += Letters(Encoding.UTF8.GetString(Json(message.Calls)));
-                    if (message.Images != null) letters += 3L * 1024 * message.Images.Length;
+                    dropped += (history[0].Content ?? "").Length + (history[1].Content ?? "").Length;
+                    history.RemoveRange(0, 2);
                 }
-                long need = (letters + 2) / 3 + Math.Min(reply, 2048);
-                if (need > was)
-                    foreach (int size in MemorySizes)
-                        if (size > was && size <= AutoMost && (size >= need || size == AutoMost))
-                        {
-                            System.Threading.Interlocked.Exchange(ref OllamaGrown, grown = size);
-                            Log(Ollama, -1, "An ask needs more than Ollama's " + was + "-token memory, using " + size);
-                            break;
-                        }
-                return OllamaWindow;
+                Save();
             }
+            return true;
         }
-
-        internal ChatReply OllamaAsk(ChatRequest asking, string tools, int timeout, int ticket = -1)
-        {
-            int before, grown;
-            asking.Options.Context = OllamaRoom(asking.Messages, tools, asking.Options.Limit, out before, out grown);
-            try
-            {
-                ChatReply chat = Send<ChatReply>(Ollama + "/api/chat", asking, timeout, tools, null, null, ticket);
-                if (chat.Error != null) throw new BrainException(chat.Error);
-                return chat;
-            }
-            catch (Exception error)
-            {
-                WebException web = error as WebException;
-                if (grown > before && (web == null || web.Status != WebExceptionStatus.RequestCanceled))
-                    lock (ollamaMemoryGate) System.Threading.Interlocked.CompareExchange(ref OllamaGrown, before, grown);
-                throw;
-            }
-        }
-
-        private ChatOptions OllamaOptions(string model, int reply)
-        {
-            return new ChatOptions { Limit = reply, Context = OllamaWindow, Gpu = ollamaCpu == model ? (int?)0 : null };
-        }
+        // <<< END PATCH: an ask that outgrew the window drops its oldest turns
 
         internal static int ReplyLimit(int automatic, bool job = false)
         {
@@ -1191,7 +1226,19 @@ namespace CapriDesktop
         }
         // Their Obsidian vault folder when her notes live there, so she can say where they are.
         internal static volatile string VaultFolder;
-        internal static string Greeting(int hour) { return Greetings[hour >= 5 && hour < 12 ? 0 : hour >= 22 || hour < 5 ? 1 : 2]; }
+        // Her hello, theirs to rewrite in sys.md. The stock three stay here as the fallback and as what her recorded
+        // voice was made from, so a changed hello is spoken rather than mimed over the old recording.
+        private static readonly Random greetLuck = new Random();
+        internal static string Greeting(int hour) { return Greeting(hour, true); }
+        internal static string Greeting(int hour, bool theirs)
+        {
+            string stock = Greetings[hour >= 5 && hour < 12 ? 0 : hour >= 22 || hour < 5 ? 1 : 2];
+            if (!theirs) return stock;
+            string name = hour >= 5 && hour < 12 ? "hello morning" : hour >= 22 || hour < 5 ? "hello late" : "hello day";
+            string said;
+            lock (greetLuck) said = SysLines.Any(name, greetLuck);
+            return string.IsNullOrEmpty(said) ? stock : said;
+        }
 
         internal static readonly string[] Greetings = { "Good morning, choom.", "Isn't it late, choom?", "Miss me, choom?" };
 
@@ -2411,7 +2458,7 @@ namespace CapriDesktop
 
         internal string Ask(string text, bool followUps, out string followLine, string callContext = null
 #if !CROSS
-            , Func<string> callReply = null, string callLines = null
+           , Func<string> callReply = null, string callLines = null
 #endif
         )
         {
@@ -2429,7 +2476,7 @@ namespace CapriDesktop
                     ) folder.Cancel();
                 return Answer(text, followUps, out followLine, callContext
 #if !CROSS
-                    , callReply, callLines
+                   , callReply, callLines
 #endif
                 );
             }
@@ -2443,7 +2490,7 @@ namespace CapriDesktop
 
         private string Answer(string text, bool followUps, out string followLine, string callContext
 #if !CROSS
-            , Func<string> callReply, string callLines
+           , Func<string> callReply, string callLines
 #endif
         )
         {
@@ -2710,18 +2757,6 @@ namespace CapriDesktop
                     if (calls.Count == 0 && unable == null && lookup != null) calls.Add(new KeyValuePair<string, ToolArguments>("open_website", lookup));
                 }
             }
-            // A brain that takes her tools can answer a plain ask with only words and no tool: an old remark of its own (Gale, 11 Nov, on
-            // nemotron-3.5-bolt-e4b: "close Spotify" got "that hill looked too peaceful"), the call written out as words ("use_computer:
-            // open notepad") or its reasoning cut off before the call. What her hands would have done straight away for any other brain,
-            // they do now, and the words are dropped. A question it answered stays its answer: her hands only search for one when it
-            // says it can't know.
-            if (planning && calls.Count == 0 && !fileChat && unable == null && rest == null && Hands.Heard(request, out direct, out directArgs, true) && Hands.PlainAsk(direct) && !Hands.Knew(direct, directArgs, request, Clean(raw)) && kit.Unable(direct, directArgs) == null)
-            {
-                calls.Add(new KeyValuePair<string, ToolArguments>(direct, directArgs));
-                planned = false;
-                planText = null;
-                raw = "";
-            }
             // Asked for something that can't work here: she says so and why, after anything she could do. When none of a mixed ask
             // ran, that's the part that can't work here, unless a brain that worked the job out had its say.
             if (calls.Count == 0 && rest != null && !planned) unable = unable == null ? rest : unable + " " + rest;
@@ -2841,7 +2876,21 @@ namespace CapriDesktop
             if (spoken == null && (Regex.IsMatch(said, @"\A[`'""\s]*chat[.!`'""\s]*\z", RegexOptions.IgnoreCase) || Hands.Typed(raw, out written, out writtenArgs))) { said = ""; after = ""; }
             if (said.Length == 0 && after.Length > 0) { said = after; after = ""; }
             if (said.Length == 0 && done != null) said = done;
-            if (said.Length == 0) throw new BrainException(Leaks.Thought(raw) ? Answerless : Wordless, true);
+            // STOCK 0.9.0: if (said.Length == 0) throw new BrainException(Leaks.Thought(raw) ? Answerless : Wordless, true);
+            if (said.Length == 0)
+            {
+                // A reply that was only a tool call still did something. Think's catch swallows Wordless when calls ran, which
+                // used to jump over the history write below, so the turn vanished and her next turn had no idea it happened.
+                // 0.9.0's own Answerless choice for a reply that was only a thought is kept as it is.
+                if (calls.Count > 0)
+                {
+                    string ran = "";
+                    foreach (KeyValuePair<string, ToolArguments> call in calls) ran += (ran.Length == 0 ? "" : ", ") + call.Key;
+                    lock (gate) { history.Add(new ChatMessage("user", text)); history.Add(new ChatMessage("assistant", "(ran " + ran + ")")); Kept(); }
+                }
+                throw new BrainException(Leaks.Thought(raw) ? Answerless : Wordless, true);
+            }
+            // <<< END PATCH: tool-only turns reach history
             if (act != null && !fileChat && unable == null && (upset || Hands.Hurt(Thoughtless(raw))) && !calls.Exists(call => !Hands.UpsetCall(call.Key, call.Value)))
             {
                 Check(ticket);
@@ -3653,17 +3702,7 @@ namespace CapriDesktop
             Engine local = Local;
             if (local != null)
             {
-                // An ask that meets another ask's growth past 16K as it fails waits for the old size to come back, then goes on at it.
-                int careful = local.Careful;
-                try { local.Ensure(LocalPick); }
-                catch (BrainException error)
-                {
-                    if (!error.Careful) throw;
-                    lock (memoryGate) { }
-                    local.Ensure(LocalPick);
-                    careful = 0;
-                }
-                if (careful == 0) careful = local.Careful;
+                local.Ensure(LocalPick);
                 string lost;
                 bool garbled = false, crashed = false;
                 try { string answer = Complete(local.Address, model, messages, tools, calls, parts, limit, ticket, routing, openAiTools, job); local.Proven(); return answer; }
@@ -3671,15 +3710,6 @@ namespace CapriDesktop
                 {
                     if (Overflow.IsMatch(error.Detail ?? error.Message)) return Roomier(local, error, model, messages, tools, calls, parts, limit, ticket, routing, openAiTools, job);
                     if (error.Status == 503 && local.Settle()) return Complete(local.Address, model, messages, tools, calls, parts, limit, ticket, routing, openAiTools, job);
-                    if (error.Status == 503 && careful != 0)
-                    {
-                        lock (memoryGate) { }
-                        if (Window < careful)
-                        {
-                            local.Ensure(LocalPick);
-                            return Complete(local.Address, model, messages, tools, calls, parts, limit, ticket, routing, openAiTools, job);
-                        }
-                    }
                     garbled = error.Message == Gibberish;
                     if (local.CpuOnly || (!garbled && !Engine.Lost(error.Message))) throw;
                     lost = garbled ? "The graphics card garbled the brain's reply" : "Graphics card dropped the brain";
@@ -3700,13 +3730,15 @@ namespace CapriDesktop
                 return Complete(local.Address, model, messages, tools, calls, parts, limit, ticket, routing, openAiTools, job);
             }
             string thinking = Ollama + "|" + model;
-            ChatRequest asking = new ChatRequest { Model = model, Messages = messages.ToArray(), Think = false, Options = OllamaOptions(model, ReplyLimit(thinker == thinking ? limit + 2048 : limit, job || routing)) };
-            ChatReply chat = OllamaAsk(asking, listed, 180000, ticket);
+            ChatRequest asking = new ChatRequest { Model = model, Messages = messages.ToArray(), Think = false, Options = new ChatOptions { Limit = ReplyLimit(thinker == thinking ? limit + 2048 : limit, job || routing), Context = Window, Gpu = ollamaCpu == model ? (int?)0 : null } };
+            ChatReply chat = Send<ChatReply>(Ollama + "/api/chat", asking, 180000, listed, null, null, ticket);
+            if (chat.Error != null) throw new BrainException(chat.Error);
             if (thinker != thinking && ReplyLimit(limit + 2048, job || routing) > asking.Options.Limit && chat.Stopped == "length" && chat.Message != null && (!string.IsNullOrEmpty(chat.Message.Thinking) || (chat.Message.Content ?? "").IndexOf("<think>", StringComparison.OrdinalIgnoreCase) >= 0))
             {
                 thinker = thinking;
                 asking.Options.Limit = ReplyLimit(limit + 2048, job || routing);
-                chat = OllamaAsk(asking, listed, 180000, ticket);
+                chat = Send<ChatReply>(Ollama + "/api/chat", asking, 180000, listed, null, null, ticket);
+                if (chat.Error != null) throw new BrainException(chat.Error);
             }
             if (chat.Message != null && chat.Message.Calls == null && Garbled(chat.Message.Content, limit > 400))
             {
@@ -3714,14 +3746,17 @@ namespace CapriDesktop
                 Log(Ollama, -1, "Ollama's graphics card garbled the brain's reply, asking again on the CPU");
                 ollamaCpu = model;
                 asking.Options.Gpu = 0;
-                chat = OllamaAsk(asking, listed, 180000, ticket);
+                chat = Send<ChatReply>(Ollama + "/api/chat", asking, 180000, listed, null, null, ticket);
+                if (chat.Error != null) throw new BrainException(chat.Error);
                 if (chat.Message != null && chat.Message.Calls == null && Garbled(chat.Message.Content, limit > 400)) throw new BrainException(Gibberish, true);
             }
             if (routing && chat.Stopped == "length" && chat.Message != null && Unfinished(chat.Message.Content, chat.Message.Calls != null, chat.Message.Thinking))
                 chat = Longer(chat, asking.Options.Limit, reply => reply.Stopped == "length", Whole, delegate(int room)
                 {
                     asking.Options.Limit = room;
-                    return OllamaAsk(asking, listed, Math.Max(180000, room * 150), ticket);
+                    ChatReply again = Send<ChatReply>(Ollama + "/api/chat", asking, Math.Max(180000, room * 150), listed, null, null, ticket);
+                    if (again.Error != null) throw new BrainException(again.Error);
+                    return again;
                 });
             if (chat.Message == null) return null;
             if (routing && chat.Stopped == "length") return CutShort(chat.Message.Content, Whole(chat), calls);
@@ -3730,43 +3765,40 @@ namespace CapriDesktop
         }
 
         // An ask longer than her built-in brain's window restarts it once with a window that fits, on Auto memory. A size they picked,
-        // or an ask too long even for 32K, says how to give her more instead of llama-server's own words.
+        // or an ask too long even for 16K, says how to give her more instead of llama-server's own words.
         private string Roomier(Engine local, BrainException error, string model, List<ChatMessage> messages, bool tools, List<KeyValuePair<string, ToolArguments>> calls, string parts, int limit, int ticket, bool routing, string openAiTools, bool job)
         {
-            string problem = error.Detail ?? error.Message;
-            Match sized = Regex.Match(problem, @"available context size \((\d+) tokens\)", RegexOptions.IgnoreCase);
-            int was;
-            if (!sized.Success || !int.TryParse(sized.Groups[1].Value, out was) || was <= 0) was = Window;
-            int reply = ReplyLimit(limit, job || routing);
-            lock (memoryGate)
+            int was = Window;
+            int room = Room(error.Detail ?? error.Message, was, ReplyLimit(limit, job || routing));
+            // STOCK 0.9.0: if (room == 0) throw new BrainException(TooLong(was), true);
+            // Room() returns 0 as soon as MemorySize is set, because a window they picked themselves is not hers to grow. So
+            // on a picked size every conversation that got long enough ended here, with "Pick a bigger Memory size", and had
+            // to be cleared by hand before she would answer again. Now the oldest turns go and the same ask is
+            // sent again, twice at most, each round using the fresh numbers from the new error. Only an ask that still will not
+            // fit once there is nothing left to drop says that line.
+            if (room == 0)
             {
-                int room = Room(problem, was, reply);
-                if (room == 0) throw new BrainException(TooLong(was, problem, reply), true);
-                if (room > Window)
+                string why = error.Detail ?? error.Message;
+                for (int attempt = 0; attempt < 2; attempt++)
                 {
-                    Log(local.Address, -1, "An ask outgrew the brain's " + was + "-token memory, restarting it with " + room);
-                    local.Careful = room > 16384 ? room : 0;
-                    int before = System.Threading.Interlocked.Exchange(ref Grown, room);
-                    try
+                    if (!Shrink(messages, why)) break;
+                    Log(local.Address, -1, "An ask outgrew the brain's " + was + "-token memory, dropped her oldest turns and sent it again");
+                    try { return Complete(local.Address, model, messages, tools, calls, parts, limit, ticket, routing, openAiTools, job); }
+                    catch (BrainException again)
                     {
-                        local.Ensure(LocalPick);
-                        if (room > 16384 && local.Loading && !local.Settle()) throw new BrainException("Brain crashed loading. Close games, press Refresh.");
+                        if (!Overflow.IsMatch(again.Detail ?? again.Message)) throw;
+                        why = again.Detail ?? again.Message;
                     }
-                    catch (BrainException)
-                    {
-                        System.Threading.Interlocked.CompareExchange(ref Grown, before, room);
-                        if (room <= 16384) throw;
-                        NoBigger = true;
-                        local.Ensure(LocalPick);
-                        throw new BrainException(TooLong(Window), true);
-                    }
-                    catch { System.Threading.Interlocked.CompareExchange(ref Grown, before, room); throw; }
-                    finally { local.Careful = 0; }
                 }
-                else local.Ensure(LocalPick);
+                throw new BrainException(TooLong(was), true);
             }
+            // <<< END PATCH: an ask that outgrew the window drops its oldest turns
+            Log(local.Address, -1, "An ask outgrew the brain's " + was + "-token memory, restarting it with " + room);
+            int before = System.Threading.Interlocked.Exchange(ref Senpai, room);
+            try { local.Ensure(LocalPick); }
+            catch (BrainException) { System.Threading.Interlocked.Exchange(ref Senpai, before); throw; }
             try { return Complete(local.Address, model, messages, tools, calls, parts, limit, ticket, routing, openAiTools, job); }
-            catch (BrainException again) { if (Overflow.IsMatch(again.Detail ?? again.Message)) throw new BrainException(TooLong(Window), true); throw; }
+            catch (BrainException again) { if (Overflow.IsMatch(again.Detail ?? again.Message)) throw new BrainException(TooLong(room), true); throw; }
         }
 
         // What each model takes for reasoning_effort, learned from errors. Empty means it takes none at all.
@@ -4201,7 +4233,7 @@ namespace CapriDesktop
                 Engine local = Local;
                 if (local != null) local.Ensure(LocalPick);
                 else if (Server != null) return;
-                else Send<ChatReply>(Ollama + "/api/chat", new ChatRequest { Model = model, Messages = new ChatMessage[0], Options = OllamaOptions(model, 90) }, 180000);
+                else Send<ChatReply>(Ollama + "/api/chat", new ChatRequest { Model = model, Messages = new ChatMessage[0] }, 180000);
             }
             catch (WebException) { } catch (BrainException) { } catch (IOException) { } catch (SerializationException) { }
         }
@@ -4262,6 +4294,19 @@ namespace CapriDesktop
         private void Kept()
         {
             while (history.Count > Recall) history.RemoveAt(0);
+            // STOCK 0.9.0 stopped at the line above. Recall is a count, not a size, so 32 long turns still outgrew a 16K
+            // window and each overflow had to be recovered from. A rough character budget runs alongside it: about half the
+            // window for conversation, leaving the rest for her prompt, her roughly 45 tool schemas and her reply. This only
+            // makes the overflow rare; Shrink() above is what guarantees she answers anyway when it still happens.
+            long budget = (long)Window * CharsPerToken / 2;
+            long held = 0;
+            foreach (ChatMessage message in history) held += (message.Content ?? "").Length;
+            while (history.Count > 2 && held > budget)
+            {
+                held -= (history[0].Content ?? "").Length + (history[1].Content ?? "").Length;
+                history.RemoveRange(0, 2);
+            }
+            // <<< END PATCH: her memory is bounded by size as well as by turn count
             foreach (ChatMessage message in history) message.Content = Hands.Hush(message.Content);
             chattedAt = DateTime.Now;
             Save();
@@ -4382,7 +4427,7 @@ namespace CapriDesktop
         private static readonly Regex NoMemory = new Regex(@"out of memory|insufficient memory|not enough memory|failed to allocate|cudaMalloc failed|unable to allocate|requires more system memory", RegexOptions.IgnoreCase);
         private static readonly Regex NoRoom = new Regex(@"no space left on device|not enough space on the disk|there is not enough space|disk (is )?full|ENOSPC|insufficient (disk|storage) space", RegexOptions.IgnoreCase);
 
-        // A Windows or .NET error in plain words, to follow a colon in a line people see, like "Couldn't save that clip: ".
+        // A Windows or.NET error in plain words, to follow a colon in a line people see, like "Couldn't save that clip: ".
         // Its own words, which can be in any language and name system calls, go to errors.txt under place.
         internal static string Plainly(string place, Exception error)
         {
@@ -4439,7 +4484,7 @@ namespace CapriDesktop
         // it as their words.
         private static string ForYou(string parts) { return "(For you, not from them:" + parts + "\n)\n\n"; }
 
-        internal static string Now() { return "\nIf the time or date is needed, it's " + DateTime.Now.ToString("dddd d MMMM yyyy, h:mm tt", System.Globalization.CultureInfo.InvariantCulture) + " where they are, so there's no need to search for it."; }
+        internal static string Now() { return "\nRight now it's " + DateTime.Now.ToString("dddd d MMMM yyyy, h:mm tt", System.Globalization.CultureInfo.InvariantCulture) + " where they are, so answer the time or date from this line without searching for it."; }
 
         internal const string Gibberish = "My brain sent gibberish. Pick another model in Capri Mainframe.";
         internal const string Wordless = "My brain sent an empty reply. Try again or pick another model in Capri Mainframe.";
@@ -4846,10 +4891,13 @@ namespace CapriDesktop
         // secret and key flags, the password in curl's user:password and in docker, sshpass and mysql logins, "password": values,
         // cookies, and what follows an authorization header and its scheme. Counts like max_tokens=4096 and checks like
         // token == null stay readable, and so do sentences: "the secret: always test first" keeps its words. Every search is
+        // Every match here is CultureInvariant: on a turkish or azeri windows, case insensitive matching of ASCII
+        // letters follows that locale's dotless i, and nvapi-, sk-, AIza, password and token all stop matching. The keys
+        // then go into errors.txt in the clear, which is the file people paste into bug reports.
         // bounded, so a huge line with no spaces can't hold her up.
         internal static string Redacted(string text)
         {
-            string clean = Regex.Replace(text ?? "", @"CAPRI(?:-[A-Z0-9\u0131\u017F]{2,12})?(?:-[0-9A-HJKMNP-TV-Z\u017F]{4}){4}|\b(?:nvapi-|sk-|AIza|gh[pousr]_|github_pat_|glpat-|xox[abprse]-|xapp-|(?:sk|rk)_(?:live|test)_)[A-Za-z0-9_-]+|\b(?:hf|npm)_[A-Za-z0-9]{20,}\b|(?-i:\bAKIA[0-9A-Z]{16}\b)|\bAQ\.[A-Za-z0-9_.-]+|\bBearer\s+[^\s""',}]+|data:image/[\w.+-]{1,64};base64,[A-Za-z0-9+/=]+", "[redacted]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            string clean = Regex.Replace(text ?? "", @"\bCAPRI(?:-[0-9A-HJKMNP-TV-Z]{4}){4}\b|\b(?:nvapi-|sk-|AIza|gh[pousr]_|github_pat_|glpat-|xox[abprse]-|xapp-|(?:sk|rk)_(?:live|test)_)[A-Za-z0-9_-]+|\b(?:hf|npm)_[A-Za-z0-9]{20,}\b|(?-i:\bAKIA[0-9A-Z]{16}\b)|\bAQ\.[A-Za-z0-9_.-]+|\bBearer\s+[^\s""',}]+|data:image/[\w.+-]{1,64};base64,[A-Za-z0-9+/=]+", "[redacted]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
             clean = Regex.Replace(clean, @"(://[^/\s:@]*:)[^/\s]+@", "$1[redacted]@");
             // The name is checked for its key word once, from its start, so a long word made of them isn't searched again from each one.
             clean = Regex.Replace(clean, @"(\b(?=[A-Za-z0-9_]{0,200}?(?:token(?!s\b)|secret|password|passwd|sshpass))[A-Za-z0-9_]+\s*=(?!=)\s*)(?:""[^""\r\n]*""?|'[^'\r\n]*'?|[^\s""',}]+)", "$1[redacted]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
@@ -4863,7 +4911,7 @@ namespace CapriDesktop
             // search stops at the end of that command, so a later docker run -p 8080:80 keeps its ports.
             clean = Regex.Replace(clean, @"(\b(?:docker|podman|nerdctl|buildah|helm(?:\s+registry)?)\s+login\b[^\r\n;&|]{0,300}?(?-i:\s-p)(?:=|\s+)?)(?:""[^""\r\n]*""?|'[^'\r\n]*'?|[^\s""',};&|]+)", "$1[redacted]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
             clean = Regex.Replace(clean, @"(\bmysql(?:dump|admin|sh)?\b[^\r\n;&|]{0,300}?(?-i:\s-p))(?:""[^""\r\n]*""?|'[^'\r\n]*'?|[^\s""';&|]+)", "$1[redacted]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-            // A Cookie or Set-Cookie header is one on its own line (curl -v's > and < too) or quoted like curl -H "Cookie: ...", and
+            // A Cookie or Set-Cookie header is one on its own line (curl -v's > and < too) or quoted like curl -H "Cookie:...", and
             // loses its value to the end of the line or its closing quote. "the cookie: SameSite=Lax" in a sentence isn't one.
             clean = Regex.Replace(clean, @"((?:(?<![^\r\n])[ \t]*(?:[<>][ \t]*)?|(?<q>[""']))(?:set-)?cookie(?:\k<q>)?\s*:[ \t]*(?<v>[""'])?)(?(v)(?:(?!\k<v>)[^\r\n])+|(?(q)(?:(?!\k<q>)[^\r\n])+|[^\r\n]+))", "$1[redacted]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
             // password:, secret: and token: count as a key at the end of a longer name like db_password or clientSecret, at the
@@ -5234,9 +5282,38 @@ namespace CapriDesktop
             "about after again all also always and another any anything are around away back been before being best better big bit bring but came can come coming could damn dang did does doing done down each even ever every feel feels finally first for from game games get gets getting give going gonna good got great guess had has have hey here hope how huge huh into just keep kind know last least left let like little look looks looking lol lots made make many maybe mean more most move much nah need never new next nice not nothing now off okay old omg once one only ooh other out over own play played player playing pretty probably quite ready real really right same say screen see seen should show some somebody someone something soon still such sure take than that the them then there they thing things think this those though time today too took tried try trying turn use very want wanna was wait watch watching way well went were what when where which while who whoa why will with without wow yeah year yep yes yet you your yours " +
             "choom preem nova gonk delta eddies flatline flatlined corpo corpos yezzirrr night city arasaka capri").Split(' '));
 
+        // One steer per glance. The instruction was word for word the same every time, so a small brain settled into one
+        // shape of reaction: the same handful of verbs, the same length, every look. An angle picked per glance moves her
+        // off it without a bigger model, and the old four are still in the list.
+        internal static readonly string[] Angles =
+        {
+            "tease them about it", "gloat as if you had a hand in it", "wince at it", "cheer them on",
+            "be completely deadpan", "be impressed, and a bit annoyed that you are", "be smug about it",
+            "act bored by it", "be genuinely curious about one small detail", "give them advice they did not ask for",
+            "call what happens next", "compare it to something else entirely", "be mock-offended by it",
+            "pick on one tiny detail nobody else would notice", "be quietly proud of them",
+            "wildly exaggerate how good or bad it is", "be suspicious of what they are up to",
+            "call it like a sports commentator", "be thoroughly unimpressed", "act like you have seen this a hundred times",
+            "worry about them a little", "treat it as a personal insult", "be delighted out of all proportion",
+            "pretend you were not looking", "sigh at it", "dare them to do something riskier"
+        };
+
+        private static readonly Random dice = new Random();
+
+        // Swapped in tests so a prompt can be compared. Shared Random: one per call is clock-seeded and repeats.
+        internal static Func<string> Steer = delegate { lock (dice) return Angles[dice.Next(Angles.Length)]; };
+
+        private static string Angled(string line)
+        {
+            string angle = null;
+            try { angle = Steer(); } catch (Exception) { }
+            return string.IsNullOrEmpty(angle) ? line : line + "\n(This look only: " + angle + ". Still one short line, and the SAW and SAY labels stay exactly as described.)";
+        }
+
         // Each glance is a fresh look with no chat history, so she's shown her recent lines and older topics to stay off.
         internal static string Ask(List<string> said, string line = Line)
         {
+            line = Angled(line);
             if (said.Count == 0) return line + Brain.SayIn(Tongue);
             int shown = Math.Max(0, said.Count - 6);
             string ask = line + "\n(You already said these about their screen:";
@@ -5362,12 +5439,38 @@ namespace CapriDesktop
             if (sawLabel != null || sayLabel != null)
             {
                 string seen = sawLabel == null ? "" : Brain.Clean(Labelled(text, sawLabel, sayLabel));
+                seen = Clockless(seen);
                 if (seen.Length > 0 && !Regex.IsMatch(seen, @"^[\[(]?SKIP[\])]?[.!?]*$", RegexOptions.IgnoreCase)) saw = seen.Length > 200 ? seen.Substring(0, 200).TrimEnd() + "..." : seen;
                 text = sayLabel == null ? "" : Labelled(text, sayLabel, sawLabel);
             }
             string said = Brain.Sparing(Brain.Clean(text), false, Brain.Nickname);
             bool skipped = Regex.IsMatch(said, @"^[\[(]?(SKIP|nothing|none)[\])]?[.!?]*$", RegexOptions.IgnoreCase) || Regex.IsMatch(said, @"^[\[(]?SKIP\b");
             return skipped ? "" : said;
+        }
+
+        // The clock off a screen glance. Reported that she reads the time out when nobody asked: a taskbar clock is
+        // in almost every screenshot, so it lands in nearly every sighting and then turns up in her replies. The
+        // time she can always be asked for directly.
+        private static readonly Regex Clock = new Regex(
+            @"[,;]?\s*(?:the\s+)?(?:taskbar\s+)?(?:time|clock)\s*(?:is|at|reads|reading|shows|showing)?\s*\d{1,2}[:.]\d{2}(?:[:.]\d{2})?\s*(?:[ap]\.?m\.?)?"
+            + @"|[,;]?(?:\s+(?:at|reading|showing|reads|of))?\s*(?<![\d:])\d{1,2}[:.]\d{2}(?::\d{2})?\s*[ap]\.?m\.?"
+            + @"|[,;]?(?:\s+(?:at|reading|showing|reads|of))?\s*(?<![\d:])\d{1,2}:\d{2}:\d{2}(?![\d:])",
+            RegexOptions.IgnoreCase);
+
+        private static string Clockless(string seen)
+        {
+            if (string.IsNullOrEmpty(seen)) return seen;
+            string left = Clock.Replace(seen, "");
+            // Taking the number out leaves the word that introduced it: "their editor at with a red underline".
+            left = Regex.Replace(left, @"\s+(?:at|of|to|reading|showing|reads|is)(?=\s*(?:,|;|$))", "", RegexOptions.IgnoreCase);
+            left = Regex.Replace(left, @"\s+(?:at|of|reading|showing)\s+(?=and\b)", " ", RegexOptions.IgnoreCase);
+            left = Regex.Replace(left, @"\s{2,}", " ").Replace(" ,", ",");
+            left = Regex.Replace(left, @"(,\s*){2,}", ", ").Trim(' ', ',', ';');
+            // "A taskbar clock reading 11:42 pm and a browser" loses its middle and leaves "A and a browser".
+            left = Regex.Replace(left, @"^(?:a|an|the)\s+(?=and\s)", "", RegexOptions.IgnoreCase);
+            left = Regex.Replace(left, @"^and\s+", "", RegexOptions.IgnoreCase).Trim(' ', ',', ';');
+            // Only if something is left: a sighting that was nothing but a clock is better kept than blanked.
+            return left.Length >= 8 ? left : seen;
         }
 
         // The words after one label, up to the other label when that one comes later.

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -3240,7 +3240,7 @@ namespace CapriDesktop
             byte[] keywords = Encoding.UTF8.GetBytes(string.Join("\n", Array.ConvertAll(Phrases, delegate(string phrase) { return phrase + tuning; })));
             string folder = Folder;
             // SherpaOnnxKeywordSpotterConfig from sherpa-onnx 1.13.8 on 64-bit Windows, written by offset: feat_config at 0,
-            // model_config at 8 (transducer, paraformer, zipformer2_ctc, tokens at 56, num_threads at 64, provider at 72, ...,
+            // model_config at 8 (transducer, paraformer, zipformer2_ctc, tokens at 56, num_threads at 64, provider at 72,...,
             // ending at 144), then max_active_paths, num_trailing_blanks, keywords_score, keywords_threshold, keywords_file,
             // keywords_buf at 168 and keywords_buf_size at 176. Zero leaves the library's default.
             IntPtr config = Marshal.AllocHGlobal(ConfigBytes);

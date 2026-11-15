@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -44,7 +44,7 @@ namespace CapriDesktop
             new JealousApp("perplexity", "Perplexity", "Perplexity", @"Perplexity(?: AI| - A free AI-powered answer engine)?|.+ [\-\|] Perplexity"),
             new JealousApp("grok", "Grok", "Grok", @"Grok|.+ [\-\|] Grok"),
             new JealousApp("deepseek", "DeepSeek", null, @"DeepSeek(?: - Into the Unknown)?|.+ [\-\|] DeepSeek"),
-            new JealousApp("character", "Character.AI", null, @"Character\.AI|character\.ai \| AI Chat, Reimagined[\u2013-]Your Words\. Your World\.|Chat with .+ [\-\|] Character\.AI"),
+            new JealousApp("character", "Character.AI", null, @"Character\.AI|character\.ai \| AI Chat, Reimagined[\u2013-]Your Words\. Your World\.|Chat with.+ [\-\|] Character\.AI"),
             new JealousApp("mistral", "Le Chat", null, @"Le Chat(?: [\-\|] Mistral AI)?|Mistral Le Chat|Vibe Chat|.+ [\-\|] Le Chat"),
             new JealousApp("meta", "Meta AI", null, @"Meta AI|Meta AI: Discover & Create with AI|Meta AI \| Explore, Create & Share with AI|.+ [\-\|] Meta AI")
         };
@@ -651,10 +651,10 @@ namespace CapriDesktop
     // make a whole short line in big letters count, so a sign or a menu doesn't.
     internal static class Banners
     {
-        private static readonly Regex Dead = new Regex(@"^(?:you died|you are dead|you'?re dead|you have died|you were killed|you got eliminated|wasted|eliminated|killed by .+|eliminated by .+|knocked down|knocked out|downed)$", RegexOptions.IgnoreCase);
+        private static readonly Regex Dead = new Regex(@"^(?:you died|you are dead|you'?re dead|you have died|you were killed|you got eliminated|wasted|eliminated|killed by.+|eliminated by.+|knocked down|knocked out|downed)$", RegexOptions.IgnoreCase);
         private static readonly Regex Lost = new Regex(@"^(?:defeat|defeated|you lose|you lost|game over|mission failed|round lost|match lost|you failed|failed|busted)$", RegexOptions.IgnoreCase);
         private static readonly Regex Won = new Regex(@"^(?:victory|victory royale|#?1 victory royale|you win|you won|we won|winner|winner winner chicken dinner|mission (?:complete|accomplished|passed)|level (?:complete|cleared)|stage clear(?:ed)?|course clear(?:ed)?|you survived|flawless victory|round won|round win|match won|first place|1st place|champions?|you are the (?:apex )?champions?|qualified|(?:great |legend |demigod )?enemy felled|legend felled|demigod felled)$", RegexOptions.IgnoreCase);
-        private static readonly Regex Killed = new Regex(@"^(?:double kill|triple kill|quadra ?kill|penta ?kill|ultra kill|multi ?kill|killing spree|rampage|unstoppable|godlike|ace|headshot|first blood|shut ?down|kill confirmed|elimination|enemy (?:down|killed|eliminated)|target (?:down|eliminated)|you eliminated .+)$", RegexOptions.IgnoreCase);
+        private static readonly Regex Killed = new Regex(@"^(?:double kill|triple kill|quadra ?kill|penta ?kill|ultra kill|multi ?kill|killing spree|rampage|unstoppable|godlike|ace|headshot|first blood|shut ?down|kill confirmed|elimination|enemy (?:down|killed|eliminated)|target (?:down|eliminated)|you eliminated.+)$", RegexOptions.IgnoreCase);
         // The middle of the frame that's read, as shares of its width and height.
         private const float Left = 0.15f, Right = 0.85f, Top = 0.08f, Bottom = 0.8f;
         // Letters this tall, as a share of the whole frame's height, are a banner.

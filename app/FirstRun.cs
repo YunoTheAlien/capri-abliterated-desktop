@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -54,6 +54,32 @@ namespace CapriDesktop
         }
 
         // The Mainframe's own mic menu, dropped under the card's mic box.
+        private ContextMenuStrip whoMenu, handledMenu;
+
+        private void FirstRunPersonalities(Control under, FirstRunCard card)
+        {
+            if (whoMenu == null) whoMenu = Dropdown();
+            whoMenu.Items.Clear();
+            foreach (string named in Personalities.Names)
+            {
+                string each = named;
+                whoMenu.Items.Add(Choice(each, Personalities.Chosen == each, delegate { capri.PickPersonality(each); card.ShowPicks(); }));
+            }
+            whoMenu.Show(under, new Point(0, under.Height));
+        }
+
+        private void FirstRunHandling(Control under, FirstRunCard card)
+        {
+            if (handledMenu == null) handledMenu = Dropdown();
+            handledMenu.Items.Clear();
+            foreach (string named in Companion.Handlings)
+            {
+                string each = named;
+                handledMenu.Items.Add(Choice(each, capri.FirstRunHandling == each, delegate { capri.PickHandling(each); card.ShowPicks(); }));
+            }
+            handledMenu.Show(under, new Point(0, under.Height));
+        }
+
         private void FirstRunMics(Control under)
         {
             MicChoices(null);
@@ -79,6 +105,15 @@ namespace CapriDesktop
             private bool waitingOllama, pendingLocal, wasTesting, quiet, moved;
             private Rectangle placedBy;
             private int shownBrain;
+
+            private Key whoPick, handledPick;
+
+            // Redrawn after a pick, so the button shows what was chosen.
+            internal void ShowPicks()
+            {
+                if (whoPick != null) { whoPick.Text = Personalities.Chosen; whoPick.Invalidate(); }
+                if (handledPick != null) { handledPick.Text = capri.FirstRunHandling; handledPick.Invalidate(); }
+            }
 
             private Pickable[] picks;
             private Pickable voiceFree, voiceText;
@@ -643,8 +678,22 @@ namespace CapriDesktop
                     extras[i] = box;
                     Caption(notes[i], 28, y + 32, Wide - 56, 24, Body(17), Faint);
                 }
-                Caption("Right-click me any time for the Mainframe, Help and the Discord.", 28, 438, Wide - 56, 26, Body(19), White);
-                return 466;
+                // Who she is, and how she likes being handled. Both are only defaults: the personality menu and her
+                // own files change them later. "Rough" and "Gentle" rather than anything stronger, because they
+                // describe the handling itself and stay accurate for every personality.
+                Caption("WHO SHE IS", 28, 430, 200, 20, Mono(15), Faint);
+                whoPick = MakeKey(Personalities.Chosen, 28, 454, (Wide - 56 - 12) / 2, 40, Body(18, true), Rose,
+                    delegate { owner.FirstRunPersonalities(whoPick, this); });
+                whoPick.Chevron = true;
+                whoPick.AccessibleName = "Her personality";
+                Caption("HOW SHE LIKES IT", 28 + (Wide - 56 - 12) / 2 + 12, 430, 220, 20, Mono(15), Faint);
+                handledPick = MakeKey(capri.FirstRunHandling, 28 + (Wide - 56 - 12) / 2 + 12, 454, (Wide - 56 - 12) / 2, 40, Body(18, true), Rose,
+                    delegate { owner.FirstRunHandling(handledPick, this); });
+                handledPick.Chevron = true;
+                handledPick.AccessibleName = "How she likes to be handled";
+                Caption("Changes what she says when you pet or throw her. All of it is in her files.", 28, 500, Wide - 56, 24, Body(17), Faint);
+                Caption("Right-click me any time for the Mainframe, Help and the Discord.", 28, 534, Wide - 56, 26, Body(19), White);
+                return 562;
             }
 
             internal string ExtrasShown

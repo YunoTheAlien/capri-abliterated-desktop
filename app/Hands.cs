@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -38,6 +38,9 @@ namespace CapriDesktop
         [DataMember(Name = "task")] public string Task;
         [DataMember(Name = "ask")] public string Ask;
         internal string Asked;
+        // A plain look-up ("what's the weather tomorrow", "look up X") rather than a site they named, so it goes to whatever
+        // search engine the browser is set to instead of her hardcoded Google. Never a DataMember: no brain sets or sees it.
+        internal bool AnyEngine;
         internal Func<bool> Current;
         internal Action Finished;
         internal bool SongOnly;
@@ -114,6 +117,23 @@ namespace CapriDesktop
         internal InstalledApp(string name, string id) { Name = name; Id = id; }
     }
 
+    // One app she has found before, kept in apps.json beside her settings. The shell's app list is a COM walk that can run long
+    // or come back short on a busy PC, and a short list used to read as "that isn't installed". Remembering what was there turns
+    // a failed look into a stale answer instead of a confident no, and a path she has already seen is checked, not searched for.
+    [DataContract]
+    internal sealed class KnownApp
+    {
+        [DataMember(Name = "name")] public string Name;
+        [DataMember(Name = "id")] public string Id;
+        [DataMember(Name = "seen")] public string Seen;
+    }
+
+    [DataContract]
+    internal sealed class KnownApps
+    {
+        [DataMember(Name = "apps")] public KnownApp[] Apps;
+    }
+
     // Her SECURITY window (Lachy, 29 Oct): a toggle for each kind of thing she does on their PC, set by a slider of four presets.
     // A toggle that's off means she asks first in chat ("Open Spotify? Say yes and I will.") and does it on their yes, never a
     // silent no. Typing passwords and card numbers is the one exception: with it off they type those themselves. Trusted, the
@@ -131,7 +151,7 @@ namespace CapriDesktop
         internal const int Lockdown = 0, Guarded = 1, Trusted = 2, Blackwall = 3, Custom = 4;
         internal static readonly string[] Names = { "Open apps, games and sites", "Music, media and volume", "Shortcuts (screenshots, Game Bar, captions, Discord mute)", "Close and switch apps and tabs", "Shut down, restart, sleep, lock and sign out", "Use your mouse and keyboard for jobs", "Send, post and delete what you asked for", "Pay, buy and book", "Things your request didn't mention", "Type passwords and card numbers", "Listen for \"Hey Capri\"", "Friends on a call can ask, you confirm", "Keep personal details out of her memories", "Use tools your code mods added"
 #if CROSS
-            , "Run terminal commands"
+           , "Run terminal commands"
 #endif
         };
         internal static readonly string[] Lines =
@@ -155,7 +175,7 @@ namespace CapriDesktop
             "On: addresses, emails and numbers stay out. Off: they don't.",
             "On: she uses a mod's tool when it fits. Off: she asks first."
 #if CROSS
-            , "On: she runs shell commands when you ask. Off: she asks before each command."
+           , "On: she runs shell commands when you ask. Off: she asks before each command."
 #endif
         };
         internal static readonly string[] Presets = { "Lockdown", "Guarded", "Trusted", "Blackwall", "Custom" };
@@ -362,7 +382,8 @@ namespace CapriDesktop
                 case "updates": return action == "install" ? Open : -1;
                 // A code mod's tool can do anything its code does, so it has its own toggle, off on Lockdown and Guarded.
                 case "mod": return ModTools;
-                case "voice_chat": case "speech": case "quit": case "mainframe": case "mini_player": case "fake_crash": case "listen": return -1;
+                // STOCK 0.8.9: same line without case "new_chat" (that tool did not exist)
+                case "voice_chat": case "speech": case "quit": case "mainframe": case "mini_player": case "fake_crash": case "listen": case "new_chat": case "twitch_live": case "do_again": case "twitch_who": case "playlist": return -1;
                 default: return -1;
             }
         }
@@ -556,9 +577,7 @@ namespace CapriDesktop
 #endif
                 case "open_app": return "open " + Plain(a.Name, "that app");
                 case "open_website":
-                    Hands.WebsiteArgs(a);
                     string site = Plain(a.Site, "that site");
-                    if (string.IsNullOrWhiteSpace(a.Site) && !string.IsNullOrWhiteSpace(a.Search)) return "search for " + Plain(a.Search, "that");
                     return string.IsNullOrWhiteSpace(a.Search) ? "open " + site : "search " + Regex.Replace(site, @"^(https?://)?(www\.)?|\.(com|org|net|tv)(/.*)?$", "", RegexOptions.IgnoreCase) + " for " + Plain(a.Search, "that");
                 case "media":
                     switch (a.Action)
@@ -994,12 +1013,6 @@ namespace CapriDesktop
 
         internal static string KeepAsk(string words, string said) { return "They said: " + Voice.Quote(words) + "\nYou said: " + Voice.Quote(said); }
 
-        // Plain asks her hands read for sure, which they still do when a brain that works jobs out answers one with only words.
-        internal static bool PlainAsk(string tool)
-        {
-            return tool == "app_window" || tool == "open_app" || tool == "open_website" || tool == "website_nickname" || tool == "media" || tool == "play_music" || tool == "find_file" || Instant(tool);
-        }
-
         // Set phrases a strong brain still lets her take straight away, because there's nothing to work out.
         internal static bool Instant(string tool, ToolArguments args = null)
         {
@@ -1019,6 +1032,11 @@ namespace CapriDesktop
         // A window as her brain sees it: its title, trimmed and quoted, and its program.
         private static string Titled(OpenWindow window)
         {
+            // A window title is the most personal line on the screen: a document name, a client, a browser tab. On camera
+            // she gets the app and nothing else, so she can still be asked to switch to or close something without
+            // reading anyone's filenames out.
+            if (StreamSafe.On)
+                return string.IsNullOrEmpty(window.Program) ? "\"a window\"" : "\"" + window.Program + "\"";
             string title = Regex.Replace(window.Title ?? "", @"\s+", " ").Trim().Replace('"', '\'');
             if (title.Length > 60) title = title.Substring(0, 57).TrimEnd() + "...";
             return "\"" + title + "\"" + (string.IsNullOrEmpty(window.Program) ? "" : " (" + window.Program + ")");
@@ -1308,14 +1326,16 @@ namespace CapriDesktop
 
         private static readonly string[,] Specs =
         {
-            { "open_app", "Open or launch an app or game installed on their PC, like Spotify, Discord, Steam or Roblox. Give its full name, not a nickname: Counter-Strike 2 for cs, Valorant for val. If they want you to play a game, call use_computer once instead, open or not: it opens the game itself and plays it, so this alone never plays anything. If it's already open and they want something done in it, like a mode, a match or accepting a match, call use_computer instead of opening it again.",
+            // STOCK 0.8.9: same description without the "call this first and straight away" sentence added below.
+            { "open_app", "Open or launch an app or game installed on their PC, like Spotify, Discord, Steam or Roblox. Give its full name, not a nickname: Counter-Strike 2 for cs, Valorant for val. When they name an app to open, call this first and straight away: it looks the name up itself and says so when nothing matches, so there's nothing to check beforehand. If they want you to play a game, call use_computer once instead, open or not: it opens the game itself and plays it, so this alone never plays anything. If it's already open and they want something done in it, like a mode, a match or accepting a match, call use_computer instead of opening it again.",
               "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"The app's name\"}},\"required\":[\"name\"]}", "open your apps and games", "open their apps and games" },
             { "open_website", "Open a website in their browser, or search a site like YouTube or Google. " +
 #if !CROSS
               "A saved website nickname goes in site, with no search words when opening it. " +
 #endif
-              "Set browser only when they named a browser; otherwise leave it out for their default. No site named: leave site out, it uses their browser's search engine; a site or engine they named goes in site.",
-              "{\"type\":\"object\",\"properties\":{\"site\":{\"type\":\"string\",\"description\":\"The site's name or address, like youtube.com\"},\"search\":{\"type\":\"string\",\"description\":\"Words to search for on that site, if any\"},\"browser\":{\"type\":\"string\",\"description\":\"Only the browser they named\",\"enum\":[\"chrome\",\"edge\",\"firefox\",\"opera\",\"opera gx\",\"brave\",\"vivaldi\"]}}}", "open websites and search Google, YouTube and other sites", "open sites and search Google or YouTube" },
+              // STOCK 0.8.9 ended this line at "...leave it out for their default."; the rest below is added.
+              "Set browser only when they named a browser; otherwise leave it out for their default. A request naming a browser and a site, like open Wikipedia in Brave, look up X on Brave, or open a new tab on Brave, is this tool, whether or not that browser is already open: never answer that the browser is open instead of opening the page.",
+              "{\"type\":\"object\",\"properties\":{\"site\":{\"type\":\"string\",\"description\":\"The site's name or address, like youtube.com\"},\"search\":{\"type\":\"string\",\"description\":\"Words to search for on that site, if any\"},\"browser\":{\"type\":\"string\",\"description\":\"Only the browser they named\",\"enum\":[\"chrome\",\"edge\",\"firefox\",\"opera\",\"opera gx\",\"brave\",\"vivaldi\"]}},\"required\":[\"site\"]}", "open websites and search Google, YouTube and other sites", "open sites and search Google or YouTube" },
 #if !CROSS
             { "media", "Control their music, video or PC volume when they ask, suggest or hint at it. Pause, resume, skip, seek to seconds from the start, like or unlike the current Spotify song, open the player that's playing, or read the song or volume. Seek and likes need a player that supports them.",
               "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"description\":\"What to do\",\"enum\":[\"play_pause\",\"pause\",\"resume\",\"next\",\"previous\",\"seek\",\"like\",\"unlike\",\"open_player\",\"volume_up\",\"volume_down\",\"volume_set\",\"mute\",\"unmute\",\"now_playing\",\"volume_now\"]},\"seconds\":{\"type\":\"string\",\"description\":\"For seek, seconds from the start, like 90 for 1:30\"},\"level\":{\"type\":\"string\",\"description\":\"For volume_set, 0 to 100. For volume_up or volume_down, how many percent, only if they said\"}},\"required\":[\"action\"]}", "control music and volume, seek, like songs or open the player", "control music and volume, seek, like songs or open the player" },
@@ -1330,7 +1350,9 @@ namespace CapriDesktop
             { "app_window", "Switch to, minimize or close an app or game that's open on their PC, found by its name or a word in its window's title. Naming a site closes that browser tab." + Arranging,
               "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"The app's name or a word from its window's title, or the site in a browser tab\"},\"action\":{\"type\":\"string\",\"description\":\"What to do\",\"enum\":[\"switch_to\",\"minimize\",\"maximize\",\"restore\",\"close\",\"snap_left\",\"snap_right\",\"snap_top\",\"snap_bottom\",\"move_to_screen\",\"move\",\"resize\",\"pin_on_top\",\"unpin\"]}" + Placing + "},\"required\":[\"name\",\"action\"]}",
               "switch to, minimize, maximize, snap, move, resize or close your apps' windows and browser tabs, on any of your monitors", "switch to, minimize, maximize, snap, move, resize or close their windows" },
-            { "use_computer", "Use their mouse and keyboard for any job inside an app or website: sending a message or DM, joining, leaving or ending a call, or anything that needs clicking, typing or several steps, like opening an app and searching in it, or in a game: picking a mode, queueing for a match, or waiting for one and accepting it while they're away. This is also how you play a game yourself: when they want you to play one, call this once with their words, open or not. It opens the game, gets into a match or map and keeps playing until they stop you. You always have their mouse and keyboard through this tool. For join the Discord call, hop in the call or join the vc, click a Join button already on screen, or else the server voice channel with people in it; their friends are the people in that call, never Discord's Friends page or DMs. Keep that job to joining; pass messages with call_say and leave their choice to call_errand afterwards.",
+            // STOCK 0.8.9 ended at "...leave their choice to call_errand afterwards."; the "Working inside something already
+            // open" sentence at the end is added.
+            { "use_computer", "Use their mouse and keyboard for any job inside an app or website: sending a message or DM, joining, leaving or ending a call, or anything that needs clicking, typing or several steps, like opening an app and searching in it, or in a game: picking a mode, queueing for a match, or waiting for one and accepting it while they're away. This is also how you play a game yourself: when they want you to play one, call this once with their words, open or not. It opens the game, gets into a match or map and keeps playing until they stop you. You always have their mouse and keyboard through this tool. For join the Discord call, hop in the call or join the vc, click a Join button already on screen, or else the server voice channel with people in it; their friends are the people in that call, never Discord's Friends page or DMs. Keep that job to joining; pass messages with call_say and leave their choice to call_errand afterwards. Working inside something already open, like deleting posts on a site, filling a form, or clicking through a page in their browser, is this tool as well: never report that the app or site is open instead of doing the thing they asked.",
               "{\"type\":\"object\",\"properties\":{\"task\":{\"type\":\"string\",\"description\":\"The whole job in their exact words, including any message to send\"}},\"required\":[\"task\"]}", "do mouse and keyboard jobs in your apps, sites and games, like sending messages, changing settings or playing a game herself", "mouse and keyboard jobs in their apps, sites and games" },
             { "stream", "Start or stop your stream. On stream you play a game yourself, live for their stream, and talk to their chat between plays, until they stop you. Start it whenever they ask, suggest or hint that you stream, go live, play for their chat or viewers, or entertain their chat, in any words, like stream for me, you should stream, wanna go live, or chat wants to see you play. name is the game to play if they named one; leave it out to play the game that's open. stop ends your stream.",
               "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"description\":\"start or stop\",\"enum\":[\"start\",\"stop\"]},\"name\":{\"type\":\"string\",\"description\":\"The game to play, if they named one\"}},\"required\":[\"action\"]}", "stream for you, playing a game herself live and talking to your chat", "stream live for them: play a game yourself and talk to their chat" },
@@ -1425,6 +1447,16 @@ namespace CapriDesktop
               "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"description\":\"stop, status or change\",\"enum\":[\"stop\",\"status\",\"change\"]},\"task\":{\"type\":\"string\",\"description\":\"For change, the new instruction in their words\"}},\"required\":[\"action\"]}", "stop, check or change a running job", "stop, check or change your running job" },
             { "quit", "Quit Capri after your reply is said when they ask, suggest or hint that you close yourself. This leaves their PC running.",
               "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"description\":\"quit Capri\",\"enum\":[\"quit\"]}},\"required\":[\"action\"]}", "quit Capri after her reply", "quit Capri after your reply" },
+            { "new_chat", "Start a new chat when they clearly ask to clear the chat or your memory of this conversation, to start over, start fresh or wipe what you two have said. It forgets everything the two of you have said and what you saw on their screen; your notes about them stay. Asking once only asks them to be sure, and a second ask right after is what clears it. Never use it for forgetting one thing about them: that's remember with forget.",
+              "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"description\":\"clear the chat\",\"enum\":[\"clear\"]}},\"required\":[\"action\"]}", "start a new chat, keeping her notes", "start a new chat, keeping your notes" },
+            { "playlist", "Her own playlist of music folders on this PC. action play starts or resumes it, skip goes to the next song, stop ends it, and remove takes the song that is playing off the playlist without ever deleting the file. add_folder takes a folder path in path and add_song takes one file. Use it when they talk about her playlist, their music folders, skipping a song or taking a song off; play_music is for Spotify and YouTube instead.",
+              "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"play\",\"skip\",\"stop\",\"remove\",\"add_folder\",\"add_song\"]},\"path\":{\"type\":\"string\",\"description\":\"The folder or file, for add_folder and add_song only\"}},\"required\":[\"action\"]}", "play, skip and manage her folder playlist", "play, skip and manage your folder playlist" },
+            { "twitch_who", "Check right now which channels on their Twitch watch list are live, when they ask who is live, who is streaming or whether anyone is on. It only looks and answers; it changes nothing and is not about reading Twitch chat.",
+              "{\"type\":\"object\",\"properties\":{}}", "check who on their watch list is live", "check who on their watch list is live" },
+            // <<< PATCH: the off switch for her Twitch live mentions, by voice or typed
+            { "twitch_live", "Turn your Twitch live notifications on or off, when they ask you to stop or start telling them who from their watch list has gone live. Only this: it is not about reading Twitch chat and not about any other notification.",
+              "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"description\":\"on or off\",\"enum\":[\"on\",\"off\"]}},\"required\":[\"action\"]}", "turn her Twitch live notifications on or off", "turn your Twitch live notifications on or off" },
+            // <<< END PATCH: twitch_live tool
 #if !CROSS
             { "mainframe", "Open Capri Mainframe or a page when they ask, suggest or hint at seeing your controls. name is an optional page; mixer is the setup for your voice in their mic, for friends in Discord or Roblox to hear you. This only opens it; keys, brains, voice services, SECURITY, Hey Capri and memories are changed there by them.",
               "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"The page to open; omit for Mainframe\",\"enum\":[\"main\",\"settings\",\"brain\",\"voice\",\"you\",\"moves\",\"keys\",\"capri\",\"watch\",\"habits\",\"games\",\"clips\",\"security\",\"extras\",\"layers\",\"mixer\",\"personality\",\"memories\"]}}}", "open Mainframe or one of its pages", "open Mainframe or one of its pages" },
@@ -1439,9 +1471,14 @@ namespace CapriDesktop
 #endif
             // Her checks, for every brain: her hands' one-shot pick and voice chat as well as one that works jobs out (Lachy, 2 Nov: "ensure
             // they have the tools they need to perform everything themself", and 3 Nov: every brain must know what it can do).
-            { "list_windows", "See what's open on their PC right now: each open window's title, trimmed, and its program, which one is in front, which are minimized or games, and which monitor each is on when they have more than one, with their monitors named left to right and their sizes in pixels. Give name to see only one app's windows, with how big each is and where its top left corner is on its monitor, before you move or resize one. Use it when they ask what's open, and when you can call more tools after it, before you act when what's open matters and after, to check a window opened, closed, moved or came to the front.",
+            // STOCK 0.8.9 said "...and when you can call more tools after it, before you act when what's open matters and after,
+            // to check a window opened, closed, moved or came to the front." The "It only looks" sentences below replace that.
+            { "list_windows", "See what's open on their PC right now: each open window's title, trimmed, and its program, which one is in front, which are minimized or games, and which monitor each is on when they have more than one, with their monitors named left to right and their sizes in pixels. Give name to see only one app's windows, with how big each is and where its top left corner is on its monitor, before you move or resize one. Use it when they ask what's open, before you act when what's open matters, and after, to check a window opened, closed, moved or came to the front. It only looks. Finding a window is never the answer to a request to do something with it: follow it in the same turn with open_website, app_window or use_computer.",
               "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Only this app's or game's windows, if you want one\"}}}", "see what's open on your PC", "see what's open on their PC and which window is in front" },
-            { "check_app", "Check whether an app or game is installed on their PC, by the name open_app would open, and whether it's running: with a window open, in front or minimized, or in the background with no window, like Discord in the tray. Use it when they ask whether something is installed or running, and when you can call more tools after it, before opening something that might already be open and after opening or closing one to check it worked.",
+            // STOCK 0.8.9 said "...and when you can call more tools after it, before opening something that might already be
+            // open and after opening or closing one to check it worked." The "Don't check before opening" and "It only looks"
+            // sentences below replace that, because open_app resolves the name itself.
+            { "check_app", "Check whether an app or game is installed on their PC, by the name open_app would open, and whether it's running: with a window open, in front or minimized, or in the background with no window, like Discord in the tray. Use it when they ask whether something is installed or running, and after opening or closing one to check it worked. Don't check before opening: when they name an app to open, call open_app straight away, because it finds the app itself and tells you when there's nothing by that name. It only looks. Never answer a request to do something with what it found: if they asked you to open, search, click, type or change anything, call the tool that does that in the same turn and say what you did, not what you saw.",
               "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"The app's or game's name\"}},\"required\":[\"name\"]}", "check whether an app or game is installed or running", "check whether an app or game is installed or running" },
             { "capri_settings", SettingsDescription(null), SettingsSchema(null), "change her own settings, like her size, quiet mode or wandering", "read or change your own Capri settings, like your size, quiet mode or wandering" },
 #if !CROSS
@@ -1455,7 +1492,7 @@ namespace CapriDesktop
 #if CROSS
             { "run_terminal", "Run the desktop owner's requested command using their native shell and real working directory. A visible job opens its native terminal itself; do not open a second empty terminal first. Use for terminal tasks instead of a screenshot job or project-scope runner. Returns real job identity/status and output when available; never claim completion from the request alone.", "{\"type\":\"object\",\"properties\":{\"command\":{\"type\":\"string\",\"description\":\"The requested shell command or script; preserve its literal quoting and Unicode.\"},\"cwd\":{\"type\":\"string\",\"description\":\"Real requested working directory. If absent, use the owner's actual home directory; no project root is required.\"},\"visible\":{\"type\":\"boolean\",\"description\":\"Open the actual terminal for this job. Defaults to true; use false for a requested background command.\"}},\"required\":[\"command\"],\"additionalProperties\":false}", "run your requested native terminal task", "run their requested native terminal task" },
             { "terminal_job", "Inspect output/status or stop one native terminal job started for the owner. Use its exact returned job ID. Stop only that owned job; never all terminal processes. An exit code is reported only when actually observed.", "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"status\",\"read\",\"stop\"]},\"job_id\":{\"type\":\"string\"},\"offset\":{\"type\":\"integer\",\"minimum\":0,\"description\":\"Optional output cursor from the previous read.\"}},\"required\":[\"action\",\"job_id\"],\"additionalProperties\":false}", "run your requested native terminal task", "run their requested native terminal task" },
-            { "linux_system", "Read Linux CPU load, memory and disk status or owned process names, or inspect and operate one explicitly named user service. Never a shell or system service. Use a literal .service unit; mutations must be in the owner's request.",
+            { "linux_system", "Read Linux CPU load, memory and disk status or owned process names, or inspect and operate one explicitly named user service. Never a shell or system service. Use a literal.service unit; mutations must be in the owner's request.",
               "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"overview\",\"status\",\"processes\",\"service_failed\",\"service_status\",\"service_start\",\"service_stop\",\"service_restart\"]},\"name\":{\"type\":\"string\"}},\"required\":[\"action\"]}", "read Linux diagnostics or manage your named user service", "read Linux diagnostics or manage their named user service" },
 #endif
         };
@@ -1493,11 +1530,11 @@ namespace CapriDesktop
             @"^(open|launch|start|run|load up|boot up|fire up|play|shuffle|put on|blast|queue|close|quit|exit|kill|shut down|switch (back |over )?to|back to|go to|take me to|bring up|pull up|show me|minimi[sz]e|pause|unpause|resume|stop the music|skip|next|previous|go back|volume|louder|quieter|mute|unmute|search|google|look up|mind (opening|launching|playing|closing))\b" +
             @"|^remind me(?:$|\s+(?:to|in|at|on|tomorrow|tonight|after|before|next|\d+)\b)|^when i say\b|^(list|show|cancel|remove|delete|forget)\b.*\b(reminders?|routines?)$|^what (are my (reminders|routines)|(reminders|routines) do i have)$" +
             @"|^(recu[eé]rdame|rappelle[- ]moi|erinnere mich|przypomnij mi|lembra[- ]me|lembre[- ]me|me lembre|me lembra)\b" +
-            @"|^(turn|make) (it|this|that|the volume|the music|the sound) (up|down|louder|quieter)\b|^(turn (up|down)|lower|raise) (the )?(volume|music|sound)\b|^put (some |a )?(music|song|tunes) on\b|^(get|bring) .+ (going|up)$" +
+            @"|^(turn|make) (it|this|that|the volume|the music|the sound) (up|down|louder|quieter)\b|^(turn (up|down)|lower|raise) (the )?(volume|music|sound)\b|^put (some |a )?(music|song|tunes) on\b|^(get|bring).+ (going|up)$" +
             @"|^(look at|take a (look|peek)( at)?|check out|check|rate|watch) (this|that|it|my|the|what)\b" +
-            @"|^(click|tap|double click|right click|type|press|scroll|go on|get on|hop on|sign in|log in|fill (in|out)|use (my|the) (mouse|keyboard|computer|pc))\b|^(use|make|create|write|draw|search|find) .+ (in|on|with|using|into) (the |my )?\w+" +
+            @"|^(click|tap|double click|right click|type|press|scroll|go on|get on|hop on|sign in|log in|fill (in|out)|use (my|the) (mouse|keyboard|computer|pc))\b|^(use|make|create|write|draw|search|find).+ (in|on|with|using|into) (the |my )?\w+" +
             @"|^(shut ?down|turn off|power (off|down)|switch off|restart|reboot|lock|sleep|hibernate|put|send) (my |the |this )?(pc|computer|laptop|system|machine|rig|windows|device|screen)\b|^(shut|turn|power|switch) (my |the |this )?(pc|computer|laptop|system|machine|rig|device) (down|off)\b|^(sign|log) me (out|off)$" +
-            @"|^(send|dm|pm|message|text|ping|reply to|respond to|post|tweet)\b|^(tell|ask|say|let|invite|kick|ban|add|react|call|ring|share|pin|block|unblock|unfriend) .+\b(on|in|into|through|via|over) (the |my )?(discord|slack|teams|whatsapp|telegram|signal|messenger|skype|instagram|insta|snapchat|snap|reddit|twitter|tiktok|facebook|roblox|steam|chat|call|vc|server|channel|group chat|gc|dms?)\b" +
+            @"|^(send|dm|pm|message|text|ping|reply to|respond to|post|tweet)\b|^(tell|ask|say|let|invite|kick|ban|add|react|call|ring|share|pin|block|unblock|unfriend).+\b(on|in|into|through|via|over) (the |my )?(discord|slack|teams|whatsapp|telegram|signal|messenger|skype|instagram|insta|snapchat|snap|reddit|twitter|tiktok|facebook|roblox|steam|chat|call|vc|server|channel|group chat|gc|dms?)\b" +
             @"|^(end|leave|hang up|disconnect( from)?|join|accept|decline|pick up|answer|reject|hop (in|on|off)|get off) (the |my |this |that |a |our |their )?(\w+('s)? )?(call|vc|voice (chat|channel|call)|video call|meeting|stream|server|channel)\b|^(hang up|disconnect|hop off|get off)( (the )?(call|vc))?$" +
             @"|^(see|tell me|show me) (what|which)\b|^see (this|that|my screen|the screen)\b|^what('?s| is) (on my screen|on the screen|playing|this song|this track|the song|on spotify)\b" +
             @"|^what ((song|track)( is|'s)? (this|playing|on)|am i (doing|playing|watching|listening)|are we (doing|playing|watching|listening)|do you see|can you see)\b|^what do you think (of|about) (this|that|it|my (build|skin|setup))\b|^do you (see|like) (this|that|my (build|skin|setup))\b" +
@@ -1509,11 +1546,11 @@ namespace CapriDesktop
             @"|^(abr[aeií]r?|[aá]bre(me|lo|la)|inicia(r|lo)?|inicie|lanza(r)?|ejecuta(r|lo)?|arranca(r)?|enciende|prende|activa(r)?|desactiva(r)?|apaga(r)?|cierra|ci[eé]rra(me|lo|la)|cerrar|minimiza(r|lo)?|busca(r)?|b[uú]sca(me|lo)|pon(me|lo|la|le|er)?|reproduce|reproducir|reprod[uú]ce(me|lo)|toca(r)?|t[oó]ca(me|la)|pausa|reanuda|salta|silencia|quita(le)?|sube|s[uú]bele|subir|baja|b[aá]jale|bajar|mu[eé]stra(me)?|ens[eé][ñn]a(me)?|escribe|escr[ií]be(le|me)|manda|m[aá]nda(le|me)|env[ií]a(le|me)?|responde|contesta|ve al?|vete al?|ir al?|entra (al?|en)|haz clic|dale clic|pulsa|presiona|googlea|quiero que (me )?(abras|pongas|reproduzcas|toques|busques|cierres|inicies|lances|mandes|env[ií]es|escribas)|(me )?(abres|pones|pondr[ií]as|abrir[ií]as|buscas|cierras|quitas|subes|bajas|pasas))\b" +
             @"|^(ves|qu[eé] (ves|hay en (mi|la) pantalla|estoy haciendo|est[aá] sonando)|mira (mi pantalla|esto|eso)|qu[eé] (canci[oó]n|m[uú]sica|tema) (es|suena)|(cu[aá]l es|c[oó]mo se llama) (esta|esa) canci[oó]n)\b" +
             // A new install talks in Windows' language, so German, Portuguese, Italian, Polish, Dutch and Russian requests reach her hands too.
-            @"|^(([öo]ffne|[öo]ffnen|starte|spiele?|schlie(ß|ss)e?|suche?|zeig(e|\s+mir)?|pausiere|schalte)\b|mach(e)? .+ (auf|an|aus|lauter|leiser)$|(kannst|k[öo]nntest|w[üu]rdest) du\b.*\b([öo]ffnen|starten|spielen|abspielen|schlie(ß|ss)en|suchen|zeigen|anmachen|aufmachen|ausmachen|pausieren)\b)" +
+            @"|^(([öo]ffne|[öo]ffnen|starte|spiele?|schlie(ß|ss)e?|suche?|zeig(e|\s+mir)?|pausiere|schalte)\b|mach(e)?.+ (auf|an|aus|lauter|leiser)$|(kannst|k[öo]nntest|w[üu]rdest) du\b.*\b([öo]ffnen|starten|spielen|abspielen|schlie(ß|ss)en|suchen|zeigen|anmachen|aufmachen|ausmachen|pausieren)\b)" +
             @"|^(abra|abrir|toque|tocar|coloca|coloque|p[õo]e|bota|fecha|feche|fechar|procura|procure|pesquisa|pesquise|mostra|mostre|pula|pule|aumenta|diminui|(voc[eê] |vc )?(pode|poderia|consegue)s? (me )?(abrir|tocar|colocar|p[ôo]r|fechar|procurar|pesquisar|mostrar|iniciar|pausar))\b" +
             @"|^(apri|aprire|avvia|avviare|lancia|metti|mettimi|riproduci|suona|chiudi|chiudere|cerca|cercare|mostrami|fammi (vedere|sentire)|alza|abbassa|(puoi|potresti|riesci a) (aprire|avviare|mettere|riprodurre|chiudere|cercare|mostrarmi|suonare|alzare|abbassare))\b" +
             @"|^(otw[óo]rz|uruchom|w[łl][aą]cz|pu[śs][ćc]|zamknij|wyszukaj|szukaj|znajd[źz]|poka[żz]|zatrzymaj|(mo[żz]esz|m[óo]g[łl]by[śs]|mog[łl]aby[śs]) (mi )?(otworzy[ćc]|uruchomi[ćc]|w[łl][aą]czy[ćc]|pu[śs]ci[ćc]|zamkn[aą][ćc]|wyszuka[ćc]|znale[źz][ćc]|pokaza[ćc]))(?!\w)" +
-            @"|^(((speel|sluit|zoek|toon|pauzeer)\b(?! (je|jij|jy|julle|u|we|wij|ons)\b)|laat (me )?zien\b)|zet .+ op$|(kun|kan|wil) je\b.*\b(openen|starten|spelen|afspelen|opzetten|sluiten|zoeken|laten zien)\b)" +
+            @"|^(((speel|sluit|zoek|toon|pauzeer)\b(?! (je|jij|jy|julle|u|we|wij|ons)\b)|laat (me )?zien\b)|zet.+ op$|(kun|kan|wil) je\b.*\b(openen|starten|spelen|afspelen|opzetten|sluiten|zoeken|laten zien)\b)" +
             @"|^(открой|открыть|запусти|запустить|включи|включить|поставь|поставить|закрой|закрыть|найди|найти|покажи|показать|выключи|сделай (громче|тише)|(можешь|можете|мог бы|могла бы|не могла бы) (ты )?(открыть|запустить|включить|поставить|закрыть|найти|показать))(?!\w)" +
             // Chinese, Japanese, Korean, Thai, Vietnamese, Indonesian, Turkish, Ukrainian, Arabic and Hindi too. Chinese and Thai write
             // no spaces, and Japanese, Korean, Turkish and Hindi put the verb last, so those match where the verb sits.
@@ -1560,7 +1597,7 @@ namespace CapriDesktop
             // languages, like Portuguese "agora", Vietnamese "cau" or Spanish "vale", are left out.
             @"|^((pecha(me|o|a|lo|la)?|am[oó]sa(me)?)(?!\w)|(podes|poder[ií]as) (abrir|po[ñn]er|pechar|buscar|amosar|reproducir|tocar)(?!\w))" +
             @"|^(ireki|itxi|bilatu|erakutsi|gelditu|bidali|erreproduzitu|piztu|itzali)(?!\w)|(^|\s)(ireki|itxi|bilatu|erakutsi|gelditu|bidali|erreproduzitu|piztu|itzali)( ezazu| ezazue| mesedez)?$|(ireki|itxi|bilatu|erakutsi|gelditu|bidali|piztu|itzali) (dezakezu|ahal duzu|al duzu)(?!\w)" +
-            @"|^((soek|wys my|stuur)(?!\w)|maak .+ (oop|toe)$|sit (die|dit|hom|haar)( .+)? (aan|af|harder|sagter)$|(kan|sal) jy\b.*\b(oopmaak|toemaak|speel|soek|wys|stuur|aansit|afsit)(?!\w))" +
+            @"|^((soek|wys my|stuur)(?!\w)|maak.+ (oop|toe)$|sit (die|dit|hom|haar)(.+)? (aan|af|harder|sagter)$|(kan|sal) jy\b.*\b(oopmaak|toemaak|speel|soek|wys|stuur|aansit|afsit)(?!\w))" +
             @"|^((opnaðu|opnadu|spilaðu|spiladu|lokaðu|lokadu|leitaðu|leitadu|sýndu|syndu|stöðvaðu|stodvadu|stoppaðu|stoppadu|sendu|hækkaðu|haekkadu|lækkaðu|laekkadu|kveiktu|slökktu|slokktu|settu)(?!\w)|(geturðu|geturdu|gætirðu|gaetirdu)\b.*\b(opnað|opnad|spilað|spilad|lokað|lokad|leitað|leitad|sýnt|synt|sett|kveikt|slökkt)(?!\w)|viltu (opna|loka|leita|sýna|syna|setja|kveikja|slökkva|slokkva|senda)(?!\w))" +
             @"|^((hape|luaj|mbyll|mbylle|kërko|kerko|më trego|me trego|ndalo|dërgo|dergo|ndiz)(?!\w)|(a )?(mund|mundesh|mundeni) (të |te |ta |t'i )?(hapësh|hapesh|luash|mbyllësh|mbyllesh|kërkosh|kerkosh|tregosh|ndezësh|ndezesh|dërgosh|dergosh)(?!\w))" +
             @"|^((oscail|seinn|dún|cuardaigh|taispeáin|taispeain|seol|ardaigh|ísligh|isligh|múch)(?!\w)|an (féidir|feidir) leat\b.*\b(oscailt|sheinm|sheinnt|chasadh|dhúnadh|dhunadh|chuardach|thaispeáint|thaispeaint|mhúchadh)(?!\w))" +
@@ -1595,7 +1632,7 @@ namespace CapriDesktop
             // Hebrew, Urdu and Persian. Urdu and Persian put the verb last.
             @"|^(בבקשה )?(פתח|פתחי|תפתח|תפתחי|נגן|נגני|תנגן|תנגני|סגור(?= )|סגרי|תסגור|תסגרי|חפש|חפשי|תחפש|תחפשי|תראה לי|תראי לי|הראה לי|הראי לי|עצור|עצרי|תעצור|תעצרי|הגבר|תגביר|תגבירי|הנמך|תנמיך|תנמיכי|שים(?! לב)|שימי(?! לב)|תשים|תשימי|הפעל|הפעילי|תפעיל|תפעילי|כבה|כבי|תכבה|תכבי|שלח|שלחי|תשלח|תשלחי)(?!\w)|^(את יכולה|אתה יכול|תוכלי|תוכל|אפשר) (בבקשה )?ל(פתוח|נגן|סגור|חפש|הראות|הפעיל|כבות|שים|הגביר|הנמיך|שלוח)(?!\w)" +
             @"|(کھولو|کھول دو|کھولیں|کھول دیں|چلاؤ|چلا دو|چلائیں|چلا دیں|بجاؤ|بجا دو|بجائیں|(?<!(بکواس|ڈرامہ|ڈرامے|مذاق|بولنا|رونا|چلانا|نخرے) )بند (کرو|کر دو|کریں|کر دیں)|ڈھونڈو|ڈھونڈ دو|تلاش کرو|تلاش کریں|دکھاؤ|دکھا دو|دکھائیں|روکو|روک دو|روکیں|بڑھاؤ|بڑھا دو|کم کرو|کم کر دو|بھیجو|بھیج دو)( نا| پلیز| پلز)?[۔.!?؟\s]*$|(کھول|چلا|بجا|بند کر|دکھا|ڈھونڈ) (سکتے|سکتی|سکو) (ہو|ہیں|گے|گی)|کون سا گانا" +
-            @"|(باز کن|بازش کن|باز کنید|پخش کن|پخشش کن|پخش کنید|بذار|بزار|بگذار|بذارش|ببند|ببندش|ببندید|جستجو کن|سرچ کن|بگرد|پیدا کن|نشون بده|نشونم بده|نشان بده|نشانم بده|متوقف کن|قطع کن|زیاد کن|زیادش کن|کم کن|کمش کن|بفرست|اجرا کن)( لطفا| لطفاً| دیگه| پلیز)?[.!?؟\s]*$|^(لطفا |لطفاً )?(می[\u200C ]?(تونی|توانی)|می[\u200C ]?شه) .*(باز کنی|بازش کنی|پخش کنی|بذاری|بزاری|بگذاری|ببندی|جستجو کنی|بگردی|پیدا کنی|نشون بدی|نشان بدهی|اجرا کنی|بفرستی)" +
+            @"|(باز کن|بازش کن|باز کنید|پخش کن|پخشش کن|پخش کنید|بذار|بزار|بگذار|بذارش|ببند|ببندش|ببندید|جستجو کن|سرچ کن|بگرد|پیدا کن|نشون بده|نشونم بده|نشان بده|نشانم بده|متوقف کن|قطع کن|زیاد کن|زیادش کن|کم کن|کمش کن|بفرست|اجرا کن)( لطفا| لطفاً| دیگه| پلیز)?[.!?؟\s]*$|^(لطفا |لطفاً )?(می[\u200C ]?(تونی|توانی)|می[\u200C ]?شه).*(باز کنی|بازش کنی|پخش کنی|بذاری|بزاری|بگذاری|ببندی|جستجو کنی|بگردی|پیدا کنی|نشون بدی|نشان بدهی|اجرا کنی|بفرستی)" +
             // Bengali, Marathi, Gujarati, Punjabi, Tamil, Telugu, Kannada and Malayalam put the verb last too, and English verbs
             // with Tamil, Telugu, Kannada or Malayalam endings ("open pannu") are common.
             @"|(^|\s)(খোলো|খুলে দাও|খুলুন|খোল|চালাও|চালিয়ে দাও|চালান|চালু করো|চালু করে দাও|বাজাও|বাজিয়ে দাও|বাজান|বন্ধ করো|বন্ধ করে দাও|বন্ধ করুন|বন্ধ কর|খোঁজো|খুঁজে দাও|খুঁজুন|দেখাও|দেখিয়ে দাও|দেখান|থামাও|থামিয়ে দাও|থামান|পাঠাও|পাঠিয়ে দাও|পাঠান|বাড়াও|বাড়িয়ে দাও|কমাও|কমিয়ে দাও)( না| প্লিজ| প্লীজ)?[।.!?\s]*$|(খুলতে|চালাতে|বাজাতে|বন্ধ করতে|দেখাতে|খুঁজতে) (পারবে|পারবেন|পারো|পারেন|পারবি)" +
@@ -1610,22 +1647,16 @@ namespace CapriDesktop
 
         private static readonly Regex Errands = new Regex(
             @"^(send|dm|pm|reply to|respond to)\b(?!\s+(me|us|help)\b)|^(message|msg|text|ping) (?!(is|was|are|were|from|looks|said|says|me|us)\b)\w|^(post|tweet) (this|that|it|a|an|my|our|something|on|in|to)\b" +
-            @"|^(tell|ask|say|let|invite|kick|ban|add|react|call|ring|share|pin|block|unblock|unfriend) .+\b(on|in|into|through|via|over|to) (the |my )?(#\S+|discord|slack|teams|whatsapp|telegram|signal|messenger|skype|instagram|insta|snapchat|snap|reddit|twitter|tiktok|facebook|roblox|steam|(group )?chat|call|vc|server|channel|gc|dms?)(?!\w)" +
+            @"|^(tell|ask|say|let|invite|kick|ban|add|react|call|ring|share|pin|block|unblock|unfriend).+\b(on|in|into|through|via|over|to) (the |my )?(#\S+|discord|slack|teams|whatsapp|telegram|signal|messenger|skype|instagram|insta|snapchat|snap|reddit|twitter|tiktok|facebook|roblox|steam|(group )?chat|call|vc|server|channel|gc|dms?)(?!\w)" +
             @"|^type (?!(of|is|was)\b)\w|^(click|tap|double click|right click) (?!(bait|is|was)\b)\w|^scroll (up|down|left|right|to|through)\b|^(fill (in|out)|sign in|log in)\b" +
             @"|^(end|leave|hang up|disconnect( from)?|join|accept|decline|pick up|answer|reject|hop (in|on|off)|get off) (the |my |this |that |a |our |their )?(\w+('s)? )?(call|vc|voice (chat|channel|call)|video call|meeting|stream|server|channel)\b|^(hang up|disconnect|hop off|get off)( (the )?(call|vc))?$", RegexOptions.IgnoreCase);
         private static readonly Regex Opener = new Regex(@"^((great|nice|cool|sweet|perfect|awesome|amazing|alright|alr|aight|bet|thanks|thank you|thx|ty|so|and|now|also|oh|wait|um|uh|hmm|lol|lmao|bro|dude|bruh)[\s,!.]+)+(?=((hey|yo|ok|okay)[\s,]+)?(capri\b|(can|could|would|will) (you|u)\b|please\b|pls\b|plz\b))", RegexOptions.IgnoreCase);
 
         internal static Func<List<InstalledApp>> Catalog = ReadCatalog;
-        internal static string AppsPath;
-        internal static Func<DateTime> AppsNow = delegate { return DateTime.UtcNow; };
         internal static Func<string, bool> Exists = File.Exists;
         internal static Action<string> Run = Start;
         internal static Func<string, string> Opened = BringOpened;
         internal static Func<string, string> BrowserPath = FindBrowser;
-        internal static Func<string, string> SearchEngine = ReadSearchEngine;
-        internal static Func<string, string> ProfileRoot = SearchRoot;
-        internal static Func<string> DefaultBrowser = ReadDefaultBrowser;
-        internal static Func<DateTime> SearchNow = delegate { return DateTime.UtcNow; };
         internal static Action<string, string> Browse = StartBrowser;
         internal static Func<IntPtr> Foreground = Native.GetForegroundWindow;
         internal static Action<byte> Press = Tap;
@@ -1822,7 +1853,78 @@ namespace CapriDesktop
         private static readonly object gate = new object();
         private static List<InstalledApp> cached;
         private static DateTime cachedAt;
-        private static Exception appsFailed;
+        // apps.json in her data folder. Null in her checks, which leaves the app list exactly as it was before.
+        internal static string CatalogPath;
+        private static List<KnownApp> known;
+        private static bool knownRead;
+        private const int MostKnown = 4000;
+
+        // What she has found before, read once.
+        private static List<KnownApp> Known()
+        {
+            if (knownRead) return known;
+            knownRead = true;
+            known = new List<KnownApp>();
+            if (CatalogPath == null) return known;
+            try
+            {
+                if (!File.Exists(CatalogPath)) return known;
+                KnownApps saved;
+                using (FileStream data = File.OpenRead(CatalogPath)) saved = (KnownApps)new DataContractJsonSerializer(typeof(KnownApps)).ReadObject(data);
+                if (saved != null && saved.Apps != null)
+                    foreach (KnownApp app in saved.Apps)
+                        if (app != null && !string.IsNullOrEmpty(app.Id) && !string.IsNullOrEmpty(app.Name)) known.Add(app);
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            catch (SerializationException) { }
+            catch (System.Xml.XmlException) { }
+            return known;
+        }
+
+        // Keep what a good scan found. Only a new or renamed app writes the file, so a scan that turns up nothing new costs nothing.
+        private static void Remember(List<InstalledApp> found)
+        {
+            if (CatalogPath == null || found.Count == 0) return;
+            List<KnownApp> all = new List<KnownApp>(Known());
+            string now = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+            bool changed = false;
+            foreach (InstalledApp app in found)
+            {
+                if (string.IsNullOrEmpty(app.Id) || string.IsNullOrEmpty(app.Name)) continue;
+                KnownApp was = all.Find(entry => string.Equals(entry.Id, app.Id, StringComparison.OrdinalIgnoreCase));
+                if (was == null) { all.Add(new KnownApp { Name = app.Name, Id = app.Id, Seen = now }); changed = true; }
+                else
+                {
+                    if (!string.Equals(was.Name, app.Name, StringComparison.Ordinal)) { was.Name = app.Name; changed = true; }
+                    was.Seen = now;
+                }
+            }
+            if (all.Count > MostKnown) all.RemoveRange(0, all.Count - MostKnown);
+            known = all;
+            if (!changed) return;
+            try
+            {
+                string temporary = CatalogPath + ".new";
+                using (FileStream data = File.Create(temporary)) new DataContractJsonSerializer(typeof(KnownApps)).WriteObject(data, new KnownApps { Apps = all.ToArray() });
+                File.Copy(temporary, CatalogPath, true);
+                File.Delete(temporary);
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+
+        // Apps she remembers that this look missed. A real path has to still be on disk, so an uninstall drops out by itself.
+        // A Store or shell id can't be checked, so those only stand in when the look itself failed.
+        private static void AddKnown(List<InstalledApp> apps, bool lookFailed)
+        {
+            foreach (KnownApp entry in Known())
+            {
+                if (apps.Exists(app => string.Equals(app.Id, entry.Id, StringComparison.OrdinalIgnoreCase))) continue;
+                bool path = entry.Id.IndexOf('\\') >= 0 || entry.Id.IndexOf('/') >= 0;
+                if (path ? Exists(entry.Id) : lookFailed) apps.Add(new InstalledApp(entry.Name, entry.Id));
+            }
+        }
 
         // The messages in the floating chat panel TikTok LIVE Studio puts over a game: its own small window, apart from the studio
         // itself, with its counters above and its comment box below. Empty when there's no panel up.
@@ -1868,9 +1970,6 @@ namespace CapriDesktop
                 StopStream();
                 return was ? "Stopped streaming." : "I'm not streaming right now.";
             }
-#if CROSS
-            if (NativeWork == null) return Work("stream mode", args.Asked);
-#endif
             Streaming = true;
             string game = string.IsNullOrWhiteSpace(args.Name) ? null : args.Name.Trim();
             return Work(game == null ? "Stream the game that's open: play it yourself, live for their stream, and talk to their chat."
@@ -1902,7 +2001,6 @@ namespace CapriDesktop
         internal static string Do(string tool, ToolArguments args)
         {
             if (args == null) args = new ToolArguments();
-            if (tool == "open_website") WebsiteArgs(args);
             try
             {
                 // Something that can't work here gets her line saying so and why, before anything runs.
@@ -1921,7 +2019,8 @@ namespace CapriDesktop
                     if (nativeSite != null) return nativeSite;
                 }
 #endif
-                if (tool == "open_website") return OpenSite(args.Site, args.Search, args.Browser);
+                // STOCK 0.8.9: if (tool == "open_website") return OpenSite(args.Site, args.Search, args.Browser);
+                if (tool == "open_website") return OpenSite(SiteMeant(args), SearchMeant(args), args.Browser, AnySearch(args));
                 if (tool == "media") return Media(args);
 #if CROSS
                 if (tool == "look_at_screen" && NativeLook != null) return NativeLook(args);
@@ -1944,6 +2043,23 @@ namespace CapriDesktop
 #endif
                     return Work(args.Task.Trim(), args.Asked);
                 }
+                // <<< PATCH: find the app, then do the thing
+                // A typing job carries the app it is for. Her job planner takes over the keyboard, so whatever is in front
+                // when it starts is what gets typed into. It was never brought up first, which is why "use discord to say
+                // hi" read correctly, started a job, and typed nowhere.
+                if (tool == "use_computer" && Named(args.Name))
+                {
+                    string into = args.Name.Trim();
+                    try
+                    {
+                        if (Showing(into)) Opened(into);
+                        else if (Installed(into)) { OpenApp(into); System.Threading.Thread.Sleep(1200); Opened(into); }
+                    }
+                    catch (Exception) { }
+                    // The name has done its job; leaving it set would read as an app to open to anything downstream.
+                    args.Name = null;
+                }
+                // <<< END PATCH: find the app, then do the thing
                 if (tool == "stream") return Stream(args);
                 if (tool == "shortcut") return Shortcut(args.Name);
                 if (tool == "remember") return args.Action == "forget" ? Brain.Unnote(Theirs(args.Text)) : CallMe(args.Text) ?? Brain.Note(Theirs(args.Text));
@@ -1954,6 +2070,11 @@ namespace CapriDesktop
                 if (tool == "speech") return Valid(tool, args) ? StopSpeech() : "Couldn't find that speech action.";
                 if (tool == "job_control") return Valid(tool, args) ? JobControl(args) : "Couldn't find that job instruction.";
                 if (tool == "quit") return Valid(tool, args) ? Quit(args) : "Couldn't find that quit action.";
+                if (tool == "new_chat") return Valid(tool, args) ? StartNewChat() : "Couldn't find that new chat action.";
+                if (tool == "twitch_live") return Valid(tool, args) ? SwitchTwitchLive(args.Action) : "Say on or off for Twitch live notifications.";
+                if (tool == "twitch_who") { Func<string> asking = TwitchWho; return asking == null ? "Twitch isn't set up on this PC." : asking(); }
+                if (tool == "playlist") { Func<string, string, string> run = Playlist; return run == null ? "No playlist on this PC." : run(args.Action, args.Path ?? args.Name ?? args.Song); }
+                if (tool == "do_again") { Func<string> over = RunAgain; return over == null ? "There's nothing to do again." : over(); }
                 if (tool == "updates") return Valid(tool, args) ? Updates(args) : "Couldn't find that update action.";
                 if (tool == "draw") return Draw(args);
                 if (tool == "fake_crash") return Valid(tool, args) ? Crash(args.Action) : "Couldn't find that fake crash action.";
@@ -2089,7 +2210,7 @@ namespace CapriDesktop
             });
         }
 
-        internal static void Forget() { lock (gate) { cached = null; appsFailed = null; remembered = null; } }
+        internal static void Forget() { lock (gate) cached = null; }
 
         private static readonly string[] Swaps = { @"\bi'?m\b", "they're", @"\bi am\b", "they are", @"\bi was\b", "they were", @"\bi've\b", "they've", @"\bi'll\b", "they'll", @"\bi'd\b", "they'd", @"\bi\b", "they", @"\bmyself\b", "themselves", @"\bmy\b", "their", @"\bmine\b", "theirs", @"\bme\b", "them" };
 
@@ -2193,6 +2314,9 @@ namespace CapriDesktop
             string[][] modTools = ModToolsNow();
             StringBuilder key = new StringBuilder(ComputerName);
             foreach (string[] gap in missing) key.Append('|').Append(gap[0]).Append('=').Append(gap[1]);
+            // Her posture reads every toggle that lets her act, so a kit built under one set must not be handed out under another.
+            key.Append("|acts=");
+            for (int toggle = Security.Open; toggle <= Security.Sends; toggle++) key.Append(Security.Has(toggle) && Security.On(toggle) ? '1' : '0');
             foreach (string[] gap in off) key.Append("|off ").Append(gap[0]).Append('=').Append(gap[1]);
             foreach (string[] tool in modTools) key.Append("|mod ").Append(tool[0]).Append('=').Append(tool[1]).Append('=').Append(tool[2]);
             bool skilled = Skilled;
@@ -2283,8 +2407,7 @@ namespace CapriDesktop
         // Why something can't work here, in her prompts' words, and what she says when she's asked for a mouse and keyboard job anyway.
         private const string OnlyWindows = "only on Windows for now", LinuxHands = "needs uinput on Linux", NoSight = "this brain can't see pictures";
 #if CROSS
-        private const string MacHands = "needs Accessibility and Screen Recording on Mac", MacHandsLine = MacFingers.Permission;
-        internal const string MacScreen = "I can only look at the main display on this Mac.";
+        private const string MacHands = "needs Accessibility on Mac", MacHandsLine = "Turn Capri on in System Settings > Privacy & Security > Accessibility, then ask again.";
         private const string MacStream = "Live stream chat and timing aren't connected to Mac screen jobs yet.";
 #else
         private const string MacHands = "Mac doesn't let apps use the mouse and keyboard yet", MacHandsLine = "I can't use your mouse and keyboard on a Mac yet, choom.";
@@ -2318,11 +2441,6 @@ namespace CapriDesktop
             }
 #if CROSS
             if (OnMac && HandsReady != null) OwnHands = HandsReady();
-            if (OnMac)
-            {
-                missing.Add(new[] { "look_at_screen:screen", "display selection is not connected on Mac" });
-                missing.Add(new[] { "use_computer:launch", "Mac screen jobs use the app already in front" });
-            }
             if (!blind && !Watching.Quiet()) missing.Add(new[] { "watch_for", "this desktop can't take quiet screenshots" });
             if (OnMac) missing.Add(new[] { "linux_system", "Linux system tools are unavailable on macOS." });
             if (TerminalAvailable == null || !TerminalAvailable())
@@ -2399,8 +2517,6 @@ namespace CapriDesktop
             { "draw", "drawing on their screen", "Drawing on your screen is only on Windows for now, choom." },
             { "clone", "clones and chaos mode", NoClones },
 #if CROSS
-            { "look_at_screen:screen", "choosing another display for a look", MacScreen },
-            { "use_computer:launch", "opening apps inside a screen job", "Open the app and bring it to the front before asking me to use it." },
             { "clone:chaos", "chaos mode", NoCloneChaos },
             { "linux_system", "Linux system tools", "I can't use Linux system tools on a Mac." },
             { "run_terminal", "terminal commands", "I can't run terminal commands on this desktop." },
@@ -2472,15 +2588,6 @@ namespace CapriDesktop
             { "use_computer", " If it's already open and they want something done in it, like a mode, a match or accepting a match, call use_computer instead of opening it again.", "" },
             { "use_computer", " You can always see their screen and use their mouse and keyboard, and you play games on their PC yourself, so never say you can't, never ask them to show you their screen, and never offer to talk them through something instead of doing it.", " You can always see their screen, so never say you can't and never ask them to show you their screen." },
             { "use_computer", " You can use their mouse and keyboard, and you play games on their PC yourself, so never say you can't, and never offer to talk them through something instead of doing it.", "" },
-#if CROSS
-            { "look_at_screen:screen", LookingAt, " It looks at the main display on Mac. Put their visual question in focus." },
-            { "look_at_screen:screen", LookPlace, "" },
-            { "use_computer:launch", "If the job needs clicking, typing or more than one step, like opening an app and then searching, going somewhere or making something in it, call use_computer once with the whole job in their words.\n", "Open the requested app and bring it to the front first, then call use_computer with the whole job in their words.\n" },
-            { "use_computer:launch", "You play games on their PC yourself with their mouse and keyboard, so when they want you to play a game, or say let's play, in any language, that's one job: call use_computer once with their words, open or not. It opens the game, gets into a match or map and keeps playing until they stop you, so don't stop at open_app.\n", "For a game job, open the game with open_app and bring it to the front before use_computer. Then keep playing until they stop you.\n" },
-            { "use_computer:launch", "like opening an app and searching in it, or in a game:", "in the app already in front, or in a game:" },
-            { "use_computer:launch", "when they want you to play one, call this once with their words, open or not. It opens the game, gets into a match or map and keeps playing until they stop you.", "the game must already be open and in front. Call this once with their words and keep playing until they stop you." },
-            { "use_computer:launch", " If they want you to play a game, call use_computer once instead, open or not: it opens the game itself and plays it, so this alone never plays anything.", " To play a game, open it and bring it to the front, then call use_computer with their words." },
-#endif
             { "draw", ", drawing something on their screen or clicking something", " or clicking something" },
             { "shortcut:discord_mute", "Mute my mic means mute their mic, not deafen them. ", "" },
             { "move_yourself:sit_on", "sit on a window they name (like their Roblox window) or the taskbar, ", "" },
@@ -2589,10 +2696,32 @@ namespace CapriDesktop
             kit.Noted = (kit.NotHere.Length == 0 ? noted : noted + "\n" + kit.NotHere + Unsure) + turnOn;
             kit.Handing = kit.NotHere.Length == 0 ? handing : handing.Insert(handing.LastIndexOf(HandsLast, StringComparison.Ordinal), kit.NotHere + " If they ask for one of these, call no tool and reply with only the word: chat\n");
             kit.Brief = "\nWhat you can do on their " + ComputerName + " right now (your hands run these tools for you, so never write a tool's name or a call in your reply):\n" + string.Join("\n", brief.ToArray())
-                + (kit.NotHere.Length == 0 ? "" : "\n" + kit.NotHere + Unsure) + (switched.Count == 0 ? "" : "\nIf they ask for one that's off right now, tell them how to turn it on.");
+                // STOCK 0.8.9: the same line without the trailing + Posture()
+                + (kit.NotHere.Length == 0 ? "" : "\n" + kit.NotHere + Unsure) + (switched.Count == 0 ? "" : "\nIf they ask for one that's off right now, tell them how to turn it on.") + Posture();
             kit.Chat = kit.Brief + chat;
             kit.ChatOnly = kit.Chat.Substring(0, kit.Chat.LastIndexOf(JobWord, StringComparison.Ordinal));
             return kit;
+        }
+
+        // How eager she is with her hands, taken from whether they gave her the mouse and keyboard rather than from a preset name,
+        // so a Custom mix lands on the right side too. With it on she is an assistant that does things and should reach for a tool
+        // in the same turn. With it off every job waits for their yes anyway, so talking is the useful behaviour and announcing an
+        // action as done is not.
+        private static string Posture()
+        {
+            // Every toggle that lets her do something, not just the mouse, and named the way their SECURITY window names it.
+            List<string> free = new List<string>();
+            for (int toggle = Security.Open; toggle <= Security.Sends; toggle++)
+                if (Security.Has(toggle) && Security.On(toggle)) free.Add(Security.Names[toggle].Substring(0, 1).ToLowerInvariant() + Security.Names[toggle].Substring(1));
+            string doing = "\nAct, don't describe: when what they asked for matches one of those, call it in this same turn and then say what you did in your own voice. Opening an app or a site is a single call that finds the app or browser itself, so never check first, never answer a request to act with what you found or what's already open, and never ask them which tool to use. Asking for something a second time means do it a second time: call the tool again and never answer that you already did it, that it is already done or that it is already open, whatever your memory of this chat says.";
+            // Her hands on the mouse and keyboard is the one that covers anything, so with it on she works like an assistant.
+            if (Security.Has(Security.Mouse) && Security.On(Security.Mouse))
+                return "\nThey've handed you their mouse and keyboard, so you can do whatever they ask on this " + ComputerName + " without asking first." + doing;
+            // Without it, whatever is still on is worth doing straight away; the rest waits for their yes, so offering is the useful move.
+            if (free.Count > 0)
+                return "\nThese run the moment you call them, with no yes needed: " + Joined(free, "and") + "." + doing
+                    + " Anything else waits for their yes, so for those say what you'd do and let them agree instead of reporting it as done.";
+            return "\nThey've switched off everything you'd use to act, so talk first and answer in words. Your tools above still exist and each one waits for their yes, so say what you'd do and let them agree. Never report an action as done.";
         }
 
         private static string Unsaying(Kit kit, string text)
@@ -2668,7 +2797,6 @@ namespace CapriDesktop
         private static string Cannot(Kit kit, string tool, ToolArguments args)
         {
 #if CROSS
-            if (OnMac && tool == "look_at_screen" && args != null && !string.IsNullOrWhiteSpace(args.Screen)) return MacScreen;
             if (OnMac && tool == "clone" && args != null && args.Action == "spawn" && args.Count.HasValue && args.Count.Value <= 0) return NoCloneChaos;
 #endif
             string choice = args == null ? null : tool == "shortcut" ? args.Name : tool == "capri_settings" ? (Array.IndexOf(SettingActions, args.Action) >= 0 ? args.Action : args.Name) : tool == "move_yourself" || tool == "app_window" ? args.Action : null;
@@ -2717,6 +2845,7 @@ namespace CapriDesktop
 #endif
             if (kit.Missing.Count == 0) return null;
             string text = Asked(said);
+
             if (text.Length == 0) return null;
             string screen, window, pressed = ShortcutFor(text), moved = MovingFor(text, out screen, out window);
             foreach (KeyValuePair<string, string> gap in kit.Missing)
@@ -2916,16 +3045,11 @@ namespace CapriDesktop
             string text = Asked(said);
             string plain = Regex.Replace(text, @"^(do|did) (you|u) (know|have any idea)\b|\byou know\b|^(tell|show|get|find) me\b|\b(near me|where i (am|live)|in my (area|city|town|suburb))\b", "", RegexOptions.IgnoreCase);
             if (text.Length < 4 || ClockAsk.IsMatch(text) || !Question.IsMatch((said ?? "").Trim()) || !Unknown.IsMatch((reply ?? "").Replace('’', '\'')) || Regex.IsMatch(plain, @"\b(screen|song|playing|track|you|your|yourself|u|ur|capri|me|my|i|i'm|im)\b", RegexOptions.IgnoreCase) || Regex.IsMatch(reply ?? "", @"\bscreen\b", RegexOptions.IgnoreCase)) return null;
-            return new ToolArguments { Search = text };
-        }
-
-        // A question her hands would only search the web for is her brain's to answer. Its words stay, unless they say it can't
-        // know or are a tool call written out as words.
-        internal static bool Knew(string tool, ToolArguments args, string said, string reply)
-        {
-            if (tool != "open_website" || args == null || !string.IsNullOrEmpty(args.Site) || string.IsNullOrEmpty(args.Search)) return false;
-            if (!Question.IsMatch((said ?? "").Trim()) && !Question.IsMatch(Asked(said))) return false;
-            return !string.IsNullOrWhiteSpace(reply) && !Unknown.IsMatch(reply.Replace('’', '\'')) && !Regex.IsMatch(reply, @"\b[a-z]+(?:_[a-z]+)+\b");
+            // STOCK 0.8.9: return new ToolArguments { Site = "google", Search = text };
+            // Still named google so her own checks and her "Pulled up X on Google" line read the same; AnyEngine is what moves
+            // the actual tab to the browser's engine.
+            return new ToolArguments { Site = "google", Search = text, AnyEngine = true };
+            // <<< END PATCH: the browser's own search engine
         }
 
         // A clicking job that's clearly music goes straight to the song. A bare title stays the job a brain asked for: "play
@@ -2947,23 +3071,16 @@ namespace CapriDesktop
 #endif
             // What isn't here goes out as she said it, like her line that clones are Windows-only.
             if (Honest(result)) return result;
-            if (Regex.IsMatch(result ?? "", @"^(The closest match is |I didn't find a name matching |Stopped looking for files\.|Selected .+ in File Explorer\.|Couldn't select that in File Explorer\.|Your websites:\n|I'll remember .+ as https?://|Forgot the .+ website\.|I couldn't read that browser's address\.)")) return result;
-            if (Regex.IsMatch(result ?? "", @"^(Opened|Searched) .+ (in your default browser(?: because |\.)|but (it's behind|I couldn't bring) )")) return result;
-            foreach (string browser in BrowserNames)
-                if (Regex.IsMatch(result ?? "", @"^Searched [a-z0-9.-]+ for .+ in " + Regex.Escape(browser) + @"(?:, but .+)?\.$")) return result;
+            if (Regex.IsMatch(result ?? "", @"^(The closest match is |I didn't find a name matching |Stopped looking for files\.|Selected.+ in File Explorer\.|Couldn't select that in File Explorer\.|Your websites:\n|I'll remember.+ as https?://|Forgot the.+ website\.|I couldn't read that browser's address\.)")) return result;
+            if (Regex.IsMatch(result ?? "", @"^(Opened|Searched).+ (in your default browser because |but (it's behind|I couldn't bring) )")) return result;
             if (Regex.IsMatch(result ?? "", @"^(Saved [\d.]+ seconds of |Turn on Clip my games |I haven't buffered any game video |Windows couldn't (find an H\.264 encoder|encode that clip)|Windows Media Foundation isn't installed|Couldn't save that clip)")) return result;
             if ((result ?? "").StartsWith("Opened your own website", StringComparison.Ordinal)) return "Here's my site, choom. That's where people download me.";
             // Power lines go out as they are: no second brain call while the shutdown counts down.
             if (Regex.IsMatch(result ?? "", @"^(One of me wasn't|There's (?:two|\d+ more) of me|Got rid of|I don't have any clones|Messing with your icons|Poof\. Your icons|Put your icons back|Your icons are already|I'm already in there|Couldn't get at your desktop|Couldn't put all your icons back|Shutting your PC down|Restarting your PC|Signing you out|Putting your PC to sleep|Lock(ed|ing) your PC|Cancelled it\.|Gaming Mode|Moved my HUD|Put my HUD|My HUD)")) return result;
             // So do her stopwatch's lines, or a second brain call could round or reword its time.
             if (Regex.IsMatch(result ?? "", @"^(Started your stopwatch|Stopped your stopwatch|Your stopwatch )")) return result;
-            Match searched = Regex.Match(result ?? "", @"^Searched ([a-z0-9.-]+) for (.+)\.$");
-            if (!searched.Success) return null;
-            string host = searched.Groups[1].Value;
-            if (Regex.IsMatch(host, @"^(youtube\.com|twitch\.tv|reddit\.com|en\.wikipedia\.org|open\.spotify\.com|roblox\.com|github\.com)$")) return null;
-            string engine = Regex.IsMatch(host, @"^google\.(com|[a-z]{2}|co\.[a-z]{2}|com\.[a-z]{2})$") ? "Google"
-                : host == "duckduckgo.com" || host == "html.duckduckgo.com" ? "DuckDuckGo" : host == "search.brave.com" ? "Brave Search" : host == "bing.com" ? "Bing" : null;
-            return "Pulled up \"" + searched.Groups[2].Value + "\"" + (engine == null ? "" : " on " + engine) + " for you, choom.";
+            Match searched = Regex.Match(result ?? "", @"^Searched google\.com for (.+)\.$");
+            return searched.Success ? "Pulled up \"" + searched.Groups[1].Value + "\" on Google for you, choom." : null;
         }
 
         // A diagram's result lists what's written on it. Mac and Linux have no ink, so it never comes up there.
@@ -3227,7 +3344,7 @@ namespace CapriDesktop
             @"|\bma (nistax|nistgħax) (niftaħ|niftah|indoqq|nikkontrolla|nidħol|nixgħel|nagħlaq)(?!\w)|\bm'?għandix aċċess(?!\w)" +
             @"|אני לא (יכולה|יכול|מסוגלת|מסוגל) ל(פתוח|נגן|הפעיל|שלוט|גשת|סגור|חפש)|אין לי גישה" +
             @"|نہیں (کھول|چلا|بجا|بند کر|کنٹرول کر|ایکسیس کر|رسائی حاصل کر) (سکتی|سکتا)|(رسائی|ایکسیس) (نہیں ہے|حاصل نہیں)|میرے پاس (رسائی|ایکسیس) نہیں" +
-            @"|نمی[\u200C ]?(تونم|توانم) .{0,40}?(باز کنم|پخش کنم|اجرا کنم|کنترل کنم|ببندم|بذارم|بگذارم)|دسترسی (ندارم|نداریم)" +
+            @"|نمی[\u200C ]?(تونم|توانم).{0,40}?(باز کنم|پخش کنم|اجرا کنم|کنترل کنم|ببندم|بذارم|بگذارم)|دسترسی (ندارم|نداریم)" +
             @"|(খুলতে|চালাতে|বাজাতে|বন্ধ করতে|নিয়ন্ত্রণ করতে|অ্যাক্সেস করতে) (পারব না|পারবো না|পারছি না|পারি না|পারবনা|পারছিনা|পারিনা)|(অ্যাক্সেস|প্রবেশাধিকার) নেই" +
             @"|(उघडू|लावू|चालू करू|बंद करू|नियंत्रित करू) शकत नाही|(ऍक्सेस|ॲक्सेस|एक्सेस|प्रवेश) नाही" +
             @"|(ખોલી|વગાડી|ચાલુ કરી|બંધ કરી|નિયંત્રિત કરી) (શકતી|શકતો|શકું) નથી|(ઍક્સેસ|એક્સેસ|પ્રવેશ) નથી" +
@@ -3352,7 +3469,7 @@ namespace CapriDesktop
         private const string Hers = @"(?:[\s,]+(?:now|then|already|again|quick|real quick|for me|for us|please|pls|plz|girl|choom|bestie|" + SpokenName + @"))*$";
         // The window she's told to sit or lie on, by its app's or game's name: "Roblox" in "sit on my Roblox window". Words for
         // a person, a pronoun or her cursor never name one.
-        private const string OnWindow = @"(?!(?:(?:the|my|your|ur|our|that|this) )?(?:it|that|this|there|here|me|you|him|her|them|us|lap|face|head|knees?|bed|couch|sofa|chair|cursor|mouse|pointer|window|ledge|back|side|stomach|tummy)\b)(?:the |my |your |ur |our |that |this )?(?<w>[\p{L}\p{Nd}][\p{L}\p{Nd} .'&+-]{0,40}?)";
+        private const string OnWindow = @"(?!(?:(?:the|my|your|ur|our|that|this) )?(?:it|that|this|there|here|me|you|him|her|them|us|lap|face|head|knees?|bed|couch|sofa|chair|cursor|mouse|pointer|window|ledge|back|side|stomach|tummy)\b)(?:the |my |your |ur |our |that |this )?(?<w>[\p{L}\p{Nd}][\p{L}\p{Nd}.'&+-]{0,40}?)";
         private const string Bidding = @"^(?:(?:go|come|now|please|pls|plz) )?";
         // The taskbar and her own Mainframe are seats she can be told to sit on too.
         internal static readonly Regex TaskbarWords = new Regex(@"^(?:(?:the|my|your|ur) )?(?:task ?bar|floor|ground|bottom of (?:the|my) screen)$", RegexOptions.IgnoreCase);
@@ -3643,11 +3760,6 @@ namespace CapriDesktop
             if (args.App == null && (args.Action == "volume_up" || args.Action == "volume_down") && Regex.IsMatch(said ?? "", @"\bspotify\b", RegexOptions.IgnoreCase)) args.App = "spotify";
         }
 
-        internal static bool Plain(string tool, ToolArguments args)
-        {
-            return tool == "open_app" || tool == "app_window" || tool == "media" || tool == "open_website" && args != null && string.IsNullOrEmpty(args.Search);
-        }
-
         internal static bool Heard(string said, out string tool, out ToolArguments args, bool brainy = false)
         {
 #if CROSS
@@ -3797,6 +3909,17 @@ namespace CapriDesktop
             if (Planned(said, out tool, out args)) return true;
             tool = null;
             args = new ToolArguments();
+            // <<< PATCH: "again" repeats her last command rather than asking her brain whether it is already done
+            // This has to come before every other branch: "run it again" was being claimed by the open/launch/run branch
+            // further down, which then refused it and sent the whole thing to her brain.
+            if (RunAgain != null && Repeated.IsMatch(Asked(said).Trim()))
+            {
+                tool = "do_again";
+                args.Asked = said;
+                return true;
+            }
+            // <<< END PATCH: again
+
 #if !CROSS
             // "Put on the song they want" leaves the call a choice: her brain's call_errand stays, instead of a song called that.
             if (CallSession.Blank(said)) return false;
@@ -3809,6 +3932,64 @@ namespace CapriDesktop
 #endif
             if (Moon.IsMatch(said ?? "")) { tool = "play_music"; args.Song = MoonSong; args.Kind = "song"; return true; }
             string text = Asked(said);
+
+            // <<< PATCH: her playlist, read without the model
+            // Ahead of everything else because her media and play_music branches further down claim "skip", "next" and
+            // "play my playlist" first, which is why those reached media next and play_music instead (measured, 13 Nov).
+            // Skip only counts as hers while her own playlist is the thing playing, so the media keys still work otherwise.
+            // Adding a folder is effectively typed-only without needing to know how the words arrived: it only counts when
+            // the path is a folder that exists, and dictation does not produce those.
+            // "playlist add <path>" is hers whatever the path turns out to be, so a typo is answered rather than acted on.
+            if (NewChat != null && ClearMemory.IsMatch(text))
+            {
+                tool = "new_chat";
+                args.Action = "clear";
+                args.Asked = said;
+                return true;
+            }
+            Match asked = PlaylistAdd.Match(text);
+            if (asked.Success && Playlist != null)
+            {
+                tool = "playlist";
+                args.Action = "add_folder";
+                args.Path = asked.Groups["path"].Value.Trim().Trim('"');
+                args.Asked = said;
+                return true;
+            }
+            // "add <path> to my playlist" ends in the word playlist, so it is hers too, and claimed whatever the path says
+            // for the same reason: a path that is wrong must come back as wrong, never as a folder she went and made.
+            Match folder = PlaylistFolder.Match(text);
+            if (folder.Success && Playlist != null)
+            {
+                tool = "playlist";
+                args.Action = "add_folder";
+                args.Path = folder.Groups["path"].Value.Trim().Trim('"');
+                args.Asked = said;
+                return true;
+            }
+            if (Playlist != null)
+            {
+                bool spinning = PlaylistBusy != null && PlaylistBusy();
+                string doing = AskedCommands.IsMatch(text) ? "commands"
+                    : PlaylistRepeatOff.IsMatch(text) ? "repeat_off"
+                    : PlaylistRepeatOne.IsMatch(text) ? "repeat_one"
+                    : PlaylistRepeatAll.IsMatch(text) ? "repeat_all"
+                    : PlaylistShuffle.IsMatch(text) && (spinning || PlaylistShuffle.Match(text).Groups[0].Value.IndexOf("playlist", StringComparison.OrdinalIgnoreCase) >= 0) ? "shuffle"
+                    : PlaylistBack.IsMatch(text) && spinning ? "back"
+                    : PlaylistSkip.IsMatch(text) && spinning ? "skip"
+                    : PlaylistDrop.IsMatch(text) ? "remove"
+                    : PlaylistStop.IsMatch(text) ? "stop"
+                    : PlaylistPlay.IsMatch(text) ? "play" : null;
+                if (doing != null)
+                {
+                    tool = "playlist";
+                    args.Action = doing;
+                    args.Asked = said;
+                    return true;
+                }
+            }
+            // <<< END PATCH: playlist heard directly
+
 #if CROSS
             // Mac and Linux have no reminders route to hear her stopwatch's words, so they're heard here. Windows hears them in
             // Reminders.Route, before any brain, like a timer.
@@ -3883,7 +4064,9 @@ namespace CapriDesktop
             string miniWeb = Regex.Replace(text, @"\s+online\b", "", RegexOptions.IgnoreCase);
             if (miniWeb != text && MiniName(miniWeb) != null)
             {
-                tool = "open_website"; args.Search = text; return true;
+                // STOCK 0.8.9: args.Site = "google" with no AnyEngine, so "play chess online" was always a Google tab.
+                tool = "open_website"; args.Site = "google"; args.Search = text; args.AnyEngine = true; return true;
+                // <<< END PATCH: the browser's own search engine
             }
 #if !CROSS
             ToolArguments miniMove = MiniInput(text);
@@ -3965,9 +4148,16 @@ namespace CapriDesktop
                 if (Site(target)) { tool = "open_website"; args.Site = target; return true; }
                 return false;
             }
+            // STOCK 0.8.9, both lines, neither setting AnyEngine, so "look up X" and "what's the weather tomorrow" were Google:
+            //   found = Regex.Match(text, @"^(?:google|look up)\s+(.+)$", RegexOptions.IgnoreCase);
+            //   if (found.Success && !Regex.IsMatch(found.Groups[1].Value, @"^(it|this|that|something|stuff|for me)$", RegexOptions.IgnoreCase)) { tool = "open_website"; args.Site = "google"; args.Search = found.Groups[1].Value.Trim(); return true; }
+            //   if (Regex.IsMatch(text, LookupWords,...) && !Regex.IsMatch(..., @"\b(my|your|you|me|i)\b",...)) { tool = "open_website"; args.Site = "google"; args.Search = text; return true; }
+            // The verb is captured now so "google X" can stay on Google, the one case where they asked for it by name, while
+            // "look up X" goes to whatever engine the browser uses. Group 2 is the words, so Search reads the same as before.
             found = Regex.Match(text, @"^(google|look up)\s+(.+)$", RegexOptions.IgnoreCase);
-            if (found.Success && !Regex.IsMatch(found.Groups[2].Value, @"^(it|this|that|something|stuff|for me)$", RegexOptions.IgnoreCase)) { tool = "open_website"; args.Site = string.Equals(found.Groups[1].Value, "google", StringComparison.OrdinalIgnoreCase) ? "google" : null; args.Search = found.Groups[2].Value.Trim(); return true; }
-            if (Regex.IsMatch(text, LookupWords, RegexOptions.IgnoreCase) && !Regex.IsMatch(Regex.Replace(text, @"\bnear me\b", ""), @"\b(my|your|you|me|i)\b", RegexOptions.IgnoreCase)) { tool = "open_website"; args.Search = text; return true; }
+            if (found.Success && !Regex.IsMatch(found.Groups[2].Value, @"^(it|this|that|something|stuff|for me)$", RegexOptions.IgnoreCase)) { tool = "open_website"; args.Site = "google"; args.Search = found.Groups[2].Value.Trim(); args.AnyEngine = !found.Groups[1].Value.Equals("google", StringComparison.OrdinalIgnoreCase); return true; }
+            if (Regex.IsMatch(text, LookupWords, RegexOptions.IgnoreCase) && !Regex.IsMatch(Regex.Replace(text, @"\bnear me\b", ""), @"\b(my|your|you|me|i)\b", RegexOptions.IgnoreCase)) { tool = "open_website"; args.Site = "google"; args.Search = text; args.AnyEngine = true; return true; }
+            // <<< END PATCH: the browser's own search engine
             found = Regex.Match(text, @"^(?:play|shuffle|put on|blast)\s+(.+?)(\s+on\s+(spotify|youtube|apple\s+music))?$", RegexOptions.IgnoreCase);
             if (found.Success)
             {
@@ -4027,6 +4217,55 @@ namespace CapriDesktop
                 if (how == "move_to_screen") args.Screen = Regex.IsMatch(found.Groups["s"].Value, "^(?:other|another|next)$", RegexOptions.IgnoreCase) ? "next" : found.Groups["s"].Value.ToLowerInvariant();
                 return true;
             }
+            // <<< PATCH: "who's live on twitch", read without the model
+            if (TwitchWho != null && WhoIsLive.IsMatch(text))
+            {
+                tool = "twitch_who";
+                args.Asked = said;
+                return true;
+            }
+            // <<< END PATCH: who is live
+
+            // <<< PATCH: "type test in notepad" runs her hands instead of being narrated
+            // Measured on a real session, 13 Nov: sixteen claims of having typed something, one actual typing job. The model
+            // answered "Test written. Ready for more." fifteen times without calling anything, and once reached for
+            // open_website instead, which is where "Notepad isn't a website" came from. So typing is read here now and never
+            // depends on the model choosing use_computer. The named app still has to be installed or on screen, so "write a
+            // poem about notepads" is not a job, and the whole sentence is passed on as the task because use_computer wants
+            // their exact words.
+            Match typing = Typing.Match(text);
+            if (typing.Success)
+            {
+                string into = typing.Groups["app"].Success ? typing.Groups["app"].Value : typing.Groups["app2"].Value;
+                into = Regex.Replace(into ?? "", @"\s+(?:application|app|window|editor)$", "", RegexOptions.IgnoreCase).Trim(' ', '.', ',', ':', '!', '?');
+                string words = (typing.Groups["what"].Value ?? "").Trim(' ', '.', ',', ':', '!', '?', '"');
+                string app = AppMeant(into);
+                if (app != null && words.Length > 0)
+                {
+                    // Spelled out rather than passed on as it was said, because the job planner reads the task literally: given
+                    // "Capri type test in Notepad" it typed the words "type test" (22:00, 13 Nov). The app is named as she
+                    // found it, so a misheard "Notad" reaches the job as Notepad.
+                    tool = "use_computer";
+                    args.Task = "Type \"" + words + "\" into " + app;
+                    // Carried so the app is brought up before the job starts: finding it and then acting, in that order.
+                    args.Name = app;
+                    args.Asked = said;
+                    return true;
+                }
+            }
+            // <<< END PATCH: typing is read without the model
+
+            // <<< PATCH: "turn off twitch live notifications", read without the model so it works by voice every time
+            Match twitched = TwitchSwitched.Match(text);
+            if (twitched.Success)
+            {
+                tool = "twitch_live";
+                args.Action = (twitched.Groups["way"].Value.Length > 0 ? twitched.Groups["way"].Value : "off").ToLowerInvariant();
+                args.Asked = said;
+                return true;
+            }
+            // <<< END PATCH: twitch_live heard directly
+
             found = Regex.Match(text, @"^end (?:the )?task(?: (?:for )?(.+))?$", RegexOptions.IgnoreCase);
             if (found.Success)
             {
@@ -4045,6 +4284,175 @@ namespace CapriDesktop
             args.Asked = said;
             return true;
         }
+
+        // The app they named, as she knows it, or null when nothing on this PC answers to it. An open window wins over an
+        // installed app, because a job is nearly always about the thing already in front of them. Her window matcher scores
+        // partial names, so a misheard "Notad" or "Notepad plus plus" still finds the right window instead of falling through
+        // to her brain, which answered "Notepad isn't a website" (22:00, 13 Nov).
+        internal static string AppMeant(string named)
+        {
+            string want = (named ?? "").Trim();
+            if (want.Length == 0) return null;
+            // The words around the name are rarely the name: "chat on Discord" is Discord, "the notepad window" is notepad.
+            // So the whole phrase is tried first and then shorter and shorter tails of it, longest first, which is why
+            // "type high in chat on Discord" stopped finding nothing (22:20, 13 Nov).
+            string[] words = Regex.Split(want, @"\s+");
+            for (int from = 0; from < words.Length && from < 4; from++)
+            {
+                string tail = string.Join(" ", words, from, words.Length - from).Trim(' ', '.', ',', ':', '!', '?');
+                string found = AppExactly(tail);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
+        private static string AppExactly(string want)
+        {
+            if (want.Length == 0 || Regex.IsMatch(want, @"^(?:the|a|an|my|this|that|in|on|to|it|chat|window|app)$", RegexOptions.IgnoreCase)) return null;
+            try
+            {
+                OpenWindow open = OpenedWindow(Windows(), want);
+                if (open != null) return BrowserName(open.Program) ?? AppTitle(open) ?? want;
+            }
+            catch (Exception) { }
+            if (Showing(want)) return want;
+            if (Installed(want)) return want;
+            // Spoken plus signs: "notepad plus plus" is notepad++, which no catalog lists under those words.
+            string signs = Regex.Replace(want, @"\s*\bplus\s*plus\b", "++", RegexOptions.IgnoreCase);
+            signs = Regex.Replace(signs, @"\s*\bplus\b", "+", RegexOptions.IgnoreCase).Trim();
+            if (signs != want && (Showing(signs) || Installed(signs))) return signs;
+            return null;
+        }
+
+        // The app behind a window, from its own title: "new 1 - Notepad++" is Notepad++.
+        private static string AppTitle(OpenWindow window)
+        {
+            if (window == null) return null;
+            string title = (window.Title ?? "").Trim();
+            int dash = title.LastIndexOf(" - ", StringComparison.Ordinal);
+            string tail = dash > 0 ? title.Substring(dash + 3).Trim() : null;
+            return string.IsNullOrEmpty(tail) ? (string.IsNullOrEmpty(window.Program) ? null : window.Program) : tail;
+        }
+
+        // Her playlist, by voice or typed. "remove song" comes before "skip" in Direct on purpose: taking a song off also
+        // moves on, so the stronger meaning has to win when someone says "remove this song and skip it".
+        // "playlist add D:\Music". The word playlist has to lead, because a bare "add folder..." is a request to make a
+        // folder as far as her file tools are concerned, and a path typed slightly wrong fell through to her brain, which
+        // then offered to create it. Led this way it always claims the words, so a wrong path comes back as
+        // "there's no folder at..." instead of becoming a new folder.
+        private static readonly Regex PlaylistAdd = new Regex(
+            @"^(?:(?:please|hey|capri|ok|okay)[\s,]+)*playlist[\s,]+(?:add|added|and)\s+(?:the\s+)?(?:folder|dir|directory|path)?\s*(?<path>.+?)[\s.!?]*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // The other way round reads clearly too, and ending in "playlist" cannot be mistaken for making a folder.
+        private static readonly Regex PlaylistFolder = new Regex(
+            @"^(?:(?:please|hey|capri|ok|okay)[\s,]+)*(?:add|put)\s+(?:the\s+)?(?:folder|directory|path)?\s*(?<path>.+?)"
+            + @"\s+(?:to|into|on|in)\s+(?:my\s+|the\s+|her\s+|your\s+)?playlist[\s.!?]*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex PlaylistDrop = new Regex(
+            @"^(?:(?:please|hey|capri|ok|okay)[\s,]+)*(?:remove|delete|drop|take\s+off|get\s+rid\s+of|bin|ditch)\s*"
+            + @"(?:this\s+|that\s+|the\s+|current\s+)?(?:song|track|tune|one)(?:\s+(?:from|off)\s+(?:my\s+|the\s+|her\s+)?playlist)?[\s.!?]*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex PlaylistSkip = new Regex(
+            @"^(?:(?:please|hey|capri|ok|okay)[\s,]+)*(?:skip(?:\s+(?:this|that|the))?(?:\s+(?:song|track|tune|one))?"
+            + @"|next(?:\s+(?:song|track|tune|one))?|go\s+to\s+the\s+next(?:\s+(?:song|track|tune|one))?"
+            + @"|play\s+the\s+next(?:\s+(?:song|track|tune|one))?)[\s.!?]*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex PlaylistBack = new Regex(
+            @"^(?:(?:please|hey|capri|ok|okay)[\s,]+)*(?:(?:go\s+)?back(?:\s+(?:a|one|to\s+the\s+last))?(?:\s+(?:song|track|tune))?"
+            + @"|previous(?:\s+(?:song|track|tune|one))?|prev(?:\s+(?:song|track|tune))?|last\s+(?:song|track|tune)"
+            + @"|play\s+the\s+(?:previous|last)(?:\s+(?:song|track|tune|one))?)[\s.!?]*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex PlaylistShuffle = new Regex(
+            @"^(?:(?:please|hey|capri|ok|okay)[\s,]+)*(?:shuffle|randomi[sz]e|mix\s+up)(?:\s+(?:my|the|her|your))?(?:\s+(?:playlist|songs|music|tracks))?(?<off>\s+off)?[\s.!?]*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex PlaylistRepeatOne = new Regex(
+            @"^(?:(?:please|hey|capri|ok|okay)[\s,]+)*(?:repeat|loop)\s+(?:(?:this|that|the|just)\s+)?(?:song|track|tune|one)[\s.!?]*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex PlaylistRepeatAll = new Regex(
+            @"^(?:(?:please|hey|capri|ok|okay)[\s,]+)*(?:repeat|loop)\s+(?:all|everything|the\s+)?(?:playlist|list|album)?[\s.!?]*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex PlaylistRepeatOff = new Regex(
+            @"^(?:(?:please|hey|capri|ok|okay)[\s,]+)*(?:(?:turn\s+)?repeat\s+off|stop\s+repeating|no\s+repeat|repeat\s+none)[\s.!?]*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // "clear memory", said plainly. It is the same new_chat as before, double-ask and all, just not left to her brain
+        // to pick.
+        private static readonly Regex ClearMemory = new Regex(
+            @"^(?:(?:please|hey|capri|ok|okay)[\s,]+)*(?:clear|wipe|reset|dump|empty)\s+(?:your\s+|the\s+|our\s+|this\s+)?memory(?:\s+(?:please|now))?[\s.!?]*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // "show commands", "command list".
+        private static readonly Regex AskedCommands = new Regex(
+            @"^(?:(?:please|hey|capri|ok|okay)[\s,]+)*(?:show\s+(?:me\s+)?(?:your\s+|the\s+|all\s+)?commands?"
+            + @"|(?:what|which)\s+commands?(?:\s+(?:do|can)\s+you\s+(?:have|know|understand|do))?"
+            + @"|commands?\s+list|list\s+(?:your\s+|the\s+)?commands?|open\s+commands?(?:\.md)?|show\s+commands?)[\s.!?]*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex PlaylistStop = new Regex(
+            @"^(?:(?:please|hey|capri|ok|okay)[\s,]+)*(?:stop|end|kill|quit|close)\s+(?:my\s+|the\s+|her\s+|your\s+)?playlist[\s.!?]*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex PlaylistPlay = new Regex(
+            @"^(?:(?:please|hey|capri|ok|okay)[\s,]+)*(?:play|start|resume|put\s+on|shuffle)\s+(?:my\s+|the\s+|her\s+|your\s+)?playlist[\s.!?]*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // "type test in notepad", "write hello into notepad++", "take control of notepad and type ok", and the way it often
+        // comes out by voice, "notepad application type test". The words typed are left in the sentence rather than captured
+        // on their own, because use_computer is given the whole request as its task.
+        private static readonly Regex Typing = new Regex(
+            @"^(?:(?:please|hey|capri|ok|okay|go|now)[\s,]+)*"
+            // "take control of notepad and type ok", and "control discord and type hi" with no take in front of it.
+            + @"(?:(?:(?:take|grab|get)\s+)?control(?:\s+of)?\s+(?<app>.+?)\s*(?:,|\s)\s*(?:and\s+|then\s+)?(?:type|write|enter|put|say)\s+(?<what>.+?)"
+            // "type test in notepad"
+            + @"|(?:type|write|enter|put)\s+(?<what>.+?)\s+(?:in|into|on|onto|to)\s+(?:the\s+|my\s+|this\s+|that\s+)?(?<app2>.+?)"
+            // "type in discord, this is capri": the app comes first and the words after it, comma or not.
+            + @"|(?:type|write|enter|put)\s+(?:in|into|on|onto)\s+(?:the\s+|my\s+|this\s+|that\s+)?(?<app2>[\w.+#-]+(?:\s+(?:application|app|window|editor))?)\s*[,:]?\s+(?<what>.+?)"
+            // "notepad application type test", and "in discord type hi", which is how it often comes out by voice.
+            + @"|(?:in|into|on|onto)?\s*(?<app2>[\w.+#-]+(?:\s+(?:application|app|window|editor))?)\s*[,:]?\s+(?:type|write|enter|put)\s+(?<what>.+?)"
+            // "use discord to say hi", "open notepad and write hello".
+            + @"|(?:use|using|go\s+(?:in)?to|open)\s+(?<app>.+?)\s+(?:to|and(?:\s+then)?)\s+(?:say|type|write|enter|put|send|post)\s+(?<what>.+?)"
+            // "say hi in discord", "send hello to discord". Only a job when the app is found, so ordinary talk is untouched.
+            + @"|(?:say|send|post|message)\s+(?<what>.+?)\s+(?:in|into|on|onto|to)\s+(?:the\s+|my\s+|this\s+|that\s+)?(?<app2>.+?))"
+            + @"[\s.!?]*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // "who's live", "anyone streaming", "check twitch". Anchored on the question word so the off switch below, which
+        // starts with stop or turn, can never be read as one of these.
+        private static readonly Regex WhoIsLive = new Regex(
+            @"^(?:hey\s+)?(?:can\s+you\s+|could\s+you\s+|go\s+|please\s+)?(?:check\s+|see\s+|tell\s+me\s+|find\s+out\s+)?"
+            + @"(?:(?:who|whos|who's|who\s+is)\s+(?:all\s+)?(?:live|streaming|online|on)\b"
+            + @"|(?:is\s+)?(?:any\s?one|anybody|anyone)\s+(?:live|streaming|online)\b"
+            + @"|check\s+twitch\b|twitch\s+(?:check|list)\b)"
+            + @"(?:\s+(?:on\s+)?twitch)?[\s.?!]*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // On, off, or a plain "stop telling me who's live", which means off.
+        private static readonly Regex TwitchSwitched = new Regex(
+            @"^(?:(?:turn|switch|put)\s+(?<way>on|off)\s+(?:my\s+|the\s+|your\s+)?twitch(?:\s+live)?(?:\s+(?:notifications?|alerts?|mentions?|pings?|updates?))?"
+            + @"|(?:turn|switch|put)\s+(?:my\s+|the\s+|your\s+)?twitch(?:\s+live)?(?:\s+(?:notifications?|alerts?|mentions?|pings?|updates?))?\s+(?<way>on|off)"
+            + @"|(?:stop|quit)\s+(?:telling|letting)\s+me\s+(?:know\s+)?(?:about\s+)?who(?:'s|s| is)?\s+live"
+            + @"|(?:stop|quit)\s+(?:the\s+)?twitch(?:\s+live)?\s+(?:notifications?|alerts?|mentions?|pings?))\s*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // "again", "do it again", "once more", "try that again". Asking twice used to go to her brain, which read the last
+        // turn in her memory, decided it was already done and said so instead of doing it. A repeat is now
+        // read here and runs the last command straight away, with no model in the way to have an opinion about it.
+        private static readonly Regex Repeated = new Regex(
+            @"^(?:(?:do|run|try|go)\s+)?(?:(?:that|it|this|the\s+last\s+one)\s+)?again[\s.!?]*$"
+            // Anchored, so "repeat song", "repeat one", "repeat all" and "repeat playlist" stay the playlist's words and
+            // never mean run her last command again.
+            + @"|^(?:again|redo(?:\s+(?:that|it))?|repeat(?:\s+(?:that|it))?|one\s+more\s+time|once\s+more)[\s.!?]*$"
+            + @"|^(?:do|run|try)\s+(?:that|it)\s+(?:one\s+)?more\s+time"
+            + @"|^(?:come\s+on,?\s+)?(?:just\s+)?(?:do|run)\s+it$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         internal static bool Failed(string result) { return Regex.IsMatch(result ?? "", @"^([^.]* can't see (?:your screen|screens)\b|My eyes are still downloading|I looked, but|Which app|What should I play|No app called|More than one|That didn't work|Couldn't|There's no|That isn't a website|Which job|Should I |Got lost|Ran out of steps|You pressed Esc|You grabbed the mouse|Using the mouse and keyboard isn't)|isn't open\.$|but (couldn't|it's still open)|isn't taking my keys\. Click inside it first\.$"); }
 
@@ -4072,7 +4480,7 @@ namespace CapriDesktop
         internal static string MiniName(string text)
         {
             if (Regex.IsMatch((text ?? "").Replace('\u2019', '\''), "^" + MiniOpen + MiniThe + @"(?:native )?chess" + MiniAfter + @"(?:\s+(?:on\s+)?(?:easy|normal|hard))?(?:(?:,?\s+i(?:'ll| will) be|\s+as)\s+(?:white|black))?$", RegexOptions.IgnoreCase)) return "chess";
-            Match mini = Regex.Match(text ?? "", "^" + MiniOpen + MiniArticle + @"(?:(?:easy|normal|hard)\s+)?" + MiniGameOf + @"(tic[ -]?tac[ -]?toe|connect[ -](four|4)|rock[ ,]+paper[ ,]+scissors)" + MiniAfter + MiniLevel + @"(?:\s+(?:with|against)\s+(?:me|you|us))?$", RegexOptions.IgnoreCase);
+            Match mini = Regex.Match(text ?? "", "^" + MiniOpen + MiniArticle + @"(?:(?:easy|normal|hard)\s+)?" + MiniGameOf + @"(tic[ -]?tac[ -]?toe|connect[ -](four|4)|rock[,]+paper[,]+scissors)" + MiniAfter + MiniLevel + @"(?:\s+(?:with|against)\s+(?:me|you|us))?$", RegexOptions.IgnoreCase);
             if (!mini.Success) return null;
             string name = mini.Groups[1].Value.ToLowerInvariant();
             return name.StartsWith("tic", StringComparison.Ordinal) ? "tic_tac_toe" : name.StartsWith("connect", StringComparison.Ordinal) ? "connect_four" : "rock_paper_scissors";
@@ -4346,7 +4754,13 @@ namespace CapriDesktop
                 return args.Action == "now" || Regex.IsMatch(args.Action ?? "", @"\A(set|up|down|mute|unmute)\z") && Named(args.Name) && (args.Action == "set" ? leveled : string.IsNullOrEmpty(args.Level) || leveled);
             }
 #endif
-            if (tool == "open_website") { WebsiteArgs(args); return Named(args.Site) || Named(args.Search); }
+            // A browser name she doesn't know must never cost them the site. OpenSite already opens their default when it can't
+            // place the one that was named, so only the site itself is worth refusing a call over.
+            // STOCK 0.8.9: if (tool == "open_website") return Named(args.Site)
+            //                  && (string.IsNullOrEmpty(args.Browser) || BrowserName(args.Browser) != null);
+            // Site, or anything that can be read as one, or search words to run on a default engine. Refusing the call teaches
+            // them nothing and loses the request; OpenSite already explains whatever it could not do.
+            if (tool == "open_website") return Named(args.Site) || Named(args.Search) || Named(args.Name);
             if (tool == "look_at_screen") return true;
             if (tool == "media")
             {
@@ -4371,6 +4785,13 @@ namespace CapriDesktop
             if (tool == "use_computer") return Named(args.Task);
             if (tool == "shortcut") return Regex.IsMatch(args.Name ?? "", @"\A(discord_mute|discord_deafen|screenshot|clip_that|record|game_bar|show_desktop|task_manager|clipboard|emoji|voice_typing|live_captions|narrator|magnifier|magnifier_off|color_filters|quick_settings)\z");
             if (tool == "remember") return Named(args.Text) && (string.IsNullOrEmpty(args.Action) || args.Action == "remember" || args.Action == "forget");
+            if (tool == "new_chat") return string.IsNullOrEmpty(args.Action) || args.Action == "clear";
+            if (tool == "twitch_live") return args.Action == "on" || args.Action == "off";
+            if (tool == "twitch_who") return true;
+            if (tool == "playlist") return args.Action == "commands" || args.Action == "play" || args.Action == "skip" || args.Action == "back" || args.Action == "stop" || args.Action == "remove"
+                || args.Action == "shuffle" || args.Action == "repeat_one" || args.Action == "repeat_all" || args.Action == "repeat_off"
+                || ((args.Action == "add_folder" || args.Action == "add_song") && Named(args.Path ?? args.Name ?? args.Song));
+            if (tool == "do_again") return true;
             if (tool == "find_file") return args.Action == "show" || args.Action == "open" || args.Action == "stop" || ((string.IsNullOrEmpty(args.Action) || args.Action == "search") && Named(args.Description));
             if (tool == "website_nickname") return args.Action == "list" || (Named(args.Name) && (args.Action == "forget" || args.Action == "save"));
             if (tool == "read_file") return Named(args.Path) && (!args.Page.HasValue || args.Page.Value >= 1) && (!args.Offset.HasValue || args.Offset.Value >= 0);
@@ -4411,21 +4832,51 @@ namespace CapriDesktop
 
         private static bool Named(string text) { return !string.IsNullOrWhiteSpace(text) && text.Trim() != "..."; }
 
+        // A site typed into the wrong field. A small brain asked to "open wikipedia.com on Brave" often fills only search, or
+        // puts the address in name, and the call was refused outright: "that open_website call was missing what it needs", which
+        // reached them as "That didn't work" over and over (22:08 to 22:27, 12 Nov). An address in any of those fields is the
+        // site they meant, and search words with no site at all are a web search, which is what they asked for anyway.
+        private static readonly Regex LooksLikeSite = new Regex(@"^(https?://|www\.)|^[A-Za-z0-9][A-Za-z0-9\-]*(\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}(/\S*)?$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        private static string SiteMeant(ToolArguments args)
+        {
+            if (Named(args.Site)) return args.Site;
+            if (Named(args.Name) && LooksLikeSite.IsMatch(args.Name.Trim())) return args.Name.Trim();
+            if (Named(args.Search) && LooksLikeSite.IsMatch(args.Search.Trim())) return args.Search.Trim();
+            if (Named(args.Search)) return "google.com";
+            return args.Site;
+        }
+
+        // A plain web search: the look-ups she routed herself, and a brain call that gave words with no site, which SiteMeant
+        // sends to google.com. Either way nobody named an engine, so the browser's own is used.
+        private static bool AnySearch(ToolArguments args)
+        {
+            if (args.AnyEngine) return true;
+            if (Named(args.Site) || !Named(args.Search)) return false;
+            if (Named(args.Name) && LooksLikeSite.IsMatch(args.Name.Trim())) return false;
+            return !LooksLikeSite.IsMatch(args.Search.Trim());
+        }
+        // <<< END PATCH: the browser's own search engine
+
+        private static string SearchMeant(ToolArguments args)
+        {
+            if (Named(args.Site)) return args.Search;
+            // The address moved out of search into site, so it must not also be searched for.
+            if (Named(args.Search) && LooksLikeSite.IsMatch(args.Search.Trim())) return null;
+            return args.Search;
+        }
+
         internal static bool Installed(string target)
         {
             string want = Regex.Replace(Plain(target), @"^the |( app| application| game)$", "");
             if (want.Length == 0) return false;
             try
             {
-                List<InstalledApp> apps = Apps();
-                foreach (InstalledApp app in apps)
+                foreach (InstalledApp app in Apps())
                     if (Score(app, want) >= 3) return true;
 #if CROSS
                 if (want == "minecraft" && Apps().Exists(MinecraftLauncher)) return true;
 #endif
-                if (AppsPath != null)
-                    foreach (InstalledApp app in FreshApps(apps))
-                        if (Score(app, want) >= 3) return true;
             }
             catch (Exception) { }
             return false;
@@ -4494,20 +4945,16 @@ namespace CapriDesktop
             try
             {
                 List<InstalledApp> apps = Apps();
-                for (int pass = 0; pass < (AppsPath == null ? 1 : 2); pass++)
+                // Each "in", "on" or "into" in turn, and the most words after it that name a game they have: "hop on bedwars in
+                // roblox for me" is roblox.
+                foreach (Match place in Regex.Matches(Plain(job), @"\b(?:in|on|into)\s+(?:the\s+)?(?=([\p{L}\p{Nd}]+(?: [\p{L}\p{Nd}]+){0,3}))"))
                 {
-                    if (pass > 0) apps = FreshApps(apps);
-                    // Each "in", "on" or "into" in turn, and the most words after it that name a game they have: "hop on bedwars in
-                    // roblox for me" is roblox.
-                    foreach (Match place in Regex.Matches(Plain(job), @"\b(?:in|on|into)\s+(?:the\s+)?(?=([\p{L}\p{Nd}]+(?: [\p{L}\p{Nd}]+){0,3}))"))
+                    string[] words = place.Groups[1].Value.Split(' ');
+                    for (int count = words.Length; count > 0; count--)
                     {
-                        string[] words = place.Groups[1].Value.Split(' ');
-                        for (int count = words.Length; count > 0; count--)
-                        {
-                            string named = string.Join(" ", words, 0, count);
-                            string wanted = Nickname(named) ?? named;
-                            if (wanted.Length >= 3 && apps.Exists(app => Score(app, wanted) >= 2)) return Showing(wanted) ? null : wanted;
-                        }
+                        string named = string.Join(" ", words, 0, count);
+                        string wanted = Nickname(named) ?? named;
+                        if (wanted.Length >= 3 && apps.Exists(app => Score(app, wanted) >= 2)) return Showing(wanted) ? null : wanted;
                     }
                 }
             }
@@ -4518,54 +4965,17 @@ namespace CapriDesktop
         private static string OpenApp(string wanted, Func<bool> current = null)
         {
             if (string.IsNullOrWhiteSpace(wanted)) return "Which app, choom?";
-            List<InstalledApp> found;
-#if CROSS
-            found = FindApps(wanted);
-#else
-            try { found = FindApps(wanted); }
-            catch (Exception error) { return "Couldn't read their apps just now: " + error.Message; }
-#endif
+            List<InstalledApp> found = Match(Apps(), wanted);
+            string nicknamed = found.Count == 0 ? Nickname(wanted) : null;
+            if (nicknamed != null) found = Match(Apps(), nicknamed);
             if (found.Count == 0) return "No app called " + wanted.Trim() + " is installed on this PC.";
             // When several match equally well, the one with the fewest extra words is closest to what they said.
             InstalledApp chosen = found[0];
             foreach (InstalledApp app in found) if (AppName(app).Length < AppName(chosen).Length) chosen = app;
             if (current != null && !current()) return "That call errand has ended.";
+            Run(chosen.Id);
             string openedName = AppName(chosen) == "spotify" ? "Spotify" : chosen.Name;
-            // Windows saying no gets said, instead of "Opened" over nothing.
-            try { Run(chosen.Id); }
-            catch (InvalidOperationException) { return "Couldn't open " + openedName + ": Windows wouldn't start it. Try opening it from the Start menu."; }
-            catch (System.ComponentModel.Win32Exception) { return "Couldn't open " + openedName + ": Windows wouldn't start it. Try opening it from the Start menu."; }
             return "Opened " + openedName + (current == null ? Opened(openedName) : "") + ".";
-        }
-
-        private static List<InstalledApp> FindApps(List<InstalledApp> apps, string wanted)
-        {
-            List<InstalledApp> found = Match(apps, wanted);
-            string nicknamed = found.Count == 0 ? Nickname(wanted) : null;
-            return nicknamed == null ? found : Match(apps, nicknamed);
-        }
-
-        private static List<InstalledApp> FindApps(string wanted)
-        {
-            List<InstalledApp> apps = Apps();
-            List<InstalledApp> found = FindApps(apps, wanted);
-            if (found.Count == 0 && AppsPath != null)
-            {
-                apps = FreshApps(apps);
-                found = FindApps(apps, wanted);
-                lock (gate) if (found.Count == 0 && cached == apps && appsFailed != null) throw appsFailed;
-            }
-            return found;
-        }
-
-        private static List<InstalledApp> FreshApps(List<InstalledApp> apps)
-        {
-            lock (gate)
-            {
-                if (AppsPath == null) return apps;
-                if (cached != apps) return cached != null && AppsNow() - cachedAt <= TimeSpan.FromMinutes(2) ? cached : apps;
-                return AppsNow() - cachedAt <= TimeSpan.FromMinutes(2) ? apps : Apps(true);
-            }
         }
 
         internal static List<InstalledApp> Match(List<InstalledApp> apps, string wanted)
@@ -4606,7 +5016,7 @@ namespace CapriDesktop
             if (name.Length == 0) return 0;
             int score = Math.Max(Score(name, want), Score(Plain(app.Name), want));
 #if CROSS
-            // Mac and Linux list every .app and .desktop name, so part of a word doesn't count there: "minecraft" can't open an app
+            // Mac and Linux list every.app and.desktop name, so part of a word doesn't count there: "minecraft" can't open an app
             // that merely has it inside a longer name (a Bazzite user).
             if (score == 1 && name.Contains(want)) score = 0;
             if (score == 0 && want == "minecraft" && MinecraftLauncher(app)) return 1;
@@ -4626,108 +5036,78 @@ namespace CapriDesktop
             return name;
         }
 
-        private static readonly Regex PlainMarks = new Regex(@"\p{M}");
-        private static readonly Regex PlainWords = new Regex(@"[^\p{L}\p{Nd}]+");
+        // STOCK 0.8.9, one line, uncompiled and recomputed on every call:
+        //   private static string Plain(string text) { return Regex.Replace(Regex.Replace((text ?? "")
+        //      .Normalize(NormalizationForm.FormD).ToLowerInvariant(), @"\p{M}", ""), @"[^\p{L}\p{Nd}]+", " ").Trim(); }
+        // Compiled and remembered: the same app names are reduced over and over while the catalog is matched, and the two Unicode
+        // classes here are the slowest part of that scan.
+        private static readonly Regex Marks = new Regex(@"\p{M}", RegexOptions.Compiled);
+        private static readonly Regex NotLetters = new Regex(@"[^\p{L}\p{Nd}]+", RegexOptions.Compiled);
+        private static readonly Dictionary<string, string> plainNames = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        private static string Plain(string text) { return PlainWords.Replace(PlainMarks.Replace((text ?? "").Normalize(NormalizationForm.FormD).ToLowerInvariant(), ""), " ").Trim(); }
-
-        // Remember good app lists and merge each name once (YunoTheAlien, 13 Nov).
-        [DataContract]
-        private sealed class AppEntry
+        private static string Plain(string text)
         {
-            [DataMember] internal string Name;
-            [DataMember] internal string Id;
-            [DataMember] internal long Seen;
-        }
-
-        private static List<AppEntry> remembered;
-        private static string rememberedPath;
-        private static SavedList<AppEntry> appsFile;
-        private static string savedApps;
-
-        private static bool AppPath(string id)
-        {
-#if CROSS
-            return false;
-#else
-            return Regex.IsMatch(id ?? "", @"\A[A-Za-z]:\\[^""<>|*?/\x00-\x1F]+\z");
-#endif
-        }
-
-        private static bool AppId(string id)
-        {
-#if CROSS
-            return false;
-#else
-            if (AppPath(id) || Regex.IsMatch(id ?? "", @"\A[A-Za-z0-9_.{}!-]+\z")) return true;
-            if (Regex.IsMatch(id ?? "", @"\A\{[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}\}\\[^""<>|*?/\x00-\x1F]+\z")) return true;
-            if (Regex.IsMatch(id ?? "", @"\A(?:steam://rungameid/[0-9]+|uplay://launch/[0-9]+/0)\z")) return true;
-            if (Regex.IsMatch(id ?? "", @"\Acom\.epicgames\.launcher://apps/(?:[A-Za-z0-9._~-]|%[0-9A-Fa-f]{2})+\?action=launch&silent=true\z")) return true;
-            Match riot = Regex.Match(id ?? "", @"\A""([^""]+)"" --launch-product=[a-z0-9_]+ --launch-patchline=[a-z0-9_]+\z");
-            return riot.Success && AppPath(riot.Groups[1].Value) && string.Equals(Path.GetFileName(riot.Groups[1].Value), "RiotClientServices.exe", StringComparison.OrdinalIgnoreCase);
-#endif
-        }
-
-        private static string AppText(List<AppEntry> entries)
-        {
-            using (MemoryStream stream = new MemoryStream())
+            string from = text ?? "";
+            lock (plainNames)
             {
-                new DataContractJsonSerializer(typeof(List<AppEntry>)).WriteObject(stream, entries);
-                return Encoding.UTF8.GetString(stream.ToArray());
+                string done;
+                if (plainNames.TryGetValue(from, out done)) return done;
             }
+            string made = NotLetters.Replace(Marks.Replace(from.Normalize(NormalizationForm.FormD).ToLowerInvariant(), ""), " ").Trim();
+            lock (plainNames)
+            {
+                if (plainNames.Count > 20000) plainNames.Clear();
+                plainNames[from] = made;
+            }
+            return made;
         }
 
-        private static void RememberApps(List<InstalledApp> apps, bool failed, DateTime now)
+        // Starting a new chat, wired in Capri.cs: the conversation and what she saw go, their notes in me.md stay.
+        internal static Action NewChat;
+        // <<< PATCH: set by Capri, takes true for on and false for off, and answers in her words.
+        internal static Func<bool, string> TwitchLive;
+
+        // Set by Capri: looks up the watch list in twitch.md there and then, ignoring every timer.
+        internal static Func<string> TwitchWho;
+
+        // Set by Capri: play, skip, stop, remove, add_folder, add_song.
+        internal static Func<string, string, string> Playlist;
+
+        // Set by Capri: whether her own folder playlist is the thing playing right now.
+        internal static Func<bool> PlaylistBusy;
+
+        // Set by Capri: runs her last command again. There is deliberately no tool spec for do_again, so no brain can
+        // reach it; it exists only for the words below, read without a model.
+        internal static Func<string> RunAgain;
+
+        private static string SwitchTwitchLive(string action)
         {
-            if (AppsPath == null) return;
-            if (remembered == null || rememberedPath != AppsPath)
-            {
-                rememberedPath = AppsPath;
-                appsFile = new SavedList<AppEntry>(AppsPath, "apps");
-                remembered = appsFile.Read(item => !string.IsNullOrWhiteSpace(item.Name) && item.Seen > 0, 4 * 1024 * 1024);
-                savedApps = AppText(remembered);
-                remembered.RemoveAll(item => !AppId(item.Id));
-                foreach (AppEntry item in remembered) if (item.Seen > now.Ticks) item.Seen = now.Ticks;
-            }
-            remembered.RemoveAll(item => item.Seen <= now.Date.AddDays(-30).Ticks || AppPath(item.Id) && !Exists(item.Id));
-            Dictionary<string, AppEntry> byId = new Dictionary<string, AppEntry>(StringComparer.OrdinalIgnoreCase);
-            foreach (AppEntry item in remembered) byId[item.Id] = item;
-            if (!failed)
-                foreach (InstalledApp app in apps)
-                {
-                    if (AppName(app).Length == 0 || AppPath(app.Id) && !Exists(app.Id)) continue;
-                    AppEntry item;
-                    if (!byId.TryGetValue(app.Id, out item))
-                    {
-                        item = new AppEntry { Id = app.Id };
-                        remembered.Add(item); byId.Add(item.Id, item);
-                    }
-                    item.Name = app.Name; item.Seen = now.Date.Ticks;
-                }
-            if (remembered.Count > 4000)
-            {
-                List<AppEntry> recent = new List<AppEntry>(remembered);
-                recent.Sort(delegate(AppEntry a, AppEntry b) { return b.Seen.CompareTo(a.Seen); });
-                HashSet<AppEntry> kept = new HashSet<AppEntry>(recent.GetRange(0, 4000));
-                remembered.RemoveAll(item => !kept.Contains(item));
-            }
-            HashSet<string> listed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (InstalledApp app in apps) listed.Add(app.Id);
-            foreach (AppEntry item in remembered)
-                if ((failed || AppPath(item.Id)) && listed.Add(item.Id)) apps.Add(new InstalledApp(item.Name, item.Id));
-            string next = AppText(remembered);
-            if (next == savedApps) return;
-            try { appsFile.Write(remembered, ".new"); savedApps = next; }
-            catch (Exception) { }
-            finally { try { File.Delete(AppsPath + ".new"); } catch (Exception) { } }
+            Func<bool, string> flip = TwitchLive;
+            if (flip == null) return "Twitch live notifications aren't set up on this PC.";
+            return flip(action == "on");
+        }
+        // <<< END PATCH: twitch_live hook
+        private static DateTime chatCleared;
+        private const int ConfirmSeconds = 30;
+
+        // Her ears mishear, and this can't be undone, so the first ask only arms it and a second ask within half a minute does it.
+        // Her Remote asks twice for Revoke the same way. The gate is here in code, not a line in her prompt she might skip.
+        private static string StartNewChat()
+        {
+            if (NewChat == null) return "There's no chat to clear on this PC.";
+            // STOCK 0.9.0 asked once to be sure, then cleared on a second ask within ConfirmSeconds. Clearing is cheap and
+            // wanted the moment it is asked for, and the double-ask plus the explanation got in the way every time
+            //. Her notes, memories and transcripts are untouched either way, so nothing here is lossy.
+            NewChat();
+            return "Done.";
         }
 
-        private static List<InstalledApp> Apps(bool fresh = false)
+        private static List<InstalledApp> Apps()
         {
             lock (gate)
             {
-                DateTime now = AppsNow();
-                if (cached != null && now - cachedAt <= TimeSpan.FromMinutes(AppsPath == null || fresh || appsFailed != null ? 2 : 10)) return cached;
+                // STOCK 0.8.9: TimeSpan.FromMinutes(2)
+                if (cached != null && DateTime.UtcNow - cachedAt <= TimeSpan.FromMinutes(10)) return cached;
                 List<InstalledApp> apps;
                 Exception failed = null;
                 try { apps = new List<InstalledApp>(Catalog()); }
@@ -4735,15 +5115,18 @@ namespace CapriDesktop
                 string folder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
                 string path = folder.Length == 0 ? "" : Path.Combine(folder, @"Spotify\Spotify.exe");
                 if (path.Length > 0 && Exists(path) && !apps.Exists(app => AppName(app) == "spotify")) apps.Add(new InstalledApp("Spotify", path));
-                RememberApps(apps, failed != null, now);
-                if (failed != null && AppsPath == null)
+                if (failed != null)
                 {
+                    // A slow or failed look used to mean "that app isn't installed". What she already knows beats a wrong no.
+                    AddKnown(apps, true);
+                    if (apps.Count == 0 && cached != null && cached.Count > 0) return cached;
                     if (apps.Count == 0) throw failed;
                     return apps;
                 }
-                appsFailed = failed;
+                Remember(apps);
+                AddKnown(apps, false);
                 cached = apps;
-                cachedAt = AppsNow();
+                cachedAt = DateTime.UtcNow;
                 return cached;
             }
         }
@@ -4772,7 +5155,8 @@ namespace CapriDesktop
             reader.SetApartmentState(ApartmentState.STA);
             reader.IsBackground = true;
             reader.Start();
-            if (!reader.Join(10000)) throw new TimeoutException("The app list took too long.");
+            // STOCK 0.8.9: reader.Join(10000)
+            if (!reader.Join(30000)) throw new TimeoutException("The app list took too long.");
             if (failed != null) throw failed;
             List<InstalledApp> listed = WithSteam(apps, SteamApps(SteamFolder()));
 #if !CROSS
@@ -4783,14 +5167,28 @@ namespace CapriDesktop
 
         // Steam games and apps show in All apps only when Steam made a Start menu shortcut, so her list adds the rest from Steam's own
         // library, and from her other launchers' lists the same way. One already in All apps by that name isn't listed twice.
+        // STOCK 0.8.9, the whole body was one line:
+        //   foreach (InstalledApp game in steam)
+        //       if (AppName(game).Length > 0 && !apps.Exists(app => AppName(app) == AppName(game))) apps.Add(game);
+        // This used to call AppName once per comparison: AppName(game) again for every app it checked, and AppName(app) for all
+        // of them, for every game. Each of those normalises the name and runs two Unicode regexes, so a full Start menu against
+        // a full Steam library ran into hundreds of thousands of regex passes on the UI thread. Her own log caught it stalling
+        // her window for ten seconds inside Hands.Plain, and the scan then overran its timeout and threw, which is what turned
+        // "open wikipedia.com" into a bare "That didn't work" (22:15, 12 Nov). Now each name is reduced once.
         internal static List<InstalledApp> WithSteam(List<InstalledApp> apps, List<InstalledApp> steam)
         {
-            HashSet<string> names = new HashSet<string>(StringComparer.Ordinal);
-            foreach (InstalledApp app in apps) names.Add(AppName(app));
+            if (steam.Count == 0) return apps;
+            HashSet<string> taken = new HashSet<string>(StringComparer.Ordinal);
+            foreach (InstalledApp app in apps)
+            {
+                string name = AppName(app);
+                if (name.Length > 0) taken.Add(name);
+            }
             foreach (InstalledApp game in steam)
             {
                 string name = AppName(game);
-                if (name.Length > 0 && names.Add(name)) apps.Add(game);
+                if (name.Length == 0 || !taken.Add(name)) continue;
+                apps.Add(game);
             }
             return apps;
         }
@@ -4870,7 +5268,7 @@ namespace CapriDesktop
             [DataMember(Name = "bIsIncompleteInstall")] internal bool Incomplete;
         }
 
-        // Epic's install manifests, the same .item files her file finder reads for game folders. Each game opens through Epic's own
+        // Epic's install manifests, the same.item files her file finder reads for game folders. Each game opens through Epic's own
         // launch link, so Epic signs in and updates it first, as its shortcuts do. Add-ons and half-installed games are left out.
         internal static List<InstalledApp> EpicApps(string folder)
         {
@@ -5018,57 +5416,10 @@ namespace CapriDesktop
 
         private static object Get(object target, string property) { return target.GetType().InvokeMember(property, BindingFlags.GetProperty, null, target, null); }
 
-        internal static void Start(string id)
+        private static void Start(string id)
         {
-            Start(id, delegate(string app) { using (Process.Start(Launch(app))) { } });
+            using (Process.Start(Launch(id))) { }
         }
-
-        internal static void Start(string id, Action<string> run)
-        {
-#if !CROSS
-            // A Store app, like Windows 11's Notepad, opens through Windows' own app activation, which says when it can't start it.
-            // Through explorer.exe and shell:AppsFolder, something in between like 360 Total Security can turn the launch into a
-            // File Explorer window on Documents, while she says it opened (the Saac fan, 11 Nov: "open notepad" opened Documents).
-            if (Packaged(id))
-            {
-                int result;
-                try { result = Activation(id); }
-                catch (COMException) { result = NoActivator; }
-                catch (InvalidCastException) { result = NoActivator; }
-                if (result >= 0) return;
-                if (result != NoActivator && result != unchecked((int)0x80270251) && result != unchecked((int)0x80270252) && result != unchecked((int)0x80270253))
-                    throw new InvalidOperationException("Windows wouldn't start " + id + ": 0x" + result.ToString("X8"));
-            }
-#endif
-            run(id);
-        }
-
-        // A Store app's id: its package family name (name, then _ and the 13-letter publisher id), then ! and the app's own name.
-        internal static bool Packaged(string id)
-        {
-            return Regex.IsMatch(id ?? "", @"^[\w.-]+_[a-z0-9]{13}![\w.-]+$", RegexOptions.IgnoreCase);
-        }
-
-#if !CROSS
-        // A Windows without app activation, which never happens on 10 or 11, opens Store apps through Explorer as before.
-        private const int NoActivator = int.MinValue;
-
-        // Windows' answer to starting a Store app, an HRESULT. The smoke test stands in for it.
-        internal static Func<string, int> Activation = delegate(string id)
-        {
-            uint process;
-            object made = System.Activator.CreateInstance(Type.GetTypeFromCLSID(new Guid("45BA127D-10A8-46EA-8AB7-56EA9078943C")));
-            try { return ((IApplicationActivationManager)made).ActivateApplication(id, null, 0, out process); }
-            finally { Marshal.ReleaseComObject(made); }
-        };
-
-        [ComImport, Guid("2e941141-7f97-4756-ba1d-9decde894a3d"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        private interface IApplicationActivationManager
-        {
-            [PreserveSig]
-            int ActivateApplication([MarshalAs(UnmanagedType.LPWStr)] string appUserModelId, [MarshalAs(UnmanagedType.LPWStr)] string arguments, int options, out uint processId);
-        }
-#endif
 
         internal static ProcessStartInfo Launch(string id)
         {
@@ -5082,210 +5433,68 @@ namespace CapriDesktop
             return info;
         }
 
-        // Unnamed searches use the engine their browser states (YunoTheAlien, 13 Nov).
-        [DataContract]
-        private sealed class SearchSettings
+        // Her stock generic look-up was always Google, Searches[1, 1], so someone whose browser is set to DuckDuckGo, Brave
+        // Search or Bing still got a Google tab. A site they actually named is untouched: "search youtube for cats" still goes to YouTube and an explicit
+        // "google X" still goes to Google. Only args.AnyEngine requests, which are the ones she picked Google for herself,
+        // move. SearchSite from settings.json wins when it's set; otherwise the browser's own default engine is read.
+        internal static Func<string> SearchSite = delegate { return null; };
+        internal static Func<string, string> SearchEngine = BrowserEngine;
+
+        // Chromium browsers write the engine in use into Preferences, a JSON file, as soon as it isn't their built-in one.
+        private static readonly string[,] BrowserProfiles =
         {
-            [DataMember(Name = "default_search_provider_data")] internal SearchProvider Provider;
+            { "Chrome", @"Google\Chrome\User Data", "local" },
+            { "Edge", @"Microsoft\Edge\User Data", "local" },
+            { "Brave", @"BraveSoftware\Brave-Browser\User Data", "local" },
+            { "Vivaldi", @"Vivaldi\User Data", "local" },
+            { "Opera", @"Opera Software\Opera Stable", "roaming" },
+            { "Opera GX", @"Opera Software\Opera GX Stable", "roaming" }
+        };
+        private static readonly Dictionary<string, KeyValuePair<DateTime, string>> engines = new Dictionary<string, KeyValuePair<DateTime, string>>();
+
+        // The words put into a template like https://duckduckgo.com/?q={searchTerms}, or appended to a prefix like her own table's.
+        private static string SearchUrl(string template, string words)
+        {
+            string query = Uri.EscapeDataString((words ?? "").Trim());
+            return template.IndexOf("{searchTerms}", StringComparison.Ordinal) >= 0 ? template.Replace("{searchTerms}", query) : template + query;
         }
 
-        [DataContract]
-        private sealed class SearchProvider
+        // A template holding placeholders she can't fill is no use: Google's own is {google:baseURL}search?q={searchTerms}, and
+        // others carry {inputEncoding}. Parameters still holding one are dropped, and a template whose address itself holds one
+        // is refused, which is how Google's own template falls back to her plain Google address.
+        private static string Filled(string template)
         {
-            [DataMember(Name = "template_url_data")] internal SearchUrl Template;
+            if (string.IsNullOrWhiteSpace(template)) return null;
+            string whole = template.Trim().Replace("\\/", "/");
+            if (!whole.StartsWith("https://", StringComparison.OrdinalIgnoreCase) && !whole.StartsWith("http://", StringComparison.OrdinalIgnoreCase)) return null;
+            if (whole.IndexOf("{searchTerms}", StringComparison.Ordinal) < 0)
+                return whole.IndexOf('{') < 0 && (whole.EndsWith("=", StringComparison.Ordinal) || whole.EndsWith("/", StringComparison.Ordinal) || whole.EndsWith("?", StringComparison.Ordinal)) ? whole : null;
+            int mark = whole.IndexOf('?');
+            string head = mark < 0 ? whole : whole.Substring(0, mark);
+            if (head.IndexOf('{') >= 0) return null;
+            if (mark < 0) return whole;
+            List<string> kept = new List<string>();
+            foreach (string part in whole.Substring(mark + 1).Split('&'))
+                if (part.Length > 0 && part.Replace("{searchTerms}", "").IndexOf('{') < 0) kept.Add(part);
+            string query = string.Join("&", kept.ToArray());
+            return query.IndexOf("{searchTerms}", StringComparison.Ordinal) >= 0 ? head + "?" + query : null;
         }
 
-        [DataContract]
-        private sealed class SearchUrl
+        // Where that browser keeps its settings. Null for one she can't read: Firefox keeps its engines in a compressed
+        // search.json.mozlz4, so Firefox falls back to SearchSite or to Google.
+        private static string ProfileRoot(string browser)
         {
-            [DataMember(Name = "url")] internal string Url;
-        }
-
-        [DataContract]
-        private sealed class BrowserState
-        {
-            [DataMember(Name = "profile")] internal BrowserProfile Profile;
-        }
-
-        [DataContract]
-        private sealed class BrowserProfile
-        {
-            [DataMember(Name = "last_used")] internal string Last;
-        }
-
-        private sealed class Engine
-        {
-            internal string Url;
-            internal DateTime At;
-        }
-
-        private static readonly object searchGate = new object();
-        private static readonly Dictionary<string, Engine> engines = new Dictionary<string, Engine>();
-
-        internal static void ForgetSearch() { lock (searchGate) engines.Clear(); }
-
-        private static T SearchJson<T>(string text)
-        {
-            if (string.IsNullOrWhiteSpace(text) || text.Length > 4 * 1024 * 1024) return default(T);
-            using (MemoryStream input = new MemoryStream(Encoding.UTF8.GetBytes(text))) return (T)new DataContractJsonSerializer(typeof(T)).ReadObject(input);
-        }
-
-        internal static string SearchTemplate(string text)
-        {
-            try
-            {
-                SearchSettings settings = SearchJson<SearchSettings>(text);
-                return settings == null || settings.Provider == null || settings.Provider.Template == null ? null : settings.Provider.Template.Url;
-            }
-            catch (Exception) { return null; }
-        }
-
-        internal static string SearchProfile(string text)
-        {
-            try
-            {
-                BrowserState state = SearchJson<BrowserState>(text);
-                string profile = state == null || state.Profile == null ? null : state.Profile.Last;
-                if (string.IsNullOrWhiteSpace(profile)) return "Default";
-                return profile != "." && profile != ".." && Regex.IsMatch(profile, @"^[^\\/:*?""<>|\x00-\x1F]+$") ? profile : null;
-            }
-            catch (Exception) { return null; }
-        }
-
-        internal static string EngineTemplate(string template)
-        {
-            if (string.IsNullOrWhiteSpace(template) || !Regex.IsMatch(template, @"\Ahttps?://", RegexOptions.IgnoreCase) || !template.Contains("{searchTerms}")) return null;
-            try
-            {
-                int hostAt = template.IndexOf("://", StringComparison.Ordinal) + 3;
-                int hostEnd = template.IndexOfAny(new[] { '/', '?', '#' }, hostAt);
-                if (hostEnd < 0) hostEnd = template.Length;
-                if (hostEnd == hostAt) return null;
-                if (Regex.IsMatch(Uri.UnescapeDataString(template.Substring(hostAt, hostEnd - hostAt)), @"[{}]")) return null;
-                int fragmentAt = template.IndexOf('#');
-                string fragment = fragmentAt < 0 ? "" : template.Substring(fragmentAt);
-                string address = fragmentAt < 0 ? template : template.Substring(0, fragmentAt);
-                int queryAt = address.IndexOf('?');
-                string path = queryAt < 0 ? address : address.Substring(0, queryAt);
-                if (Regex.IsMatch(Uri.UnescapeDataString((path + fragment).Replace("{searchTerms}", "caprisearch")), @"[{}]")) return null;
-                List<string> parts = new List<string>();
-                if (queryAt >= 0)
-                    foreach (string part in address.Substring(queryAt + 1).Split('&'))
-                        if (!Regex.IsMatch(Uri.UnescapeDataString(part.Replace("{searchTerms}", "caprisearch")), @"[{}]")) parts.Add(part);
-                string cleaned = path + (parts.Count == 0 ? "" : "?" + string.Join("&", parts.ToArray())) + fragment;
-                Uri uri;
-                if (!cleaned.Contains("{searchTerms}") || !Uri.TryCreate(cleaned.Replace("{searchTerms}", "caprisearch"), UriKind.Absolute, out uri) || (uri.Scheme != "http" && uri.Scheme != "https") || uri.Host.Length == 0 || uri.UserInfo.Length > 0) return null;
-                return cleaned;
-            }
-            catch (Exception) { return null; }
-        }
-
-        private static string SearchAddress(string search, string browser)
-        {
-            string words = Uri.EscapeDataString(search.Trim());
-#if !CROSS
-            try
-            {
-                string name = string.IsNullOrWhiteSpace(browser) ? BrowserName(DefaultBrowser()) : BrowserName(browser);
-                if (name != null && name != "Firefox")
-                {
-                    string template;
-                    lock (searchGate)
-                    {
-                        Engine engine;
-                        DateTime now = SearchNow();
-                        if (!engines.TryGetValue(name, out engine) || now - engine.At >= TimeSpan.FromMinutes(10))
-                        {
-                            string read = null;
-                            try { read = EngineTemplate(SearchEngine(name)); } catch (Exception) { }
-                            engine = new Engine { Url = read, At = now }; engines[name] = engine;
-                        }
-                        template = engine.Url;
-                    }
-                    Uri uri;
-                    if (template != null && Uri.TryCreate(template.Replace("{searchTerms}", words), UriKind.Absolute, out uri) && (uri.Scheme == "http" || uri.Scheme == "https") && uri.Host.Length > 0 && uri.UserInfo.Length == 0) return uri.AbsoluteUri;
-                }
-            }
-            catch (Exception) { }
-#endif
-            return Searches[1, 1] + words;
-        }
-
-        private static string ReadDefaultBrowser()
-        {
-#if !CROSS
-            return DefaultBrowserChoice(ReadBrowserChoice);
-#else
-            return null;
-#endif
-        }
-
-#if !CROSS
-        internal static string DefaultBrowserChoice(Func<string, string> read)
-        {
-            const string path = @"Software\Microsoft\Windows\Shell\Associations\UrlAssociations\https\";
-            foreach (string choice in new[] { @"UserChoiceLatest\ProgId", "UserChoiceLatest", "UserChoice" })
-            {
-                string id = null;
-                try { id = read(path + choice); } catch (Exception) { }
-                if (!string.IsNullOrWhiteSpace(id)) return DefaultBrowserName(id);
-            }
+            for (int i = 0; i < BrowserProfiles.GetLength(0); i++)
+                if (BrowserProfiles[i, 0] == browser)
+                    return Path.Combine(Environment.GetFolderPath(BrowserProfiles[i, 2] == "local" ? Environment.SpecialFolder.LocalApplicationData : Environment.SpecialFolder.ApplicationData), BrowserProfiles[i, 1]);
             return null;
         }
 
-        private static string ReadBrowserChoice(string path)
-        {
-            using (Microsoft.Win32.RegistryKey key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(path))
-                return key == null ? null : key.GetValue("ProgId") as string;
-        }
-#endif
-
-        internal static string DefaultBrowserName(string id)
-        {
-            if (Regex.IsMatch(id ?? "", @"^ChromeHTML(?:\.|$)", RegexOptions.IgnoreCase)) return "Chrome";
-            if (Regex.IsMatch(id ?? "", @"^MSEdgeHTM(?:\.|$)", RegexOptions.IgnoreCase)) return "Edge";
-            if (Regex.IsMatch(id ?? "", @"^BraveHTML(?:\.|$)", RegexOptions.IgnoreCase)) return "Brave";
-            if (Regex.IsMatch(id ?? "", @"^VivaldiHTM(?:\.|$)", RegexOptions.IgnoreCase)) return "Vivaldi";
-            if (Regex.IsMatch(id ?? "", @"^OperaGX", RegexOptions.IgnoreCase)) return "Opera GX";
-            if (Regex.IsMatch(id ?? "", @"^OperaStable(?:\.|$)", RegexOptions.IgnoreCase)) return "Opera";
-            if (Regex.IsMatch(id ?? "", @"^FirefoxURL(?:-|$)", RegexOptions.IgnoreCase)) return "Firefox";
-            return null;
-        }
-
-        private static string SearchRoot(string browser)
-        {
-#if !CROSS
-            string folder = browser == "Chrome" ? @"Google\Chrome\User Data" : browser == "Edge" ? @"Microsoft\Edge\User Data" : browser == "Brave" ? @"BraveSoftware\Brave-Browser\User Data" : browser == "Vivaldi" ? @"Vivaldi\User Data" : browser == "Opera" ? @"Opera Software\Opera Stable" : browser == "Opera GX" ? @"Opera Software\Opera GX Stable" : null;
-            return folder == null ? null : Path.Combine(Environment.GetFolderPath(browser == "Opera" || browser == "Opera GX" ? Environment.SpecialFolder.ApplicationData : Environment.SpecialFolder.LocalApplicationData), folder);
-#else
-            return null;
-#endif
-        }
-
-        internal static string ReadSearchEngine(string browser)
-        {
-#if !CROSS
-            try
-            {
-                string root = ProfileRoot(browser);
-                if (string.IsNullOrWhiteSpace(root)) return null;
-                string state = Path.Combine(root, "Local State");
-                bool hasState = File.Exists(state);
-                string stateText = hasState ? ReadSearchFile(state) : null;
-                if (hasState && stateText == null) return null;
-                string profile = SearchProfile(stateText);
-                if (profile == null) return null;
-                string folder = Path.Combine(root, profile);
-                if ((browser == "Opera" || browser == "Opera GX") && !File.Exists(Path.Combine(folder, "Secure Preferences")) && !File.Exists(Path.Combine(folder, "Preferences"))) folder = root;
-                return SearchTemplate(ReadSearchFile(Path.Combine(folder, "Secure Preferences"))) ?? SearchTemplate(ReadSearchFile(Path.Combine(folder, "Preferences")));
-            }
-            catch (Exception) { }
-#endif
-            return null;
-        }
-
-#if !CROSS
-        internal static string ReadSearchFile(string path)
+        // That browser's own default engine, read once every ten minutes like her app catalog. A missing file, a locked one or
+        // a browser that never moved off its built-in engine all read as null, which leaves Google.
+        // A browser holds its own settings open, so File.ReadAllText threw on the common case and she fell back to Google
+        // while they were actually on DuckDuckGo. Shared read, a size cap and a whole-file check, all from upstream.
+        private static string ReadSearchFile(string path)
         {
             try
             {
@@ -5300,17 +5509,93 @@ namespace CapriDesktop
             }
             catch (Exception) { return null; }
         }
-#endif
 
-        // Keep a page when her website call has a misplaced address or browser name (YunoTheAlien, 13 Nov).
-        internal static void WebsiteArgs(ToolArguments args)
+        // Which profile the browser is actually using, from Local State, rather than guessing at the usual names. Upstream
+        // reads this with a JSON contract; the one field wanted is pulled out here the same way the engine itself is.
+        private static string UsedProfile(string root)
         {
-            if (args == null || Named(args.Site)) return;
-            if (Named(args.Name) && Site(args.Name)) args.Site = args.Name.Trim();
-            else if (Named(args.Search) && Site(args.Search)) { args.Site = args.Search.Trim(); args.Search = null; }
+            string text = ReadSearchFile(Path.Combine(root, "Local State"));
+            if (string.IsNullOrEmpty(text)) return null;
+            Match last = Regex.Match(text, @"""last_used""\s*:\s*""([^""\\]+)""");
+            if (!last.Success) return null;
+            string profile = last.Groups[1].Value;
+            return profile == "." || profile == ".." || profile.IndexOfAny(new[] { '\\', '/', ':', '*', '?', '"', '<', '>', '|' }) >= 0 ? null : profile;
         }
 
-        private static string OpenSite(string site, string search, string browser = null)
+        private static string BrowserEngine(string browser)
+        {
+            string root = ProfileRoot(browser);
+            if (root == null) return null;
+            lock (engines)
+            {
+                KeyValuePair<DateTime, string> remembered;
+                if (engines.TryGetValue(browser, out remembered) && DateTime.UtcNow - remembered.Key < TimeSpan.FromMinutes(10)) return remembered.Value;
+            }
+            // The profile in use first, then the usual names. Opera keeps its settings in the root itself.
+            List<string> folders = new List<string>();
+            string used = UsedProfile(root);
+            if (!string.IsNullOrEmpty(used)) folders.Add(used);
+            foreach (string guess in new[] { "Default", "", "Profile 1", "Profile 2" }) if (!folders.Contains(guess)) folders.Add(guess);
+            string found = null;
+            foreach (string profile in folders)
+            {
+                // Chromium writes the search provider to Secure Preferences on most setups and only sometimes to
+                // Preferences, so reading one of the two found nothing on a lot of machines.
+                foreach (string name in new[] { "Secure Preferences", "Preferences" })
+                {
+                    string text = ReadSearchFile(Path.Combine(Path.Combine(root, profile), name));
+                    if (string.IsNullOrEmpty(text)) continue;
+                    int at = text.IndexOf("\"default_search_provider_data\"", StringComparison.Ordinal);
+                    if (at < 0) continue;
+                    Match url = Regex.Match(text.Substring(at, Math.Min(4000, text.Length - at)), @"""url""\s*:\s*""([^""]+)""");
+                    if (url.Success) found = Filled(url.Groups[1].Value);
+                    if (found != null) break;
+                }
+                if (found != null) break;
+            }
+            lock (engines) engines[browser] = new KeyValuePair<DateTime, string>(DateTime.UtcNow, found);
+            return found;
+        }
+
+        // The engine a plain look-up uses: their own setting, then the browser's, then Google exactly as 0.8.9 did.
+        private static string LookupEngine(string browser)
+        {
+            string chosen = null;
+            try { chosen = Filled(SearchSite()); }
+            catch (Exception) { chosen = null; }
+            if (chosen != null) return chosen;
+            string named = BrowserName(browser) ?? DefaultBrowser();
+            string theirs = null;
+            try { theirs = named == null ? null : SearchEngine(named); }
+            catch (Exception) { theirs = null; }
+            return theirs ?? Searches[1, 1];
+        }
+
+        // Which browser Windows opens links with, so a look-up that names no browser still uses that browser's engine.
+        private static string DefaultBrowser()
+        {
+            try
+            {
+                using (Microsoft.Win32.RegistryKey choice = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\Shell\Associations\UrlAssociations\https\UserChoice"))
+                {
+                    string id = choice == null ? null : ((choice.GetValue("ProgId") as string) ?? "").ToLowerInvariant();
+                    if (string.IsNullOrEmpty(id)) return null;
+                    if (id.Contains("brave")) return "Brave";
+                    if (id.Contains("operagx")) return "Opera GX";
+                    if (id.Contains("opera")) return "Opera";
+                    if (id.Contains("vivaldi")) return "Vivaldi";
+                    if (id.Contains("firefox")) return "Firefox";
+                    if (id.Contains("edge")) return "Edge";
+                    if (id.Contains("chrome")) return "Chrome";
+                }
+            }
+            catch (Exception) { }
+            return null;
+        }
+        // <<< END PATCH: the browser's own search engine
+
+        // STOCK 0.8.9: private static string OpenSite(string site, string search, string browser = null)
+        private static string OpenSite(string site, string search, string browser = null, bool anyEngine = false)
         {
             string address = null;
             string nickname = Websites == null ? null : Websites.Nickname(site);
@@ -5319,7 +5604,9 @@ namespace CapriDesktop
                 site = Websites.Find(nickname);
                 if (string.IsNullOrWhiteSpace(search)) address = site;
             }
-            if (address == null) address = Address(site, search, browser);
+            // A look-up she chose the engine for goes to the browser's engine; a site they named still goes through Address.
+            if (address == null && anyEngine && !string.IsNullOrWhiteSpace(search)) address = SearchUrl(LookupEngine(browser), search);
+            if (address == null) address = Address(site, search);
             if (address == null) return "That isn't a website.";
             string browserName = BrowserName(browser);
             string browserPath = browserName == null ? null : BrowserPath(browserName);
@@ -5328,36 +5615,47 @@ namespace CapriDesktop
             string host = new Uri(address).Host;
             if (host.StartsWith("www.", StringComparison.Ordinal)) host = host.Substring(4);
             string result = address.TrimEnd('/') == "https://" + Home ? "Opened your own website, " + Home : string.IsNullOrWhiteSpace(search) ? "Opened " + host : "Searched " + host + " for " + search.Trim();
-            if (browserName == null) return result + (string.IsNullOrWhiteSpace(browser) ? "." : " in your default browser.");
+            if (browserName == null) return result + ".";
             if (browserPath == null) return result + " in your default browser because " + browserName + " isn't installed.";
             return result + " in " + browserName + Opened(browserName) + ".";
         }
 
-        private const string BrowserWords = @"(?:google )?chrome|(?:microsoft )?edge|(?:mozilla )?firefox|opera[ _]gx|opera|brave|vivaldi";
-        private static readonly string[] BrowserNames = { "Chrome", "Edge", "Firefox", "Opera GX", "Opera", "Brave", "Vivaldi" };
+        private const string BrowserWords = @"chrome|edge|firefox|opera gx|opera|brave|vivaldi";
 
+        // STOCK 0.8.9, exact match only, so "Brave Browser" matched nothing:
+        //   string plain = (browser ?? "").Trim().ToLowerInvariant();
+        //   string[] choices = { "Chrome", "Edge", "Firefox", "Opera", "Opera GX", "Brave", "Vivaldi" };
+        //   foreach (string choice in choices) if (plain == choice.ToLowerInvariant()) return choice;
+        //   return null;
+        // They say "open Brave Browser", so the brain passes "Brave Browser", which matched nothing and the whole call was
+        // refused with "That didn't work" before the site was ever opened. The maker's name, a trailing "browser" and any
+        // underscores or extra spaces are taken off first. Opera GX is checked before Opera so it never collapses into it.
         internal static string BrowserName(string browser)
         {
-            string plain = Regex.Replace(Plain(browser), @"^the | (browser|stable)$", "");
-            if (plain == "google chrome") plain = "chrome";
-            if (plain == "microsoft edge") plain = "edge";
-            if (plain == "mozilla firefox") plain = "firefox";
-            foreach (string choice in BrowserNames) if (plain == choice.ToLowerInvariant()) return choice;
+            string plain = Regex.Replace((browser ?? "").Trim().ToLowerInvariant(), @"[\s_\-]+", " ").Trim();
+            plain = Regex.Replace(plain, @"^(the|my|google|microsoft|mozilla|brave software)\s+", "");
+            plain = Regex.Replace(plain, @"\s*(web\s*)?browser$", "").Trim();
+            string[] choices = { "Opera GX", "Chrome", "Edge", "Firefox", "Opera", "Brave", "Vivaldi" };
+            foreach (string choice in choices) if (plain == choice.ToLowerInvariant()) return choice;
+            foreach (string choice in choices) if (plain.StartsWith(choice.ToLowerInvariant() + " ", StringComparison.Ordinal)) return choice;
             return null;
         }
 
         private static string BrowserApp(string name)
         {
-            return BrowserName(name);
+            string plain = Regex.Replace(Plain(name), @"^(google|microsoft|mozilla) | (browser|stable)$", "");
+            return BrowserName(plain);
         }
 
         // "open youtube in chrome", "in firefox open reddit", "search for cats on youtube in edge". Only the end or the start of what they said can name a browser, so "chrome hearts" stays a search.
         private static ToolArguments WebsiteRequest(string text)
         {
             string browser = null;
-            Match before = Regex.Match(text, @"^in (?:the )?(" + BrowserWords + @")(?: browser)?[, ]+(.+)$", RegexOptions.IgnoreCase);
+            // STOCK 0.9.0 took only "in <browser>". "on brave open wikipedia" and "using brave..." are the same request
+            // and were dropping through to her brain, which narrated it.
+            Match before = Regex.Match(text, @"^(?:in|on|using|with|via) (?:the )?(" + BrowserWords + @")(?: browser)?[, ]+(.+)$", RegexOptions.IgnoreCase);
             if (before.Success) { browser = before.Groups[1].Value.ToLowerInvariant(); text = before.Groups[2].Value; }
-            Match after = Regex.Match(text, @"^(.+?)\s+in (?:the )?(" + BrowserWords + @")(?: browser)?$", RegexOptions.IgnoreCase);
+            Match after = Regex.Match(text, @"^(.+?)\s+(?:in|on|using|with|via) (?:the )?(" + BrowserWords + @")(?: browser)?$", RegexOptions.IgnoreCase);
             if (after.Success && browser == null) { browser = after.Groups[2].Value.ToLowerInvariant(); text = after.Groups[1].Value; }
             Match nickname = Regex.Match(text, @"^(?:open|launch|start|go to|take me to|check out)\s+(.+)$", RegexOptions.IgnoreCase);
             if (Websites != null)
@@ -5365,13 +5663,41 @@ namespace CapriDesktop
                 string target = Websites.Nickname(text) ?? (nickname.Success ? Websites.Nickname(nickname.Groups[1].Value) : null);
                 if (target != null) return new ToolArguments { Site = target, Browser = browser };
             }
+            // STOCK 0.9.0:
+            //   if (opening.Success && Site(opening.Groups[1].Value) && (browser != null || !Installed(opening.Groups[1].Value)))
+            //       return new ToolArguments { Site = opening.Groups[1].Value.Trim(), Browser = browser };
+            //
+            // Site() only knows a handful of names, so "on brave open yahoo", "open yahoo" and "open bbc in brave" all
+            // dropped through to her brain and were narrated. The order is now the one asked for: anything
+            // that could be an app is looked up as an app first, and only what is not an app is treated as a page.
+            //
+            //   1. a name she knows as a site, like wikipedia, is that site
+            //   2. otherwise an installed app wins, even with a browser named, because a word that could be an app should
+            //      find the app first
+            //   3. otherwise a single plain word is a site, which is what makes yahoo and bbc work at all
             Match opening = Regex.Match(text, @"^(?:open|launch|start|go to|load up|fire up)\s+(.+)$", RegexOptions.IgnoreCase);
-            if (opening.Success && Site(opening.Groups[1].Value) && (browser != null || !Installed(opening.Groups[1].Value)))
-                return new ToolArguments { Site = opening.Groups[1].Value.Trim(), Browser = browser };
+            if (opening.Success)
+            {
+                string target = opening.Groups[1].Value.Trim();
+                bool known = Site(target);
+                // App first only when no browser was named. Saying "on brave" is saying you want a page, and treating
+                // Discord as the app there made the whole request drop instead (measured, 13 Nov).
+                bool app = !known && browser == null && Installed(target);
+                bool plain = Regex.IsMatch(target, @"^[A-Za-z0-9][A-Za-z0-9.+#-]{1,}$");
+                if (!app && (known || plain)) return new ToolArguments { Site = target, Browser = browser };
+                // 4. Naming a browser and then something that is not a site, an app or one plain word is a search in that
+                //    browser, rather than her waiting for a.com: "on brave open hollow knight silksong".
+                //    AnyEngine sends it to whatever engine that browser is set to, not to Google.
+                if (!app && browser != null && target.Length > 1)
+                    return new ToolArguments { Search = target, Browser = browser, AnyEngine = true };
+            }
             Match searching = Regex.Match(text, @"^search\s+(\S+)\s+for\s+(.+)$", RegexOptions.IgnoreCase);
             if (searching.Success && Site(searching.Groups[1].Value)) return new ToolArguments { Site = searching.Groups[1].Value, Search = searching.Groups[2].Value.Trim(), Browser = browser };
             Match searchingOn = Regex.Match(text, @"^search(?: for)?\s+(.+?)\s+on\s+(\S+)$", RegexOptions.IgnoreCase);
             if (searchingOn.Success && Site(searchingOn.Groups[2].Value)) return new ToolArguments { Site = searchingOn.Groups[2].Value, Search = searchingOn.Groups[1].Value.Trim(), Browser = browser };
+            // "on brave search for cat videos": a browser named and a plain search goes to that browser's own engine.
+            Match justSearch = Regex.Match(text, @"^search(?:\s+for)?\s+(.+)$", RegexOptions.IgnoreCase);
+            if (justSearch.Success && browser != null) return new ToolArguments { Search = justSearch.Groups[1].Value.Trim(), Browser = browser, AnyEngine = true };
             return null;
         }
 
@@ -5501,13 +5827,12 @@ namespace CapriDesktop
             return bestWindow;
         }
 
-        internal static string Address(string site, string search, string browser = null)
+        internal static string Address(string site, string search)
         {
             string host = Regex.Replace((site ?? "").Trim().ToLowerInvariant(), @"^(https?://)?(www\.)?", "");
             bool searching = !string.IsNullOrWhiteSpace(search);
             if (searching)
             {
-                if (host.Length == 0) return SearchAddress(search, browser);
                 for (int i = 0; i < Searches.GetLength(0); i++)
                 {
                     string key = Searches[i, 0];
@@ -5795,7 +6120,7 @@ namespace CapriDesktop
             { "show_desktop", "", "5B 44", "Showed the desktop (Win + D).", "show desktop", "show the desktop" },
             { "task_manager", "", "11 10 1B", "Opened Task Manager.", "Task Manager", "open Task Manager" },
             { "clipboard", "", "5B 56", "Opened clipboard history (Win + V).", "clipboard history", "open clipboard history" },
-            { "emoji", "", "5B BE", "Opened the emoji picker (Win + .).", "emoji", "open the emoji picker" },
+            { "emoji", "", "5B BE", "Opened the emoji picker (Win +.).", "emoji", "open the emoji picker" },
             { "voice_typing", "", "5B 48", "Opened voice typing (Win + H). Talk and it types where the cursor is.", "voice typing", "start voice typing" },
             { "live_captions", "", "5B 11 4C", "Turned Live Captions on or off (Win + Ctrl + L).", "Live Captions", "turn Live Captions on or off" },
             { "narrator", "", "5B 11 0D", "Turned Narrator on or off (Win + Ctrl + Enter).", "Narrator", "turn Narrator on or off" },
@@ -6069,10 +6394,7 @@ namespace CapriDesktop
                 string played = PlayMusic(asked, "auto", askedKind, current, songOnly);
                 return played.StartsWith("Playing ", StringComparison.Ordinal) ? "Apple Music isn't installed, so p" + played.Substring(1) : played;
             }
-            bool hasSpotify = false;
-            // A failed look at their apps still lets music go to YouTube, but it never becomes "Spotify isn't installed".
-            if (app != "youtube") try { hasSpotify = FindApps("spotify").Count > 0; } catch (Exception) { if (app == "spotify") throw; }
-            if (hasSpotify)
+            if (app != "youtube" && Match(Apps(), "spotify").Count > 0)
             {
                 if (liked) named = "their Liked Songs";
                 string spotted = liked || ownPlaylist ? null : known ?? SpotifyLink(Fetch("https://html.duckduckgo.com/html/?q=" + Uri.EscapeDataString("site:open.spotify.com/" + (kind == "song" ? "track" : kind) + " " + song)), kind, song);
@@ -6148,17 +6470,11 @@ namespace CapriDesktop
             try
             {
                 InstalledApp chosen = null;
-                List<InstalledApp> apps = Apps();
-                for (int pass = 0; pass < (AppsPath == null ? 1 : 2); pass++)
+                foreach (InstalledApp app in Apps())
                 {
-                    if (pass > 0) apps = FreshApps(apps);
-                    foreach (InstalledApp app in apps)
-                    {
-                        string name = AppName(app);
-                        if (name != "apple music" && !name.StartsWith("apple music ", StringComparison.Ordinal)) continue;
-                        if (chosen == null || WebApp(chosen) && !WebApp(app) || WebApp(chosen) == WebApp(app) && name.Length < AppName(chosen).Length) chosen = app;
-                    }
-                    if (chosen != null) return chosen;
+                    string name = AppName(app);
+                    if (name != "apple music" && !name.StartsWith("apple music ", StringComparison.Ordinal)) continue;
+                    if (chosen == null || WebApp(chosen) && !WebApp(app) || WebApp(chosen) == WebApp(app) && name.Length < AppName(chosen).Length) chosen = app;
                 }
                 return chosen;
             }
@@ -6658,7 +6974,9 @@ namespace CapriDesktop
             List<InstalledApp> found;
             try
             {
-                found = FindApps(wanted);
+                found = Match(Apps(), wanted);
+                string nicknamed = found.Count == 0 ? Nickname(wanted) : null;
+                if (nicknamed != null) found = Match(Apps(), nicknamed);
             }
             catch (Exception error) { return "Couldn't read their apps just now: " + error.Message; }
             InstalledApp chosen = null;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -251,10 +251,32 @@ namespace CapriDesktop
 
         // What holds her fake crash back, and closes it if it starts while it's up: full screen, a stream, a job of hers (its
         // clicks would land on the plate), their cursor lent to her, or her being dragged (a Codex review, 2 Nov).
+        // <<< PATCH: a prank chat set off is meant to land on the stream
+        // STOCK 0.9.0: return FullScreen() || Computer.Streaming || working != null || MidJob(job) || lentOut || dragging || pressed;
+        // Full screen and streaming are exactly when the author held this back, and exactly when a prank from Twitch chat is
+        // supposed to land. So those two are lifted for a prank chat or the test menu asked for, and only for
+        // as long as it runs. Everything else still holds: never while she has the mouse, is mid-job, is being dragged or is
+        // shutting down, because those are the cases where getting in the way would actually break something.
+        private bool bullyChaos;
+
         private bool ChaosHeld()
         {
-            return FullScreen() || Computer.Streaming || working != null || MidJob(job) || lentOut || dragging || pressed;
+            bool busy = working != null || MidJob(job) || lentOut || dragging || pressed;
+            return bullyChaos ? busy : FullScreen() || Computer.Streaming || busy;
         }
+
+        // The fake blue screen on purpose, over a game and over the stream. Null when something it will not push past is in
+        // the way, so the caller can say so.
+        internal string BullyCrash()
+        {
+            if (InvokeRequired) return (string)Invoke(new Func<string>(BullyCrash));
+            bullyChaos = true;
+            string said = CrashTool("show");
+            if (chaosScreen == null) bullyChaos = false;
+            else chaosScreen.FormClosed += delegate { bullyChaos = false; };
+            return said;
+        }
+        // <<< END PATCH: chat-triggered pranks ignore full screen and streaming
 
         private void ChaosOff()
         {

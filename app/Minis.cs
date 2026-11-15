@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -169,7 +169,7 @@ namespace CapriDesktop
             else
             {
                 int width = Kind == "connect_four" ? 7 : 3;
-                board.Append("X = user, O = Capri, . = empty. Rows top to bottom.\n");
+                board.Append("X = user, O = Capri,. = empty. Rows top to bottom.\n");
                 if (width == 7) board.Append("1 2 3 4 5 6 7\n");
                 for (int cell = 0; cell < Cells.Length; cell++) board.Append(Cells[cell] == 1 ? 'X' : Cells[cell] == 2 ? 'O' : '.').Append(cell % width == width - 1 ? '\n' : ' ');
             }

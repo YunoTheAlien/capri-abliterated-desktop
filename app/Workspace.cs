@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -1241,7 +1241,7 @@ namespace CapriDesktop
                 if (tool == "Glob")
                 {
                     string pattern = HuskJson.Text(input, "pattern");
-                    // A .. after the first wildcard, like **/../../*, climbs out of wherever the start of the pattern is.
+                    // A.. after the first wildcard, like **/../../*, climbs out of wherever the start of the pattern is.
                     if (Regex.IsMatch(pattern, @"(?:^|[\\/])\.\.(?:[\\/]|$)")) return false;
                     int wild = pattern.IndexOfAny(new[] { '*', '?', '[' });
                     if (wild >= 0)

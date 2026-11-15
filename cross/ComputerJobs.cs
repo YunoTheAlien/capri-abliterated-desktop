@@ -216,7 +216,6 @@ namespace CapriDesktop
                     if (Math.Abs(now.PointerX - x) > 3 || Math.Abs(now.PointerY - y) > 3) throw new InvalidOperationException("You moved the pointer during input completion, so I stopped.");
                     completed = now;
                 }
-                RemotePrivate.Keep(job, action);
                 Input.Execute(action, frame, Desktop, Guard, token, Complete);
                 if (completed == null) throw new InvalidOperationException("The input executor did not confirm delivery; its effect is uncertain.");
                 job.TotalSteps++;
@@ -284,8 +283,8 @@ namespace CapriDesktop
         internal static void Attach(Brain attached)
         {
             brain = attached;
-            Hands.Work = Limbs.RemoteWork(new Func<string, string, string>(Run));
-            Hands.NativeWork = Limbs.RemoteWork(new Func<ToolArguments, string>(args => Run(args.Task, args.Asked, args.Current)));
+            Hands.Work = Run;
+            Hands.NativeWork = args => Run(args.Task, args.Asked, args.Current);
             InControl.NativeStopHint = () => EscapeListening ? "Capri's using your mouse. Press Esc in the game or say stop to stop her." : "Capri's using your mouse. Say stop to stop her.";
             Hands.Resume = text => Resume(text) ?? Security.Resume(text, attached.Act);
             _ = Available;
@@ -366,12 +365,7 @@ namespace CapriDesktop
         }
 
         internal static string Run(string task, string asked) { return Run(task, asked, null); }
-        internal static string Run(string task, string asked, Func<bool> current)
-        {
-            RemoteTurn phone = RemoteTurn.Working;
-            if (phone != null) return phone.Current ? RemoteTurn.PcOnly : RemoteTurn.Ended;
-            return Run(new ComputerJob { Task = task, Asked = asked ?? task, Current = current });
-        }
+        internal static string Run(string task, string asked, Func<bool> current) { return Run(new ComputerJob { Task = task, Asked = asked ?? task, Current = current }); }
         private static NativeGameEscape escape;
         private static MacFingers.Escape macEscape;
         internal static bool EscapeListening => Volatile.Read(ref escape)?.Armed == true || Volatile.Read(ref macEscape)?.Armed == true;
@@ -380,7 +374,7 @@ namespace CapriDesktop
             bool mac = OperatingSystem.IsMacOS();
             if (mac)
             {
-                string problem = MacFingers.JobProblem();
+                string problem = MacFingers.Problem();
                 if (problem != null) return problem;
                 if (Hands.Streaming || Hands.StreamAsked(job.Task) || Hands.StreamAsked(job.Asked)) return "Live stream chat and timing aren't connected to Mac screen jobs yet.";
             }

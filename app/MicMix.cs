@@ -1071,9 +1071,9 @@ namespace CapriDesktop
         {
             if (count + length > held.Length)
             {
-                float[] grown = new float[Math.Max(held.Length * 2, count + length)];
-                Array.Copy(held, grown, count);
-                held = grown;
+                float[] senpai = new float[Math.Max(held.Length * 2, count + length)];
+                Array.Copy(held, senpai, count);
+                held = senpai;
             }
             Array.Copy(samples, offset, held, count, length);
             count += length;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -183,7 +183,7 @@ namespace CapriDesktop
             internal string Output = "", Errors = "";
         }
 
-        // Runs the app hidden in her folder with their input on stdin. A .cmd from npm runs through cmd.exe, and none of the
+        // Runs the app hidden in her folder with their input on stdin. A.cmd from npm runs through cmd.exe, and none of the
         // arguments are their words, so nothing they say reaches a command line.
         private static Ran Start(string kind, string app, List<string> args, string input, string folder, Func<bool> cancelled)
         {

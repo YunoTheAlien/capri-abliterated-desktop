@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 #if !CROSS
@@ -2837,7 +2837,7 @@ namespace CapriDesktop
     // Kokoro, Kitten and Pocket TTS, as sherpa-onnx's tts-models releases pack them. One stays open at a time.
     internal static class ModelFile
     {
-        internal const string Missing = "That's no voice model Capri can run. Pick a Piper, Kokoro, Kitten or Pocket TTS model for sherpa-onnx: its .tar.bz2, or the .onnx in its folder.";
+        internal const string Missing = "That's no voice model Capri can run. Pick a Piper, Kokoro, Kitten or Pocket TTS model for sherpa-onnx: its.tar.bz2, or the.onnx in its folder.";
         internal const string Unopened = "Capri can't open that clip. Press the arrow in the Speaker or clip box to pick it.";
         // Her free voice's folder, where sherpa-onnx is, and the folder models from an archive are unpacked into. Set at startup.
         internal static string Engine;
@@ -2866,7 +2866,7 @@ namespace CapriDesktop
             return named.IndexOf("kitten", StringComparison.OrdinalIgnoreCase) >= 0 ? "kitten" : "kokoro";
         }
 
-        // Its model: the biggest .onnx in the folder.
+        // Its model: the biggest.onnx in the folder.
         private static string Model(string folder)
         {
             string best = null;
@@ -2995,7 +2995,7 @@ namespace CapriDesktop
             return name.Length == 0 ? "Voice model" : name;
         }
 
-        // A .tar.bz2 or .zip they picked, unpacked into her models folder. Returns the model's folder.
+        // A.tar.bz2 or.zip they picked, unpacked into her models folder. Returns the model's folder.
         internal static string Unpack(string archive)
         {
             // Its folder is named after the archive, and only ever sits inside her models folder: an archive named ".zip" or
@@ -3011,7 +3011,7 @@ namespace CapriDesktop
                 if (archive.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) ZipFile.ExtractToDirectory(archive, staging);
                 else
                 {
-                    // Windows' own tar unpacks .tar.bz2, as sherpa-onnx ships its models.
+                    // Windows' own tar unpacks.tar.bz2, as sherpa-onnx ships its models.
                     ProcessStartInfo start = new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "tar.exe"), "-xf \"" + archive + "\" -C \"" + staging + "\"");
                     start.UseShellExecute = false;
                     start.CreateNoWindow = true;
@@ -3230,7 +3230,7 @@ namespace CapriDesktop
                     config.Model.Kokoro.Lang = keep(lang);
                 }
                 config.MaxSentences = 1;
-                // A broken or half-downloaded .onnx throws inside sherpa-onnx rather than returning nothing.
+                // A broken or half-downloaded.onnx throws inside sherpa-onnx rather than returning nothing.
                 try { tts = LocalVoice.SherpaOnnxCreateOfflineTts(ref config); }
                 catch (SEHException) { tts = IntPtr.Zero; }
             }
@@ -3729,7 +3729,7 @@ namespace CapriDesktop
             new Service("Fish Audio · cloud", Fish, FishCloud, FishFree, "", "Voice ID or fish.audio link", "Paste your Fish Audio key",
                 "Fish Audio's voices. Paste a key from fish.audio, then make your own voice with Fish Audio's Voice Design and paste its link or ID. Capri prohibits cloning or impersonating a living person's voice without explicit, informed consent or other valid authorization. " + FishFree + " is its free tier."),
             new Service("Voice model file · on your PC", Files, "", "", "", "Number or clip, optional", "Optional",
-                "A Piper, Kokoro, Kitten or Pocket TTS model for sherpa-onnx, run with no server. Browse to its .tar.bz2 or .onnx. Pocket TTS copies a voice clip you pick."),
+                "A Piper, Kokoro, Kitten or Pocket TTS model for sherpa-onnx, run with no server. Browse to its.tar.bz2 or.onnx. Pocket TTS copies a voice clip you pick."),
             new Service("Fish Speech · on your PC", Fish, "http://127.0.0.1:8080", "", "", "Reference ID, optional", "Optional",
                 "Fish Speech running on your PC with tools/api_server.py. Voice is a reference ID you added to it, or blank."),
             new Service("Kokoro · on your PC", OpenAi, Address, "kokoro", "af_heart", "Optional", "Optional",

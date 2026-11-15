@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -257,6 +257,10 @@ namespace CapriDesktop
             if (frames == 2) ask.Append(" The first picture is the screen just before it, the second just after.");
             else if (frames == 1) ask.Append(" The picture is the screen right now.");
             ask.Append(pace == Chatty ? " You're in a chatty mood, so say something unless there's really nothing there." : " Only say something if something really happened; otherwise SKIP.");
+            // The same steer her glances get, for the same reason: one fixed instruction gives one shape of line.
+            string angle = null;
+            try { angle = Glances.Steer(); } catch (Exception) { }
+            if (!string.IsNullOrEmpty(angle)) ask.Append(" This one only: ").Append(angle).Append('.');
             return ask + ")";
         }
 

@@ -133,7 +133,7 @@ namespace CapriDesktop
             if (OnMac && Program.Smoke == null)
             {
                 Hands.HandsReady = () => MacFingers.Available;
-                Hands.HandsProblem = MacFingers.JobProblem;
+                Hands.HandsProblem = MacFingers.Problem;
                 Hands.MacClipboard = OperatingSystem.IsMacOSVersionAtLeast(26);
                 Chores.Shoot = MacFingers.Picture;
             }
@@ -142,9 +142,6 @@ namespace CapriDesktop
             // switched off in Security holds the call so she asks first, and their yes runs it.
             brain.Act = delegate(string tool, ToolArguments args)
             {
-                RemoteTurn phone = RemoteTurn.Working;
-                if (phone != null && !phone.Current) return RemoteTurn.Ended;
-                if (args == null) args = new ToolArguments();
                 if (!VoiceActionRecovery.AllowCurrentTool()) return "That voice request ended; no action was dispatched.";
                 Func<bool> voiceGuard = VoiceActionRecovery.DispatchGuard;
                 if (voiceGuard != null)
@@ -154,64 +151,14 @@ namespace CapriDesktop
                 }
                 string unable = Hands.Unable(tool, args);
                 if (unable != null) return unable;
-                if (phone != null && RemoteTurn.AtPc(tool, args)) return phone.Refuse(tool, args);
-                string held = phone == null ? Security.Gate(tool, args) : phone.Pet.RemoteGate(phone, tool, args);
+                string held = Security.Gate(tool, args);
                 if (held != null) return held;
-                if (phone != null)
-                {
-                    Func<bool> previous = args.Current;
-                    args.Current = delegate { return phone.Live && (previous == null || previous()); };
-                    if (!args.Current()) return RemoteTurn.Ended;
-                }
-                string id = phone == null ? null : RemoteMessages.NewId();
-                string summary = phone == null ? null : RemoteTurn.Words(tool, args);
-                string name = summary == "Using a tool" ? "tool" : tool;
-                if (phone != null) phone.Tool(id, name, summary, "running");
-                string done;
-                try
-                {
-                    if (phone != null && !phone.Current) return RemoteTurn.Ended;
-                    done = phone != null && tool == "mod" ? phone.Pet.RemoteMod(phone, args) : Hands.Do(tool, args);
-                }
-                catch
-                {
-                    if (phone != null) phone.Tool(id, name, summary, "failed");
-                    throw;
-                }
-                if (phone != null) phone.Tool(id, name, summary, done == RemoteTurn.PcOnly || Hands.Failed(done) ? "failed" : "done");
+                string done = Hands.Do(tool, args);
                 if (tool != "look_at_screen" && !Hands.Checking(tool, args) && !string.IsNullOrEmpty(done)) Brain.Transcribe(null, "Job: " + done);
                 return done;
             };
             Hands.Resume = delegate(string text) { return Security.Resume(text, brain.Act); };
             if (!OnMac || Program.Smoke == null) ComputerJobs.Attach(brain);
-            Hands.NativeWork = RemoteWork(Hands.NativeWork);
-            Hands.Work = RemoteWork(Hands.Work);
-        }
-
-        internal static Func<ToolArguments, string> RemoteWork(Func<ToolArguments, string> work)
-        {
-            if (work == null) return null;
-            return delegate(ToolArguments args)
-            {
-                RemoteTurn phone = RemoteTurn.Working;
-                if (phone != null)
-                {
-                    if (!phone.Current) return RemoteTurn.Ended;
-                    return RemoteTurn.PcOnly;
-                }
-                return work(args);
-            };
-        }
-
-        internal static Func<string, string, string> RemoteWork(Func<string, string, string> work)
-        {
-            if (work == null) return null;
-            return delegate(string task, string asked)
-            {
-                RemoteTurn phone = RemoteTurn.Working;
-                if (phone != null) return phone.Current ? RemoteTurn.PcOnly : RemoteTurn.Ended;
-                return work(task, asked);
-            };
         }
 
         internal static void Open(string id, bool mac)

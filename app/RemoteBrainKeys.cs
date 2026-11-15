@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace CapriDesktop
@@ -63,7 +63,7 @@ namespace CapriDesktop
             List<RemoteJson.Writer> brains = new List<RemoteJson.Writer>();
             for (int i = 0; i < Brains.Length; i++) brains.Add(new RemoteJson.Writer().Text("id", Brains[i]).Flag("key", keys[i]));
             return new RemoteJson.Writer().Text("type", "brain.state").Text("use", Brains[Math.Max(0, Math.Min(Brains.Length - 1, use))])
-                .Text("name", RemoteMessages.CleanText(name, 64)).Text("note", RemoteMessages.CleanText(note, 200)).Objects("brains", brains).ToString();
+               .Text("name", RemoteMessages.CleanText(name, 64)).Text("note", RemoteMessages.CleanText(note, 200)).Objects("brains", brains).ToString();
         }
 
         // How a phone's key went: "checking", "saved" or "failed", in her Mainframe's words. The key that was sent never

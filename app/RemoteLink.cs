@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -223,7 +223,7 @@ namespace CapriDesktop
             if (scheme == null) scheme = probe.IsLoopback ? "ws" : "wss";
             if (scheme == "ws" && !probe.IsLoopback) return null;
             if (!Uri.TryCreate(scheme + "://" + text + "/", UriKind.Absolute, out uri) || uri.PathAndQuery != "/") return null;
-            // As typed, lower-cased: .NET Framework would write [::1] out in full.
+            // As typed, lower-cased:.NET Framework would write [::1] out in full.
             return scheme + "://" + text.ToLowerInvariant();
         }
 
@@ -655,11 +655,7 @@ namespace CapriDesktop
                     link.Admit(notes);
                     RemoteDevice child = state.Devices[state.Devices.Count - 1];
                     if (child.Parent != parent.Id || child.From != parent.Name) throw new Exception("A link-added phone lost its parent's id or name.");
-#if CROSS
-                    RemoteState saved = RemoteState.FromJson(state.Copy().ToJson());
-#else
                     RemoteState saved = RemoteState.Unseal(state.Copy().Seal());
-#endif
                     if (saved == null || saved.Find(child.Id).Parent != parent.Id || saved.Find(child.Id).From != parent.Name) throw new Exception("A saved phone lost its link parent.");
                     take();
                     link.PairAsk(link.phones[child.Id], "pair-child", notes);
@@ -782,7 +778,7 @@ namespace CapriDesktop
         private async Task<Ending> Connection(CancellationToken stop)
         {
             Wire w = new Wire(CancellationTokenSource.CreateLinkedTokenSource(stop));
-            // The relay's own heartbeat keeps the connection alive, so .NET's keep-alive frames are left off. No Origin
+            // The relay's own heartbeat keeps the connection alive, so.NET's keep-alive frames are left off. No Origin
             // header is ever set: the relay refuses a PC connection that has one, because only web pages send them.
             w.Socket.Options.KeepAliveInterval = TimeSpan.Zero;
             ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072;

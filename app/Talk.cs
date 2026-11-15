@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -500,7 +500,7 @@ namespace CapriDesktop
         // Without a word breaker a line can still break between letters. A Thai or Lao line never breaks before a vowel or
         // tone mark, or a vowel that follows its letter, and never after a vowel written before its letter. Every script keeps
         // each letter with its marks, and with the next letter after a sign that joins them (a virama, or Khmer's coeng), and
-        // a Burmese line never breaks before ါ, ာ or း (newer .NET counts them as letters of their own, like Mac and Linux do)
+        // a Burmese line never breaks before ါ, ာ or း (newer.NET counts them as letters of their own, like Mac and Linux do)
         // or a letter that ends the syllable before it.
         internal static bool[] Letters(string word)
         {
@@ -1389,8 +1389,8 @@ namespace CapriDesktop
 
         internal static double Held(double t, double length, double linger)
         {
-            double grown = 0.26 * length, hold = 0.3 * length + linger;
-            return t < grown ? t / length : t < grown + hold ? 0.26 + 0.3 * (t - grown) / hold : (t - linger) / length;
+            double senpai = 0.26 * length, hold = 0.3 * length + linger;
+            return t < senpai ? t / length : t < senpai + hold ? 0.26 + 0.3 * (t - senpai) / hold : (t - linger) / length;
         }
 
         internal static Bitmap Frame(Size size, double progress, int seed, bool wide = false, Point? core = null, Rectangle? body = null, int flicker = 0)
@@ -1892,11 +1892,11 @@ namespace CapriDesktop
         private static void Beam(Graphics graphics, float middle, float top, float bottom, double b, double rise, double hold, double fall, bool up, float scale, Random pick)
         {
             if (b < 0 || b > rise + hold + fall) return;
-            double grown = Smooth(b / rise);
-            double wide = 30 * scale * (b < rise ? grown : 1 - Smooth((b - rise - hold) / fall));
+            double senpai = Smooth(b / rise);
+            double wide = 30 * scale * (b < rise ? senpai : 1 - Smooth((b - rise - hold) / fall));
             if (wide < 0.6) return;
-            float upper = up ? (float)(bottom - (bottom - top) * grown) : top;
-            float lower = up ? bottom : (float)(top + (bottom - top) * grown);
+            float upper = up ? (float)(bottom - (bottom - top) * senpai) : top;
+            float lower = up ? bottom : (float)(top + (bottom - top) * senpai);
             if (lower - upper < 2) return;
             float w = (float)wide, rows = Math.Max(8, 14 * scale);
             List<PointF> left = new List<PointF>(), right = new List<PointF>();
@@ -3490,7 +3490,9 @@ namespace CapriDesktop
                     float row2 = panel.Top + 12 * s;
                     if (above > 0)
                     {
-                        string you = copied ? "> sys: copied" : Prompt + (Heard ?? "");
+                        // The prefix is theirs to change in sys.md; Prompt itself stays the stock marker, since the
+                        // code elsewhere tests it to tell a system line from a spoken one.
+                        string you = copied ? SysLines.Prefix(SysLines.SysMark) + "copied" : SysLines.Prefix(Prompt) + (Heard ?? "");
                         if (Look.Cells(you) > columns) you = Look.Cut(you, columns - 3) + "...";
                         using (Brush dim = new SolidBrush(Look.Dim)) Look.Draw(graphics, you, heard, dim, x, row2);
                         row2 += line;

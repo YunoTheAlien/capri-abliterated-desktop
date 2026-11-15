@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -971,7 +971,7 @@ namespace CapriDesktop
             }
 
             public int Api { get { return Mods.Api; } }
-            public string CapriVersion { get { return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString(3); } }
+            public string CapriVersion { get { return Companion.Built; } }
             public bool Has(string permission) { return allowed.Contains(permission); }
 
             public void Say(string line)

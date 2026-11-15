@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -480,7 +480,7 @@ namespace CapriDesktop
                 "Oh. That's a lovely idea. Let's do it!", "Oh. That's a lovely idea.|Let's do it!",
                 "It costs 3.50 today. Want it?", "It costs 3.50 today. Want it?",
                 "Wait... what? No way! That's wild.", "Wait... what?|No way! That's wild.",
-                "That's all I have. ...", "That's all I have. ...",
+                "That's all I have....", "That's all I have....",
                 "Done. :)", "Done. :)"
             };
             for (int i = 0; i < cases.Length; i += 2)

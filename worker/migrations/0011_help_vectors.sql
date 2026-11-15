@@ -1,1 +1,0 @@
-CREATE TABLE help_vectors (hash TEXT PRIMARY KEY, vector BLOB, pending INTEGER NOT NULL DEFAULT 0);

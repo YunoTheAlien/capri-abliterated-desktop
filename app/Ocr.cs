@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -243,9 +243,9 @@ namespace CapriDesktop
                     attributes.SetWrapMode(WrapMode.TileFlipXY);
                     if (contrast) attributes.SetColorMatrix(new ColorMatrix(new float[][]
                     {
-                        new float[] { .897f, .897f, .897f, 0, 0 },
+                        new float[] {.897f,.897f,.897f, 0, 0 },
                         new float[] { 1.761f, 1.761f, 1.761f, 0, 0 },
-                        new float[] { .342f, .342f, .342f, 0, 0 },
+                        new float[] {.342f,.342f,.342f, 0, 0 },
                         new float[] { 0, 0, 0, 1, 0 },
                         new float[] { -1.5f, -1.5f, -1.5f, 0, 1 }
                     }));
