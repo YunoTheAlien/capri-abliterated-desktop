@@ -10,5 +10,12 @@ node_modules/
 cross/native/capri-input
 worker/.codes-secret
 
+# Folders left behind by the move to this layout, and local scratch. Not part of her source.
+build-src-0.9.0/
+capri-desktop_lachydotmcg/
+staged/
+temp_*
+*.backup
+
 # Built programs staged for the Releases page, never committed.
 release/

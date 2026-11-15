@@ -885,6 +885,12 @@ namespace CapriDesktop
                 // and never shown a meter, so she cannot quote a score back at them.
                 try { string felt = Mood.Line; if (!string.IsNullOrEmpty(felt)) built += "\n" + felt; }
                 catch (Exception) { }
+                // The question she is waiting on, so her brain knows where the answer goes.
+                try { string probe = Probes.Line(); if (!string.IsNullOrEmpty(probe)) built += "\n" + probe; }
+                catch (Exception) { }
+                // When they are usually about, so a late night means something to her rather than the clock alone.
+                try { string hours = Hours.Line(DateTime.Now); if (!string.IsNullOrEmpty(hours)) built += "\n" + hours; }
+                catch (Exception) { }
                 // Only with Uncensored on: how forward she is, and what she is into from interests.md. Both drove her
                 // written lines alone, so her brain knew neither and answered from its own defaults however the
                 // toggle and the level were set. The open safety text takes a rule away but never grants anything.
@@ -1249,7 +1255,7 @@ namespace CapriDesktop
 
         internal static readonly string[] HalloweenLines = { "Happy Halloween, choom!", "Happy Halloween, choom. Trick or treat?", "Boo! Happy Halloween, choom." };
 
-        internal const string NotesHead = "# What Capri remembers about you\n> She reads this every time you chat. Edit or delete anything here.\n\n";
+        internal const string NotesHead = "# What Capri remembers about you\n> This is private data. It stays on this PC and nothing here is programmed to send it anywhere.\n> She reads this every time you chat. Edit or delete anything here.\n>\n> She fills the lines below in as she learns them, and keeps whatever you write yourself.\n> awakeHours is when you are usually up, like 9am-1am. It overrides her late hour, so working\n> nights stops meaning she tells you off at one in the morning.\n\n- thingsUserLikes=\n- gamesUserLikes=\n- programsUserLikes=\n- awakeHours=\n- personalityLikes=\n\n";
         private static readonly object noting = new object();
         // Only secrets and things that find them in real life stay out of me.md: Lachy wants every other memory to save.
         private static readonly Regex Personal = new Regex(@"\b(passwords?|passcodes?|pin (code|number)|log ?in details|credit card|card number|bank (account|details|number)|account number|sort code|routing number|social security|passport|(home|street|postal|email|e-mail) address|(my|their|his|her) address|postcode|post code|zip code|(phone|mobile|cell) number|surname|last name|full name|real name|date of birth|(i|they) live (in|at|on)|(my|their|his|her) school(?: is|'s| is called| called)|school (is )?called)\b|@\w+\.\w+|\d[\d\s-]{6,}\d|\b\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\b", RegexOptions.IgnoreCase);
@@ -1306,6 +1312,56 @@ namespace CapriDesktop
                 if (text.Length > 0 && !text.StartsWith("#", StringComparison.Ordinal) && !text.StartsWith(">", StringComparison.Ordinal)) kept.Add(text.Length > 200 ? text.Substring(0, 200) : text);
             }
             return kept;
+        }
+
+        // One of the keyed lines in me.md, like gamesUserLikes. A keyed line is updated in place and its values
+        // merged, so asking about their games twice builds a list instead of two bullets saying nearly the same
+        // thing. The same privacy guard as a normal note applies: nothing that looks like an address or a name
+        // goes in, whatever she was told.
+        // What is in me.md right now, for anything that needs to know whether a line is already filled in.
+        internal static string NotesBody()
+        {
+            string path = MemoryPath;
+            try { return path != null && File.Exists(path) ? File.ReadAllText(path) : ""; }
+            catch (Exception) { return ""; }
+        }
+
+        internal static string NoteKey(string key, string value)
+        {
+            string name = Probes.Tidy(key);
+            if (name == null) return Note(value);
+            string text = Regex.Replace((value ?? "").Trim(), @"\s+", " ").Trim(' ', '-', '.', ',', '"');
+            if (text.Length == 0) return "";
+            if (Discreet ? Revealing(text) : Personal.IsMatch(text)) return Private;
+            if (text.Length > 120) text = text.Substring(0, 120).TrimEnd();
+            string path = MemoryPath;
+            if (path == null) return "I can't keep notes on this computer yet.";
+            lock (noting)
+            {
+                try
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(path));
+                    string current = File.Exists(path) ? File.ReadAllText(path) : NotesHead;
+                    Match line = Regex.Match(current, @"(?mi)^(-?[ \t]*" + Regex.Escape(name) + @"[ \t]*=[ \t]*)(.*)$");
+                    string already = line.Success ? line.Groups[2].Value.Trim() : "";
+                    foreach (string part in already.Split(','))
+                        if (string.Equals(part.Trim(), text, StringComparison.OrdinalIgnoreCase)) return "";
+                    string merged = already.Length == 0 ? text : already.TrimEnd(',', ' ') + ", " + text;
+                    if (merged.Length > 300) merged = merged.Substring(merged.Length - 300).TrimStart(',', ' ');
+                    if (line.Success) current = current.Substring(0, line.Index) + line.Groups[1].Value + merged + current.Substring(line.Index + line.Length);
+                    else
+                    {
+                        if (current.Length > 0 && !current.EndsWith("\n", StringComparison.Ordinal)) current += "\n";
+                        current += "- " + name + "=" + merged + "\n";
+                    }
+                    if (current.Length > 8000) return "My notes are full. Clear some out in me.md first.";
+                    File.WriteAllText(path, current);
+                }
+                catch (IOException) { return "Couldn't save that to my notes."; }
+                catch (UnauthorizedAccessException) { return "Couldn't save that to my notes."; }
+            }
+            // Nothing said back: she writes these quietly and carries on talking.
+            return "";
         }
 
         internal static string Note(string fact)
@@ -5258,7 +5314,7 @@ namespace CapriDesktop
 #else
         private const string Mirror = "";
 #endif
-        internal const string Line = "(You glance at their screen while they do their thing. Only this picture counts: your instructions, old chats and memories aren't evidence of what's open, so never take a game from them. " + Mirror + "Reply in two parts, with the labels SAW: and SAY: written exactly like that. SAW: only what you can clearly see, in under 20 plain words: the game or app and what's happening. SAY: your reaction in one short line, in character, to one specific thing you can see: tease them, gloat, wince or cheer them on, and don't ask what they're doing. A game scene, scoreboard, inventory or quiet moment is enough, but a document or code editor is work, not a game. A fight, match, stream or video is something they're watching: react as a viewer next to them, and never as if they're the one fighting or playing. Don't invent action from a still image, and never guess who a person is; name someone only if their name is written on screen. If you aren't sure what you're seeing, reply with just SKIP. If nothing's worth a line, still give the SAW part and make it SAY: SKIP. For a blank screen, a bare desktop or a loading screen, reply with just SKIP.)";
+        internal const string Line = "(You glance at their screen while they do their thing. Only this picture counts: your instructions, old chats and memories aren't evidence of what's open, so never take a game from them. " + Mirror + "Reply in two parts, with the labels SAW: and SAY: written exactly like that. SAW: only what you can clearly see, in under 20 plain words: the game or app and what's happening. SAY: your reaction in one short line, in character, to one specific thing you can see: tease them, gloat, wince or cheer them on, and don't ask what they're doing. Never read out the clock, the date or the day: they can see those, and they did not ask. A game scene, scoreboard, inventory or quiet moment is enough, but a document or code editor is work, not a game. A fight, match, stream or video is something they're watching: react as a viewer next to them, and never as if they're the one fighting or playing. Don't invent action from a still image, and never guess who a person is; name someone only if their name is written on screen. If you aren't sure what you're seeing, reply with just SKIP. If nothing's worth a line, still give the SAW part and make it SAY: SKIP. For a blank screen, a bare desktop or a loading screen, reply with just SKIP.)";
         // Only SAY is said out loud, so only it goes in their language: SAW, the labels and SKIP are read back in English.
         internal const string Tongue = "(Write the SAY line in {0}. Keep SAW in English, and the labels SAW: and SAY: and the word SKIP exactly as written.)";
         // Her glance lines from the last hour count as already said.
@@ -5443,7 +5499,10 @@ namespace CapriDesktop
                 if (seen.Length > 0 && !Regex.IsMatch(seen, @"^[\[(]?SKIP[\])]?[.!?]*$", RegexOptions.IgnoreCase)) saw = seen.Length > 200 ? seen.Substring(0, 200).TrimEnd() + "..." : seen;
                 text = sayLabel == null ? "" : Labelled(text, sayLabel, sawLabel);
             }
-            string said = Brain.Sparing(Brain.Clean(text), false, Brain.Nickname);
+            // The clock came out of what she remembers seeing but not out of what she says, so a taskbar clock in the
+            // picture still reached her mouth: a glance is unsolicited by definition, so the time never belongs in one.
+            // Asking her the time goes down a different path and still answers.
+            string said = Brain.Sparing(Brain.Clean(Clockless(text)), false, Brain.Nickname);
             bool skipped = Regex.IsMatch(said, @"^[\[(]?(SKIP|nothing|none)[\])]?[.!?]*$", RegexOptions.IgnoreCase) || Regex.IsMatch(said, @"^[\[(]?SKIP\b");
             return skipped ? "" : said;
         }

@@ -56,6 +56,8 @@ namespace CapriDesktop
         internal long? Sequence;
         [DataMember(Name = "target")] public string Target;
         [DataMember(Name = "text")] public string Text;
+        // Which line in me.md a remembered thing belongs on, for the few she asks about herself.
+        [DataMember(Name = "key")] public string Key;
         [DataMember(Name = "now")] public bool? Now;
         [DataMember(Name = "description")] public string Description;
         [DataMember(Name = "path")] public string Path;
@@ -1358,7 +1360,7 @@ namespace CapriDesktop
               "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"description\":\"start or stop\",\"enum\":[\"start\",\"stop\"]},\"name\":{\"type\":\"string\",\"description\":\"The game to play, if they named one\"}},\"required\":[\"action\"]}", "stream for you, playing a game herself live and talking to your chat", "stream live for them: play a game yourself and talk to their chat" },
             { "shortcut", "Press a keyboard shortcut for them: mute or unmute their mic in Discord (discord_mute), deafen or undeafen in Discord (discord_deafen), take a screenshot, clip the last 30 seconds, start or stop recording, open the Game Bar, show the desktop, open Task Manager, clipboard history or the emoji picker, start voice typing, turn Live Captions, Narrator or colour filters on or off, zoom in with Magnifier or close it, or open Quick Settings.",
               "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Which shortcut\",\"enum\":[\"discord_mute\",\"discord_deafen\",\"screenshot\",\"clip_that\",\"record\",\"game_bar\",\"show_desktop\",\"task_manager\",\"clipboard\",\"emoji\",\"voice_typing\",\"live_captions\",\"narrator\",\"magnifier\",\"magnifier_off\",\"color_filters\",\"quick_settings\"]}},\"required\":[\"name\"]}", "press shortcuts like screenshots, Discord mute, Game Bar and Live Captions", "press shortcuts like screenshots and Discord mute" },
-            { "remember", "Save a short note about them to your notes (me.md) so you remember it next time, like a favourite game or what they're making, or forget a note. Use it whenever they ask you to remember, note down, save or forget something, or to leave or make a memory.",
+            { "remember", "Save a short note about them to your notes (me.md) so you remember it next time, like a favourite game or what they're making, or forget a note. Use it whenever they ask you to remember, note down, save or forget something, or to leave or make a memory. When you are saving the answer to something you asked about their games, what they are into, what they work in, their hours or how they like you, also pass key as one of gamesUserLikes, thingsUserLikes, programsUserLikes, awakeHours or personalityLikes, and keep text to a few words.",
               "{\"type\":\"object\",\"properties\":{\"text\":{\"type\":\"string\",\"description\":\"The note, about them in the third person, or what to forget\"},\"action\":{\"type\":\"string\",\"description\":\"What to do\",\"enum\":[\"remember\",\"forget\"]}},\"required\":[\"text\"]}", "keep notes about you in me.md", "save notes about them in me.md" },
 #if !CROSS
             { "call_errand", "Only when the user asks, let people on the call choose one app or game to open, or one song to play. Call mode must be on; join first with use_computer if asked. The next answering call line supplies only its name. One errand replaces the last and lasts ten minutes. Use cancel when the user cancels it. ask is an optional short line to say on the call with this reply; keep it empty if no question is needed.",
@@ -2062,7 +2064,9 @@ namespace CapriDesktop
                 // <<< END PATCH: find the app, then do the thing
                 if (tool == "stream") return Stream(args);
                 if (tool == "shortcut") return Shortcut(args.Name);
-                if (tool == "remember") return args.Action == "forget" ? Brain.Unnote(Theirs(args.Text)) : CallMe(args.Text) ?? Brain.Note(Theirs(args.Text));
+                if (tool == "remember") return args.Action == "forget" ? Brain.Unnote(Theirs(args.Text))
+                    : Probes.Allowed(args.Key) ? Brain.NoteKey(args.Key, Theirs(args.Text))
+                    : CallMe(args.Text) ?? Brain.Note(Theirs(args.Text));
                 if (tool == "list_windows") return ListWindows(args.Name);
                 if (tool == "check_app") return CheckApp(args.Name);
                 if (tool == "capri_settings") return Settings(args);

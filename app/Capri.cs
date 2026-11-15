@@ -2802,7 +2802,9 @@ namespace CapriDesktop
         // Room around her square, so her perched legs (they hang 8% of her size below it) aren't cut off at Giant.
         private const int PaddingSize = 48;
         internal const int MinSize = 140;
-        internal const int MaxSize = 560;
+        // Her frames are 384 tall, so anything past Giant is bigger rather than sharper. The bigger steps are
+        // here because being able to actually see a detail beats the art not having more of it.
+        internal const int MaxSize = 1038;
         private const int DismountId = 0x4361;
         // Ctrl + Alt + C first. Streaming apps like TikTok LIVE Studio grab it, so she falls back to the next free combo.
         private static readonly int[,] HopKeys = { { 0x0001 | 0x0002, 0x43 }, { 0x0001 | 0x0002 | 0x0004, 0x43 }, { 0x0001 | 0x0002, 0x58 }, { 0x0001 | 0x0002, 0x48 } };
@@ -2997,6 +2999,17 @@ namespace CapriDesktop
             Sayings.TopUp();
             Interests.Kept = Path.Combine(data, Interests.FileName);
             SysLines.Kept = Path.Combine(data, SysLines.FileName);
+            Hours.Kept = Path.Combine(data, Hours.FileName);
+            // What Probes reads to decide whether to ask anything, and about what.
+            Probes.Known = delegate(string key)
+            {
+                try { return Probes.Filled(Brain.NotesBody(), key); }
+                catch (Exception) { return false; }
+            };
+            Probes.Upset = delegate { try { return Mood.Upset; } catch (Exception) { return 0; } };
+            Probes.Band = delegate { try { return Mood.Band; } catch (Exception) { return "steady"; } };
+            Probes.Quiet = delegate { return probeQuiet; };
+            Working.Ahead = delegate { try { return Computer.Glimpse(); } catch (Exception) { return null; } };
             SysLines.Write(false);
             SysLines.TopUp();
             Them.Watch(Brain.MemoryPath ?? Path.Combine(data, "me.md"));
@@ -3158,6 +3171,11 @@ namespace CapriDesktop
             AddSize(sizes, "Large", 320);
             AddSize(sizes, "Huge", 440);
             AddSize(sizes, "Giant", 560);
+            // Her frames are 384 tall and her idle clip draws at 1.11 of her size, so 346, 692 and 1038 land on a
+            // whole 1x, 2x and 3x. A whole multiple resamples far less than an arbitrary one, which is the same
+            // reason old sprites were scaled by doubling rather than to whatever the window happened to be.
+            AddSize(sizes, "Double (2x)", 692);
+            AddSize(sizes, "Triple (3x)", 1038);
             menu.Items.Add(sizes);
             // Her own size is above. This is the words she says, which people were having to squint at.
             textItem = new ToolStripMenuItem("Text size");
@@ -3708,6 +3726,10 @@ namespace CapriDesktop
         private void Tick()
         {
             double now = clock.Elapsed.TotalSeconds;
+            Hours.Mark();
+            // Their own awakeHours out of me.md, which beats what she counted.
+            Hours.Told = Them.Awake;
+            Probes.Tick(DateTime.Now);
             RampageTick(now);
             MoveExplorePointer(now);
             int interval = FrameInterval(now);
@@ -4126,8 +4148,17 @@ namespace CapriDesktop
                 updateItem.Enabled = true;
                 updateItem.Text = "Restart to update to Capri " + ready.Version;
                 if (!menu.Items.Contains(updateItem)) menu.Items.Insert(menu.Items.Count - 2, updateItem);
+                // They pressed the button, so finish the job: look, fetch and restart off the one click. The timed
+                // check behind their back still only offers it, because restarting someone's companion when they
+                // did not ask is a different thing entirely.
+                if (asked)
+                {
+                    mainframe.UpdateNote("Updating to Capri " + ready.Version + ". She'll restart on her own.", false);
+                    InstallUpdate();
+                    return;
+                }
                 mainframe.UpdateNote(updateItem.Text + ". Use her tray menu.", false);
-                if (fresh || asked)
+                if (fresh)
                 {
                     balloonPage = null;
                     balloonUpdate = true;
@@ -5439,11 +5470,32 @@ namespace CapriDesktop
                 careGameAt = now + 15;
                 careGame = Computer.GameOpen() ?? GameAhead();
             }
-            // Being left alone is an act too, which is what her needier moods react to.
-            if (quiet > 300) Did("ignored");
+            // Being left alone is an act too, which is what her needier moods react to. Someone working is still
+            // there, so it takes longer to count as being ignored rather than counting the same as an empty chair.
+            bool working = Working.Now(DateTime.UtcNow);
+            if (quiet > (working ? 300.0 / Working.Slower : 300)) Did("ignored");
             MaybeGiveUp(now, quiet);
             string line = care.Check(preferences.CheckIns, preferences.CareOn, preferences.CareTime, ref preferences.CareNight, quiet, !hidden && nudgeOut < 0 && PopFree(now, quiet), careGame, noticed, nudgeGap / NudgeGap);
-            if (line == null) return;
+            // How long they have been quiet, in seconds, for Probes. Kept here because this is where it is known.
+            probeQuiet = quiet / 1000.0;
+            if (line == null)
+            {
+                // A question of her own, under the same guards a check-in gets: check-ins on, not hidden, and a
+                // moment where she is free to speak. She asks instead of a check-in, never on top of one.
+                if (preferences.CheckIns && !hidden && nudgeOut < 0 && PopFree(now, quiet))
+                {
+                    // Hungry, and she has not mentioned it lately. The feeding menu knew; she never said.
+                    string peckish = HungerLine(now, working);
+                    if (peckish != null) { SayOwn("check-in", peckish); return; }
+                    string question, key;
+                    if (Probes.Due(DateTime.Now, out question, out key))
+                    {
+                        Probes.Said(question, key);
+                        SayOwn("check-in", question);
+                    }
+                }
+                return;
+            }
             if (care.Said == CareKind.Bored) AskedForAttention(now, true);
             if (care.Said == CareKind.Late) SavePreferences();
             SayOwn("check-in", line);
@@ -7152,6 +7204,8 @@ namespace CapriDesktop
         // drifted, and switches her if so. Main is untouched, so she always comes back to the one they picked.
         private ToolStripMenuItem feedItem;
         private ToolStripMenuItem textItem;
+        // Seconds since they last did anything, for Probes. Set where her check-ins work it out.
+        private double probeQuiet = 99999;
 
         private void ShowTextMenu()
         {
@@ -7188,7 +7242,38 @@ namespace CapriDesktop
         {
             if (feedItem == null) return;
             double fed = Since(preferences.FedAt);
+            if (fed > 0 && Working.Now(DateTime.UtcNow)) fed *= Working.Slower;
             feedItem.Text = fed < 0 ? "Feed her" : fed >= 6 ? "Feed her (hungry)" : fed >= 3 ? "Feed her (peckish)" : "Feed her";
+        }
+
+        // How long since she was fed, in hours, with time at a desk counting for less.
+        private double hungerSaidAt = -1;
+
+        private static readonly string[] PeckishLines =
+        {
+            "I could go something.", "Bit peckish, not that you asked.", "Is it snack o'clock?",
+            "I wouldn't say no to something.", "Feed me? Maybe. If you like."
+        };
+
+        private static readonly string[] HungryLines =
+        {
+            "Okay, I'm actually hungry now.", "You've forgotten about me entirely, haven't you.",
+            "Feed me. I'm not asking twice.", "I'm running on nothing here, choom.",
+            "Starving. Dramatic? Yes. True? Also yes."
+        };
+
+        // Said at most once every few hours, and never twice for the same stretch. Nothing happens if they ignore
+        // it: she is not a tamagotchi that dies, she just gets snippier about it the next time.
+        private string HungerLine(double now, bool working)
+        {
+            double fed = Since(preferences.FedAt);
+            if (fed < 0) return null;
+            if (working) fed *= Working.Slower;
+            if (fed < 3) { hungerSaidAt = -1; return null; }
+            if (hungerSaidAt >= 0 && now - hungerSaidAt < 3 * 3600) return null;
+            hungerSaidAt = now;
+            string[] from = fed >= 6 ? HungryLines : PeckishLines;
+            return Sayings.Dress(from[random.Next(from.Length)], Worth("fed") >= 0);
         }
 
         internal void Feed(string kind)
@@ -12790,7 +12875,7 @@ namespace CapriDesktop
         }
 
         // Her sliders' steps for her settings tool, the same ones her Mainframe's sliders stop on.
-        internal static readonly int[] OwnSizes = { 140, 170, 200, 240, 280, 320, 380, 440, 500, 560 };
+        internal static readonly int[] OwnSizes = { 140, 170, 200, 240, 280, 320, 346, 380, 440, 500, 560, 692, 1038 };
         internal static readonly int[] OwnSleeps = { 0, 60, 120, 300, 600, 1800 };
         internal static readonly int[] OwnVolumes = { 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150 };
         internal static readonly int[] OwnPaces = { 70, 80, 90, 100, 110, 120, 130, 140, 150 };

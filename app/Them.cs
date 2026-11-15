@@ -30,7 +30,10 @@ namespace CapriDesktop
         private static string path;
         private static DateTime read = DateTime.MinValue;
         private static long wasLong = -1;
-        private static string he = "they", them = "them", their = "their", boy = "one", isAre = "are", bits = "crotch", name = "";
+        private static string he = "they", them = "them", their = "their", boy = "one", isAre = "are", bits = "crotch", name = "", awake = "";
+
+        // What they wrote for awakeHours in me.md, or empty. Hours prefers this over what it counted.
+        internal static string Awake { get { Fresh(); lock (gate) return awake; } }
 
         internal static void Watch(string mePath) { lock (gate) { path = mePath; read = DateTime.MinValue; wasLong = -1; } }
 
@@ -114,10 +117,16 @@ namespace CapriDesktop
                 string called = "";
                 Match named = Regex.Match(notes, @"^-\s*(?:Name|Call them|They go by):\s*(.+)$", RegexOptions.Multiline | RegexOptions.IgnoreCase);
                 if (named.Success) called = named.Groups[1].Value.Trim();
+                // Their own hours, written as awakeHours in me.md. Read here because this already watches that file
+                // and re-reads it only when it changes.
+                string up = "";
+                Match hours = Regex.Match(notes, @"^-?\s*awakeHours\s*[=:]\s*(.+)$", RegexOptions.Multiline | RegexOptions.IgnoreCase);
+                if (hours.Success) up = hours.Groups[1].Value.Trim();
 
                 lock (gate)
                 {
                     name = called;
+                    awake = up;
                     // "any pronouns" and anything unreadable both land on neutral on purpose.
                     if (Regex.IsMatch(said, @"\bhe\b|\bhim\b|\bhis\b"))
                         { he = "he"; them = "him"; their = "his"; boy = "boy"; isAre = "is"; bits = "balls"; }

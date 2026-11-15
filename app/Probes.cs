@@ -1,0 +1,156 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+
+namespace CapriDesktop
+{
+    // The questions she asks to find out about them, and when she is allowed to ask one.
+    //
+    // She had no way to learn anything she was not told. Her notes filled up only when someone remembered to say
+    // "remember that", so a companion that is supposed to know them started every week as blank as the first.
+    //
+    // Nothing here speaks. It decides there is a question worth asking and which one; her usual line path says it,
+    // and her brain writes the answer down through the remember tool with a key. What she asks about is whatever
+    // she knows least about, so the file fills out rather than one line getting asked about forever.
+    internal static class Probes
+    {
+        // The me.md lines she can fill in, and what she asks to fill them. Keys are what remember writes to, so
+        // they must match what is in NotesHead.
+        private static readonly string[,] Asks =
+        {
+            { "gamesUserLikes", "What have you been playing lately?" },
+            { "gamesUserLikes", "Anything good in your games list right now?" },
+            { "gamesUserLikes", "What's the last game that actually got you?" },
+            { "thingsUserLikes", "What do you do when you're not at this thing?" },
+            { "thingsUserLikes", "Go on, tell me something you're into." },
+            { "thingsUserLikes", "What would you be doing right now if you could do anything?" },
+            { "programsUserLikes", "What do you spend most of your day in on here?" },
+            { "programsUserLikes", "What are you building or working on these days?" },
+            { "awakeHours", "What hours are you usually up? I'd rather not nag you at the wrong time." },
+            { "awakeHours", "When does your day normally start and end?" },
+            { "personalityLikes", "Am I about right for you, or do you want me different?" },
+            { "personalityLikes", "What would you change about how I talk to you?" }
+        };
+
+        private static readonly object gate = new object();
+        private static readonly Random dice = new Random();
+        private static DateTime next = DateTime.MinValue;
+        private static string waiting;
+        private static DateTime asked = DateTime.MinValue;
+
+        // What they already told her, so she asks about what is still blank first. Set from me.md.
+        internal static Func<string, bool> Known = delegate { return false; };
+        // How she is feeling, so she does not interrogate someone she has upset.
+        internal static Func<int> Upset = delegate { return 0; };
+        internal static Func<string> Band = delegate { return "steady"; };
+        // Seconds since they last said something, so a conversation that is flowing can bring one forward.
+        internal static Func<double> Quiet = delegate { return 99999; };
+
+        // The question she is waiting on an answer to, or null. Her prompt carries this so her brain knows to save
+        // the answer rather than just reply to it.
+        internal static string Pending { get { lock (gate) return waiting; } }
+
+        internal static string PendingKey { get; private set; }
+
+        // Her brain is told what she asked and where the answer goes. No instruction to nag: a question they
+        // ignored is a question they did not want.
+        internal static string Line()
+        {
+            string question = Pending;
+            if (string.IsNullOrEmpty(question)) return null;
+            return "You asked them: " + Voice.Quote(question) + " If their reply answers it, call remember with key "
+                + Voice.Quote(PendingKey) + " and a few words as the text, and reply as you normally would. Do not mention"
+                + " saving it, and do not ask again if they changed the subject.";
+        }
+
+        // Called when she has said the question, so the clock starts from her asking rather than from deciding to.
+        internal static void Said(string question, string key)
+        {
+            lock (gate)
+            {
+                waiting = question;
+                PendingKey = key;
+                asked = DateTime.UtcNow;
+                Roll();
+            }
+        }
+
+        // A question stops being pending once they have had a fair chance to answer it.
+        internal static void Tick(DateTime now)
+        {
+            lock (gate) if (waiting != null && (now.ToUniversalTime() - asked).TotalMinutes > 6) { waiting = null; PendingKey = null; }
+        }
+
+        private static void Roll()
+        {
+            double low = Dynamics.ProbeLow, high = Dynamics.ProbeHigh;
+            if (high < low) { double swap = low; low = high; high = swap; }
+            next = DateTime.UtcNow.AddHours(low + dice.NextDouble() * Math.Max(0, high - low));
+        }
+
+        // Whether to ask now, and what. Null when she should not.
+        internal static bool Due(DateTime now, out string question, out string key)
+        {
+            question = null;
+            key = null;
+            lock (gate)
+            {
+                if (waiting != null) return false;
+                if (next == DateTime.MinValue) { Roll(); return false; }
+
+                // Not at someone she has annoyed, and not while she does not want to be useful anyway. Being asked
+                // questions by something you are cross with is worse than silence.
+                int sore = 0;
+                string band = "steady";
+                try { sore = Upset(); band = Band() ?? "steady"; } catch (Exception) { }
+                if (sore >= 10 || band == "reluctant" || band == "off") return false;
+
+                double since = 99999;
+                try { since = Quiet(); } catch (Exception) { }
+                // Mid-conversation is the natural moment, so a flowing chat brings it forward; otherwise she waits
+                // out the whole window. Either way she never asks into silence.
+                bool flowing = since <= 90;
+                if (since > 600) return false;
+                if (now.ToUniversalTime() < next && !(flowing && now.ToUniversalTime().AddMinutes(20) >= next)) return false;
+
+                List<int> blank = new List<int>(), rest = new List<int>();
+                for (int each = 0; each < Asks.GetLength(0); each++)
+                {
+                    bool got = false;
+                    try { got = Known(Asks[each, 0]); } catch (Exception) { }
+                    (got ? rest : blank).Add(each);
+                }
+                List<int> from = blank.Count > 0 ? blank : rest;
+                if (from.Count == 0) return false;
+                int pick = from[dice.Next(from.Count)];
+                question = Asks[pick, 1];
+                key = Asks[pick, 0];
+                return true;
+            }
+        }
+
+        // The keys she is allowed to write, so a brain inventing one cannot put junk in their notes.
+        internal static bool Allowed(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key)) return false;
+            for (int each = 0; each < Asks.GetLength(0); each++)
+                if (string.Equals(Asks[each, 0], key.Trim(), StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+
+        internal static string Tidy(string key)
+        {
+            for (int each = 0; each < Asks.GetLength(0); each++)
+                if (string.Equals(Asks[each, 0], (key ?? "").Trim(), StringComparison.OrdinalIgnoreCase)) return Asks[each, 0];
+            return null;
+        }
+
+        // Whether a me.md body already has something for a key.
+        internal static bool Filled(string notes, string key)
+        {
+            if (string.IsNullOrEmpty(notes) || string.IsNullOrEmpty(key)) return false;
+            Match found = Regex.Match(notes, @"(?mi)^-?[ \t]*" + Regex.Escape(key) + @"[ \t]*=[ \t]*(.*)$");
+            return found.Success && found.Groups[1].Value.Trim().Length > 0;
+        }
+    }
+}

@@ -31,6 +31,8 @@ namespace CapriDesktop
         // How forward she is, when that is set to drift rather than held at a number. Same file and the same timer as
         // her moods, because it is the same kind of thing: something about her that moves on its own.
         private static int kinkLow = 2, kinkHigh = 8;
+        // How long between her probing questions. Same shape as the mood window, and read by Probes.
+        private static double probeLow = 1, probeHigh = 2;
         private static int kinkNow = -1;
         private static DateTime kinkUntil = DateTime.MinValue;
         private static readonly List<string> allowed = new List<string>();
@@ -42,7 +44,31 @@ namespace CapriDesktop
         private static readonly Random dice = new Random();
 
         internal static string Under { get { Fresh(); lock (gate) return under; } }
+        // How long, from what they wrote: 2, 2h, 90m, 30s, or 1h30m. Hours when nothing says otherwise, which is what
+        // every one of these meant before. Returns false for anything it cannot read, so a typo leaves the default
+        // alone instead of setting a timer to nothing.
+        internal static bool Span(string said, out double hours)
+        {
+            hours = 0;
+            if (string.IsNullOrWhiteSpace(said)) return false;
+            string text = said.Trim().ToLowerInvariant();
+            bool any = false;
+            foreach (Match part in Regex.Matches(text, @"(\d+(?:\.\d+)?)\s*(h|hr|hrs|hour|hours|m|min|mins|minute|minutes|s|sec|secs|second|seconds)?"))
+            {
+                double much;
+                if (!double.TryParse(part.Groups[1].Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out much)) continue;
+                string unit = part.Groups[2].Value;
+                if (unit.StartsWith("m")) much /= 60.0;
+                else if (unit.StartsWith("s")) much /= 3600.0;
+                hours += much;
+                any = true;
+            }
+            return any && hours > 0;
+        }
+
         internal static double Least { get { Fresh(); lock (gate) return leastHours; } }
+        internal static double ProbeLow { get { Fresh(); lock (gate) return probeLow; } }
+        internal static double ProbeHigh { get { Fresh(); lock (gate) return probeHigh; } }
         internal static int KinkLow { get { Fresh(); lock (gate) return kinkLow; } }
         internal static int KinkHigh { get { Fresh(); lock (gate) return kinkHigh; } }
 
@@ -205,7 +231,7 @@ namespace CapriDesktop
                 lock (gate) { if (about.LastWriteTimeUtc == read && about.Length == wasLong) return; }
                 string[] lines = File.ReadAllLines(Kept);
                 string baseName = "Devoted";
-                double least = 4, most = 8;
+                double least = 4, most = 8, askLow = 1, askHigh = 2;
                 int low = 2, high = 8;
                 List<string> moods = new List<string>();
                 Dictionary<string, int> odds = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -228,9 +254,11 @@ namespace CapriDesktop
                         if (key.Equals("base", StringComparison.OrdinalIgnoreCase) || key.Equals("personality", StringComparison.OrdinalIgnoreCase))
                             { if (val.Length > 0) baseName = val; }
                         else if (Regex.IsMatch(key, @"^(rotate )?min( hours)?$", RegexOptions.IgnoreCase)
-                            && double.TryParse(val.TrimEnd('h', 'H', ' '), out much)) least = much;
+                            && Span(val, out much)) least = much;
                         else if (Regex.IsMatch(key, @"^(rotate )?max( hours)?$", RegexOptions.IgnoreCase)
-                            && double.TryParse(val.TrimEnd('h', 'H', ' '), out much)) most = much;
+                            && Span(val, out much)) most = much;
+                        else if (Regex.IsMatch(key, @"^probe min$", RegexOptions.IgnoreCase) && Span(val, out much)) askLow = much;
+                        else if (Regex.IsMatch(key, @"^probe max$", RegexOptions.IgnoreCase) && Span(val, out much)) askHigh = much;
                         else if (Regex.IsMatch(key, @"^forward min$", RegexOptions.IgnoreCase)
                             && double.TryParse(val, out much)) low = (int)much;
                         else if (Regex.IsMatch(key, @"^forward max$", RegexOptions.IgnoreCase)
@@ -253,6 +281,8 @@ namespace CapriDesktop
                     under = baseName;
                     leastHours = Math.Max(0.05, least);
                     mostHours = Math.Max(leastHours, most);
+                    probeLow = Math.Max(0.02, askLow);
+                    probeHigh = Math.Max(probeLow, askHigh);
                     int wasLow = kinkLow, wasHigh = kinkHigh;
                     kinkLow = Math.Max(0, Math.Min(10, low));
                     kinkHigh = Math.Max(0, Math.Min(10, high));
@@ -321,12 +351,21 @@ namespace CapriDesktop
                 bool hasList = Regex.IsMatch(had, @"(?mi)^#+\s*(attitudes|moods)");
                 // The forward range arrived after this file did, and Install only ever writes a missing file, so an
                 // older dynamic.md would never have offered it. Added above the mood list, where the other ranges are.
+                if (!Regex.IsMatch(had, @"(?mi)^\s*probe (min|max)\s*:"))
+                {
+                    string asking = "> How long between her questions about you. Takes 2h, 90m, 30s or 1h30m."
+                        + Environment.NewLine + "probe min: 1h" + Environment.NewLine + "probe max: 2h" + Environment.NewLine;
+                    had = (had.EndsWith(Environment.NewLine) ? had : had + Environment.NewLine) + Environment.NewLine + asking;
+                    File.WriteAllText(Kept, had, new UTF8Encoding(false));
+                    lock (gate) { read = DateTime.MinValue; wasLong = -1; }
+                }
                 if (!Regex.IsMatch(had, @"(?mi)^\s*forward (min|max)\s*:"))
                 {
                     string range = "> With How forward she is set to drift, it moves between these on the same timer."
                         + Environment.NewLine + "forward min: 2" + Environment.NewLine + "forward max: 8" + Environment.NewLine;
                     Match list = Regex.Match(had, @"(?mi)^#+\s*(attitudes|moods)[^
-]*?
+]*
+?
 ");
                     if (list.Success) had = had.Substring(0, list.Index) + range + Environment.NewLine + had.Substring(list.Index);
                     else had = (had.EndsWith(Environment.NewLine) ? had : had + Environment.NewLine) + Environment.NewLine + range;
@@ -392,6 +431,10 @@ namespace CapriDesktop
                 made.AppendLine("> With How forward she is set to drift, it moves between these on the same timer.");
                 made.AppendLine("forward min: 2");
                 made.AppendLine("forward max: 8");
+                made.AppendLine();
+                made.AppendLine("> How long between her questions about you. Takes 2h, 90m, 30s or 1h30m.");
+                made.AppendLine("probe min: 1h");
+                made.AppendLine("probe max: 2h");
                 made.AppendLine();
                 made.AppendLine("## Attitudes she can have");
                 made.AppendLine();
