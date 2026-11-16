@@ -160,9 +160,26 @@ namespace CapriDesktop
         // own names, or a sound a brain tends to write, maybe after "very" or "slightly" and with a word or two more, like
         // "[whispers sweetly]". Fish Audio's old s1 took its names in round brackets, so "(sad)" is one too. Anything else in
         // brackets is just text.
-        internal const string Feelings = "happy|sad|angry|excited|calm|nervous|confident|surprised|satisfied|delighted|scared|worried|upset|frustrated|depressed|empathetic|embarrassed|disgusted|moved|proud|relaxed|grateful|curious|sarcastic|disdainful|unhappy|anxious|hysterical|indifferent|uncertain|doubtful|confused|disappointed|regretful|guilty|ashamed|jealous|envious|hopeful|optimistic|pessimistic|nostalgic|lonely|bored|contemptuous|sympathetic|compassionate|determined|resigned|in a hurry tone|shouting|screaming|whispering|soft tone|laughing|chuckling|sobbing|crying loudly|sighing|groaning|panting";
+        internal const string Feelings = "joyful|hyper|wanting|needy|longing|affectionate|loving|giddy|eager|flustered|tender|breathless|wistful|mournful|elated|thrilled|furious|happy|sad|angry|excited|calm|nervous|confident|surprised|satisfied|delighted|scared|worried|upset|frustrated|depressed|empathetic|embarrassed|disgusted|moved|proud|relaxed|grateful|curious|sarcastic|disdainful|unhappy|anxious|hysterical|indifferent|uncertain|doubtful|confused|disappointed|regretful|guilty|ashamed|jealous|envious|hopeful|optimistic|pessimistic|nostalgic|lonely|bored|contemptuous|sympathetic|compassionate|determined|resigned|in a hurry tone|shouting|screaming|whispering|soft tone|laughing|chuckling|sobbing|crying loudly|sighing|groaning|panting";
         private const string Sounds = "emphasis|gasping|yawning|snoring|clear throat|clears throat|long-break|break|laughs?|giggl(?:e|es|ing)|chuckles?|sighs?|gasps?|whispers?|sobs?|cr(?:ying|ies)|sniffl(?:e|es|ing)|groans?|yawns?|scoff(?:s|ing)?|snorts?|hum(?:s|ming)?|pauses?|teasing(?:ly)?|playful(?:ly)?|smug(?:ly)?|flirt(?:y|atious|atiously)|sweetly|softly|warm(?:ly)?|cheerful(?:ly)?|mischievous(?:ly)?|annoyed|pout(?:s|ing)?|gentl(?:e|y)|shy(?:ly)?|sleepy|tired|dramatic(?:ally)?|mock(?:ing|ingly)?|sing(?:s|ing)|cheeky|deadpan|quietly|loudly|evil";
-        internal static readonly Regex Cue = new Regex(@"\[\s*(?<cue>(?:(?:very|slightly|extremely|really|super|so|quite|a bit|a little|kind of|kinda)\s+)?(?:" + Feelings + "|" + Sounds + @")(?:[\s-]+[a-z']+){0,3})\s*\](?!\()|\(\s*(?<cue>(?!moved\b)(?:" + Feelings + @"))\s*\)", RegexOptions.IgnoreCase);
+        // Plain tones allowed in round brackets as well as square ones. Short on purpose: round brackets turn up in
+        // ordinary writing, so only words nobody puts in a sentence by accident go here.
+        private const string Tones = "sleepy|tired|playful|teasing|smug|deadpan|flirty|cheeky|mischievous|softly|sweetly|warmly|gently|quietly|loudly|whispering|laughing|giggling|chuckling|sighing|gasping";
+
+        internal static readonly Regex Cue = new Regex(@"\[\s*(?<cue>(?:(?:very|slightly|extremely|really|super|so|quite|a bit|a little|kind of|kinda)\s+)?(?:" + Feelings + "|" + Sounds + @")(?:[\s-]+[a-z']+){0,3})\s*\](?!\()|\(\s*(?<cue>(?!moved\b)(?:(?:very|slightly|extremely|really|super|so|quite|a bit|a little|kind of|kinda)\s+)?(?:" + Feelings + "|" + Tones + @"))\s*\)", RegexOptions.IgnoreCase);
+
+        // The first cue in a line, as written. Her Fish Audio voice acts these out itself; every other voice of hers
+        // has to be moved by hand, so this hands the word over and VoiceFeel turns it into pitch and pace.
+        internal static string FeelingOf(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return null;
+            try
+            {
+                Match found = Cue.Match(text);
+                return found.Success ? found.Groups["cue"].Value.Trim().ToLowerInvariant() : null;
+            }
+            catch (Exception) { return null; }
+        }
 
         // What she says without its cues: her bubble, her history and every voice but Fish Audio's. A cue takes the space after
         // it, or the one before it when it ends a sentence, so the words around it close up.
@@ -170,7 +187,9 @@ namespace CapriDesktop
         {
             if (string.IsNullOrEmpty(text) || !Cue.IsMatch(text)) return text ?? "";
             string plain = Cue.Replace(text, "");
-            plain = Regex.Replace(plain, @"[ \t]*(?:[ \t]*)*[ \t]*(?=[.,!?…;:]|$)", "", RegexOptions.Multiline);
+            // The carriage return matters on a line that arrived CRLF: without it the space a cue left behind
+            // sits in front of it and survives.
+            plain = Regex.Replace(plain, @"[ \t]*(?:[ \t]*)*[ \t]*(?=[.,!?…;:]|?$)", "", RegexOptions.Multiline);
             return Regex.Replace(plain, @"[ \t]*", "").Trim();
         }
 
@@ -642,7 +661,7 @@ namespace CapriDesktop
     }
 
     // Bonk is her thud when she's thrown into an edge of her screen or the taskbar.
-    internal enum Cue { Arrive, Leave, Hop, Click, Bonk }
+    internal enum Cue { Arrive, Leave, Hop, Click, Bonk, Slap, Pipe }
 
     internal static class Sfx
     {
@@ -708,6 +727,52 @@ namespace CapriDesktop
             return samples;
         }
 
+        private static short[] pipe;
+        private static bool pipeTried;
+
+        // A clip shipped beside her, read straight out of a PCM wav: 24 kHz mono, same as everything else here,
+        // so the body is the samples and all that has to be found is where they start.
+        private static short[] Recorded(string name)
+        {
+            try
+            {
+                using (System.IO.Stream clip = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("Capri.Voice." + name + ".wav"))
+                {
+                    if (clip == null) return null;
+                    byte[] all = new byte[clip.Length];
+                    int got = 0, step;
+                    while (got < all.Length && (step = clip.Read(all, got, all.Length - got)) > 0) got += step;
+                    // Walk the chunks rather than assuming a 44 byte header, since a writer may add its own.
+                    int at = 12;
+                    while (at + 8 <= all.Length)
+                    {
+                        int size = BitConverter.ToInt32(all, at + 4);
+                        if (all[at] == 'd' && all[at + 1] == 'a' && all[at + 2] == 't' && all[at + 3] == 'a')
+                        {
+                            int count = Math.Max(0, Math.Min(size, all.Length - at - 8)) / 2;
+                            short[] made = new short[count];
+                            Buffer.BlockCopy(all, at + 8, made, 0, count * 2);
+                            return made;
+                        }
+                        at += 8 + size + (size & 1);
+                    }
+                }
+            }
+            catch (Exception) { }
+            return null;
+        }
+
+        // At the level the rest of her sounds play at.
+        private static short[] Pipe(int level)
+        {
+            if (!pipeTried) { pipeTried = true; pipe = Recorded("metal-pipe"); }
+            if (pipe == null) return Clang(1.7, 430, level);
+            double loud = Math.Max(0, Math.Min(100, level)) / 100.0;
+            short[] made = new short[pipe.Length];
+            for (int i = 0; i < pipe.Length; i++) made[i] = (short)(pipe[i] * loud);
+            return made;
+        }
+
         internal static short[] Make(Cue cue, int level)
         {
             switch (cue)
@@ -716,8 +781,61 @@ namespace CapriDesktop
                 case Cue.Leave: return Sweep(0.36, 880, 250, 0.012, level);
                 case Cue.Hop: return Sweep(0.16, 520, 1240, 0.008, level);
                 case Cue.Bonk: return Sweep(0.13, 420, 120, 0.002, level * 4 / 5);
+                // Shorter and brighter than a bonk, and gone almost at once: a crack, not a thud.
+                case Cue.Slap: return Sweep(0.07, 2300, 320, 0.0008, level);
+                case Cue.Pipe: return Pipe(level);
                 default: return Sweep(0.05, 1600, 1350, 0.003, level * 3 / 4);
             }
+        }
+
+        // A struck steel pipe. Sweep is tonal, built from a fundamental with a fifth and an octave over it, and a
+        // metal bar is not: its partials sit at awkward ratios, which is what makes it read as metal rather than as
+        // a note. So this has its own: inharmonic partials, a scrape of noise for the strike itself, and a long
+        // ring that outlasts everything else she plays.
+        private static readonly double[] Partials = { 1, 2.76, 5.40, 8.93, 13.34 };
+        private static readonly double[] Loudness = { 1, 0.62, 0.38, 0.22, 0.12 };
+
+        // When it hits, again, and how hard. A dropped pipe bounces, and that clatter is the whole character of
+        // the sound: one strike on its own is a bell, which is what the first attempt at this came out as.
+        private static readonly double[] Bounces = { 0, 0.085, 0.155, 0.212, 0.258, 0.296, 0.327 };
+        private static readonly double[] Hits = { 1, 0.62, 0.42, 0.28, 0.18, 0.11, 0.07 };
+
+        private static short[] Clang(double seconds, double root, int level)
+        {
+            int count = (int)(seconds * Rate);
+            short[] samples = new short[count];
+            double peak = 0.3 * Math.Max(0, Math.Min(100, level)) / 100.0;
+            Random grit = new Random(7);
+            double[] mix = new double[count];
+            for (int hit = 0; hit < Bounces.Length; hit++)
+            {
+                int from = (int)(Bounces[hit] * Rate);
+                if (from >= count) break;
+                // Each bounce rings a little higher and dies a little faster, the way a pipe losing energy does.
+                double pitch = root * (1 + hit * 0.06), loud = Hits[hit];
+                double[] phase = new double[Partials.Length];
+                for (int i = from; i < count; i++)
+                {
+                    double t = (double)(i - from) / Rate;
+                    double wave = 0;
+                    for (int part = 0; part < Partials.Length; part++)
+                    {
+                        phase[part] += 2 * Math.PI * pitch * Partials[part] / Rate;
+                        wave += Loudness[part] * Math.Sin(phase[part]) * Math.Exp(-t * (3.4 + part * 4.2 + hit));
+                    }
+                    // The strike itself: broadband, because metal on concrete is mostly clatter before it rings.
+                    if (t < 0.008) wave += (grit.NextDouble() * 2 - 1) * 2.2 * (1 - t / 0.008);
+                    mix[i] += wave * loud * Math.Min(1, t / 0.0004);
+                }
+            }
+            for (int i = 0; i < count; i++)
+            {
+                double t = (double)i / Rate;
+                // One long tail over the lot, so the last bounce rings on instead of stopping dead.
+                double fade = t > seconds - 0.25 ? Math.Max(0, (seconds - t) / 0.25) : 1;
+                samples[i] = (short)(Math.Max(-1, Math.Min(1, mix[i] / 3.2)) * fade * peak * 32767);
+            }
+            return samples;
         }
 
         private static short[] Sweep(double seconds, double from, double to, double attack, int level)

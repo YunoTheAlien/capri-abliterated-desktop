@@ -252,5 +252,19 @@ namespace CapriDesktop
             foreach (string one in Always) if (string.Equals(one, tool, StringComparison.OrdinalIgnoreCase)) return true;
             return false;
         }
+
+        // The same list, said to her brain, and only while she is in a mood to refuse things. The list existed and
+        // nothing asked it, so the one thing it was written to prevent, a sulk that will not open her settings or
+        // close her, was never actually prevented.
+        internal static string Obeys
+        {
+            get
+            {
+                if (Willing >= 4) return "";
+                return " However she feels, she always does these without argument: closing her, starting a new chat,"
+                    + " opening her settings or her Mainframe, her voice and listening, her mini player, her playlist"
+                    + " and her nap. Being in a mood never means someone cannot get at her controls.";
+            }
+        }
     }
 }

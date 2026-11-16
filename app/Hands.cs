@@ -2013,7 +2013,9 @@ namespace CapriDesktop
                     Func<string, string, string> run = RunModTool;
                     return run == null ? "No mod has added that." : run(args.Name, args.Text ?? "");
                 }
-                if (tool == "open_app") return OpenApp(args.Name, args.Current);
+                // Her opening it is one use of it on this PC and nothing more. If it counted toward the default,
+                // her first guess would vote for itself and she would never learn she had the wrong one.
+                if (tool == "open_app") { try { Favourites.SheOpened(args.Name); } catch (Exception) { } return OpenApp(args.Name, args.Current); }
 #if CROSS
                 if (tool == "open_website" && NativeWebsite != null)
                 {
@@ -2120,6 +2122,7 @@ namespace CapriDesktop
                     if (!string.IsNullOrEmpty(args.Seconds) && (!int.TryParse(args.Seconds, out clipSeconds) || clipSeconds <= 0)) return "How many seconds should I clip?";
                     return SaveClip(clipSeconds);
                 }
+                if (tool == "show_feet") { Func<string> feet = ShowHerFeet; string said = feet == null ? null : feet(); return said ?? "Not a chance."; }
                 if (tool == "mini_game") return Valid(tool, args) ? Mini(args) : "Couldn't find that desktop board action.";
 #if !CROSS
                 if (tool == "watch_along") return WatchAlong(args.Action);
@@ -4046,6 +4049,7 @@ namespace CapriDesktop
             }
             if (ListenFor(text)) { tool = "listen"; args.Focus = said; return true; }
 #endif
+            if (AskedFeet(text) && ShowHerFeet != null) { tool = "show_feet"; args.Action = "show"; return true; }
             Match chessWeb = Regex.Match(text, @"^(?:open|play chess on|play chess at)\s+(?:https?://)?(?:www\.)?(chess\.com)(?:/)?$", RegexOptions.IgnoreCase);
             if (chessWeb.Success) { tool = "open_website"; args.Site = "chess.com"; return true; }
             string miniName = MiniName(text);
@@ -4480,6 +4484,20 @@ namespace CapriDesktop
         private const string MiniThe = MiniArticle + MiniGameOf;
         private const string MiniAfter = @"(?:\s+(?:board|game|match|round))?(?:\s+(?:with|against)\s+(?:me|you|us))?";
         private const string MiniLevel = @"(?:\s+(?:on\s+)?(?:easy|normal|hard)(?:\s+(?:mode|difficulty|level))?)?";
+
+        // Asking to see her feet. Only matched with the toggle on; censored it is not a thing she does.
+        private static readonly Regex FeetAsk = new Regex(
+            @"^(?:(?:can|could|will|would)\s+(?:you|u)\s+|please\s+|go\s+on\s+|)(?:show|lemme\s+see|let\s+me\s+see|gimme|give\s+me|send|post)\s*"
+            + @"(?:me\s+)?(?:your|ur|them|the|some)?\s*(?:feet|foot|toes|feet\s+pics?|foot\s+pics?)\s*(?:pics?|pictures?|photos?)?\s*[.!?]*$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        // Her window does the growing, so it hands this in.
+        internal static Func<string> ShowHerFeet;
+
+        internal static bool AskedFeet(string text)
+        {
+            return !string.IsNullOrEmpty(text) && Brain.Uncensored && FeetAsk.IsMatch(text.Replace('’', '\'').Trim());
+        }
 
         internal static string MiniName(string text)
         {
@@ -4969,6 +4987,19 @@ namespace CapriDesktop
         private static string OpenApp(string wanted, Func<bool> current = null)
         {
             if (string.IsNullOrWhiteSpace(wanted)) return "Which app, choom?";
+            // "Open my browser" names a kind, not an app. She has been counting which one of each kind they use
+            // and only her calendar ever asked, so everything else came back as no app called "my browser". Their
+            // own pick wins, then the one they keep in front; naming an actual app still goes straight through,
+            // which is how someone opens the other browser without changing what their browser is.
+            string kind = null;
+            try { kind = Favourites.KindOf(wanted); } catch (Exception) { }
+            if (kind != null)
+            {
+                string theirs = null;
+                try { theirs = Favourites.Best(kind); } catch (Exception) { }
+                if (!string.IsNullOrEmpty(theirs) && Match(Apps(), theirs).Count > 0) wanted = theirs;
+                else if (string.Equals(kind, "browser", StringComparison.OrdinalIgnoreCase)) return OpenBrowserKind(current);
+            }
             List<InstalledApp> found = Match(Apps(), wanted);
             string nicknamed = found.Count == 0 ? Nickname(wanted) : null;
             if (nicknamed != null) found = Match(Apps(), nicknamed);
@@ -4980,6 +5011,22 @@ namespace CapriDesktop
             Run(chosen.Id);
             string openedName = AppName(chosen) == "spotify" ? "Spotify" : chosen.Name;
             return "Opened " + openedName + (current == null ? Opened(openedName) : "") + ".";
+        }
+
+        // Nothing learned yet and they asked for their browser: Windows' own default is the honest answer, and it
+        // is what they would get from a link anyway.
+        private static string OpenBrowserKind(Func<bool> current)
+        {
+            foreach (string known in new[] { "brave", "chrome", "firefox", "msedge", "edge", "opera", "vivaldi", "librewolf", "zen" })
+            {
+                List<InstalledApp> found = Match(Apps(), known);
+                if (found.Count == 0) continue;
+                if (current != null && !current()) return "That call errand has ended.";
+                Run(found[0].Id);
+                string named = found[0].Name;
+                return "Opened " + named + (current == null ? Opened(named) : "") + ".";
+            }
+            return "I can't tell which browser is yours yet. Name it once and I'll remember.";
         }
 
         internal static List<InstalledApp> Match(List<InstalledApp> apps, string wanted)

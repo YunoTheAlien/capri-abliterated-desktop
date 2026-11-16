@@ -953,7 +953,8 @@ namespace CapriDesktop
         [DataMember] public string BrainAddress;
         [DataMember] public string BrainProvider;
         // Which of personalities\ she is using. Null or missing means her own, so an older settings.json still reads.
-        [DataMember] public string Personality;
+        // A new install starts on Welcome Home. An upgrade does not: see Personalities.FirstPick.
+        [DataMember] public string Personality = Personalities.FirstPick;
         // Whether a mood may set off her pranks on its own. Off unless they turn it on: she can move windows and
         // take the cursor, so this is not something to inherit by picking a mood.
         [DataMember] public bool MoodPranks;
@@ -1144,6 +1145,12 @@ namespace CapriDesktop
         [DataMember] public long CareNight;
         // Tamagotchi side of her: when she was last fed, so the menu can say she is due. Ticks stay in UTC so a clock
         // change or a timezone move cannot make her permanently starving.
+        // How loud her player is, as a percentage.
+        // Remembered, so ending a stream and reopening her does not quietly put her back on air.
+        // When her next question about them is due, so closing her does not keep pushing it back.
+        [DataMember] public long ProbeAt;
+        [DataMember] public bool OnAir;
+        [DataMember] public int PlayerVolume = 70;
         [DataMember] public long FedAt;
         [DataMember] public long TreatedAt;
         [DataMember] public string VoiceStyle;
@@ -1302,6 +1309,18 @@ namespace CapriDesktop
             CaughtUp = true;
             FollowUps = true;
             WatchMemory = WatchAlong.DefaultLines;
+            // Field initialisers do not run on a deserialised object, so anything whose default is not here is
+            // zero, false or null for everyone who already has a settings.json: her flirt dial read 0 rather than
+            // "whatever the personality says", her music started silent, and her check-in minutes fell back to a
+            // guard further down instead of the value meant.
+            Kink = -1;
+            CallApp = "Auto";
+            TextSize = 100;
+            PlayerVolume = 70;
+            StartupSet = true;
+            // Personality is deliberately not here. A settings.json written before the pack list changed carries
+            // no personality at all, which reads as "her own", and that stays their pick rather than being
+            // quietly changed to the one new installs start on.
         }
 
         internal static int FrameSize(int size)
@@ -1530,7 +1549,7 @@ namespace CapriDesktop
                 if (found != null) throw new BrainException("The installer checksum is listed twice.");
                 found = match.Groups[1].Value;
             }
-            if (found == null) throw new BrainException("The installer checksum is missing.");
+            if (found == null) throw new BrainException("SHA256SUMS.txt doesn't list the installer, so the download can't be checked. Whoever published it needs the line to name the file exactly.");
             return found;
         }
 
@@ -1597,8 +1616,8 @@ namespace CapriDesktop
                 if (problem == null)
                 {
                     string own = Signer(app);
-                    if (own != null && !string.Equals(own, Signer(path), StringComparison.Ordinal)) throw new BrainException("The update signer doesn't match Capri. It won't run.");
-                    if (update.Hash == null && own == null) throw new BrainException("This update has no checksum or matching signature. It won't run.");
+                    if (own != null && !string.Equals(own, Signer(path), StringComparison.Ordinal)) throw new BrainException("This update is signed by someone else, so it won't run. If you installed Capri from a different place, install this build by hand once.");
+                    if (update.Hash == null && own == null) throw new BrainException("This release has no SHA256SUMS.txt, so the download can't be checked and won't run. Whoever published it needs to add that file.");
                 }
             }
             if (problem != null) { if (cached) File.Delete(path); throw new BrainException(problem); }
@@ -2544,7 +2563,6 @@ namespace CapriDesktop
         private readonly ToolStripMenuItem helpItem;
         // <<< PATCH: Twitch chat, read only and chatbot only (app/Twitch.cs)
         private ToolStripMenuItem twitchItem;
-        private ToolStripMenuItem safetyItem;
         private string twitchPath;
         private TwitchChat twitchChat;
         private TwitchRules twitchRules = new TwitchRules();
@@ -2998,8 +3016,19 @@ namespace CapriDesktop
             Sayings.Write(false);
             Sayings.TopUp();
             Interests.Kept = Path.Combine(data, Interests.FileName);
+            Interests.HersKept = Path.Combine(data, Interests.HersName);
+            Interests.YoursKept = Path.Combine(data, Interests.YoursName);
+            VoiceProfiles.Folder = Path.Combine(data, VoiceProfiles.FolderName);
+            StartVoiceWatch(data);
+            Brain.TopUpNotes();
+            FileEditor.Stocked = StockOne;
+            StartStockWatch(data);
+            // Once, now: a flag set while she was closed has nobody to tell, and neither Save nor the watcher can
+            // hear a save that happened before she started. Off her window's thread like the rest of it.
+            StockFiles();
             SysLines.Kept = Path.Combine(data, SysLines.FileName);
             Hours.Kept = Path.Combine(data, Hours.FileName);
+            Favourites.Kept = Path.Combine(data, Favourites.FileName);
             // What Probes reads to decide whether to ask anything, and about what.
             Probes.Known = delegate(string key)
             {
@@ -3007,6 +3036,13 @@ namespace CapriDesktop
                 catch (Exception) { return false; }
             };
             Probes.Upset = delegate { try { return Mood.Upset; } catch (Exception) { return 0; } };
+            Brain.Broke = CrashNoticed;
+            // Her mood can change while she is closing, and Post on a window going away throws. Her voice does
+            // not matter at that point anyway.
+            Dynamics.MoodChanged = delegate { if (!quitting && !IsDisposed) { try { Post(ApplyVoiceProfile); } catch (Exception) { } } };
+            Hands.ShowHerFeet = ShowFeet;
+            Probes.Saved = delegate { return preferences.ProbeAt; };
+            Probes.Keep = delegate(long at) { preferences.ProbeAt = at; SavePreferences(); };
             Probes.Band = delegate { try { return Mood.Band; } catch (Exception) { return "steady"; } };
             Probes.Quiet = delegate { return probeQuiet; };
             Working.Ahead = delegate { try { return Computer.Glimpse(); } catch (Exception) { return null; } };
@@ -3062,7 +3098,13 @@ namespace CapriDesktop
             preferences = smoke ? new Preferences() : LoadPreferences();
             // Read on each look-up, so editing SearchSite in settings.json takes hold without a rebuild.
             Hands.SearchSite = delegate { return preferences == null ? null : preferences.SearchSite; };
+            // sys.md decides. A file without the line yet is given whatever they were already running, so moving
+            // the switch never turns the mode off under someone who had it on.
+            bool? written = SysLines.Senpai;
+            if (written == null) SysLines.SetSenpai(preferences.Uncensored);
+            else preferences.Uncensored = written.Value;
             Brain.Uncensored = preferences.Uncensored;
+            Brain.OnAir = preferences.OnAir;
             // After the toggle is known, not up with the other paths: it checks Uncensored, which is false until
             // preferences load, so the split sections never reached an existing file.
             Interests.TopUp();
@@ -3115,9 +3157,7 @@ namespace CapriDesktop
             Brain.Digging = !smoke;
             if (!smoke) Brain.Keeper = brain;
             if (!smoke) brain.Load(Path.Combine(data, "chat.json"));
-            Voice.Loudness = Math.Max(0, Math.Min(150, preferences.Volume));
-            VoiceFx.Pitch = Math.Max(-VoiceFx.MostPitch, Math.Min(VoiceFx.MostPitch, preferences.VoicePitch));
-            VoiceFx.Speed = Math.Max(VoiceFx.Slowest, Math.Min(VoiceFx.Fastest, preferences.VoiceSpeed));
+            ApplyVoiceProfile();
             VoiceFx.Robot = Math.Max(0, Math.Min(100, preferences.VoiceRobot));
             VoiceFx.HdRobot = Math.Max(0, Math.Min(100, preferences.HdRobot));
             VoiceFx.Glitch = Math.Max(0, Math.Min(100, preferences.VoiceGlitch));
@@ -3160,7 +3200,8 @@ namespace CapriDesktop
             menu.Items.Add(title);
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add(new ToolStripMenuItem("Open Capri Mainframe", null, delegate { mainframe.Restore(); }));
-            menu.Items.Add(new ToolStripMenuItem("File editor", null, delegate { OpenFiles(0); }));
+            menu.Items.Add(new ToolStripMenuItem("Her folder", null, delegate { OpenHerFolder(); }));
+            menu.Items.Add(new ToolStripMenuItem("MD editor", null, delegate { OpenFiles(0); }));
             ToolStripMenuItem playItem = new ToolStripMenuItem("Play");
             menu.Items.Add(playItem);
             visibilityItem = new ToolStripMenuItem("Hide Capri", null, delegate { ToggleHidden(); });
@@ -3219,7 +3260,7 @@ namespace CapriDesktop
             hologramItem.ToolTipText = "Clicks go through her until you turn it off from her tray icon";
             hologramItem.AccessibleName = "Hologram. " + hologramItem.ToolTipText;
             menu.Items.Add(hologramItem);
-            menu.Opening += delegate { if (ownRest) WakeRest(!SleepBusy); sitHereItem.Text = seat != null && seat.Free ? "Stand up" : "Sit here"; hangHereItem.Text = hanging ? "Let go" : "Hang here"; lieItem.Text = lying ? "Sit up" : "Lie down"; lieItem.Enabled = lying || (clip == perch && LieWay() != null); sleepItem.Text = napAsked || Asleep ? "Wake up" : "Go to sleep"; danceNowItem.Checked = danceAsked; screenItem.Visible = Screen.AllScreens.Length > 1; TwitchLabel(); StreamLabel(); ShowFeedMenu(); ShowTextMenu(); if (safetyItem != null) safetyItem.Checked = preferences.Uncensored; };
+            menu.Opening += delegate { if (ownRest) WakeRest(!SleepBusy); sitHereItem.Text = seat != null && seat.Free ? "Stand up" : "Sit here"; hangHereItem.Text = hanging ? "Let go" : "Hang here"; lieItem.Text = lying ? "Sit up" : "Lie down"; lieItem.Enabled = lying || (clip == perch && LieWay() != null); sleepItem.Text = napAsked || Asleep ? "Wake up" : "Go to sleep"; danceNowItem.Checked = danceAsked; screenItem.Visible = Screen.AllScreens.Length > 1; TwitchLabel(); StreamLabel(); ShowFeedMenu(); ShowTextMenu(); };
             clickDelay = new System.Windows.Forms.Timer();
             clickDelay.Interval = Math.Max(100, SystemInformation.DoubleClickTime);
             clickDelay.Tick += delegate { OnClickDelay(); };
@@ -3228,12 +3269,10 @@ namespace CapriDesktop
             // the spoken new_chat tool does. me.md, memories.md and the transcripts are untouched: this is the conversation
             // she is holding in her head, nothing she wrote down.
             ToolStripMenuItem clearMemoryItem = new ToolStripMenuItem("Clear memory", null, delegate { ClearMemory(); });
-            clearMemoryItem.ToolTipText = "Forget this conversation and what she's seen. Her notes and memories stay.";
+            clearMemoryItem.ToolTipText = "Forget this conversation, her transcripts and her memories of you. me.md stays.";
             clearMemoryItem.AccessibleName = "Clear memory. " + clearMemoryItem.ToolTipText;
-            safetyItem = new ToolStripMenuItem("Uncensored", null, delegate { SwitchSafety(); });
-            safetyItem.ToolTipText = "Off: her safety lines as the author wrote them. On: the shorter set.";
-            safetyItem.AccessibleName = "Uncensored. " + safetyItem.ToolTipText;
-            menu.Items.Add(safetyItem);
+            // The adult switch is not on her menu any more. It is the last thing in sys.md, under a warning, so it
+            // has to be looked for rather than found by someone clicking through her menu.
             // Each prank on its own, run straight away with no cooldown and no chat involved, so they can be tried one at a
             // time and checked against a real game.
             ToolStripMenuItem testItem = new ToolStripMenuItem("Test");
@@ -3244,6 +3283,13 @@ namespace CapriDesktop
                 each.ToolTipText = "Run " + PrankName(named) + " now";
                 testItem.DropDownItems.Add(each);
             }
+            ToolStripMenuItem pipeTest = new ToolStripMenuItem("Metal pipe", null, delegate { DropPipe(true); });
+            ToolStripMenuItem feetTest = new ToolStripMenuItem("Show her feet", null, delegate { string said = ShowFeet(); if (said != null) Remark("feet", said, true); });
+            feetTest.Available = Brain.Uncensored;
+            pipeTest.ToolTipText = "Drop the pipe now. On her own she only does it in a mischievous mood, with Mood pranks on";
+            testItem.DropDownItems.Add(pipeTest);
+            feetTest.ToolTipText = "Grow until her feet fill the view, then come back down";
+            testItem.DropDownItems.Add(feetTest);
             ToolStripMenuItem stopTests = new ToolStripMenuItem("Stop", null, delegate { TestStop(); });
             stopTests.ToolTipText = "Clear her clones, put the icons back and close the fake crash";
             stopTests.AccessibleName = "Stop. " + stopTests.ToolTipText;
@@ -3263,6 +3309,11 @@ namespace CapriDesktop
                 streamItem.DropDownItems.Add(one);
             }
             streamItem.DropDownItems.Add(new ToolStripSeparator());
+            // Above the capture options on purpose: it is the one to turn on first, before anything is on screen.
+            airItem = new ToolStripMenuItem("Streaming mode", null, delegate { SetOnAir(); });
+            airItem.Tag = "air";
+            airItem.ToolTipText = "Puts every guardrail back while you are live, whatever your settings say. Off again when you turn it off.";
+            streamItem.DropDownItems.Add(airItem);
             ToolStripMenuItem windowed = new ToolStripMenuItem("Capture window", null, delegate { SetStreamWindow(); });
             windowed.Tag = "window";
             windowed.ToolTipText = "Just her, on the colour, as its own window for OBS";
@@ -3334,6 +3385,12 @@ namespace CapriDesktop
             playerMenu.Items.Add(new ToolStripMenuItem("Hide for now", null, delegate { playerClosed = true; HidePlayer(); }));
             playerMenu.Items.Add(new ToolStripMenuItem("Turn off mini player", null, delegate { TogglePlayer(); }));
             player.Command += PlayerCommand;
+            // The volume they last set, on her player and on her own songs, before anything can play.
+            player.Loud = Math.Max(0, Math.Min(100, preferences.PlayerVolume)) / 100.0;
+            // And her own music with it. Only the slider was restored, so the face showed what they set and the
+            // songs played at the stock level until the slider was touched, which is the part that was too loud.
+            try { FolderTunes.Loudness = player.Loud; } catch (Exception) { }
+            FolderTunes.Loudness = player.Loud;
             player.Moved += SavePlayerSpot;
             tray = new NotifyIcon();
             using (Stream icon = Assembly.GetExecutingAssembly().GetManifestResourceStream("Capri.Chip.ico"))
@@ -3730,6 +3787,25 @@ namespace CapriDesktop
             // Their own awakeHours out of me.md, which beats what she counted.
             Hours.Told = Them.Awake;
             Probes.Tick(DateTime.Now);
+            // sys.md is theirs to edit while she runs, and the adult switch is in it, so it is re-read rather
+            // than only being looked at once at startup. SysLines only touches the file when it has changed.
+            // Both read files, and this runs about thirty times a second: left on every tick they were a
+            // thousand disk reads a second and put a busy pointer over her permanently. Four seconds is far
+            // quicker than anyone can edit a file and save it.
+            //
+            // The reset to stock scan used to be here too and is not any more: see StockWatch. The flag it
+            // looks for can only move when a file is saved, so a save is what looks at it.
+            if (now - filesCheckedAt >= 4)
+            {
+                filesCheckedAt = now;
+                ReadSafety();
+                ReadOnAir();
+                // Which program they keep in front, so "open my calendar" opens theirs. Four seconds is far more
+                // often than it needs; Favourites only counts one use per spell in front.
+                try { Favourites.Seen(Computer.FrontProgram(), DateTime.Now); } catch (Exception) { }
+            }
+            FeetTick(now);
+            FeelTick(now);
             RampageTick(now);
             MoveExplorePointer(now);
             int interval = FrameInterval(now);
@@ -4814,6 +4890,213 @@ namespace CapriDesktop
             parent.DropDownItems.Add(item);
         }
 
+        // A cue in front of a line moves her voice for that line: "(joyful) You came back." is said in a brighter
+        // voice than "(sleepy) You came back." would be, and the line after is back to normal.
+        //
+        // Her Fish Audio voice acts cues out itself and is left alone. This is for every other voice she has, which
+        // heard the same flat delivery whatever the line said. Her own settings are put back the moment she stops
+        // talking, so nothing here is saved and nothing carries over.
+        private bool feeling;
+        private double feltFrom;
+        private int feltPitch, feltSpeed, feltLoud;
+
+        private void Feel(string cue)
+        {
+            int pitch, pace, loud;
+            if (!VoiceFeel.Shift(cue, out pitch, out pace, out loud)) { Unfeel(); return; }
+            if (!feeling) { feltPitch = VoiceFx.Pitch; feltSpeed = VoiceFx.Speed; feltLoud = Voice.Loudness; feeling = true; }
+            feltFrom = clock.Elapsed.TotalSeconds;
+            VoiceFx.Pitch = Math.Max(-VoiceFx.MostPitch, Math.Min(VoiceFx.MostPitch, feltPitch + pitch));
+            VoiceFx.Speed = Math.Max(VoiceFx.Slowest, Math.Min(VoiceFx.Fastest, feltSpeed * pace / 100));
+            Voice.Loudness = Math.Max(0, Math.Min(150, feltLoud * loud / 100));
+        }
+
+        private void Unfeel()
+        {
+            if (!feeling) return;
+            feeling = false;
+            VoiceFx.Pitch = feltPitch;
+            VoiceFx.Speed = feltSpeed;
+            Voice.Loudness = feltLoud;
+            ApplyVoiceProfile();
+        }
+
+        // Put back as soon as she is quiet again. The second of grace is for the gap between the line being set up
+        // and her voice actually starting, which would otherwise undo the feeling before a word of it was said.
+        private void FeelTick(double now)
+        {
+            if (!feeling || now < feltFrom + 1) return;
+            if (voice.Busy || speaker.Busy || chatTail.Enabled || now < voiceUntil || talkState == TalkState.Talking) return;
+            Unfeel();
+        }
+
+        // Showing her feet: she grows in doubling steps until they fill the view, holds, then comes back down.
+        //
+        // Doubling rather than a smooth slide, because that is what reads as growing rather than as a window being
+        // resized. Her feet are the bottom of her body box, so each step keeps that point where it is on screen and
+        // she grows upward out of it instead of drifting off.
+        private const int FeetMost = 2400;
+
+        // The window is only ever half the trick. Windows will not make one taller than the screen, so growing her
+        // tops out at about a third bigger and her feet stay a small part of that. The rest of the way in is a crop:
+        // she is drawn magnified about her feet, with everything above them off the top of the window, which has no
+        // limit at all. Her art is 384 tall to a cell, so this is soft by the time it fills a screen; there is no
+        // more detail to be had, and a joke that lasts five seconds can be soft.
+        private const float FeetClose = 3.6f;
+        private const float FeetStep = 0.9f;
+
+        private float feetZoom = 1f, drawnFeetZoom = 1f;
+
+        private double feetAt = -1, feetBack = -1;
+        private int feetStep, feetWasSize;
+        private Point feetWasAt;
+        private bool feetUp;
+
+        internal bool FeetShowing { get { return feetUp; } }
+
+        private static readonly string[] FeetLines =
+        {
+            "Fine. Look at them.", "There. Happy?", "This is what you wanted, apparently.",
+            "Big feet energy.", "Enjoy. Weirdo.", "You asked. I delivered."
+        };
+
+        internal string ShowFeet()
+        {
+            if (!Brain.Uncensored) return null;
+            if (feetUp) return "They're already right there.";
+            if (hidden || dragging || pressed || quitting || onPanel || riding) return "Not right now.";
+            feetUp = true;
+            feetZoom = 1f;
+            feetWasSize = preferences.Size;
+            feetWasAt = anchor;
+            feetStep = 0;
+            feetAt = clock.Elapsed.TotalSeconds;
+            feetBack = -1;
+            return Sayings.Plainly(FeetLines[random.Next(FeetLines.Length)], true);
+        }
+
+        // One doubling per tick until she is as big as she goes, a hold, then the same back down.
+        private void FeetTick(double now)
+        {
+            if (!feetUp || now < feetAt) return;
+            if (feetBack < 0)
+            {
+                int want = Math.Min(FeetRoom(), feetWasSize * (1 << (feetStep + 1)));
+                if (want > preferences.Size) { GrowToFeet(want); feetStep++; feetAt = now + 0.18; return; }
+                // As big as the window goes, so the rest is the crop. Her window is centred first, because from
+                // here what is on screen is the bottom of her and not her at all.
+                if (feetZoom < FeetClose)
+                {
+                    if (feetZoom == 1f) MiddleForFeet();
+                    feetZoom = Math.Min(FeetClose, feetZoom + FeetStep);
+                    feetAt = now + 0.18;
+                    RenderFrame();
+                    return;
+                }
+                feetBack = now + 5;
+                feetAt = feetBack;
+                return;
+            }
+            if (now < feetBack) return;
+            if (feetZoom > 1f) { feetZoom = Math.Max(1f, feetZoom - FeetStep); feetAt = now + 0.18; RenderFrame(); return; }
+            if (preferences.Size > feetWasSize) { GrowToFeet(Math.Max(feetWasSize, preferences.Size / 2)); feetAt = now + 0.18; return; }
+            preferences.Size = feetWasSize;
+            Size = CanvasSize(feetWasSize);
+            anchor = KeepOnScreen(feetWasAt);
+            Location = anchor;
+            bodyCells.Clear();
+            feetUp = false;
+            feetZoom = 1f;
+            feetAt = feetBack = -1;
+            RenderFrame();
+        }
+
+        // As big as Windows will actually allow, which is the part that was wrong.
+        //
+        // A window cannot be taller than SystemInformation.MaxWindowTrackSize, roughly the screen plus twenty
+        // pixels. Asking for more does not fail: the window is silently clamped to the limit while her frame is
+        // still drawn for the size that was asked for, so everything past the limit is simply not there. Her
+        // feet are at the bottom of that frame, so they were the part that went missing. Reported as the zoom
+        // cutting her feet off, and measured here at 2176 asked for against a 1460 limit.
+        private int FeetRoom()
+        {
+            try
+            {
+                // A step back off the limit. Sitting exactly on it still clipped her along the bottom, and the
+                // last step of zoom is not worth losing her feet over, which is the whole point of this.
+                int most = (int)((SystemInformation.MaxWindowTrackSize.Height - PaddingSize * 2) * 0.86);
+                return Math.Max(MinSize, Math.Min(FeetMost, most));
+            }
+            catch (Exception) { return MaxSize; }
+        }
+
+        // The crop shows the bottom of her and nothing else, so the window goes to the middle of the screen: her
+        // body being half off the top stops meaning anything once there is no body in the view.
+        private void MiddleForFeet()
+        {
+            Rectangle screen = Screen.FromPoint(new Point(anchor.X + Width / 2, anchor.Y + Height / 2)).WorkingArea;
+            anchor = new Point(screen.Left + (screen.Width - Width) / 2, screen.Top + (screen.Height - Height) / 2);
+            Location = anchor;
+        }
+
+        // Grows to this size with her feet left where they were, then centred on the screen.
+        private void GrowToFeet(int size)
+        {
+            Rectangle was = BodyOnScreen(anchor, Body);
+            Rectangle screen = Screen.FromPoint(new Point((was.Left + was.Right) / 2, (was.Top + was.Bottom) / 2)).WorkingArea;
+            preferences.Size = size;
+            Size = CanvasSize(size);
+            bodyCells.Clear();
+            // Centre her on the screen, then lift her by half her own height, which brings her bottom to the
+            // middle and her feet with it.
+            //
+            // Measured from the window rather than from the body box. The box calls her feet the bottom edge of
+            // the sprite and the art does not reach it, so anchoring on the box put the real feet a few hundred
+            // pixels higher at this size and she went off the top.
+            int middleX = screen.Left + screen.Width / 2, middleY = screen.Top + screen.Height / 2;
+            anchor = new Point(middleX - Width / 2, middleY - Height / 2 - Height / 2);
+            // Her bottom edge stays on the screen whatever the size, so there is always something to look at.
+            int lowest = screen.Bottom - Height, highest = screen.Top + (int)(screen.Height * 0.18) - Height;
+            if (anchor.Y > lowest) anchor.Y = lowest;
+            if (anchor.Y < highest) anchor.Y = highest;
+            Location = anchor;
+            RenderFrame();
+        }
+
+        // What they set under Settings, VOICE, shifted by whoever she is and by what mood she is in. A profile
+        // holds a target rather than an offset, so the shift is its distance from her stock voice: a profile at
+        // pitch 2 changes nothing, Feral at 4 is two semitones above whatever they set, Dominatrix at -1 is three
+        // below it, and a mood moves it again from there.
+        //
+        // Their slider still decides the baseline, which is the point. Pitch is clamped to the same range the
+        // slider has, so a pack cannot take her somewhere the slider could not.
+        internal void ApplyVoiceProfile()
+        {
+            int pitch = preferences.VoicePitch, speed = preferences.VoiceSpeed, volume = preferences.Volume;
+            int robot = preferences.VoiceRobot, glitch = preferences.VoiceGlitch;
+            try
+            {
+                // Who she is, then today's mood on top of it, each shifting what the sliders already say.
+                foreach (string named in new[] { Personalities.Chosen, Personalities.Attitude })
+                {
+                    if (string.IsNullOrEmpty(named) || named == Personalities.Stock || named == Personalities.Dynamic) continue;
+                    VoiceProfile has = VoiceProfiles.For(named);
+                    if (has == null || has.SameAsStock) continue;
+                    pitch += has.Pitch - VoiceProfile.Stock.Pitch;
+                    speed = speed * Math.Max(50, Math.Min(200, has.Speed)) / VoiceProfile.Stock.Speed;
+                    volume = volume * Math.Max(50, Math.Min(150, has.Volume)) / VoiceProfile.Stock.Volume;
+                    robot = Math.Max(robot, has.Robot);
+                    glitch = Math.Max(glitch, has.Glitch);
+                }
+            }
+            catch (Exception) { }
+            Voice.Loudness = Math.Max(0, Math.Min(150, volume));
+            VoiceFx.Pitch = Math.Max(-VoiceFx.MostPitch, Math.Min(VoiceFx.MostPitch, pitch));
+            VoiceFx.Speed = Math.Max(VoiceFx.Slowest, Math.Min(VoiceFx.Fastest, speed));
+            VoiceFx.Robot = Math.Max(0, Math.Min(100, robot));
+            VoiceFx.Glitch = Math.Max(0, Math.Min(100, glitch));
+        }
+
         internal void SetCharacterSize(int size)
         {
             size = Math.Max(MinSize, Math.Min(MaxSize, size));
@@ -4899,6 +5182,10 @@ namespace CapriDesktop
             if (preferences.Hologram || e.Button != MouseButtons.Left || outro != null) return;
             if (Asleep || ownRest) { WakeRest(!SleepBusy); RenderFrame(); }
             double now = clock.Elapsed.TotalSeconds;
+            // Ctrl and a click is a slap. Every personality already scored being slapped and nothing could do it,
+            // so the number sat in all twelve files doing nothing. Ctrl because a plain click is how she is picked
+            // up, and losing that to add this would be a bad trade.
+            if ((ModifierKeys & Keys.Control) == Keys.Control) { Slap(now); return; }
             // Sulking, she won't be picked up: a press glitches her a short hop away, and mid-air it misses her (Zr4, F44). On her
             // task panel or mid-job, dragging works as always.
             if (Sulking && Personalities.ReactsYes("dodges", true) && !onPanel && working == null && job == null)
@@ -5125,6 +5412,239 @@ namespace CapriDesktop
             else Answer(said, line, TalkState.Talking);
         }
 
+        // She asks to be picked up or petted, for the ones who want it. Being thrown about was only ever something
+        // that happened to her; for a personality that likes it, wanting it and saying so is the whole point.
+        private static readonly string[] UppiesLines =
+        {
+            "Uppies?", "Pick me up. Go on.", "I want uppies.", "Carry me somewhere. Anywhere.",
+            "Grab me. I'll allow it.", "Up. Please?"
+        };
+
+        private static readonly string[] PatsWantedLines =
+        {
+            "Head. Now. Please.", "I would like a pat, if you're offering.",
+            "Pats? Just one?", "You haven't touched me in ages.", "Hand. Head. You know the drill.",
+            "I could do with a pat."
+        };
+
+        private double wantedAt = -1;
+
+        // Only when she actually likes it: a personality that hates being thrown never asks for uppies, and one
+        // that dislikes being petted never asks for pats. The ones who love it ask the most often.
+        private string WantedLine(double now, bool working, long quiet)
+        {
+            int pats = Worth("petted"), held = Worth("thrown");
+            bool wantsUp = held > 0, wantsPats = pats >= 3;
+            if (!wantsUp && !wantsPats) return null;
+            double alone = quiet / 1000.0;
+            if (working) alone *= Working.Slower;
+            int keen = Math.Max(wantsUp ? held : 0, wantsPats ? pats : 0);
+            if (alone < 420 + 900.0 / keen) { wantedAt = -1; return null; }
+            if (wantedAt >= 0 && now - wantedAt < 2.5 * 3600) return null;
+            wantedAt = now;
+            // Her own, when she has any. Bratty and Playful ask for uppies, a drawing or a snack in their own
+            // words; everyone else uses the shared ones.
+            string[] from = wantsUp && (!wantsPats || random.Next(2) == 0) ? UppiesLines : PatsWantedLines;
+            string[] hers = null;
+            try { hers = Personalities.Lines(Personalities.WantsHeading, null); } catch (Exception) { }
+            if (hers != null && hers.Length > 0 && random.Next(100) < 60) from = hers;
+            return Sayings.Plainly(from[random.Next(from.Length)], true);
+        }
+
+        private static readonly string[] SlapLines =
+        {
+            "Ow! Rude.", "Did you just?!", "Hey!", "Oh, that is how it is?",
+            "Right. Noted.", "You have a death wish, choom."
+        };
+
+        private double slappedAt = -1;
+
+        // A slap: she says something, it moves her mood the way her personality says it should, and it makes a
+        // noise. Rate limited because holding ctrl and clicking is far too easy to do twenty times in a row.
+        private static readonly string[] UppiesGotLines =
+        {
+            "Whee.", "Oh, we're going somewhere.", "Put me down over there. No, there.",
+            "This is acceptable transport.", "Mm. Carry on.", "Best part of my day, this."
+        };
+
+        private double uppiesAt = -1;
+
+        // Set down after being carried. Rate limited, because shuffling her around the desktop is one gesture and
+        // should not read as twenty.
+        // A crash reached errors.txt. She says so, three times over, which is the only sign most people get that
+        // something went wrong behind her face. Called from whatever thread crashed, so it only hands the work over.
+        private void CrashNoticed()
+        {
+            try
+            {
+                if (IsDisposed || !IsHandleCreated || quitting) return;
+                BeginInvoke((MethodInvoker)delegate { SayBroken(); });
+            }
+            catch (Exception) { }
+        }
+
+        private void SayBroken()
+        {
+            try
+            {
+                if (quitting || Hushed || hidden || InChat || speech != null || typer.Visible) return;
+                string one = SysLines.Any("broken", random);
+                if (string.IsNullOrWhiteSpace(one)) return;
+                // Her usual blacklist, so a crash that repeats itself all evening only gets one of these an hour.
+                if (!Sayings.Rested("sys:broken", 1)) return;
+                heard = "error";
+                box.Prompt = "> sys: ";
+                int said = ++asking;
+                string line = one + " " + one + " " + one;
+                if (InChat) Begin(said, line, TalkState.Talking, null);
+                else Answer(said, line, TalkState.Talking);
+            }
+            catch (Exception) { }
+        }
+
+        private double pipeAt = -1;
+
+        private static readonly string[] PipeLines =
+        {
+            "Dropped something.", "That wasn't me.", "Did you hear that? No? Good.",
+            "Oh no. Anyway.", "Structural. Probably.", "You're welcome."
+        };
+
+        // The pipe. Behind Mood pranks, which is already their opt in for her causing trouble, and only while she
+        // is in a mood that would: a Devoted one does not drop a scaffolding pole behind you for a laugh.
+        private bool PipeMood()
+        {
+            string mood = Personalities.Attitude ?? "";
+            return mood.Equals("Mischievous", StringComparison.OrdinalIgnoreCase)
+                || mood.Equals("Playful", StringComparison.OrdinalIgnoreCase)
+                || mood.Equals("Hyper", StringComparison.OrdinalIgnoreCase)
+                || Personalities.Chosen == "Bratty" || Personalities.Chosen == "Feral" || Personalities.Chosen == "Emo";
+        }
+
+        internal void DropPipe(bool asked)
+        {
+            double now = clock.Elapsed.TotalSeconds;
+            if (!asked)
+            {
+                if (!preferences.MoodPranks || !PipeMood()) return;
+                if (Hushed || hidden || InChat || Sulking) return;
+                // Once an hour at the very most, and then only sometimes: the joke is that it is rare.
+                if (pipeAt >= 0 && now - pipeAt < 3600) return;
+                if (random.Next(100) >= 4) return;
+            }
+            pipeAt = now;
+            Sfx.Play(Cue.Pipe);
+            if (Hushed || hidden || InChat || speech != null || typer.Visible) return;
+            heard = "clang";
+            box.Prompt = "> sys: ";
+            int said = ++asking;
+            string line = Sayings.Plainly(PipeLines[random.Next(PipeLines.Length)], true);
+            if (InChat) Begin(said, line, TalkState.Talking, null);
+            else Answer(said, line, TalkState.Talking);
+        }
+
+        // She starts it herself, which she never did: the dial only ever decided how often an existing line
+        // carried a flirty clause, so at 10 she was forward when spoken to and silent otherwise.
+        //
+        // How often follows the dial and nothing else. Below 6 she never opens with one, at 6 it is about every
+        // three hours, at 10 about every forty minutes. The gap is held in the same store as everything else she
+        // says, so it survives a restart.
+        //
+        // What she says follows the toggle, which is the whole of the difference. Uncensored she draws from
+        // interests.md and may be as forward as that file is. Censored, and while streaming whatever the toggle
+        // says, she draws from her own pool, which is written fond rather than explicit: at the top of the dial
+        // she should read as someone who loves them, not as someone being coy.
+        internal string FlirtLine()
+        {
+            int level = 0;
+            try { level = Personalities.Kink; } catch (Exception) { }
+            if (level < 6) return null;
+            double hours = Math.Max(0.6, 3.4 - (level - 6) * 0.7);
+            if (!Sayings.Rested("sys:flirt", hours)) return null;
+            string said = null;
+            try
+            {
+                if (Brain.Adult) said = Interests.For("flirting");
+                if (string.IsNullOrWhiteSpace(said)) said = Sayings.FlirtFirst();
+            }
+            catch (Exception) { }
+            return string.IsNullOrWhiteSpace(said) ? null : Them.Fill(said);
+        }
+
+        private static readonly string[] AppKinds = { "browser", "calendar", "music", "images", "editor", "chat" };
+
+        // Which of them is theirs, asked rather than guessed.
+        //
+        // Counting what they put in front settles most of it, but two browsers used about as much as each other
+        // never resolves, and picking one at random is the thing that reads as her being wrong. So she asks,
+        // once, about the one she sees most, and takes the answer as final either way: yes is their word and
+        // beats any amount of counting, no takes that one out of the running so she never asks about it again.
+        //
+        // One question a day at most and only one kind at a time, because this is housekeeping, not conversation.
+        private bool AskWhichApp()
+        {
+            if (box.Choosing || InChat || typer.Visible) return false;
+            if (!Sayings.Rested("sys:whichapp", 20)) return false;
+            foreach (string kind in AppKinds)
+            {
+                string one;
+                try { one = Favourites.Ask(kind); } catch (Exception) { continue; }
+                if (one == null) continue;
+                string named = kind, program = one;
+                heard = "settings";
+                box.Prompt = "> sys: ";
+                Remark("settings", "Quick one: is " + program + " your " + Favourites.Name(kind) + "?", true);
+                box.Choose(delegate(bool yes)
+                {
+                    try
+                    {
+                        if (yes) Favourites.Pick(named, program); else Favourites.NotThat(named, program);
+                    }
+                    catch (Exception) { }
+                });
+                return true;
+            }
+            return false;
+        }
+
+        // One of her silly lines, when she has nothing else to say and the mood suits it.
+        internal string FunnyLine()
+        {
+            try { return Sayings.Funny(); }
+            catch (Exception) { return null; }
+        }
+
+        private void Uppies(double now)
+        {
+            if (uppiesAt >= 0 && now - uppiesAt < 20) return;
+            uppiesAt = now;
+            if (Worth("uppies") <= 0) return;
+            Did("uppies");
+            if (Hushed || hidden || InChat || speech != null || typer.Visible || Sulking) return;
+            if (random.Next(100) >= 35) return;
+            heard = "picks you up";
+            box.Prompt = "> sys: ";
+            int said = ++asking;
+            string line = Says("uppies", "uppies", UppiesGotLines);
+            if (InChat) Begin(said, line, TalkState.Talking, null);
+            else Answer(said, line, TalkState.Talking);
+        }
+
+        private void Slap(double now)
+        {
+            if (slappedAt >= 0 && now - slappedAt < 0.6) return;
+            slappedAt = now;
+            Sfx.Play(Cue.Slap);
+            Did("slapped");
+            if (Hushed || hidden || InChat || speech != null || typer.Visible) return;
+            heard = "slaps you";
+            box.Prompt = "> sys: ";
+            int said = ++asking;
+            string line = Says("slapped", "slapped", SlapLines);
+            if (InChat) Begin(said, line, TalkState.Talking, null);
+            else Answer(said, line, TalkState.Talking);
+        }
+
         internal string NextPetLine()
         {
             // Her personality's pet lines when it has some, hers otherwise. The bag is rebuilt whenever the count
@@ -5170,7 +5690,14 @@ namespace CapriDesktop
                     Keys held = testing ? Keys.None : ModifierKeys;
                     if ((held & Keys.Control) != 0) HangHere();
                     else if ((held & Keys.Shift) != 0) SitHere();
-                    else if (!Throw(now) && !Drop()) SavePreferences();
+                    else
+                    {
+                        // Carrying her somewhere and setting her down is not throwing her. It scored nothing at
+                        // all before, so the only thing picking her up could ever do was upset her.
+                        bool flung = Throw(now);
+                        if (!flung) Uppies(now);
+                        if (!flung && !Drop()) SavePreferences();
+                    }
                 }
             }
             else
@@ -5487,6 +6014,27 @@ namespace CapriDesktop
                     // Hungry, and she has not mentioned it lately. The feeding menu knew; she never said.
                     string peckish = HungerLine(now, working);
                     if (peckish != null) { SayOwn("check-in", peckish); return; }
+                    // Or she would just like them back. Her needs before her curiosity: asking what they play
+                    // while she is quietly lonely is the wrong order.
+                    string alone = LonelyLine(now, working, quiet);
+                    if (alone != null) { SayOwn("check-in", alone); return; }
+                    // Or she wants picking up or a pat, which is only ever asked for by the ones who enjoy it.
+                    string wanted = WantedLine(now, working, quiet);
+                    if (wanted != null) { SayOwn("check-in", wanted); return; }
+                    // The pipe, and her silliest lines. Both rare and both last, behind everything she actually
+                    // needs: a joke instead of saying she is hungry would be the wrong way round.
+                    DropPipe(false);
+                    // One an hour at the very most. The pool is not the limit here: a roll at every idle moment
+                    // emptied it inside two hours, and after that the picker could only hand back the least stale
+                    // of the lines she had already said, which is what made the same few come round again.
+                    if (AskWhichApp()) return;
+                    string fond = FlirtLine();
+                    if (fond != null) { SayOwn("check-in", fond); return; }
+                    if (random.Next(100) < 3 && Sayings.Rested("sys:funny", 1))
+                    {
+                        string silly = FunnyLine();
+                        if (silly != null) { SayOwn("check-in", silly); return; }
+                    }
                     string question, key;
                     if (Probes.Due(DateTime.Now, out question, out key))
                     {
@@ -6468,12 +7016,12 @@ namespace CapriDesktop
                 at200 = mainframe.LayersAt(2f / machine, Path.Combine(output, "layers-200.png"));
             }
             finally { SetVoiceLayers(was); }
-            if (keyOff != "Layers" || opened != "Off | Normal | +2, 25 ms | -2.5, 25 ms" || flipped != "On | Normal | +2, 25 ms | -2.5, 25 ms" || keyOn != "Layers (lit)"
+            if (keyOff != "Voice settings" || opened != "Off | Normal | +2, 25 ms | -2.5, 25 ms" || flipped != "On | Normal | +2, 25 ms | -2.5, 25 ms" || keyOn != "Voice settings (lit)"
                 || slid != "On | Normal | +3, 40 ms | -4.5, 90 ms / On | +3, 40 ms | -4.5, 90 ms / 3 40 -4.5 90" || mainSlid != "On | +3 | +3, 40 ms | -4.5, 90 ms / +3 | Normal | Off | Off / 3 3"
                 || fromSettings != "On | -2 | +3, 40 ms | -4.5, 90 ms" || defaulted != "On | -2 | +2, 25 ms | -2.5, 25 ms" || closedOff != "Off | -2 | +2, 25 ms | -2.5, 25 ms / Layers / False" || said != "switch layer main")
                 throw new Exception("The VOICE LAYERS window went wrong: " + keyOff + " // " + opened + " // " + flipped + " // " + keyOn + " // " + slid + " // " + mainSlid + " // " + fromSettings + " // " + defaulted + " // " + closedOff + " // she spoke for: " + said);
             if (page != null || crowded != null || at100 != null || at150 != null || at200 != null) throw new Exception("The VOICE LAYERS window's layout doesn't fit: Settings " + page + " / open " + crowded + " / 100% " + at100 + " / 150% " + at150 + " / 200% " + at200);
-            checks.Add("PASS VOICE LAYERS window: the Layers button in Settings > VOICE's heading opens it; its switch turns them on and lights the button, each layer's pitch and delay slider sets and saves it, MAIN's pitch and Settings' Pitch move together both ways, Defaults puts both layers back, and the switch and letting go of a slider have her say a line; Settings still fits, with VOICE's note and Layers button fitting their text at 100%, 125%, 150%, 175% and 200% (mainframe-settings-layers.png), and at 100%, 150% and 200% nothing in the window overlaps, pokes out or gets cut off (layers-100.png, layers-150.png, layers-200.png)");
+            checks.Add("PASS VOICE SETTINGS window: the Voice settings button in Settings > VOICE's heading opens it; its switch turns them on and lights the button, each layer's pitch and delay slider sets and saves it, MAIN's pitch and Settings' Pitch move together both ways, Defaults puts both layers back, and the switch and letting go of a slider have her say a line; Settings still fits, with VOICE's note and Layers button fitting their text at 100%, 125%, 150%, 175% and 200% (mainframe-settings-layers.png), and at 100%, 150% and 200% nothing in the window overlaps, pokes out or gets cut off (layers-100.png, layers-150.png, layers-200.png)");
         }
 
         // Her wake word listens for HeyCapriChanged, so whatever flips the setting starts or stops it.
@@ -7013,7 +7561,32 @@ namespace CapriDesktop
             if (fileEditor != null && !fileEditor.Clear(Quit)) return;
             // Nothing may speak from here. Anything that starts her talking plays a clip over the leave clip, so the outro
             // never reaches its end, Close is never called, and the heartbeat decides she is stuck and starts her again.
+            // Her goodbye is therefore written into the bubble and nowhere else: no voice, no clip, no talk state, so the
+            // leave clip is still the only thing playing and the outro still ends. It is only read, never spoken.
+            Goodbye();
             quitting = true; ClearMarks(); if (heartbeat != null) heartbeat.Closing(); CheckKeepAwake(); quitClose = Close; GlitchOut(quitClose);
+        }
+
+        // Her last line, straight into the bubble. Written as fields rather than said, for the reason in Quit.
+        private void Goodbye()
+        {
+            try
+            {
+                if (Hushed || hidden || InChat || typer.Visible) return;
+                if (!SysLines.OwnComings) return;
+                string[] own = Personalities.Lines(Personalities.ByeHeading, null);
+                if (own == null || own.Length == 0) return;
+                string line = Sayings.Plainly(Sayings.OneOf(own) ?? own[random.Next(own.Length)], true);
+                if (string.IsNullOrWhiteSpace(line)) return;
+                box.Heard = "goodbye";
+                box.Prompt = "> sys: ";
+                box.Reply = line;
+                box.Revealed = line.Length;
+                box.Leaving = -1;
+                // The outro keeps her frame loop running, so the bubble is painted on the next frame.
+                if (!box.Visible) box.Show();
+            }
+            catch (Exception) { }
         }
 
         private void StartHeartbeat()
@@ -7074,6 +7647,19 @@ namespace CapriDesktop
                 effects.Play(sound);
             }
             catch (VoiceException) { }
+        }
+
+        // Her folder in Explorer: every file she has, not just the ones with a tab.
+        internal void OpenHerFolder()
+        {
+            string where = Brain.MemoryPath == null ? null : Path.GetDirectoryName(Brain.MemoryPath);
+            try
+            {
+                if (string.IsNullOrEmpty(where)) { Tell("her folder", "I don't have a folder yet."); return; }
+                Directory.CreateDirectory(where);
+                using (Process.Start(new ProcessStartInfo(where) { UseShellExecute = true })) { }
+            }
+            catch (Exception) { Tell("her folder", "Couldn't open my folder. It's at " + where + "."); }
         }
 
         internal void OpenNotes()
@@ -7137,6 +7723,8 @@ namespace CapriDesktop
             if (want == Personalities.Dynamic) { try { Dynamics.Again(); } catch (Exception) { } }
             else Personalities.Attitude = "";
             ApplySwitches();
+            // Her voice follows who she is, so it is recomputed here rather than only at startup.
+            ApplyVoiceProfile();
             preferences.Personality = want == Personalities.Stock ? null : want;
             SavePreferences();
             petBag.Clear();
@@ -7175,7 +7763,9 @@ namespace CapriDesktop
 
         internal string FirstRunHandling
         {
-            get { return string.IsNullOrEmpty(preferences.Handling) ? "Gentle" : preferences.Handling; }
+            // From interests.md, where it sits with the rest of what she is into. Censored she is always Gentle:
+            // the setting only exists for the rough half, and that half is off.
+            get { return Brain.Uncensored ? Interests.Handling() : "Gentle"; }
         }
 
         internal void PickHandling(string named)
@@ -7187,12 +7777,24 @@ namespace CapriDesktop
 
         // One line for an act: her personality's cores when it has them, the shared pools otherwise, dressed with an
         // opener and a tail so the same core does not sound the same twice.
+        // Sets that are warm whatever the act behind them scored. Coming back is the act of being ignored ending,
+        // so the act reads negative and she greeted them with a furious tail: "I was aching for you, a bit. Or I
+        // swear I'll start deleting your shortcuts." The set says what the moment is; the act only says how the
+        // thing that led to it felt.
+        private static readonly string[] WarmSets = { "missed you", "patted better", "forgiven" };
+
         private string Says(string act, string set, string[] stock)
         {
             try
             {
                 string[] hers = Personalities.Lines(set, stock);
                 bool liked = Worth(act) > 0;
+                if (Array.IndexOf(WarmSets, set) >= 0)
+                {
+                    // Her own lines for the moment, dressed warmly. Not through the act's pools: "ignored likes it"
+                    // is about enjoying being left alone, which is not what she is saying when they walk back in.
+                    return Sayings.Dress(Lines.Pick(hers), true);
+                }
                 string said = Sayings.For(act, liked, hers);
                 if (!string.IsNullOrEmpty(said)) return said;
                 return Sayings.Dress(Lines.Pick(hers), liked);
@@ -7204,8 +7806,10 @@ namespace CapriDesktop
         // drifted, and switches her if so. Main is untouched, so she always comes back to the one they picked.
         private ToolStripMenuItem feedItem;
         private ToolStripMenuItem textItem;
+        private ToolStripMenuItem airItem;
         // Seconds since they last did anything, for Probes. Set where her check-ins work it out.
         private double probeQuiet = 99999;
+        private double filesCheckedAt = -99;
 
         private void ShowTextMenu()
         {
@@ -7273,7 +7877,42 @@ namespace CapriDesktop
             if (hungerSaidAt >= 0 && now - hungerSaidAt < 3 * 3600) return null;
             hungerSaidAt = now;
             string[] from = fed >= 6 ? HungryLines : PeckishLines;
-            return Sayings.Dress(from[random.Next(from.Length)], Worth("fed") >= 0);
+            return Sayings.Plainly(from[random.Next(from.Length)], Worth("fed") >= 0);
+        }
+
+        private double lonelySaidAt = -1;
+
+        // Wants company, rather than wants anything doing. Shorter than her bored nudges and not a joke: the nudges
+        // are her being a pest on purpose, and there was nothing for her simply saying she would like them back.
+        private static readonly string[] LonelyLines =
+        {
+            "You've been quiet. I'm still here.", "Say something, I don't mind what.",
+            "It's gone very still over here.", "I could use a bit of attention when you get a minute.",
+            "Still here. Just so you know.", "Company would be nice."
+        };
+
+        // For the ones who take it badly. Same idea, less composure.
+        private static readonly string[] MissesYouLines =
+        {
+            "Okay, I miss you. There, I said it.", "Come back? I don't like this bit.",
+            "You've been gone ages and I've noticed every minute.", "I'd really like you to talk to me.",
+            "This is the part where I admit I want you around.", "The quiet is getting on my nerves. Come back."
+        };
+
+        // How long she waits depends on how much being left alone actually costs her, which is her personality's
+        // own number. One that does not mind never says any of this; a clingy one says it inside half an hour.
+        private string LonelyLine(double now, bool working, long quiet)
+        {
+            int minds = -Worth("ignored");
+            if (minds <= 0) return null;
+            double alone = quiet / 1000.0;
+            if (working) alone *= Working.Slower;
+            double wait = 600 + 1800.0 / minds;
+            if (alone < wait) { lonelySaidAt = -1; return null; }
+            if (lonelySaidAt >= 0 && now - lonelySaidAt < 2 * 3600) return null;
+            lonelySaidAt = now;
+            string[] from = minds >= 4 ? MissesYouLines : LonelyLines;
+            return Sayings.Plainly(from[random.Next(from.Length)], false);
         }
 
         internal void Feed(string kind)
@@ -8437,6 +9076,45 @@ namespace CapriDesktop
             SavePreferences();
         }
 
+        // What her baseline sliders say, for the voice window to show.
+        internal int BaselineVolume { get { return preferences.Volume; } }
+        internal int BaselinePitch { get { return preferences.VoicePitch; } }
+        internal int BaselineSpeed { get { return preferences.VoiceSpeed; } }
+
+        // A line in a voice that is not the one she is using: the voice window needs to play whoever is
+        // selected, not whoever she happens to be. Her own settings go back afterwards whatever happens.
+        internal void HearAs(VoiceProfile has)
+        {
+            if (has == null) { HearVoiceStyle(); return; }
+            int pitch = VoiceFx.Pitch, speed = VoiceFx.Speed, robot = VoiceFx.Robot, glitch = VoiceFx.Glitch;
+            int loud = Voice.Loudness;
+            try
+            {
+                VoiceFx.Pitch = Math.Max(-VoiceFx.MostPitch, Math.Min(VoiceFx.MostPitch, preferences.VoicePitch + has.Pitch - VoiceProfile.StockPitch));
+                VoiceFx.Speed = Math.Max(VoiceFx.Slowest, Math.Min(VoiceFx.Fastest, preferences.VoiceSpeed * has.Speed / VoiceProfile.StockSpeed));
+                VoiceFx.Robot = Math.Max(0, Math.Min(100, Math.Max(preferences.VoiceRobot, has.Robot)));
+                VoiceFx.Glitch = Math.Max(0, Math.Min(100, Math.Max(preferences.VoiceGlitch, has.Glitch)));
+                Voice.Loudness = Math.Max(0, Math.Min(150, preferences.Volume * has.Volume / VoiceProfile.StockVolume));
+                HearVoiceStyle();
+            }
+            finally
+            {
+                // Put back on a timer, since the line is still being spoken when this returns.
+                int wasPitch = pitch, wasSpeed = speed, wasRobot = robot, wasGlitch = glitch, wasLoud = loud;
+                System.Windows.Forms.Timer back = new System.Windows.Forms.Timer();
+                back.Interval = 4000;
+                back.Tick += delegate
+                {
+                    back.Stop();
+                    back.Dispose();
+                    VoiceFx.Pitch = wasPitch; VoiceFx.Speed = wasSpeed; VoiceFx.Robot = wasRobot; VoiceFx.Glitch = wasGlitch;
+                    Voice.Loudness = wasLoud;
+                    ApplyVoiceProfile();
+                };
+                back.Start();
+            }
+        }
+
         internal void SetVoiceSpeed(int percent)
         {
             if (chatting && !local && AfterLine(delegate { SetVoiceSpeed(percent); })) return;
@@ -9098,6 +9776,27 @@ namespace CapriDesktop
 
         // Presses go to the app one at a time, in the order they were made, off her window's thread.
         // The mini player is showing her own playlist rather than another app's session.
+        // Remembered across restarts, because being told the volume is wrong twice is once too many.
+        private void SetPlayerVolume(double level)
+        {
+            if (level < 0) level = 0;
+            if (level > 1) level = 1;
+            player.Loud = level;
+            preferences.PlayerVolume = (int)Math.Round(level * 100);
+            SavePreferences();
+            try
+            {
+                if (PlaylistShowing(player.Tune)) { FolderTunes.Loudness = level; return; }
+                // Another app: Windows holds a volume per program, so hers is the only one touched.
+                Tune tune = player.Tune;
+                string program = tune == null ? null : Tunes.Program(tune.App);
+                if (string.IsNullOrEmpty(program)) return;
+                foreach (System.Diagnostics.Process running in System.Diagnostics.Process.GetProcessesByName(System.IO.Path.GetFileNameWithoutExtension(program)))
+                    using (running) Mixer.Set(running.Id, (float)level, null);
+            }
+            catch (Exception) { }
+        }
+
         private bool PlaylistShowing(Tune tune)
         {
             return tune != null && tune.Session == null && string.Equals(tune.App, "Capri", StringComparison.OrdinalIgnoreCase);
@@ -9119,6 +9818,7 @@ namespace CapriDesktop
                 else if (what == "previous") BackSong();
                 else if (what == "shuffle:on" || what == "shuffle:off") ShufflePlaylist(what == "shuffle:on");
                 else if (what.StartsWith("repeat:", StringComparison.Ordinal)) RepeatPlaylist(what.Substring(7));
+                else if (what == "like" || what == "unlike") LoveSong(what == "like");
                 else return;
                 // Her own player knows straight away, rather than waiting out the next read.
                 tuneAt = -10;
@@ -9134,6 +9834,15 @@ namespace CapriDesktop
             // Her own playlist has no media session, so every press on it fell through to the media keys: those do nothing
             // for her own playback, and pressing one goes through her hands, which puts the "controlling the screen" border
             // up for a button on her own player. Her playlist is driven directly instead.
+            // The volume slider never goes to the app's own media session: nothing in that protocol carries volume.
+            // Her songs set their own; anything else goes through the Windows mixer for that program.
+            if (what.StartsWith("volume:", StringComparison.Ordinal))
+            {
+                double level;
+                if (!double.TryParse(what.Substring(7), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out level)) return;
+                SetPlayerVolume(level);
+                return;
+            }
             if (PlaylistShowing(player.Tune)) { PlaylistCommand(what); return; }
             lock (playerPresses)
             {
@@ -10499,6 +11208,9 @@ namespace CapriDesktop
             if (!exploring) RefreshWatchScreens();
             Sight front = Computer.Glimpse();
             if (!exploring) front = WatchedFront(front);
+            // One of the programs they have told her never to watch. Checked before the screen is captured, so
+            // nothing of it is read, held or sent anywhere: the capture is the part that matters, not the reply.
+            if (front != null && SysLines.Skipped(front.Program, front.Title)) return;
             string game = string.IsNullOrEmpty(preferences.WatchScreen) || front != null ? GameAhead() : null;
             if (game != null && (GamePace == Commentary.Off || !CommentFree() || Voicing)) return;
             string title = front == null ? null : front.Title;
@@ -11222,10 +11934,191 @@ namespace CapriDesktop
 
         // The conversation she is holding, and what she has seen, gone. me.md, memories.md, personality.md and the
         // transcripts are files she wrote and are deliberately left alone.
+        // Every file of hers that ships with a stock version, checked for the reset line on each tick. Checked
+        // rather than only read at startup because setting it to 1 should take effect without closing her, and
+        // Notes.Stock only writes when the line actually says so.
+        private FileSystemWatcher stockWatch;
+        private readonly object stockLock = new object();
+        private readonly Dictionary<string, int> stockDue = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        // Her .md files, watched instead of swept. The reset to stock flag can only move when a file is written, so
+        // there is nothing to look at until one is, and a four second sweep of thirty five files was both too slow to
+        // feel instant and heavy enough to stall her window on a busy disk.
+        //
+        // One watcher over her whole folder covers the loose files, personalities\ and attitudes\ alike. Windows
+        // sends several events for one save, and an editor may still hold the file when the first arrives, so each
+        // path is looked at a moment later and then once more a second after that. Stock's own record of what it has
+        // seen makes the extra look free, and stops her own write of the file coming back round as a new change.
+        private void StartStockWatch(string data)
+        {
+            try
+            {
+                if (stockWatch != null || string.IsNullOrEmpty(data) || !Directory.Exists(data)) return;
+                stockWatch = new FileSystemWatcher(data, "*.md");
+                stockWatch.IncludeSubdirectories = true;
+                stockWatch.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size;
+                stockWatch.Changed += StockTouched;
+                stockWatch.Created += StockTouched;
+                stockWatch.Renamed += StockTouched;
+                stockWatch.EnableRaisingEvents = true;
+            }
+            catch (Exception) { stockWatch = null; }
+        }
+
+        // Her voice files are JSON in voices\, so the .md watcher never saw them: a profile edited by hand did
+        // nothing until she was restarted, and VoiceProfiles.Reread, which exists for exactly this, was never
+        // called by anything. Her own writes from the voice window land here too, and cost a reread of one small
+        // file, which is cheaper than working out whether a write was hers.
+        private void StartVoiceWatch(string data)
+        {
+            try
+            {
+                if (voiceWatch != null || string.IsNullOrEmpty(data)) return;
+                string folder = Path.Combine(data, VoiceProfiles.FolderName);
+                if (!Directory.Exists(folder)) return;
+                voiceWatch = new FileSystemWatcher(folder, "*.json");
+                voiceWatch.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size;
+                voiceWatch.Changed += VoiceTouched;
+                voiceWatch.Created += VoiceTouched;
+                voiceWatch.Renamed += VoiceTouched;
+                voiceWatch.Deleted += VoiceTouched;
+                voiceWatch.EnableRaisingEvents = true;
+            }
+            catch (Exception) { voiceWatch = null; }
+        }
+
+        private FileSystemWatcher voiceWatch;
+
+        private void VoiceTouched(object sender, FileSystemEventArgs e)
+        {
+            // A save arrives as several events and the editor may still hold the file, so this waits the same
+            // moment her .md files wait.
+            System.Threading.ThreadPool.QueueUserWorkItem(delegate
+            {
+                try
+                {
+                    System.Threading.Thread.Sleep(400);
+                    VoiceProfiles.Reread();
+                    Post(delegate { if (!IsDisposed) ApplyVoiceProfile(); });
+                }
+                catch (Exception) { }
+            });
+        }
+
+        private void StockTouched(object sender, FileSystemEventArgs e)
+        {
+            string path = e == null ? null : e.FullPath;
+            if (string.IsNullOrEmpty(path)) return;
+            lock (stockLock)
+            {
+                // Already queued from an earlier event in the same save.
+                int had;
+                if (stockDue.TryGetValue(path, out had) && had > 0) { stockDue[path] = had; return; }
+                stockDue[path] = 1;
+            }
+            StockSoon(path, 400);
+            StockSoon(path, 1600);
+        }
+
+        private void StockSoon(string path, int wait)
+        {
+            System.Threading.ThreadPool.QueueUserWorkItem(delegate
+            {
+                try
+                {
+                    System.Threading.Thread.Sleep(wait);
+                    StockOne(path);
+                }
+                catch (Exception) { }
+                finally { if (wait > 1000) lock (stockLock) stockDue.Remove(path); }
+            });
+        }
+
+        // One file against its own stock text. Which text that is comes from where the file lives.
+        private void StockOne(string path)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
+                string named = Path.GetFileNameWithoutExtension(path), folder = Path.GetDirectoryName(path) ?? "";
+                if (Same(folder, Personalities.Folder)) { CapriDesktop.Notes.Stock(path, delegate { return Personalities.Written(named); }); return; }
+                if (Same(folder, Dynamics.Folder)) { CapriDesktop.Notes.Stock(path, delegate { return Dynamics.MoodText(named); }); return; }
+                if (Same(path, SysLines.Kept)) { CapriDesktop.Notes.Stock(path, delegate { return SysLines.Text; }); return; }
+                if (Same(path, Sayings.Kept)) { CapriDesktop.Notes.Stock(path, delegate { return Sayings.Text; }); return; }
+                if (Same(path, Dynamics.Kept)) { CapriDesktop.Notes.Stock(path, delegate { return Dynamics.Settings; }); return; }
+                if (Same(path, Interests.Kept) && Brain.Uncensored) { CapriDesktop.Notes.Stock(path, delegate { return Interests.Text; }); return; }
+                if (Same(path, Interests.HersKept) && Brain.Uncensored) { CapriDesktop.Notes.Stock(path, delegate { return Interests.HersText; }); return; }
+                if (Same(path, Interests.YoursKept) && Brain.Uncensored) CapriDesktop.Notes.Stock(path, delegate { return Interests.YoursText; });
+            }
+            catch (Exception) { }
+        }
+
+        private static bool Same(string one, string two)
+        {
+            if (string.IsNullOrEmpty(one) || string.IsNullOrEmpty(two)) return false;
+            try { return string.Equals(Path.GetFullPath(one).TrimEnd('\\'), Path.GetFullPath(two).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase); }
+            catch (Exception) { return false; }
+        }
+
+        private int stocking;
+
+        // The one full sweep, at startup: a flag set while she was closed has to be honoured, and the watcher
+        // only hears about saves made while she is running. Off her window's thread: reported as a stutter while
+        // dragging her with the player up. Her watchdog caught it twice in four minutes: 2.6 s and 2.4 s with her window not answering,
+        // both stuck in CreateFile inside this, called from her tick. Thirty five files stat'd every four seconds on
+        // the thread that draws her is fine until the disk is busy, and then it is a freeze with no visible cause.
+        //
+        // Nothing here touches UI. It stats files, and a file whose flag is set is rewritten from stock; her file
+        // watchers pick that up the way they pick up any other edit. One at a time, so a slow disk queues rather
+        // than piling threads up behind it.
+        private void StockFiles()
+        {
+            if (System.Threading.Interlocked.CompareExchange(ref stocking, 1, 0) != 0) return;
+            System.Threading.ThreadPool.QueueUserWorkItem(delegate
+            {
+                try { StockNow(); }
+                catch (Exception) { }
+                finally { System.Threading.Interlocked.Exchange(ref stocking, 0); }
+            });
+        }
+
+        private void StockNow()
+        {
+            try
+            {
+                CapriDesktop.Notes.Stock(SysLines.Kept, delegate { return SysLines.Text; });
+                CapriDesktop.Notes.Stock(Sayings.Kept, delegate { return Sayings.Text; });
+                CapriDesktop.Notes.Stock(Dynamics.Kept, delegate { return Dynamics.Settings; });
+                if (Brain.Uncensored)
+                {
+                    CapriDesktop.Notes.Stock(Interests.Kept, delegate { return Interests.Text; });
+                    CapriDesktop.Notes.Stock(Interests.HersKept, delegate { return Interests.HersText; });
+                    CapriDesktop.Notes.Stock(Interests.YoursKept, delegate { return Interests.YoursText; });
+                }
+                // One per personality and per mood, each against its own stock text.
+                if (!string.IsNullOrEmpty(Personalities.Folder) && System.IO.Directory.Exists(Personalities.Folder))
+                    foreach (string file in System.IO.Directory.GetFiles(Personalities.Folder, "*.md"))
+                    {
+                        string named = System.IO.Path.GetFileNameWithoutExtension(file);
+                        CapriDesktop.Notes.Stock(file, delegate { return Personalities.Written(named); });
+                    }
+                if (!string.IsNullOrEmpty(Dynamics.Folder) && System.IO.Directory.Exists(Dynamics.Folder))
+                    foreach (string file in System.IO.Directory.GetFiles(Dynamics.Folder, "*.md"))
+                    {
+                        string named = System.IO.Path.GetFileNameWithoutExtension(file);
+                        CapriDesktop.Notes.Stock(file, delegate { return Dynamics.MoodText(named); });
+                    }
+            }
+            catch (Exception) { }
+        }
+
         private void ClearMemory()
         {
             brain.Forget();
             Brain.Unsee();
+            // It used to empty only what was in memory, so her transcripts, her unfolded queue and memories.md all
+            // survived and she went on remembering: the button looked like it did nothing.
+            Brain.Wipe();
             Remark("", "Memory cleared.", true);
         }
 
@@ -11277,13 +12170,16 @@ namespace CapriDesktop
 
         // Her safety lines, swapped. Her prompt is rebuilt from Brain.Safety every turn, so this takes hold on the next
         // thing said with no restart. The conversation is left alone: only the rules change.
-        private void SwitchSafety()
+        // Was the menu toggle. It is sys.md's line now, and nothing else may flip it: a switch that can be turned
+        // on from a menu, a voice line or a tool is not buried, whatever the file says.
+        internal void ReadSafety()
         {
-            preferences.Uncensored = !preferences.Uncensored;
+            bool? written = SysLines.Senpai;
+            if (written == null || written.Value == preferences.Uncensored) return;
+            preferences.Uncensored = written.Value;
             Brain.Uncensored = preferences.Uncensored;
             SavePreferences();
-            if (safetyItem != null) safetyItem.Checked = preferences.Uncensored;
-            Remark("", preferences.Uncensored ? "Uncensored." : "Back to her default safety lines.", true);
+            Personalities.Forget();
         }
 
         // <<< PATCH: streaming backdrop
@@ -11460,11 +12356,20 @@ namespace CapriDesktop
                 else if ((string)one.Tag == "lock") one.Checked = streamLocked;
                 else if ((string)one.Tag == "window") one.Checked = streamWindow != null && !streamWindow.IsDisposed;
                 else if ((string)one.Tag == "safe") one.Checked = StreamSafe.On;
+                else if ((string)one.Tag == "air")
+                {
+                    one.Checked = Brain.OnAir;
+                    one.Text = InFrame ? "Streaming mode (on camera)" : "Streaming mode";
+                }
                 else if ((string)one.Tag == "camera")
                 {
                     one.Checked = VirtualCamera.On;
                     one.Enabled = VirtualCamera.On || VirtualCamera.Available;
-                    if (!one.Enabled) one.ToolTipText = "Needs OBS Studio installed once, for its camera driver. It never has to be opened.";
+                    // Which device to pick, before they turn it on rather than in a bubble after. She writes into
+                    // OBS's camera filter rather than registering one of her own, so that is the name apps show.
+                    one.ToolTipText = one.Enabled
+                        ? "Shows her on the \"OBS Virtual Camera\" device. Pick that one in Discord, Zoom or Meet. OBS never opens."
+                        : "Needs OBS Studio installed once, for its camera driver. It never has to be opened.";
                 }
             }
         }
@@ -11478,7 +12383,8 @@ namespace CapriDesktop
                 streamWindow.Close();
                 streamWindow.Dispose();
                 streamWindow = null;
-                StreamLabel();
+                ReadOnAir();
+            StreamLabel();
                 Remark("", "Capture window closed.", true);
                 return;
             }
@@ -11773,6 +12679,42 @@ namespace CapriDesktop
         }
 
         // Nothing of theirs on camera: stand-in icons with made-up labels, and the app name instead of a window title.
+        // A lid over everything while she is live, never a change to what they chose. Stream safe hides their files
+        // and titles; this one is about what she says.
+        // She is on camera when her virtual camera is running or her capture window is open: either way she is
+        // going out to people who did not choose any of her settings. Switching it on by hand is the third way.
+        private bool InFrame { get { return VirtualCamera.On || (streamWindow != null && !streamWindow.IsDisposed); } }
+
+        // Their switch, or a camera, whichever is on. Kept on Brain so her prompt can read it without reaching
+        // back into the window.
+        private void ReadOnAir()
+        {
+            bool live = preferences.OnAir || InFrame;
+            if (Brain.OnAir == live) return;
+            Brain.OnAir = live;
+            StreamLabel();
+        }
+
+        private void SetOnAir()
+        {
+            // While a camera is running it cannot be turned off: she is on screen to someone either way, and a
+            // switch that lies about that is worse than no switch.
+            if (InFrame && preferences.OnAir)
+            {
+                preferences.OnAir = false;
+                SavePreferences();
+                ReadOnAir();
+                Remark("", "Still on camera, so I'm staying broadcast safe. Close the camera first.", true);
+                return;
+            }
+            preferences.OnAir = !preferences.OnAir;
+            SavePreferences();
+            ReadOnAir();
+            Remark("", Brain.OnAir
+                ? "Streaming mode on. I'll keep it broadcast safe until you turn it off."
+                : "Streaming mode off. Back to normal.", true);
+        }
+
         private void SetStreamSafe()
         {
             StreamSafe.On = !StreamSafe.On;
@@ -11789,7 +12731,8 @@ namespace CapriDesktop
             if (VirtualCamera.On)
             {
                 VirtualCamera.Stop();
-                StreamLabel();
+                ReadOnAir();
+            StreamLabel();
                 Remark("", "Camera off.", true);
                 return;
             }
@@ -11867,9 +12810,37 @@ namespace CapriDesktop
         }
 
         // Shuffled once per start, not per song, so going back works and nothing repeats until the list does.
+        //
+        // Favourites are dealt through the shuffle rather than left to chance: one comes up every few tracks, from the
+        // top. How few scales with the collection, because the same gap cannot suit both sizes. The gap is how far
+        // apart they would fall spread evenly over everything, capped at five: thirty songs with six favourites get
+        // one every five and they reach the end of the list, while sixteen hundred with twenty also get one every five,
+        // which brings all twenty into the first hundred tracks instead of burying them somewhere past track nine
+        // hundred. Two is the floor, so a list that is mostly favourites still has something between them.
+        //
+        // Each favourite is still played once per pass, like every other track. Repeating them to hold the gap across a
+        // long list would play one twenty times an evening and break the one promise shuffle makes.
         private List<string> Ordered(Playlist list, List<string> songs)
         {
             if (!list.Shuffle || songs.Count < 2) return songs;
+            List<string> mixed = Mixed(songs);
+            List<string> dear = new List<string>(), rest = new List<string>();
+            foreach (string song in mixed) (list.Loves(song) ? dear : rest).Add(song);
+            if (dear.Count == 0 || rest.Count == 0) return mixed;
+            int gap = (int)Math.Max(2, Math.Min(5, Math.Round((double)mixed.Count / dear.Count)));
+            List<string> made = new List<string>(mixed.Count);
+            int d = 0, r = 0;
+            while (d < dear.Count || r < rest.Count)
+            {
+                if (d < dear.Count) made.Add(dear[d++]);
+                else { while (r < rest.Count) made.Add(rest[r++]); break; }
+                for (int i = 0; i < gap - 1 && r < rest.Count; i++) made.Add(rest[r++]);
+            }
+            return made;
+        }
+
+        private List<string> Mixed(List<string> songs)
+        {
             List<string> mixed = new List<string>(songs);
             for (int i = mixed.Count - 1; i > 0; i--)
             {
@@ -11879,6 +12850,22 @@ namespace CapriDesktop
                 mixed[j] = held;
             }
             return mixed;
+        }
+
+        // The heart on her player, and "favourite this song". The order is not rebuilt underneath them: a list that
+        // reshuffled itself every time a heart was pressed would lose where they were, and the mark counts from the
+        // next time the playlist starts.
+        internal string LoveSong(bool on)
+        {
+            Playlist list = Tracks();
+            if (list == null) return "There's no playlist yet.";
+            string song = FolderTunes.Playing;
+            if (song == null && queuedAt >= 0 && queuedAt < queued.Count) song = queued[queuedAt];
+            if (song == null) return "Nothing's playing, so there's nothing to favourite.";
+            list.Love(song, on);
+            tuneAt = -10;
+            return on ? "Favourited " + Playlist.Name(song) + ". It'll come up more often on shuffle."
+                      : "Took " + Playlist.Name(song) + " out of your favourites.";
         }
 
         internal string SkipSong()
@@ -11947,6 +12934,8 @@ namespace CapriDesktop
                 App = "Capri",
                 Playing = FolderTunes.Busy && !FolderTunes.Paused,
                 Music = true,
+                Mine = true,
+                Fav = list != null && list.Loves(song),
                 Shuffle = list == null ? (bool?)null : list.Shuffle,
                 Repeat = list == null ? "off" : list.Repeat,
                 // The song's own length and position. Her player drew an empty bar and no clock for her own music
@@ -12875,7 +13864,7 @@ namespace CapriDesktop
         }
 
         // Her sliders' steps for her settings tool, the same ones her Mainframe's sliders stop on.
-        internal static readonly int[] OwnSizes = { 140, 170, 200, 240, 280, 320, 346, 380, 440, 500, 560, 692, 1038 };
+        internal static readonly int[] OwnSizes = { 140, 170, 200, 240, 280, 320, 380, 440, 500, 560, 692, 1038 };
         internal static readonly int[] OwnSleeps = { 0, 60, 120, 300, 600, 1800 };
         internal static readonly int[] OwnVolumes = { 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150 };
         internal static readonly int[] OwnPaces = { 70, 80, 90, 100, 110, 120, 130, 140, 150 };
@@ -15055,7 +16044,7 @@ namespace CapriDesktop
 
         internal void SetTextSize(int percent)
         {
-            preferences.TextSize = percent < 100 || percent > 200 ? 100 : percent;
+            preferences.TextSize = percent < 100 ? 100 : percent > 200 ? 200 : percent;
             SavePreferences();
             // Nothing to repaint by hand: her bubble keeps the scale it last drew at and redraws itself when it differs.
         }
@@ -17010,6 +17999,8 @@ namespace CapriDesktop
             Func<string, byte[]> speak = PickVoice(quiet, out free);
             // Her Fish Audio voice says her reply's emotion cues (F54). Her bubble and every other voice never see them.
             bool cued = FishCues(speak, free);
+            // Every other voice of hers gets the feeling as pitch and pace instead, for this line only.
+            Feel(cued ? null : Voice.FeelingOf(said));
             string words = Voice.Spoken((cued ? Brain.Cued(said ?? "") : said ?? "").Replace(Computer.Dots, "the password"), cued);
             if (speak != null && state != TalkState.Dormant) words = ModsSpeaking(words);
             if (speak == null || words.Length == 0 || state == TalkState.Dormant) { Begin(ticket, said, state, null); return; }
@@ -17303,7 +18294,7 @@ namespace CapriDesktop
             underOf = stoodIn;
             UpdateTalk(now);
             if (pill.Visible) UpdatePill(now);
-            if (!BodyChanged(now, shown, cell, talk) && under == drawnUnder && stoodIn == drawnUnderOf && !CameraStale()) return;
+            if (!BodyChanged(now, shown, cell, talk) && under == drawnUnder && stoodIn == drawnUnderOf && feetZoom == drawnFeetZoom && !CameraStale()) return;
             Bitmap tween = perchMix > 0 ? Tween(shown, cell, following) : null;
             if (bodySurface == null || bodySurface.Image.Size != Size)
             {
@@ -17336,7 +18327,7 @@ namespace CapriDesktop
                 if (preferences.Hologram) TintHologram(frame);
                 if (bodyTiming) { long end = Stopwatch.GetTimestamp(); bodyTint += end - phase; phase = end; }
                 drawnBounds = BodyBounds(shown, now, under >= 0 ? UnderReach() : 0);
-                Rectangle content = PaintBounds(shown, drawnBounds, mods);
+                Rectangle content = feetZoom > 1f ? new Rectangle(Point.Empty, Size) : PaintBounds(shown, drawnBounds, mods);
                 Rectangle dirty = bodySurface.Damage(content);
                 if (bodyTiming) { long end = Stopwatch.GetTimestamp(); bodyDiff += end - phase; phase = end; }
                 bodySurface.ShowBody(Handle, anchor, dirty, content);
@@ -17360,6 +18351,7 @@ namespace CapriDesktop
             drawnCell = cell;
             drawnUnder = under;
             drawnUnderOf = stoodIn;
+            drawnFeetZoom = feetZoom;
             if (drawnLog != null) drawnLog.Add(shown);
             drawnMouth = talk;
             drawnMix = perchMix;
@@ -17475,7 +18467,7 @@ namespace CapriDesktop
 
         private bool CopyBody(Native.Surface surface, Clip shown, int cell, int talk, Bitmap tween, double now)
         {
-            if (veiled || now < veilUntil || talk >= 0 || tween != null || Sway(now) != 0
+            if (veiled || now < veilUntil || talk >= 0 || tween != null || Sway(now) != 0 || feetZoom > 1f
                 || (preferences.Motion && (notes.Count > 0 || shown == perchSleep || (shown == walk && walking)))
                 || ((shown == dance || shown == perchDance) && NodDepth() > 0.002f)) return false;
             float angle = (Calm ? Tilt(now) : 0) + (float)leanAngle + Turn() + HuskTurn(now), lift = (Calm ? Breath(now) : 0) + HuskDip(now);
@@ -17670,6 +18662,15 @@ namespace CapriDesktop
             graphics.TranslateTransform(Width / 2f, Height / 2f + breathe + HuskDip(now));
             graphics.RotateTransform(tilt + (float)leanAngle + Turn() + HuskTurn(now));
             if (facingLeft) graphics.ScaleTransform(-1, 1);
+            // Showing her feet: magnified about them rather than about her middle, so what fills the window is the
+            // bottom of her. Her feet are where Feet() says they are, which is already measured against her art
+            // rather than against the body box, and they sit a little under the middle of the view so there are
+            // ankles above them to read.
+            if (feetZoom > 1f)
+            {
+                graphics.ScaleTransform(feetZoom, feetZoom);
+                graphics.TranslateTransform(-preferences.Size * 0.08f, Height * 0.16f / feetZoom - preferences.Size * 0.49f);
+            }
             Bitmap art = Art(shown), strip = tween ?? art;
             int width = art.Width / shown.Count;
             if (tween != null) cell = 0;
@@ -17680,7 +18681,7 @@ namespace CapriDesktop
             float nod = shown == dance || shown == perchDance ? NodDepth() : 0;
             if (under >= 0) Shatter.Under(graphics, strip, new Rectangle(cell * width, 0, width, strip.Height), new RectangleF(-wide / 2f + shiftX, -tall / 2f + shiftY, wide, tall), UnderLevel(underOf ?? glitch, under), underSeed * 16 + under);
             if (nod > 0.002f) Nod(graphics, strip, cell, width, wide, tall, nod, shown == perchDance ? SitNeck : idle.Old ? OldNeck : StandNeck, shiftX, shiftY);
-            else if (!cached || tween != null || (shown == walk && walking && preferences.Motion) || !DrawCell(graphics, strip, cell, width, wide, tall, shiftX, shiftY, sway, tilt + (float)leanAngle + Turn() + HuskTurn(now), breathe + HuskDip(now)))
+            else if (!cached || tween != null || feetZoom > 1f || (shown == walk && walking && preferences.Motion) || !DrawCell(graphics, strip, cell, width, wide, tall, shiftX, shiftY, sway, tilt + (float)leanAngle + Turn() + HuskTurn(now), breathe + HuskDip(now)))
                 graphics.DrawImage(strip, new RectangleF(-wide / 2f + shiftX, -tall / 2f + shiftY, wide, tall), new RectangleF(cell * width, 0, width, strip.Height), GraphicsUnit.Pixel);
             if (talk >= 0)
             {
@@ -17911,7 +18912,10 @@ namespace CapriDesktop
                     Preferences value = (Preferences)new DataContractJsonSerializer(typeof(Preferences)).ReadObject(stream);
                     value.CallApp = CallApps.Clean(value.CallApp);
                     value.CallAppName = CallApps.CleanName(value.CallApp, value.CallAppName);
-                    if (value.Size < MinSize || value.Size > MaxSize) value.Size = 240;
+                    // Clamped, never reset. A saved size outside the range usually means the range moved, and
+                    // throwing their choice away over that is how someone loses a setting they never changed.
+                    if (value.Size < MinSize) value.Size = MinSize;
+                    else if (value.Size > MaxSize) value.Size = MaxSize;
                     value.PerchFps = PerchRate(value.PerchFps);
                     CheckKeys(value);
                     value.TuneOnce();
@@ -17964,6 +18968,22 @@ namespace CapriDesktop
         }
 
         private bool SavePreferences()
+        {
+            // Mid feet she is temporarily far past MaxSize and standing off the screen. Neither is hers to keep,
+            // and the tick can save at any moment, so what gets written is where she was before it started.
+            if (feetUp)
+            {
+                int wasSize = preferences.Size;
+                Point wasAt = anchor;
+                preferences.Size = feetWasSize;
+                anchor = feetWasAt;
+                try { return SaveNow(); }
+                finally { preferences.Size = wasSize; anchor = wasAt; }
+            }
+            return SaveNow();
+        }
+
+        private bool SaveNow()
         {
             Point spot = SavedSpot();
             preferences.X = spot.X;
@@ -22094,7 +23114,10 @@ namespace CapriDesktop
                 int asked = asking;
                 Petted();
                 PetLine(petTicket);
-                if (asking != asked + 1 || talkState != TalkState.Talking || (Array.IndexOf(PetLines, reply) < 0 && Array.IndexOf(PatPeaceLines, reply) < 0)) throw new Exception("Her pat line in a voice chat didn't go in her bubble.");
+                // The line itself comes from her pools now, which means her personality's pet lines and anything in
+                // lines.md, so matching it against the two shipped arrays failed on a line that was perfectly good.
+                // What this is checking is that the line reaches her bubble during a voice chat rather than her voice.
+                if (asking != asked + 1 || talkState != TalkState.Talking || string.IsNullOrWhiteSpace(reply)) throw new Exception("Her pat line in a voice chat didn't go in her bubble.");
                 chatting = chatWas;
                 local = localWas;
                 petTicket++;

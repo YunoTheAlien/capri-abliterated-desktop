@@ -81,11 +81,35 @@ namespace CapriDesktop
             lock (gate) if (waiting != null && (now.ToUniversalTime() - asked).TotalMinutes > 6) { waiting = null; PendingKey = null; }
         }
 
+        // When the next one is due, kept in her settings so closing her does not push it back again.
+        internal static Func<long> Saved = delegate { return 0; };
+        internal static Action<long> Keep = delegate { };
+
         private static void Roll()
         {
             double low = Dynamics.ProbeLow, high = Dynamics.ProbeHigh;
             if (high < low) { double swap = low; low = high; high = swap; }
             next = DateTime.UtcNow.AddHours(low + dice.NextDouble() * Math.Max(0, high - low));
+            try { Keep(next.Ticks); } catch (Exception) { }
+        }
+
+        // The time from her settings, the first time it is wanted. A saved time further out than the longest the
+        // window allows is ignored: it means the window was shortened since, and she should not be held to the old one.
+        private static void Woken()
+        {
+            if (next != DateTime.MinValue) return;
+            long had = 0;
+            try { had = Saved(); } catch (Exception) { }
+            if (had > 0)
+            {
+                try
+                {
+                    DateTime when = new DateTime(had, DateTimeKind.Utc);
+                    if (when <= DateTime.UtcNow.AddHours(Math.Max(Dynamics.ProbeLow, Dynamics.ProbeHigh))) { next = when; return; }
+                }
+                catch (Exception) { }
+            }
+            Roll();
         }
 
         // Whether to ask now, and what. Null when she should not.
@@ -96,14 +120,14 @@ namespace CapriDesktop
             lock (gate)
             {
                 if (waiting != null) return false;
-                if (next == DateTime.MinValue) { Roll(); return false; }
+                Woken();
 
                 // Not at someone she has annoyed, and not while she does not want to be useful anyway. Being asked
                 // questions by something you are cross with is worse than silence.
                 int sore = 0;
                 string band = "steady";
                 try { sore = Upset(); band = Band() ?? "steady"; } catch (Exception) { }
-                if (sore >= 10 || band == "reluctant" || band == "off") return false;
+                if (sore >= 15 || band == "off") return false;
 
                 double since = 99999;
                 try { since = Quiet(); } catch (Exception) { }

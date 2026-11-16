@@ -57,6 +57,11 @@ namespace CapriDesktop
         private enum Stage { Waiting, Opening, Open, Untyping, Closing, Gone }
 
         internal event Action Saved;
+
+        // A file she ships has a reset to stock flag in it. Saving is the only moment that flag can have
+        // moved, so saving is what checks it, rather than a sweep of every file on a timer. A file that
+        // resets is rewritten here and shows as stock the next time it is opened or Reload is pressed.
+        internal static Action<string> Stocked;
         internal bool Motion = true;
         // The frames it drew, in order, while her smoke test watches: where in the art each one was, when on the animation's clock,
         // and how long it took to draw. And a stop on its clock for stepping it by hand.
@@ -110,9 +115,11 @@ namespace CapriDesktop
             // Only with Uncensored on, and the tab is absent rather than disabled, so censored shows no trace of it.
             if (!personalities && Interests.Shown)
             {
-                Doc[] senpai = new Doc[docs.Length + 1];
+                Doc[] senpai = new Doc[docs.Length + 3];
                 Array.Copy(docs, senpai, docs.Length);
                 senpai[docs.Length] = new Doc(Interests.FileName, delegate { return Interests.Open(); });
+                senpai[docs.Length + 1] = new Doc(Interests.HersName, delegate { return Interests.OpenHers(); });
+                senpai[docs.Length + 2] = new Doc(Interests.YoursName, delegate { return Interests.OpenYours(); });
                 docs = senpai;
             }
             // Her personalities open in her own editor rather than whatever Windows has for.md, which was Notepad
@@ -502,6 +509,7 @@ namespace CapriDesktop
         {
             string problem = doc.Note.Save(doc.ForFile());
             if (problem != null) return problem;
+            if (Stocked != null) { try { Stocked(doc.Note.Path); } catch (Exception) { } }
             doc.Revert();
             ForgetDraft(doc);
             if (doc == docs[0] && Saved != null) Saved();
@@ -1166,8 +1174,10 @@ namespace CapriDesktop
 
             // P_ and M_ in the tab only. The files keep their own names, since the folder they are in
             // already says which they are and renaming them would break every saved pick.
-            foreach (string each in Sorted(Personalities.Folder)) Add(found, taken, each, "P_");
-            foreach (string each in Sorted(Dynamics.Folder)) Add(found, taken, each, "M_");
+            // A personality or mood marked uncensored only is absent while the toggle is off, not greyed out,
+            // the same as interests.md: a censored install should show no trace that there is anything to unlock.
+            foreach (string each in Sorted(Personalities.Folder)) if (Brain.Uncensored || !Personalities.AdultOnly(each)) Add(found, taken, each, "P_");
+            foreach (string each in Sorted(Dynamics.Folder)) if (Brain.Uncensored || !Personalities.AdultOnly(each)) Add(found, taken, each, "M_");
             return found.ToArray();
         }
 
@@ -1272,7 +1282,7 @@ namespace CapriDesktop
                 box.TextChanged += delegate { if (!loading) Typed(); Freshen(); };
                 // STOCK 0.9.0: tabs = new[] { new Ink { Tag = 0 }, new Ink { Tag = 1 } };
                 tabs = new Ink[panel.docs.Length];
-                for (int made = 0; made < tabs.Length; made++) tabs[made] = new Ink { Tag = made };
+                for (int made = 0; made < tabs.Length; made++) tabs[made] = new Ink { Tag = made, Rolling = true };
                 foreach (Ink tab in tabs)
                 {
                     Ink press = tab;
@@ -2157,6 +2167,10 @@ namespace CapriDesktop
                             if (since < 0) since += refresh;
                             next = now - since + refresh + Math.Min(frequency / 1000, refresh / 4);
                             InStep = true;
+                            // Windows reports a whole number of Hz, so a 59.94 screen comes back as 59 and the panel,
+                            // correctly running at 59.94 with the compositor, read as running faster than its screen.
+                            // The compositor's own figure is the true one, so it is the one kept.
+                            Hz = composed;
                         }
                     }
                 }
@@ -2276,7 +2290,15 @@ namespace CapriDesktop
         private sealed class Ink : Button
         {
             internal bool Filled, Mark;
+            // A tab, rather than one of the buttons along the bottom. Its text is a file name, it is left aligned
+            // because that is the end that tells them which file it is, and it scrolls while the mouse is on it
+            // because the strip is too narrow for "P_Dominatrix.md" and ellipsis loses the part that differs.
+            internal bool Rolling;
             private bool hot, down;
+            private Timer roll;
+            private int shift;
+
+            private const int Gap = 24;
 
             internal Ink()
             {
@@ -2287,8 +2309,49 @@ namespace CapriDesktop
             }
 
             protected override void OnInvalidated(InvalidateEventArgs e) { base.OnInvalidated(e); Touch(this); }
-            protected override void OnMouseEnter(EventArgs e) { hot = true; Invalidate(); base.OnMouseEnter(e); }
-            protected override void OnMouseLeave(EventArgs e) { hot = false; down = false; Invalidate(); base.OnMouseLeave(e); }
+            protected override void OnMouseEnter(EventArgs e) { hot = true; StartRoll(); Invalidate(); base.OnMouseEnter(e); }
+            protected override void OnMouseLeave(EventArgs e) { hot = false; down = false; StopRoll(); Invalidate(); base.OnMouseLeave(e); }
+
+            // How wide the text wants to be, against the room it has.
+            private int Overflow()
+            {
+                if (!Rolling || string.IsNullOrEmpty(Text)) return 0;
+                int wants = TextRenderer.MeasureText(Text, Font, new Size(int.MaxValue, int.MaxValue), TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix).Width;
+                int room = Width - Pad() * 2;
+                return wants > room ? wants : 0;
+            }
+
+            private int Pad() { return Math.Max(4, Height / 4); }
+
+            // Only while the mouse is on it, and only when there is something to see. Nothing ticks otherwise.
+            private void StartRoll()
+            {
+                if (Overflow() == 0) return;
+                shift = -Gap / 2;
+                if (roll == null) { roll = new Timer { Interval = 33 }; roll.Tick += delegate { Step(); }; }
+                roll.Start();
+            }
+
+            private void StopRoll()
+            {
+                if (roll != null) roll.Stop();
+                shift = 0;
+            }
+
+            private void Step()
+            {
+                int wants = Overflow();
+                if (wants == 0 || !hot) { StopRoll(); Invalidate(); return; }
+                shift++;
+                if (shift > wants + Gap) shift = -Gap / 2;
+                Invalidate();
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing && roll != null) { roll.Stop(); roll.Dispose(); roll = null; }
+                base.Dispose(disposing);
+            }
             protected override void OnMouseDown(MouseEventArgs e) { if (e.Button == MouseButtons.Left) { down = true; Invalidate(); } base.OnMouseDown(e); }
             protected override void OnMouseUp(MouseEventArgs e) { down = false; Invalidate(); base.OnMouseUp(e); }
 
@@ -2319,7 +2382,32 @@ namespace CapriDesktop
                         if (lit) using (Brush fill = new SolidBrush(Red)) pen.FillPath(fill, plate);
                         using (Pen edge = new Pen(Enabled ? Red : Color.FromArgb(110, Red), line)) pen.DrawPath(edge, plate);
                     }
-                    TextRenderer.DrawText(pen, Text, Font, ClientRectangle, !Enabled ? Color.FromArgb(130, 50, 46) : lit ? Dark : Red, BackColorFor(lit), TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
+                    Color ink = !Enabled ? Color.FromArgb(130, 50, 46) : lit ? Dark : Red;
+                    if (!Rolling)
+                    {
+                        TextRenderer.DrawText(pen, Text, Font, ClientRectangle, ink, BackColorFor(lit), TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
+                    }
+                    else
+                    {
+                        int pad = Pad(), wants = Overflow();
+                        Rectangle inside = new Rectangle(pad, 0, Math.Max(1, Width - pad * 2), Height);
+                        TextFormatFlags how = TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoClipping;
+                        if (wants == 0 || !hot)
+                        {
+                            // It fits, or the mouse is elsewhere: left aligned, and cut with an ellipsis if it is long.
+                            TextRenderer.DrawText(pen, Text, Font, inside, ink, BackColorFor(lit), how | TextFormatFlags.EndEllipsis);
+                        }
+                        else
+                        {
+                            // Drawn twice, a gap apart, so the end of the name runs straight into its start again.
+                            Region was = pen.Clip;
+                            pen.SetClip(inside);
+                            Rectangle first = new Rectangle(inside.X - shift, inside.Y, wants + Gap, inside.Height);
+                            TextRenderer.DrawText(pen, Text, Font, first, ink, how);
+                            TextRenderer.DrawText(pen, Text, Font, new Rectangle(first.X + wants + Gap, first.Y, first.Width, first.Height), ink, how);
+                            pen.Clip = was;
+                        }
+                    }
                 }
                 if (Focused && ShowFocusCues)
                     using (Pen dots = new Pen(lit ? Dark : Red, line) { DashStyle = DashStyle.Dot })

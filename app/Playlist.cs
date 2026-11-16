@@ -31,6 +31,7 @@ namespace CapriDesktop
         private readonly List<string> folders = new List<string>();
         private readonly List<string> added = new List<string>();
         private readonly List<string> removed = new List<string>();
+        private readonly List<string> loved = new List<string>();
         private readonly object gate = new object();
         private string path;
         internal bool Shuffle;
@@ -43,6 +44,7 @@ namespace CapriDesktop
 
         internal List<string> Folders { get { lock (gate) return new List<string>(folders); } }
         internal List<string> Removed { get { lock (gate) return new List<string>(removed); } }
+        internal List<string> Loved { get { lock (gate) return new List<string>(loved); } }
         internal int AddedCount { get { lock (gate) return added.Count; } }
 
         // Every song the folders and the added list offer, in order, with the removed ones left out. Read fresh each time so
@@ -89,6 +91,34 @@ namespace CapriDesktop
             while (plain.EndsWith("\\", StringComparison.Ordinal)) plain = plain.Substring(0, plain.Length - 1);
             try { plain = Path.GetFullPath(plain); } catch (Exception) { }
             return plain.ToLowerInvariant();
+        }
+
+        internal bool Loves(string file)
+        {
+            if (string.IsNullOrEmpty(file)) return false;
+            string want = Settled(file);
+            lock (gate) foreach (string each in loved) if (Settled(each) == want) return true;
+            return false;
+        }
+
+        // A favourite is only a mark against the path. Nothing is moved, copied or written near the drive, and a
+        // favourite that is later taken off the playlist simply stops coming up: the mark is left alone so putting
+        // the song back brings its heart back with it.
+        internal bool Love(string file, bool on)
+        {
+            string want = (file ?? "").Trim().Trim('"');
+            if (want.Length == 0) return false;
+            try { want = Path.GetFullPath(want); } catch (Exception) { }
+            lock (gate)
+            {
+                bool held = false;
+                foreach (string each in loved) if (Settled(each) == Settled(want)) held = true;
+                if (on == held) return false;
+                if (on) loved.Add(want);
+                else loved.RemoveAll(each => Settled(each) == Settled(want));
+            }
+            Write();
+            return true;
         }
 
         internal string AddFolder(string folder)
@@ -154,18 +184,20 @@ namespace CapriDesktop
         internal void Write()
         {
             if (path == null) return;
-            List<string> roots, ones, gone;
-            lock (gate) { roots = new List<string>(folders); ones = new List<string>(added); gone = new List<string>(removed); }
+            List<string> roots, ones, gone, dear;
+            lock (gate) { roots = new List<string>(folders); ones = new List<string>(added); gone = new List<string>(removed); dear = new List<string>(loved); }
             StringBuilder text = new StringBuilder();
             text.Append("{").Append(Environment.NewLine);
             text.Append("  \"_\": \"Capri's playlist. Folders are scanned top to bottom. Songs under added are played after them.\",").Append(Environment.NewLine);
             text.Append("  \"__\": \"Anything under removed is skipped. Taking a song off the playlist never deletes it from the drive.\",").Append(Environment.NewLine);
+            text.Append("  \"____\": \"Songs under loved are favourites: on shuffle they are dealt through the list so one comes up every few tracks.\",").Append(Environment.NewLine);
             text.Append("  \"___\": \"Edit this file by hand if you like. Keep it UTF-8 with no byte order mark.\",").Append(Environment.NewLine);
             text.Append("  \"shuffle\": ").Append(Shuffle ? "true" : "false").Append(",").Append(Environment.NewLine);
             text.Append("  \"repeat\": \"").Append(Repeat).Append("\",").Append(Environment.NewLine);
             Lines(text, "playlist", roots, true);
             Lines(text, "added", ones, true);
-            Lines(text, "removed", gone, false);
+            Lines(text, "removed", gone, true);
+            Lines(text, "loved", dear, false);
             text.Append("}").Append(Environment.NewLine);
             try
             {
@@ -218,10 +250,11 @@ namespace CapriDesktop
             if (text.Length > 0 && text[0] == '﻿') text = text.Substring(1);
             lock (gate)
             {
-                folders.Clear(); added.Clear(); removed.Clear();
+                folders.Clear(); added.Clear(); removed.Clear(); loved.Clear();
                 Fill(text, "playlist", folders);
                 Fill(text, "added", added);
                 Fill(text, "removed", removed);
+                Fill(text, "loved", loved);
                 Shuffle = Regex.IsMatch(text ?? "", @"""shuffle""\s*:\s*true", RegexOptions.IgnoreCase);
                 Match how = Regex.Match(text ?? "", @"""repeat""\s*:\s*""(off|one|all)""", RegexOptions.IgnoreCase);
                 Repeat = how.Success ? how.Groups[1].Value.ToLowerInvariant() : "off";
@@ -313,6 +346,8 @@ namespace CapriDesktop
             ended = false;
             failed = false;
             lock (gate) paused = false;
+            double want = Loudness;
+            OnLoop(delegate { try { player.Volume = want; } catch (Exception) { } });
             bool opened = false;
             OnLoop(delegate
             {
@@ -379,6 +414,21 @@ namespace CapriDesktop
             });
             lock (gate) { playing = null; paused = false; }
             ended = false;
+        }
+
+        private static double loud = 0.7;
+
+        // How loud her own songs are, 0 to 1. Starts below full because it was reported as too loud, and there was
+        // nothing on her player to turn it down with.
+        internal static double Loudness
+        {
+            get { lock (gate) return loud; }
+            set
+            {
+                double want = value < 0 ? 0 : value > 1 ? 1 : value;
+                lock (gate) loud = want;
+                OnLoop(delegate { try { player.Volume = want; } catch (Exception) { } });
+            }
         }
 
         private static bool paused;

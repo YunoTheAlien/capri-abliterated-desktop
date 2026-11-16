@@ -31,6 +31,7 @@ namespace CapriDesktop
         // How forward she is, when that is set to drift rather than held at a number. Same file and the same timer as
         // her moods, because it is the same kind of thing: something about her that moves on its own.
         private static int kinkLow = 2, kinkHigh = 8;
+        private static int cringe;
         // How long between her probing questions. Same shape as the mood window, and read by Probes.
         private static double probeLow = 1, probeHigh = 2;
         private static int kinkNow = -1;
@@ -67,6 +68,10 @@ namespace CapriDesktop
         }
 
         internal static double Least { get { Fresh(); lock (gate) return leastHours; } }
+        // 0 to 100, over whoever she is. Nothing per personality yet, on purpose: turning this up is meant
+        // to affect all of them at once.
+        internal static int Cringe { get { Fresh(); lock (gate) return cringe; } }
+
         internal static double ProbeLow { get { Fresh(); lock (gate) return probeLow; } }
         internal static double ProbeHigh { get { Fresh(); lock (gate) return probeHigh; } }
         internal static int KinkLow { get { Fresh(); lock (gate) return kinkLow; } }
@@ -200,6 +205,7 @@ namespace CapriDesktop
             lock (gate) until = now.AddHours(Math.Max(0.05, hours));
 
             Personalities.Attitude = next;
+            if (MoodChanged != null) { try { MoodChanged(); } catch (Exception) { } }
             if (!string.Equals(next, was, StringComparison.OrdinalIgnoreCase))
                 Brain.Log("mood", -1, "Dynamic: she is " + (next.Length == 0 ? "herself" : next.ToLowerInvariant())
                     + " for the next " + hours.ToString("0.#") + "h, over " + Under + ".");
@@ -213,6 +219,7 @@ namespace CapriDesktop
         {
             Held = true;
             Personalities.Attitude = mood ?? "";
+            if (MoodChanged != null) { try { MoodChanged(); } catch (Exception) { } }
             double least = Least, most = Most;
             if (most < least) { double swap = least; least = most; most = swap; }
             double hours = least + new Random().NextDouble() * Math.Max(0.0, most - least);
@@ -232,7 +239,7 @@ namespace CapriDesktop
                 string[] lines = File.ReadAllLines(Kept);
                 string baseName = "Devoted";
                 double least = 4, most = 8, askLow = 1, askHigh = 2;
-                int low = 2, high = 8;
+                int low = 2, high = 8, awful = cringe;
                 List<string> moods = new List<string>();
                 Dictionary<string, int> odds = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
                 bool listing = false;
@@ -263,6 +270,8 @@ namespace CapriDesktop
                             && double.TryParse(val, out much)) low = (int)much;
                         else if (Regex.IsMatch(key, @"^forward max$", RegexOptions.IgnoreCase)
                             && double.TryParse(val, out much)) high = (int)much;
+                        else if (Regex.IsMatch(key, @"^cringe$", RegexOptions.IgnoreCase)
+                            && double.TryParse(val.TrimEnd('%', ' '), out much)) awful = (int)much;
                         continue;
                     }
                     if (listing && one.Length > 0)
@@ -286,6 +295,7 @@ namespace CapriDesktop
                     int wasLow = kinkLow, wasHigh = kinkHigh;
                     kinkLow = Math.Max(0, Math.Min(10, low));
                     kinkHigh = Math.Max(0, Math.Min(10, high));
+                    cringe = Math.Max(0, Math.Min(100, awful));
                     // An edited range takes effect now rather than at the end of the current stretch.
                     if (kinkLow != wasLow || kinkHigh != wasHigh) { kinkNow = -1; kinkUntil = DateTime.MinValue; }
                     allowed.Clear();
@@ -316,6 +326,132 @@ namespace CapriDesktop
             catch (Exception) { }
         }
 
+        // One mood's stock text, for putting a file back the way it shipped.
+        internal static string MoodText(string named)
+        {
+            for (int mood = 0; mood < Moods.GetLength(0); mood++)
+                if (Moods[mood, 0].Equals(named, StringComparison.OrdinalIgnoreCase)) return Moods[mood, 1];
+            return null;
+        }
+
+        // The uncensored only marker, into a mood file written before that mood carried one.
+        //
+        // The marker sits among the lines of a "How she reacts" section, and a mood file is only ever written when
+        // it is missing, so a mood that existed before it was marked never received it. Despondent is marked adult
+        // in the table here and was not marked on disk, which left it in her mood menu on a censored install: the
+        // one mood that can close her on its own, offered to someone who never turned anything on.
+        //
+        // Read from the table rather than a list of names, so a mood marked adult later needs nothing added here.
+        // A section added to a mood after someone already had the file, and the lines added to a section they
+        // already have. Mood files were only ever written when missing, and then only whole sections were added,
+        // so a line written into a mood reached new installs and nobody else. Same trap the packs had, same fix:
+        // missing lines go at the end of the section they belong to, by exact match, and prose and settings
+        // sections are left alone.
+        private static void TopUpMood(string file, string stock)
+        {
+            try
+            {
+                string had = File.ReadAllText(file), adding = "";
+                List<string> within = new List<string>();
+                foreach (Match head in Regex.Matches(stock, @"(?m)^##[ 	]*(.+?)[ 	]*$"))
+                {
+                    string named = head.Groups[1].Value.Trim();
+                    if (named.Length == 0) continue;
+                    if (Regex.IsMatch(had, @"(?m)^[ \t]*##+[ \t]*" + Regex.Escape(named) + @"[ \t\r]*$"))
+                    {
+                        bool prose = false;
+                        foreach (string skip in Personalities.NotLines)
+                            if (named.StartsWith(skip, StringComparison.OrdinalIgnoreCase)) { prose = true; break; }
+                        if (!prose) within.Add(named);
+                        continue;
+                    }
+                    int from = head.Index;
+                    Match next = Regex.Match(stock.Substring(from + head.Length), @"(?m)^##[ 	]");
+                    int to = next.Success ? from + head.Length + next.Index : stock.Length;
+                    adding += Environment.NewLine + stock.Substring(from, to - from).TrimEnd() + Environment.NewLine;
+                }
+                string body = FilledMood(had, stock, within);
+                if (adding.Length == 0 && body == had) return;
+                if (adding.Length > 0 && !body.EndsWith("\n")) body += Environment.NewLine;
+                File.WriteAllText(file, body + adding, new UTF8Encoding(false));
+            }
+            catch (Exception) { }
+        }
+
+        // The lines of one section as she ships them, less the ones their file already has.
+        private static string FilledMood(string had, string stock, List<string> headings)
+        {
+            if (headings.Count == 0) return had;
+            List<string> made = new List<string>(had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'));
+            foreach (string heading in headings)
+            {
+                int from = -1, to = made.Count;
+                for (int row = 0; row < made.Count; row++)
+                {
+                    string one = made[row].Trim();
+                    if (!one.StartsWith("#", StringComparison.Ordinal)) continue;
+                    if (from < 0)
+                    {
+                        if (string.Equals(one.TrimStart('#').Trim(), heading, StringComparison.OrdinalIgnoreCase)) from = row + 1;
+                        continue;
+                    }
+                    to = row;
+                    break;
+                }
+                if (from < 0) continue;
+                int after = from;
+                List<string> theirs = new List<string>();
+                for (int row = from; row < to; row++)
+                {
+                    string one = made[row].Trim();
+                    if (one.Length > 0) after = row + 1;
+                    if (one.Length == 0 || one.StartsWith(">", StringComparison.Ordinal)) continue;
+                    theirs.Add(one);
+                }
+                List<string> missing = new List<string>();
+                bool inside = false;
+                foreach (string line in stock.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+                {
+                    string one = line.Trim();
+                    if (one.StartsWith("#", StringComparison.Ordinal))
+                    {
+                        if (inside) break;
+                        inside = string.Equals(one.TrimStart('#').Trim(), heading, StringComparison.OrdinalIgnoreCase);
+                        continue;
+                    }
+                    if (!inside || one.Length == 0 || one.StartsWith(">", StringComparison.Ordinal)) continue;
+                    bool known = false;
+                    foreach (string mine in theirs) if (string.Equals(mine, one, StringComparison.OrdinalIgnoreCase)) { known = true; break; }
+                    if (!known) missing.Add(one);
+                }
+                if (missing.Count == 0) continue;
+                made.InsertRange(after, missing);
+            }
+            return string.Join(Environment.NewLine, made.ToArray());
+        }
+
+        private static void MarkAdult(string file, string stock)
+        {
+            try
+            {
+                if (!Marked(stock)) return;
+                string had = File.ReadAllText(file);
+                if (Marked(had)) return;
+                if (had.Length > 0 && !had.EndsWith("\n")) had += Environment.NewLine;
+                File.WriteAllText(file, had + Environment.NewLine + "uncensored only: yes" + Environment.NewLine, new UTF8Encoding(false));
+            }
+            catch (Exception) { }
+        }
+
+        private static bool Marked(string text)
+        {
+            return !string.IsNullOrEmpty(text) && Regex.IsMatch(text,
+                @"(?mi)^[ \t]*-?[ \t]*(uncensored only|adult only|needs uncensored)[ \t]*:[ \t]*(yes|true|on|1)[ \t\r]*$");
+        }
+
+        // Her window recomputes her voice when the mood changes, since a mood can shift it too.
+        internal static Action MoodChanged;
+
         internal static void Install()
         {
             try
@@ -333,6 +469,7 @@ namespace CapriDesktop
                 {
                     string file = Path.Combine(Folder, Moods[mood, 0] + ".md");
                     if (!File.Exists(file)) File.WriteAllText(file, Moods[mood, 1], new UTF8Encoding(false));
+                    else { MarkAdult(file, Moods[mood, 1]); TopUpMood(file, Moods[mood, 1]); }
                 }
             }
             catch (Exception) { }
@@ -354,8 +491,18 @@ namespace CapriDesktop
                 if (!Regex.IsMatch(had, @"(?mi)^\s*probe (min|max)\s*:"))
                 {
                     string asking = "> How long between her questions about you. Takes 2h, 90m, 30s or 1h30m."
-                        + Environment.NewLine + "probe min: 1h" + Environment.NewLine + "probe max: 2h" + Environment.NewLine;
+                        + Environment.NewLine + "probe min: 1h" + Environment.NewLine + "probe max: 2h" + Environment.NewLine
+                        ;
                     had = (had.EndsWith(Environment.NewLine) ? had : had + Environment.NewLine) + Environment.NewLine + asking;
+                    File.WriteAllText(Kept, had, new UTF8Encoding(false));
+                    lock (gate) { read = DateTime.MinValue; wasLong = -1; }
+                }
+                // Its own check: a file that already had probe min would never have reached the block above.
+                if (!Regex.IsMatch(had, @"(?mi)^\s*cringe\s*:"))
+                {
+                    string awful = "> How much she leans into a bit. 0 is dry, 100 is unbearable, over all of them at once."
+                        + Environment.NewLine + "cringe: 0" + Environment.NewLine;
+                    had = (had.EndsWith(Environment.NewLine) ? had : had + Environment.NewLine) + Environment.NewLine + awful;
                     File.WriteAllText(Kept, had, new UTF8Encoding(false));
                     lock (gate) { read = DateTime.MinValue; wasLong = -1; }
                 }
@@ -436,6 +583,9 @@ namespace CapriDesktop
                 made.AppendLine("probe min: 1h");
                 made.AppendLine("probe max: 2h");
                 made.AppendLine();
+                made.AppendLine("> How much she leans into a bit. 0 is dry, 100 is unbearable, over all of them at once.");
+                made.AppendLine("cringe: 0");
+                made.AppendLine();
                 made.AppendLine("## Attitudes she can have");
                 made.AppendLine();
                 made.AppendLine("> One a line, with its chance of turning up, 0 to 100.");
@@ -470,7 +620,7 @@ praised: 0
 
 ## How she reacts
 
-kink: -2
+flirt: -2
 sulks at upset: 4
 sulk minutes: 10
 
@@ -734,6 +884,20 @@ Come here. Properly this time.
 > Everything is a game and she wants in.
 > Numbers here are added to her personality's, not instead of them.
 
+
+## When she wants attention
+
+> Said when she wants you, with the toggle off as much as on. Keep these plainly childlike rather
+> than anything else: this pool ships to everyone.
+
+can I have uppies?
+uppies? please? I said please.
+can we draw together? I'll pick the colours.
+is it snack o'clock yet
+play with me, I've been very patient
+I found a thing. Come see the thing.
+let's do something silly, you pick
+
 ## What she likes
 
 called on: +2
@@ -938,7 +1102,7 @@ praised: +1
 
 ## How she reacts
 
-kink: -3
+flirt: -3
 sulks after: 2
 sulks at upset: 4
 sulk minutes: 6
@@ -990,7 +1154,7 @@ degraded: -3
 
 ## How she reacts
 
-kink: -2
+flirt: -2
 sulks after: 2
 sulks at upset: 3
 sulk minutes: 6
@@ -1049,7 +1213,7 @@ degraded: -4
 
 ## How she reacts
 
-kink: -3
+flirt: -3
 sulks after: 2
 sulks at upset: 3
 sulk minutes: 8
@@ -1109,7 +1273,7 @@ thrown: -2
 
 ## How she reacts
 
-kink: +2
+flirt: +2
 sulks after: 2
 sulks at upset: 3
 sulk minutes: 6
@@ -1171,7 +1335,7 @@ praised: +2
 
 ## How she reacts
 
-kink: +2
+flirt: +2
 sulks after: 0
 sulks at upset: 8
 sulk minutes: 1
@@ -1233,7 +1397,7 @@ thrown: +1
 
 ## How she reacts
 
-kink: +4
+flirt: +4
 sulks after: 0
 sulks at upset: 8
 sulk minutes: 2

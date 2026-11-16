@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -85,7 +85,7 @@ namespace CapriDesktop
 
                 // Opening: from her right-click menu, and with the real clock.
                 ToolStripMenuItem item = null;
-                foreach (ToolStripItem top in menu.Items) if (top.Text == "File editor") item = top as ToolStripMenuItem;
+                foreach (ToolStripItem top in menu.Items) if (top.Text == "MD editor") item = top as ToolStripMenuItem;
                 if (item == null) throw new Exception("Her right-click menu has no File editor.");
                 if (fileEditor != null && !fileEditor.Over) throw new Exception("A file editor was already open.");
                 Stopwatch timed = Stopwatch.StartNew();

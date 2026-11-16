@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -62,6 +63,66 @@ namespace CapriSetup
 
         private static readonly string[] Programs = { "Capri.exe", "Uninstall.exe", "Capri-Setup.exe", "Updater.exe" };
 
+        [DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindow found, IntPtr nothing);
+        [DllImport("user32.dll")] private static extern int GetWindowThreadProcessId(IntPtr window, out int process);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern bool PostMessage(IntPtr window, uint message, IntPtr wide, IntPtr low);
+        private delegate bool EnumWindow(IntPtr window, IntPtr nothing);
+
+        private const uint Close = 0x0010;
+
+        // WM_CLOSE to every top level window the process owns, which is what her tray Quit ends up doing.
+        //
+        // Process.CloseMainWindow is the obvious call and does nothing here: her window is a layered tool window
+        // that keeps off the taskbar and never activates, so .NET finds no main window for her and the call
+        // quietly returns false. The updater then waited for a close it had never actually asked for, and fell
+        // through to Install, which gave up with "Quit Capri from her tray menu".
+        private static void CloseWindows(int id)
+        {
+            EnumWindows(delegate(IntPtr window, IntPtr nothing)
+            {
+                int owner;
+                GetWindowThreadProcessId(window, out owner);
+                if (owner == id) PostMessage(window, Close, IntPtr.Zero, IntPtr.Zero);
+                return true;
+            }, IntPtr.Zero);
+        }
+
+        // Asks every Capri running from the installed folder to close, the way her tray Quit does, and waits. Null
+        // once they are gone, or the line to show when one will not go.
+        //
+        // Her own close takes a moment: she plays her leave clip and saves as she goes, so the wait is generous
+        // rather than a kill. Nothing here forces one: a forced exit is how settings written at that moment get
+        // lost, and the update can wait a few seconds more.
+        private static string AskHerToClose(string app)
+        {
+            List<Process> hers = new List<Process>();
+            try
+            {
+                foreach (Process process in Process.GetProcessesByName("Capri"))
+                {
+                    bool held;
+                    if (string.Equals(SetupFiles.FileOf(process, out held), app, StringComparison.OrdinalIgnoreCase)) hers.Add(process);
+                    else process.Dispose();
+                }
+                foreach (Process process in hers)
+                {
+                    try { if (!process.HasExited) CloseWindows(process.Id); }
+                    catch (InvalidOperationException) { }
+                    catch (System.ComponentModel.Win32Exception) { }
+                }
+                foreach (Process process in hers)
+                {
+                    if (Gone(process, 20000)) continue;
+                    // Elevated, or wedged. Either way she has to be quit by hand, and the message says which.
+                    bool held = false;
+                    try { SetupFiles.FileOf(process, out held); } catch (Exception) { }
+                    return held ? AdminCopy : "Capri wouldn't close, so the update was stopped rather than risk your settings. Quit her from her tray menu, then run the updater again.";
+                }
+                return null;
+            }
+            finally { foreach (Process process in hers) process.Dispose(); }
+        }
+
         private static int ApplyUpdate(bool quiet)
         {
             string destination = InstallPath;
@@ -85,6 +146,21 @@ namespace CapriSetup
                         bool held;
                         if (string.Equals(SetupFiles.FileOf(process, out held), app, StringComparison.OrdinalIgnoreCase)) wasUp = true;
                     }
+                // And she is asked to close, which nothing did before this. Install waits three seconds to see
+                // whether she happens to exit on her own and then gives up with "Quit Capri from her tray menu,
+                // then install again", which is the error people were getting: no use from the updater, whose
+                // entire job is updating an install that is running. She is asked properly and saves on the way
+                // out, the same as the tray's Quit.
+                if (wasUp)
+                {
+                    string stuck = AskHerToClose(app);
+                    if (stuck != null)
+                    {
+                        if (quiet) { Console.Error.WriteLine(stuck); return 1; }
+                        using (Notice tell = new Notice(stuck, "Capri", true)) tell.ShowDialog();
+                        return 1;
+                    }
+                }
                 // Install writes Capri.exe and Uninstall.exe and touches nothing else in the folder, so settings.json, me.md,
                 // her keys, her notes, the personalities folder and her brain, voice and model packs all stay as they are.
                 int spared = 0;
@@ -233,6 +309,23 @@ namespace CapriSetup
             catch (Exception error) { Directory.CreateDirectory(output); File.WriteAllText(Path.Combine(output, "failure.txt"), error.ToString()); return 1; }
         }
 
+        // Puts the new file in place of one that may be locked.
+        //
+        // File.Replace needs to open the old file for writing, so antivirus holding a freshly written Capri.exe
+        // failed the whole update with "being used by another process" and no way forward. Windows always allows
+        // a locked file to be renamed, so it is moved aside instead and tidied up on the next run.
+        private static void Swap(string made, string target)
+        {
+            try { File.Replace(made, target, null); return; }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            string aside = target + ".old";
+            for (int next = 2; File.Exists(aside); next++) aside = target + ".old" + next.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            File.Move(target, aside);
+            File.Move(made, target);
+            try { File.Delete(aside); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        }
+
         // A shortcut Windows won't save, often because of an antivirus, doesn't stop the install. She's installed either way,
         // so its reason comes back for the installer to show. Null means every shortcut was saved.
         internal static string Install(bool desktop, bool quiet = false)
@@ -268,7 +361,7 @@ namespace CapriSetup
             try
             {
                 File.WriteAllBytes(temporary, Payload());
-                if (File.Exists(target)) File.Replace(temporary, target, null); else File.Move(temporary, target);
+                if (File.Exists(target)) Swap(temporary, target); else File.Move(temporary, target);
             }
             finally { if (File.Exists(temporary)) File.Delete(temporary); }
             File.Copy(Application.ExecutablePath, Path.Combine(destination, "Uninstall.exe"), true);

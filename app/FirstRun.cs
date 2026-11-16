@@ -54,7 +54,7 @@ namespace CapriDesktop
         }
 
         // The Mainframe's own mic menu, dropped under the card's mic box.
-        private ContextMenuStrip whoMenu, handledMenu;
+        private ContextMenuStrip whoMenu;
 
         private void FirstRunPersonalities(Control under, FirstRunCard card)
         {
@@ -66,18 +66,6 @@ namespace CapriDesktop
                 whoMenu.Items.Add(Choice(each, Personalities.Chosen == each, delegate { capri.PickPersonality(each); card.ShowPicks(); }));
             }
             whoMenu.Show(under, new Point(0, under.Height));
-        }
-
-        private void FirstRunHandling(Control under, FirstRunCard card)
-        {
-            if (handledMenu == null) handledMenu = Dropdown();
-            handledMenu.Items.Clear();
-            foreach (string named in Companion.Handlings)
-            {
-                string each = named;
-                handledMenu.Items.Add(Choice(each, capri.FirstRunHandling == each, delegate { capri.PickHandling(each); card.ShowPicks(); }));
-            }
-            handledMenu.Show(under, new Point(0, under.Height));
         }
 
         private void FirstRunMics(Control under)
@@ -106,13 +94,12 @@ namespace CapriDesktop
             private Rectangle placedBy;
             private int shownBrain;
 
-            private Key whoPick, handledPick;
+            private Key whoPick;
 
             // Redrawn after a pick, so the button shows what was chosen.
             internal void ShowPicks()
             {
                 if (whoPick != null) { whoPick.Text = Personalities.Chosen; whoPick.Invalidate(); }
-                if (handledPick != null) { handledPick.Text = capri.FirstRunHandling; handledPick.Invalidate(); }
             }
 
             private Pickable[] picks;
@@ -162,8 +149,11 @@ namespace CapriDesktop
                 pulse.Tick += delegate { Pulse(); };
             }
 
-            // The tallest a screen gets, in the card's own px: FREE KEY with her stopped download along the bottom.
-            internal const int Tallest = 700;
+            // The tallest a screen gets, in the card's own px. This is what the card is scaled against so its longest
+            // screen still fits above the taskbar, and it was 700, measured from FREE KEY with her stopped download
+            // along the bottom. The real tallest is the extras screen with that download under it, at 740, so on a
+            // short screen the bottom 40px of the first card a new person sees was below the taskbar.
+            internal const int Tallest = 740;
 
             internal static float FitScale(float wanted, int roomHigh) { return Math.Min(wanted, Math.Max(0.75f, (roomHigh - 8) / (float)Tallest)); }
 
@@ -678,20 +668,15 @@ namespace CapriDesktop
                     extras[i] = box;
                     Caption(notes[i], 28, y + 32, Wide - 56, 24, Body(17), Faint);
                 }
-                // Who she is, and how she likes being handled. Both are only defaults: the personality menu and her
-                // own files change them later. "Rough" and "Gentle" rather than anything stronger, because they
-                // describe the handling itself and stay accurate for every personality.
+                // Who she is, and nothing else. There is no handling pick here and there is not to be one: it is
+                // the first card a new person sees, and asking how she likes being handled before they have met
+                // her reads as something it is not. The setting itself still exists in her files and the Mainframe.
                 Caption("WHO SHE IS", 28, 430, 200, 20, Mono(15), Faint);
-                whoPick = MakeKey(Personalities.Chosen, 28, 454, (Wide - 56 - 12) / 2, 40, Body(18, true), Rose,
+                whoPick = MakeKey(Personalities.Chosen, 28, 454, Wide - 56, 40, Body(18, true), Rose,
                     delegate { owner.FirstRunPersonalities(whoPick, this); });
                 whoPick.Chevron = true;
                 whoPick.AccessibleName = "Her personality";
-                Caption("HOW SHE LIKES IT", 28 + (Wide - 56 - 12) / 2 + 12, 430, 220, 20, Mono(15), Faint);
-                handledPick = MakeKey(capri.FirstRunHandling, 28 + (Wide - 56 - 12) / 2 + 12, 454, (Wide - 56 - 12) / 2, 40, Body(18, true), Rose,
-                    delegate { owner.FirstRunHandling(handledPick, this); });
-                handledPick.Chevron = true;
-                handledPick.AccessibleName = "How she likes to be handled";
-                Caption("Changes what she says when you pet or throw her. All of it is in her files.", 28, 500, Wide - 56, 24, Body(17), Faint);
+                Caption("You can change her, and everything she says, any time in her files.", 28, 500, Wide - 56, 24, Body(17), Faint);
                 Caption("Right-click me any time for the Mainframe, Help and the Discord.", 28, 534, Wide - 56, 26, Body(19), White);
                 return 562;
             }

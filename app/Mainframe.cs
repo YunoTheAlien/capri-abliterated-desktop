@@ -41,7 +41,7 @@ namespace CapriDesktop
         private static readonly FontFamily Heavy = Family("Bahnschrift SemiBold SemiConden");
         private static readonly FontFamily Narrow = Family("Bahnschrift SemiBold Condensed");
         private const int Wide = 380;
-        private const int Tall = 766;
+        private const int Tall = 788;
         private static readonly int[] Gaps = { 10, 15, 30, 60, 90, 120, 180, 300, 600 };
         private static readonly string[] GapNames = { "10 s", "15 s", "30 s", "1 min", "1.5 min", "2 min", "3 min", "5 min", "10 min" };
         private const int SetupHeight = 118;
@@ -63,8 +63,11 @@ namespace CapriDesktop
         private static readonly int[] Volumes = { 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150 };
         private static readonly string[] VolumeNames = { "Mute", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%", "125%", "150%" };
         private static readonly string[] MicLevels = { "50%", "60%", "70%", "80%", "90%", "100%", "110%", "120%", "130%", "140%", "150%", "160%", "170%", "180%", "190%", "200%" };
-        private static readonly int[] SizeSteps = { 140, 170, 200, 240, 280, 320, 346, 380, 440, 500, 560, 692, 1038 };
-        private static readonly string[] SizeNames = { "Tiny", "Small", "Small+", "Medium", "Medium+", "Large", "Large+", "Huge", "Huge+", "Giant" };
+        // These two are read by index against each other and the slider is built from the names, so they
+        // must stay the same length. Adding a step without a name stopped the slider at the old last one
+        // and threw on any size past it.
+        private static readonly int[] SizeSteps = { 140, 170, 200, 240, 280, 320, 380, 440, 500, 560, 692, 1038 };
+        private static readonly string[] SizeNames = { "Tiny", "Small", "Small+", "Medium", "Medium+", "Large", "Large+", "Huge", "Huge+", "Giant", "Double", "Triple" };
         private static readonly int[] Sleeps = { 0, 60, 120, 300, 600, 1800 };
         private static readonly string[] SleepNames = { "Never", "1 min", "2 min", "5 min", "10 min", "30 min" };
         private static readonly string[] PopNames = { "Rarely", "Sometimes", "Often" };
@@ -83,6 +86,8 @@ namespace CapriDesktop
         // CLOUD VOICE's row: its service, then ElevenLabs' key or the other service's panel. Unless ElevenLabs is picked with a
         // key saved, one row under it folds away and the rest moves up; under the other rows, this one folds away instead.
         private const int KeyAt = 310;
+        // The four voice sliders that moved into the voice window, and the room they used to take.
+        // The four voice sliders that moved into the voice window, and the room they used to take.
         private const int KeyFold = 36;
         private const int HearingFixAt = 474;
         private const int HearingFixRow = 35;
@@ -232,6 +237,7 @@ namespace CapriDesktop
         private readonly Label keysNote;
         private readonly Label blackwallNote;
         private readonly Label updateNote;
+        private readonly Label senpaiNote;
         private readonly Key keyHelp;
         private readonly Label shortcut;
         private bool shortcutReady;
@@ -295,14 +301,17 @@ namespace CapriDesktop
         // Settings opens simple: the rows most people never need are hidden and the gaps closed, and Advanced Settings brings
         // them back. These are stretches of each column as built, by Top.
         // Simple Settings keeps Her voice in your mic's rows, between Free voice in games and MOVES.
-        private static readonly int[][] FoldedLeft = { new[] { 232, 400 }, new[] { 478, 506 }, new[] { 728, 1233 }, new[] { 1372, 1424 }, new[] { 1424, 1452 } };
+        private static readonly int[][] FoldedLeft = { new[] { 232, 316 }, new[] { 366, 394 }, new[] { 616, 1086 }, new[] { 1225, 1277 }, new[] { 1277, 1305 } };
         // Power saver's and Music app's rows stay in Simple Settings, so the right column's last band starts two rows lower, at Perch.
         // SOUNDS, under HABITS, stays in Simple Settings too, so that band ends above it.
         private static readonly int[][] FoldedRight = { new[] { 138, 362 }, new[] { 390, 418 }, new[] { 876, 1370 }, new[] { 1622, 1810 } };
         private readonly Dictionary<Control, int> built = new Dictionary<Control, int>();
         private bool simple;
         private Key advancedKey;
-        private int PageNow { get { return simple ? SimpleTall : PageTall; } }
+        private int PageNow { get { return simple ? SimpleTall : Math.Max(PageTall, pageTall); } }
+        // How far the page actually runs, measured off what was built. It was a number by hand, so a row added past
+        // the old bottom could not be scrolled to at all. Never shorter than the number it replaces.
+        private int pageTall;
         // The same for Simple Settings, with its hidden rows taken out.
         private const int SimpleTall = 1198;
         private int wheel;
@@ -360,7 +369,7 @@ namespace CapriDesktop
         private MixSheet mixSheet;
         private readonly Toggle callMode;
         // The call app menu moved to her call panel (Lachy, 6 Nov), so her voice in your mic sits right under Call mode.
-        private const int MixAt = 534;
+        private const int MixAt = 422;
         private const int MixRows = 212;
         private readonly Toggle miniPlayer;
         private readonly Readout sleepName;
@@ -654,7 +663,16 @@ namespace CapriDesktop
             // The full width of the row above it, from Check for updates to Quit Capri.
             Key abliterated = Lower(Make("Abliterated updates", 28, 282 + v, 328, 28, delegate { capri.OpenAbliterated(); }));
             abliterated.AccessibleName = "Abliterated updates: opens the folder the uncensored builds are kept in";
+            // Says plainly whether adult mode is on. The switch itself is in sys.md and deliberately not here, so
+            // without this there is nothing anywhere telling them which way it is set.
             updateNote = Lower(Caption("", 28, 320 + v, small, Faint));
+            // Last of everything, and hidden unless adult mode is on, so when it is off the space it would have
+            // taken reads as padding at the bottom rather than a hole in the middle of the panel.
+            senpaiNote = Lower(Caption("", 28, 344 + v, small, Faint));
+            senpaiNote.AutoSize = false;
+            senpaiNote.Bounds = new Rectangle(28, 344 + v, 328, 16);
+            senpaiNote.TextAlign = ContentAlignment.MiddleCenter;
+            senpaiNote.Visible = false;
             for (int i = header; i < Controls.Count; i++) mainLeft.Add(new KeyValuePair<Control, int>(Controls[i], Controls[i].Left));
             int first = Controls.Count;
             // Settings: a setting to a row, its name on the left in red and its value in a box on the right, as on Cyberpunk
@@ -665,9 +683,9 @@ namespace CapriDesktop
             advancedKey.Accent = Cyan;
             advancedKey.Loud = true;
             Section("YOU >", 0, 58);
-            notesKey = Make("Open her notes", 184, 55, 96, 20, delegate { EditNotes(false); });
+            notesKey = Make("MD editor", 184, 55, 96, 20, delegate { EditNotes(false); });
             notesKey.AccessibleName = "Open her notes: edit me.md here, or her note in your Obsidian vault";
-            filesKey = Make("File editor", 286, 55, 70, 20, delegate { capri.OpenFiles(0); });
+            filesKey = Make("Her folder", 286, 55, 70, 20, delegate { capri.OpenHerFolder(); });
             filesKey.AccessibleName = "File editor: edit personality.md and me.md in one panel";
             // Their personality.md (back in 0.8.0): the key says whose personality she's using, and its menu edits or resets it.
             personalityMenu = Dropdown();
@@ -692,48 +710,55 @@ namespace CapriDesktop
             nickname.Box.KeyDown += delegate(object sender, KeyEventArgs e) { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; UseNickname(); } };
             Make("Save", 280, 141, 76, 22, delegate { UseNickname(); }, "What should she call you?");
             Section("VOICE >", 0, 180);
-            styleNote = Caption("Applies to every voice", 88, 178, small, Faint);
+            styleNote = Caption("", 88, 178, small, Faint);
             styleNote.AutoSize = false;
             styleNote.TextAlign = ContentAlignment.MiddleRight;
-            styleNote.Bounds = new Rectangle(88, 178, 192, 20);
-            // Her VOICE LAYERS window (Lachy, 29 Oct) opens from VOICE's band, and the button lights up while they're on.
-            // "Layers: Off" and the note don't both fit the band at 150%.
-            layersKey = Make("Layers", 286, 177, 70, 20, delegate { OpenLayers(); });
-            layersKey.AccessibleName = "Voice layers: two copies of her voice under her, each with its own pitch and delay";
+            styleNote.Bounds = new Rectangle(88, 178, 96, 20);
+            styleNote.Visible = false;
+            // Her voice window opens from VOICE's band. It holds the layers and a voice per personality and mood,
+            // so it is named for what it opens rather than for one of the things inside it.
+            layersKey = Make("Voice settings", 190, 177, 166, 20, delegate { OpenLayers(); });
+            layersKey.AccessibleName = "Voice settings: a voice per personality and mood, and the layers under her";
             volume = Setting("Volume", VolumeNames, 0, 204, "Her voice volume");
             volumeName = new Readout(volume);
             volume.Changed += delegate { if (syncing) return; volumeName.Text = VolumeNames[volume.Value]; capri.SetVolume(Volumes[volume.Value]); };
             // Her voice's sliders change every voice she has as they move, and she says a line once they're let go.
-            pitchSlider = Setting("Pitch", PitchNames, 0, 232, "Her voice's pitch");
+            Label pitchLabel, paceLabel, robotLabel, glitchLabel;
+            pitchSlider = Setting("Pitch", PitchNames, 0, 344, "Her voice's pitch", out pitchLabel);
             pitchName = new Readout(pitchSlider);
             pitchSlider.Changed += delegate { if (syncing) return; pitchName.Text = PitchNames[pitchSlider.Value]; capri.SetVoicePitch(pitchSlider.Value - VoiceFx.MostPitch); ShowLayers(); };
             pitchSlider.Released += delegate { if (!syncing) capri.HearVoiceStyle(); };
-            paceSlider = Setting("Speed", PaceNames, 0, 260, "Her voice's speed");
+            paceSlider = Setting("Speed", PaceNames, 0, 372, "Her voice's speed", out paceLabel);
             paceName = new Readout(paceSlider);
             paceSlider.Changed += delegate { if (syncing) return; paceName.Text = PaceNames[paceSlider.Value]; capri.SetVoiceSpeed(Paces[paceSlider.Value]); };
             paceSlider.Released += delegate { if (!syncing) capri.HearVoiceStyle(); };
-            robotSlider = Setting("Robot", AmountNames, 0, 288, "How robotic her voice sounds");
+            robotSlider = Setting("Robot", AmountNames, 0, 400, "How robotic her voice sounds", out robotLabel);
             robotName = new Readout(robotSlider);
             robotSlider.Changed += delegate { if (syncing) return; robotName.Text = AmountName(robotSlider.Value); capri.SetVoiceRobot(Amounts[robotSlider.Value]); };
             robotSlider.Released += delegate { if (!syncing) capri.HearVoiceStyle(); };
-            glitchSlider = Setting("Glitch", AmountNames, 0, 316, "How much her voice glitches");
+            glitchSlider = Setting("Glitch", AmountNames, 0, 316, "How much her voice glitches", out glitchLabel);
             glitchName = new Readout(glitchSlider);
             glitchSlider.Changed += delegate { if (syncing) return; glitchName.Text = AmountName(glitchSlider.Value); capri.SetVoiceGlitch(Amounts[glitchSlider.Value]); };
             glitchSlider.Released += delegate { if (!syncing) capri.HearVoiceStyle(); };
-            sounds = Setting("Sounds", SoundNames, 0, 344, "Sound effects volume");
+            // Glitch, Pitch, Speed and Robot live in the voice window, where they sit beside the layers and the
+            // voice per personality and mood. They stay built here because her own lines move them, and everything
+            // under them was placed four rows higher to take their place.
+            foreach (Control gone in new Control[] { pitchLabel, pitchSlider, paceLabel, paceSlider, robotLabel, robotSlider, glitchLabel, glitchSlider })
+                gone.Visible = false;
+            sounds = Setting("Sounds", SoundNames, 0, 232, "Sound effects volume");
             soundsName = new Readout(sounds);
             sounds.Changed += delegate { if (syncing) return; soundsName.Text = SoundNames[sounds.Value]; capri.SetSoundLevel(sounds.Value * 10); };
-            typing = Switch("Typing sound", 0, 372, delegate { if (!syncing) capri.ToggleTyping(); });
+            typing = Switch("Typing sound", 0, 260, delegate { if (!syncing) capri.ToggleTyping(); });
             typing.Hint = "When she types";
             typing.HintFont = small;
             typing.AccessibleName = "Typing sound. A soft typing sound while her text replies type out";
-            listenCapri = Switch("Listen for Capri", 0, 400, delegate { if (!syncing) capri.ToggleListenCapri(); });
-            Caption("Say her name anywhere to chat", 28, 428, small, Faint);
+            listenCapri = Switch("Listen for Capri", 0, 288, delegate { if (!syncing) capri.ToggleListenCapri(); });
+            Caption("Say her name anywhere to chat", 28, 316, small, Faint);
             listenCapri.AccessibleName = "Listen for Capri. Keep the mic open; say her name anywhere in your sentence, then just talk until you go quiet. Stop and push to talk still work";
-            Caption("Hearing", 28, 454, Type(9.5f), Rose).AccessibleName = "Hearing";
+            Caption("Hearing", 28, 342, Type(9.5f), Rose).AccessibleName = "Hearing";
             hearingMenu = Dropdown();
             hearingMenu.AccessibleName = "Hearing engine choices";
-            hearingChoice = Make("Auto", ValueAt, 450, ValueWide, 22, delegate { hearingMenu.Show(hearingChoice, new Point(0, hearingChoice.Height)); });
+            hearingChoice = Make("Auto", ValueAt, 338, ValueWide, 22, delegate { hearingMenu.Show(hearingChoice, new Point(0, hearingChoice.Height)); });
             hearingChoice.Chevron = true;
             hearingChoice.AccessibleName = "Hearing engine";
             for (int i = 0; i < HearingStatus.Choices.Length; i++)
@@ -743,10 +768,10 @@ namespace CapriDesktop
                 hearingMenu.Items[i].AccessibleName = HearingStatus.Choices[i];
             }
             // The row under Listen for Capri, shown only while her HD voice is on (Lachy, 29 Oct). Off out of the box.
-            hdGames = Switch("Free voice in games", 0, 478, delegate { if (!syncing) capri.ToggleHdGameRest(); });
+            hdGames = Switch("Free voice in games", 0, 366, delegate { if (!syncing) capri.ToggleHdGameRest(); });
             hdGames.AccessibleName = "Free voice in games: while a game or video is full screen, her free voice talks instead of her HD voice, so the game gets the graphics card";
             hdGames.Visible = false;
-            callMode = Switch("Call mode (beta)", 0, 506, delegate { if (!syncing) capri.PressCallMode(); });
+            callMode = Switch("Call mode (beta)", 0, 394, delegate { if (!syncing) capri.PressCallMode(); });
             callMode.AccessibleName = "Call mode. Only your mic or typing can confirm requests. Pick what she hears from the call app's name on her call panel";
             voiceInMic = Switch("Her voice in your mic", 0, MixAt, delegate { if (!syncing) capri.ToggleVoiceInMic(); });
             voiceInMic.Switch = 68;
@@ -838,7 +863,7 @@ namespace CapriDesktop
             keysNote.MaximumSize = new Size(328, 0);
             for (int i = afterVoice; i < Controls.Count; i++)
             {
-                Controls[i].Top += Row * 2 + 22 + MixRows;
+                Controls[i].Top += Row * 2 + 22 + MixRows - Row * 4;
                 underVoice.Add(new KeyValuePair<Control, int>(Controls[i], Controls[i].Top));
             }
             foreach (Control mixRow in MixControls) underVoice.Add(new KeyValuePair<Control, int>(mixRow, mixRow.Top));
@@ -846,7 +871,15 @@ namespace CapriDesktop
             Section("CAPRI >", c, 58);
             sizeSlider = Setting("Size", SizeNames, c, 82, "Her size");
             sizeName = new Readout(sizeSlider);
-            sizeSlider.Changed += delegate { if (syncing) return; sizeName.Text = SizeNames[sizeSlider.Value]; capri.SetCharacterSize(SizeSteps[sizeSlider.Value]); };
+            sizeSlider.Changed += delegate
+            {
+                if (syncing) return;
+                // Guarded: a mismatch between the two lists used to throw here, which left the size unapplied
+                // and the slider looking stuck rather than saying anything was wrong.
+                int at = Math.Max(0, Math.Min(Math.Min(SizeNames.Length, SizeSteps.Length) - 1, sizeSlider.Value));
+                sizeName.Text = SizeNames[at];
+                capri.SetCharacterSize(SizeSteps[at]);
+            };
             checkIns = Switch("Check in on me", c, 110, delegate { if (!syncing) capri.ToggleCheckIns(); });
             careMenu = Dropdown();
             for (int careRow = 0; careRow < careToggles.Length; careRow++)
@@ -1033,7 +1066,7 @@ namespace CapriDesktop
             hideFullScreen.AccessibleName = "Hide in full screen. Gaming Mode takes priority; a manual hide stays hidden";
             playerFullScreen.AccessibleName = "Mini player over full screen. Works over borderless windows; exclusive full screen cannot show overlays";
             exploreAway.AccessibleName = "Explore while I'm away. Scrolls browser or reader pages without moving your mouse; your input stops her";
-            exploreAfter = Setting("Explore after", AwayNames, c, 1000, "How long you are away before she scrolls a browser or reader");
+            exploreAfter = Setting("Explore after", AwayNames, c, 1034, "How long you are away before she scrolls a browser or reader");
             exploreAfterName = new Readout(exploreAfter);
             exploreAfter.Changed += delegate { if (!syncing) capri.SetExploreAfter(AwayTimes[exploreAfter.Value]); };
             // Power saver's and Music app's rows move the rest of HABITS down two.
@@ -1101,10 +1134,13 @@ namespace CapriDesktop
                 if (Controls[belowPats].Left >= c) Controls[belowPats].Top += Row * 11;
             for (int belowCare = afterCare; belowCare < Controls.Count; belowCare++)
                 if (Controls[belowCare].Left >= c) Controls[belowCare].Top += Row * 8;
-            // The hearing row, her Mainframe key's row and Her voice in your mic's rows push GAMES down under KEYS too.
+            // GAMES takes a different push from the rows above it, and picks up another 56 on the way from the talk
+            // settings loop, so the two bands drifted apart every time either one changed. Measured off the last key
+            // row instead: a section header sits 42 under the row above it, the same as every other band here.
+            int gamesShift = frameKeys.Top + 42 - Controls[gamesFrom].Top;
             for (int gameRow = gamesFrom; gameRow < gamesTo; gameRow++)
             {
-                Controls[gameRow].Top += Row * 2 + MixRows;
+                Controls[gameRow].Top += gamesShift;
                 underVoice.Add(new KeyValuePair<Control, int>(Controls[gameRow], Controls[gameRow].Top));
             }
             for (int i = first; i < Controls.Count; i++)
@@ -1112,6 +1148,7 @@ namespace CapriDesktop
                 Control control = Controls[i];
                 pageLeft.Add(new KeyValuePair<Control, int>(control, control.Left));
                 built[control] = control.Top;
+                if (control.Top + control.Height + 24 > pageTall) pageTall = control.Top + control.Height + 24;
                 Scrolls(control);
                 control.Left += Far;
                 Reachable(control, false);
@@ -1325,9 +1362,11 @@ namespace CapriDesktop
         private Label Named(string name, int x, int y) { return Caption(name, 28 + x, y + 6, Font, Rose); }
 
         // A setting with a slider: its name on the left of its row and its value's box on the right.
-        private Slider Setting(string name, string[] steps, int x, int y, string spoken)
+        private Slider Setting(string name, string[] steps, int x, int y, string spoken) { Label ignored; return Setting(name, steps, x, y, spoken, out ignored); }
+
+        private Slider Setting(string name, string[] steps, int x, int y, string spoken, out Label label)
         {
-            Label label = Named(name, x, y);
+            label = Named(name, x, y);
             Slider slider = new Slider(steps);
             slider.Font = Type(9.5f);
             slider.Bounds = new Rectangle(ValueAt + x, y + 3, ValueWide, 22);
@@ -2268,6 +2307,29 @@ namespace CapriDesktop
         // Her Mainframe at the size her settings tool just picked, as its own slider does.
         internal void ResizeSettings() { Rezoom(Wanted()); ShowFrameSize(); }
 
+        // Never taller than the screen it is on.
+        //
+        // The auto zoom only ever grew her panel: it was clamped to 1.0 at the bottom, because it exists to undo a
+        // desktop being larger than the monitor showing it. On a short screen that ran the bottom of the panel off
+        // the desktop, with no way to reach it, and the move-up afterwards cannot help when the window is taller
+        // than the working area. A picked size is held to the same limit, since a panel cut in half is worse than
+        // one smaller than asked for.
+        private float Fitted(float want)
+        {
+            try
+            {
+                int room = Screen.FromControl(this).WorkingArea.Height;
+                float per = DeviceScale() * TextScale();
+                if (room <= 0 || per <= 0) return want;
+                // The same height Arrange sizes the frame from, not the worst case: capping against the worst
+                // case would shrink her on an ordinary 1080p screen that has room for her as she is.
+                int needs = Tall + (expanded ? SetupHeight : 0) + KeyRow + (voiceFilled >= 0 ? InstallRow : 0);
+                if (needs <= 0) return want;
+                return Math.Max(0.6f, Math.Min(want, room / (float)needs / per));
+            }
+            catch (Exception) { return want; }
+        }
+
         // Her Mainframe size as picked, or for Auto what her screen needs: how much bigger its desktop is than the panel showing
         // it, less what Windows' own scaling already makes up, to the nearest 5% from 100% to 200%. Zenni's Virtual Super
         // Resolution, a 3840 x 2160 desktop on a 1920 x 1080 screen at 100%, gets 200%.
@@ -2275,9 +2337,9 @@ namespace CapriDesktop
         {
             // GitHub's virtual screen says its panel is narrower than the desktop her test needs, which isn't a shrunken monitor.
             float shrunk = Companion.OnGitHub ? 1f : Panels.Shrink(Screen.FromControl(this), restoringFullScreen || capri.FullScreenDisplay);
-            autoZoom = Math.Max(1f, Math.Min(2f, (float)Math.Round(shrunk / DeviceScale() * 20) / 20));
+            autoZoom = Fitted(Math.Max(1f, Math.Min(2f, (float)Math.Round(shrunk / DeviceScale() * 20) / 20)));
             int picked = capri.MainframeSize;
-            return picked > 0 ? picked / 100f : autoZoom;
+            return Fitted(picked > 0 ? picked / 100f : autoZoom);
         }
 
         private void ShowFrameSize()
@@ -2864,6 +2926,16 @@ namespace CapriDesktop
             brainNote.MaximumSize = new Size(Scaled(328), 0);
             voiceNote.MaximumSize = new Size(Scaled(328), 0);
             updateNote.MaximumSize = new Size(Scaled(328), 0);
+            if (senpaiNote != null)
+            {
+                bool senpai = false;
+                try { senpai = Brain.Uncensored; } catch (Exception) { }
+                // Only ever shown when it is on. Saying OFF tells someone the mode exists, which is the opposite of
+                // burying the switch: a panel that advertises it is no better than a menu item.
+                senpaiNote.Visible = senpai;
+                senpaiNote.Text = senpai ? "UNCENSORED ON  ·  sys.md" : "";
+                senpaiNote.ForeColor = Hot;
+            }
             if (keysNote != null) keysNote.MaximumSize = new Size(Scaled(328), 0);
             if (paged) pageView = Fit();
             ClientSize = new Size(Scaled(paged ? Wide + Column : Wide), Scaled(paged ? pageView : Tall + shift + below - fold - hearingFold));
@@ -2961,7 +3033,7 @@ namespace CapriDesktop
             int near = 0;
             for (int i = 0; i < SizeSteps.Length; i++) if (Math.Abs(SizeSteps[i] - capri.CharacterSize) < Math.Abs(SizeSteps[near] - capri.CharacterSize)) near = i;
             sizeSlider.Value = near;
-            sizeName.Text = SizeNames[near];
+            sizeName.Text = SizeNames[Math.Max(0, Math.Min(SizeNames.Length - 1, near))];
             checkIns.Checked = capri.CheckIns;
             onTop.Checked = capri.OnTop;
             startup.Checked = capri.StartsWithWindows;
@@ -4308,14 +4380,14 @@ namespace CapriDesktop
         // they don't meet. Null when they do.
         internal string VoiceHeadingFits()
         {
-            if (styleNote.Bounds.IntersectsWith(layersKey.Bounds) || styleNote.Right > layersKey.Left) return "the note runs into the Layers button";
+            if (styleNote.Visible && (styleNote.Bounds.IntersectsWith(layersKey.Bounds) || styleNote.Right > layersKey.Left)) return "the note runs into the Voice settings button";
             // Text is measured at this screen's own scale, so each font is sized for the scale being checked.
             float here = Unit();
             foreach (float zoom in new[] { 1f, 1.25f, 1.5f, 1.75f, 2f })
                 using (Font note = new Font(styleNote.Font.FontFamily, styleNote.Font.SizeInPoints * zoom / here, styleNote.Font.Style, GraphicsUnit.Point))
                 using (Font key = new Font(layersKey.Font.FontFamily, layersKey.Font.SizeInPoints * zoom / here, layersKey.Font.Style, GraphicsUnit.Point))
                 {
-                    int wide = TextRenderer.MeasureText(styleNote.Text, note).Width, room = (int)(styleNote.Width / here * zoom);
+                    int wide = styleNote.Visible ? TextRenderer.MeasureText(styleNote.Text, note).Width : 0, room = (int)(styleNote.Width / here * zoom);
                     if (wide > room) return "\"" + styleNote.Text + "\" is " + wide + " px in " + room + " at " + zoom;
                     foreach (string text in new[] { layersKey.Text })
                     {
@@ -5096,7 +5168,10 @@ namespace CapriDesktop
                 AutoSize = true;
             }
 
-            internal RectangleF Band(float s) { return new RectangleF(Left - 14 * s, Top - 5 * s, Span * s, 24 * s); }
+            // The band starts 8 above the title rather than 5, and is 27 tall rather than 24. A section's own key
+            // sits in this band, three above the title, and at 24 its top edge landed one pixel under the rule and
+            // read as hanging off it.
+            internal RectangleF Band(float s) { return new RectangleF(Left - 14 * s, Top - 8 * s, Span * s, 27 * s); }
 
             internal string Shown { get { return Text.EndsWith(" >", StringComparison.Ordinal) ? Text.Substring(0, Text.Length - 2) : Text; } }
 
@@ -5151,6 +5226,93 @@ namespace CapriDesktop
         // A button: a dark box with a red rim and its bottom right corner clipped. Cyan ones are the step to take, like
         // Settings or Use this server; a picked one, like Layers while they're on, is solid cyan; red ones end something.
         // A chevron makes it a dropdown, its choice in cyan beside a ▽.
+        // One name in the voice window's left column.
+        //
+        // Two hit areas, because the two things you do with this list are different. The tab down the left
+        // ticks it and leaves everything else alone, so several can be set at once and all of them can be
+        // cleared. The rest of the row switches to that one on its own, which is what you want nearly all of
+        // the time and should not need the other rows unticking first.
+        private sealed class WhoRow : Control
+        {
+            internal bool Ticked;
+            internal bool Mood;
+            internal event EventHandler Tick, Only;
+            private bool hot, onTab;
+
+            internal WhoRow()
+            {
+                SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+                BackColor = Ground;
+                Cursor = Cursors.Hand;
+                TabStop = true;
+            }
+
+            private int Tab { get { return Math.Max(12, (int)Math.Round(16 * ScaleOf(this))); } }
+
+            protected override void OnMouseEnter(EventArgs e) { hot = true; Invalidate(); base.OnMouseEnter(e); }
+            protected override void OnMouseLeave(EventArgs e) { hot = false; Invalidate(); base.OnMouseLeave(e); }
+            protected override void OnMouseMove(MouseEventArgs e)
+            {
+                bool over = e.X <= Tab;
+                if (over != onTab) { onTab = over; Invalidate(); }
+                base.OnMouseMove(e);
+            }
+
+            protected override void OnMouseDown(MouseEventArgs e)
+            {
+                if (e.Button == MouseButtons.Left)
+                {
+                    if (e.X <= Tab) { if (Tick != null) Tick(this, EventArgs.Empty); }
+                    else if (Only != null) Only(this, EventArgs.Empty);
+                }
+                base.OnMouseDown(e);
+            }
+
+            protected override bool IsInputKey(Keys key) { return key == Keys.Space || key == Keys.Enter || base.IsInputKey(key); }
+
+            protected override void OnKeyDown(KeyEventArgs e)
+            {
+                if (e.KeyCode == Keys.Space && Tick != null) { Tick(this, EventArgs.Empty); e.Handled = true; }
+                else if (e.KeyCode == Keys.Enter && Only != null) { Only(this, EventArgs.Empty); e.Handled = true; }
+                base.OnKeyDown(e);
+            }
+
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                float s = ScaleOf(this);
+                Graphics graphics = e.Graphics;
+                graphics.Clear(Ground);
+                graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                float line = Math.Max(1f, s);
+                RectangleF box = new RectangleF(line / 2, line / 2, Width - line, Height - line);
+                Color face = Ticked ? Cyan : hot ? Hover : Field;
+                Color rim = Ticked ? Cyan : hot ? Hot : Edge;
+                Color ink = Ticked ? OnInk : Mood ? Cyan : Rose;
+                using (GraphicsPath plate = Cut(box, 0, 0, 5 * s, 0))
+                {
+                    using (Brush brush = new SolidBrush(face)) graphics.FillPath(brush, plate);
+                    using (Pen pen = new Pen(rim, line)) graphics.DrawPath(pen, plate);
+                }
+                // The tab, which is the part that ticks it.
+                int tab = Tab;
+                RectangleF strip = new RectangleF(line, line, tab, Height - line * 2);
+                using (Brush brush = new SolidBrush(Ticked ? OnInk : onTab && hot ? Hot : Edge)) graphics.FillRectangle(brush, strip);
+                if (Ticked)
+                {
+                    using (Pen pen = new Pen(Cyan, 1.8f * s))
+                    {
+                        float x = tab / 2f + line, y = Height / 2f;
+                        graphics.DrawLine(pen, x - 3.2f * s, y, x - 0.6f * s, y + 2.8f * s);
+                        graphics.DrawLine(pen, x - 0.6f * s, y + 2.8f * s, x + 3.4f * s, y - 2.6f * s);
+                    }
+                }
+                Rectangle area = new Rectangle(tab + (int)(8 * s), 0, Width - tab - (int)(12 * s), Height);
+                TextRenderer.DrawText(graphics, Text, Font, area, ink,
+                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
+                if (Focused && ShowFocusCues) FocusMark(graphics, new RectangleF(0, 0, Width, Height), s, 0, 5 * s, 0);
+            }
+        }
+
         private sealed class Key : Button, Tinted
         {
             public void Recolour(Func<Color, Color> swap) { Accent = swap(Accent); }
@@ -5996,8 +6158,20 @@ namespace CapriDesktop
             // Ollama in one button. Its port is fixed at 11434 unless OLLAMA_HOST says otherwise, so where it lives can
             // be worked out rather than typed. /api/tags both proves something is answering and says which models are
             // installed, so a blank model list is told apart from Ollama not running at all.
+            // Set once she has looked and found nothing installed: the button says Get Ollama until it is pressed.
+            private bool getOllama;
+
             private void UseOllama()
             {
+                if (getOllama)
+                {
+                    getOllama = false;
+                    ollama.Text = "Use Ollama on this PC";
+                    ollama.Invalidate();
+                    note.Text = "Install Ollama, then press this again.";
+                    owner.capri.OpenOllamaPage();
+                    return;
+                }
                 string where = OllamaHome();
                 ollama.Enabled = false;
                 ollama.Text = "Starting Ollama...";
@@ -6012,9 +6186,11 @@ namespace CapriDesktop
                     // Nothing answered, but it is installed: start it rather than telling them to go and do it.
                     // Found through PATH first, because Ollama puts itself there and people move the install off the
                     // default folder, as this machine does.
+                    bool installed = true;
                     if (models == null)
                     {
                         string exe = OllamaExe();
+                        installed = exe != null;
                         if (exe != null && Serve(exe))
                         {
                             for (int wait = 0; wait < 24 && models == null; wait++)
@@ -6035,10 +6211,22 @@ namespace CapriDesktop
                             ollama.Invalidate();
                             if (models == null)
                             {
+                                // Telling someone to start a program they have not got is the kind of dead end that
+                                // makes people give up on the local brain. OpenOllamaPage has been in here the whole
+                                // time with nothing calling it.
+                                if (!installed)
+                                {
+                                    getOllama = true;
+                                    ollama.Text = "Get Ollama";
+                                    ollama.Invalidate();
+                                    note.Text = "Ollama isn't on this PC. This opens its download page.\nInstall it, then press this again.";
+                                    return;
+                                }
                                 note.Text = "Nothing answered at " + where + ".\nStart Ollama, then press this again."
                                     + (trouble == null ? "" : "\n" + trouble);
                                 return;
                             }
+                            getOllama = false;
                             address.Box.Text = where + "/v1";
                             key.Box.Clear();
                             note.Text = named.Length == 0
@@ -7225,12 +7413,22 @@ namespace CapriDesktop
         // test, which draws it at 150% and 200% too.
         private sealed class LayersSheet : Form, LookWindow
         {
-            internal const int Wide = 760, Tall = 356, Column = 364, DelayStep = 5;
+            // Left column picks who, right column is the settings. Everything to do with her voice is in
+            // this one window now, so the Mainframe's own band does not have to carry it.
+            internal const int Wide = 1000, Tall = 620, Column = 364, DelayStep = 5;
+            internal const int Picks = 196, Right = Picks + 44, Panel = Wide - Right - 28;
             internal readonly float Zoom;
             private static readonly string[] PitchSteps = PitchLabels();
             private static readonly string[] DelaySteps = DelayLabels();
             private readonly Mainframe owner;
             private readonly Toggle onOff;
+            // Who the settings on the right are being set for. Nothing ticked means her baseline.
+            private readonly List<WhoRow> whoRows = new List<WhoRow>();
+            private readonly List<string> whoNames = new List<string>();
+            private readonly Panel whoBox = new Panel();
+            private Slider volume, pitch, speed, robot, glitch;
+            private Readout volumeName, pitchName, speedName, robotName, glitchName;
+            private Label applyTo;
             private readonly Slider mainPitch;
             private readonly Readout mainName;
             private readonly Slider[] pitches = new Slider[2];
@@ -7244,7 +7442,7 @@ namespace CapriDesktop
                 SuspendLayout();
                 this.owner = owner;
                 Zoom = zoom;
-                Text = "Voice layers";
+                Text = "Voice settings";
                 Icon = owner.Icon;
                 ShowInTaskbar = false;
                 FormBorderStyle = FormBorderStyle.None;
@@ -7257,19 +7455,19 @@ namespace CapriDesktop
                 KeyPreview = true;
                 ClientSize = new Size(Z(Wide), Z(Tall));
                 Font small = Look.Mono(8.5f * zoom, FontStyle.Regular, GraphicsUnit.Point), head = Type(10f * zoom, true);
-                Heading(this, "VOICE LAYERS >", new Point(Z(24), Z(15)), Display(15f * zoom), Rose, 0);
+                Heading(this, "VOICE SETTINGS >", new Point(Z(24), Z(15)), Display(15f * zoom), Rose, 0);
                 Key shut = new Key();
                 shut.Bounds = Box(Wide - 54, 20, 26, 22);
                 shut.Glyph = 2;
                 shut.AccessibleName = "Close";
                 shut.Click += delegate { Close(); };
                 Controls.Add(shut);
-                Caption("Her voice, and two copies of it mixed in under her, each with its own pitch and delay.", 28, 52, small, Faint);
+                Caption("Her voice for each personality and mood, and the layers under her.", 28, 52, small, Faint);
                 onOff = new Toggle();
                 onOff.Text = "Voice layers";
                 onOff.Font = Font;
                 onOff.Switch = 120;
-                onOff.Bounds = Box(28, 76, 260, 22);
+                onOff.Bounds = Box(Right, 362, 220, 22);
                 onOff.AccessibleName = "Voice layers. Off, she sounds as she always has";
                 onOff.CheckedChanged += delegate
                 {
@@ -7279,12 +7477,16 @@ namespace CapriDesktop
                     owner.capri.HearVoiceStyle();
                 };
                 Controls.Add(onOff);
-                Caption("Off: she sounds as she always has. On: every voice she has, ElevenLabs too.", 28, 102, small, Faint);
-                Make("Hear her", Wide - 236, 76, 100, 22, delegate { owner.capri.HearVoiceStyle(); }).AccessibleName = "Hear her: she says a line in her voice as it is now";
+
+                Make("Hear her", Wide - 248, 76, 100, 22, delegate { HearPicked(); }).AccessibleName = "Hear her: she says a line in her voice as it is now";
                 Make("Defaults", Wide - 128, 76, 100, 22, delegate { Defaults(); }).AccessibleName = "Defaults: Layer 1 " + VoiceFx.Layering.PitchName(VoiceFx.Layering.HigherPitch) + " and Layer 2 " + VoiceFx.Layering.PitchName(VoiceFx.Layering.LowerPitch) + " semitones, both " + VoiceFx.Layering.DelayName(VoiceFx.Layering.Behind) + " behind her";
-                Heading(this, "MAIN >", new Point(Z(28), Z(136)), head, White, Wide - 28);
-                Caption("Pitch", 28, 166, Font, Rose);
-                mainPitch = Bar(PitchNames, 120, 163, 300, "Her voice's pitch, the same as Settings > VOICE > Pitch");
+                Heading(this, "WHO >", new Point(Z(24), Z(84)), head, White, Picks);
+                BuildWho();
+                BuildSettings();
+                Heading(this, "VOICE LAYERS >", new Point(Z(Right), Z(360)), head, White, Panel);
+                Heading(this, "MAIN >", new Point(Z(Right), Z(392)), head, White, Panel);
+                Caption("Pitch", Right, 422, Font, Rose);
+                mainPitch = Bar(PitchNames, Right + 92, 419, Panel - 92, "Her voice's pitch, the same as her baseline above");
                 mainName = new Readout(mainPitch);
                 mainPitch.Changed += delegate
                 {
@@ -7294,20 +7496,20 @@ namespace CapriDesktop
                     owner.Sync();
                 };
                 mainPitch.Released += delegate { if (!syncing) owner.capri.HearVoiceStyle(); };
-                Caption("Her voice itself. Its pitch is Settings > VOICE > Pitch, and they move together.", 28, 192, small, Faint);
+                Caption("Her voice itself. The same pitch as her baseline above, and they move together.", Right, 448, small, Faint);
                 for (int layer = 1; layer <= 2; layer++)
                 {
-                    int x = layer == 1 ? 28 : 28 + Column, at = layer - 1, which = layer;
-                    Heading(this, "LAYER " + layer + " >", new Point(Z(x), Z(228)), head, White, Column - 12);
-                    Caption("Pitch", x, 258, Font, Rose);
-                    pitches[at] = Bar(PitchSteps, x + 84, 255, 244, "Layer " + layer + "'s pitch, in semitones from hers");
+                    int x = layer == 1 ? Right : Right + Panel / 2 + 6, at = layer - 1, which = layer;
+                    Heading(this, "LAYER " + layer + " >", new Point(Z(x), Z(478)), head, White, Panel / 2 - 12);
+                    Caption("Pitch", x, 508, Font, Rose);
+                    pitches[at] = Bar(PitchSteps, x + 84, 505, Panel / 2 - 96, "Layer " + layer + "'s pitch, in semitones from hers");
                     pitches[at].TickEvery = 4;
                     pitchNames[at] = new Readout(pitches[at]);
-                    Caption("Delay", x, 286, Font, Rose);
-                    delays[at] = Bar(DelaySteps, x + 84, 283, 244, "Layer " + layer + "'s delay behind her");
+                    Caption("Delay", x, 536, Font, Rose);
+                    delays[at] = Bar(DelaySteps, x + 84, 533, Panel / 2 - 96, "Layer " + layer + "'s delay behind her");
                     delays[at].TickEvery = 10;
                     delayNames[at] = new Readout(delays[at]);
-                    Caption(layer == 1 ? "Out of the box a little higher, just behind her." : "Out of the box lower, just behind her.", x, 314, small, Faint);
+                    Caption(layer == 1 ? "A little higher, just behind her." : "Lower, just behind her.", x, 564, small, Faint);
                     pitches[at].Changed += delegate
                     {
                         if (syncing) return;
@@ -7398,12 +7600,228 @@ namespace CapriDesktop
                     Put(delays[at], (int)Math.Round(layers.DelayOf(at + 1) / (double)DelayStep));
                     delayNames[at].Text = VoiceFx.Layering.DelayName(layers.DelayOf(at + 1));
                 }
+                ShowWhose();
+                ShowApplyTo();
                 syncing = false;
             }
 
             private static void Put(Slider slider, int value) { if (slider.Value != value) slider.Value = value; }
 
             // Both layers back to how they come, on or off as they are, and a line in them.
+
+            // Everyone she can be, with the moods under the personalities. Ticking more than one sets them all
+            // at once, which is the point: Sassy and Bratty wanting the same voice should take one pass.
+            private void BuildWho()
+            {
+                whoBox.BackColor = Ground;
+                whoBox.AutoScroll = true;
+                whoBox.Bounds = Box(24, 108, Picks, Tall - 148);
+                Controls.Add(whoBox);
+                int y = 0;
+                AddWho("Her baseline", null, ref y, true, false);
+                Divider("PERSONALITIES", ref y);
+                foreach (string named in Personalities.Names)
+                {
+                    if (named == Personalities.Stock || named == Personalities.Dynamic) continue;
+                    AddWho(named, named, ref y, false, false);
+                }
+                Divider("MOODS", ref y);
+                foreach (string named in Dynamics.Allowed) AddWho(named, named, ref y, false, true);
+            }
+
+            private void AddWho(string shown, string named, ref int y, bool baseline, bool mood)
+            {
+                WhoRow row = new WhoRow();
+                row.Text = shown;
+                row.Font = Font;
+                row.Mood = mood;
+                row.Bounds = new Rectangle(0, Z(y), Z(Picks - 22), Z(22));
+                row.Ticked = baseline;
+                row.Tag = named;
+                row.AccessibleName = (baseline ? "Her baseline voice" : "The voice for " + shown) + ". Space ticks it, Enter switches to it.";
+                row.Tick += delegate { Ticked(row); };
+                row.Only += delegate { Switch(row); };
+                whoBox.Controls.Add(row);
+                whoRows.Add(row);
+                whoNames.Add(named);
+                y += 24;
+            }
+
+            // A label between the two kinds, so the list does not read as one long run of names.
+            private void Divider(string text, ref int y)
+            {
+                y += 6;
+                Label head = new Note();
+                head.Text = text;
+                head.Font = Look.Mono(8f * Zoom, FontStyle.Regular, GraphicsUnit.Point);
+                head.ForeColor = Faint;
+                head.BackColor = Ground;
+                head.AutoSize = false;
+                head.Bounds = new Rectangle(Z(2), Z(y), Z(Picks - 22), Z(14));
+                whoBox.Controls.Add(head);
+                y += 16;
+            }
+
+            // The right of a row: this one and nothing else.
+            private void Switch(WhoRow row)
+            {
+                foreach (WhoRow one in whoRows) one.Ticked = one == row;
+                foreach (WhoRow one in whoRows) one.Invalidate();
+                ShowApplyTo();
+                Sync();
+            }
+
+            private void Ticked(WhoRow row)
+            {
+                row.Ticked = !row.Ticked;
+                // Her baseline and a named character are different things to be setting, so they never mix.
+                if (row.Ticked)
+                    foreach (WhoRow one in whoRows)
+                        if (one != row && (one.Tag == null) != (row.Tag == null)) one.Ticked = false;
+                foreach (WhoRow one in whoRows) one.Invalidate();
+                ShowApplyTo();
+                Sync();
+            }
+
+            private bool AnyTicked()
+            {
+                foreach (WhoRow one in whoRows) if (one.Ticked) return true;
+                return false;
+            }
+
+            private List<string> Chosen()
+            {
+                List<string> found = new List<string>();
+                foreach (WhoRow one in whoRows) if (one.Ticked && one.Tag != null) found.Add((string)one.Tag);
+                return found;
+            }
+
+            private bool OnBaseline
+            {
+                get { foreach (WhoRow one in whoRows) if (one.Ticked && one.Tag == null) return true; return false; }
+            }
+
+            private void ShowApplyTo()
+            {
+                if (applyTo == null) return;
+                List<string> who = Chosen();
+                applyTo.Text = OnBaseline ? "Setting her baseline, which every character starts from."
+                    : who.Count == 0 ? "Nothing picked. Tick one on the left, or click a name to switch to it."
+                    : who.Count == 1 ? "Setting " + who[0] + "."
+                    : "Setting " + who.Count + " of them at once.";
+            }
+
+
+            // Pitch in semitones, the same range her slider has. The rest are percentages of her baseline.
+            private static string[] ShiftNames(int from, int to, string after)
+            {
+                string[] names = new string[to - from + 1];
+                for (int i = 0; i < names.Length; i++)
+                {
+                    int value = from + i;
+                    names[i] = (value > 0 && after == "" ? "+" : "") + value.ToString(System.Globalization.CultureInfo.InvariantCulture) + after;
+                }
+                return names;
+            }
+
+            private static readonly string[] PitchShift = ShiftNames(-VoiceFx.MostPitch, VoiceFx.MostPitch, "");
+            private static readonly string[] Percent = ShiftNames(50, 150, "%");
+            private static readonly string[] Amount = ShiftNames(0, 100, "%");
+
+            private void BuildSettings()
+            {
+                Heading(this, "HER VOICE >", new Point(Z(Right), Z(108)), Type(10f * Zoom, true), White, Panel);
+                applyTo = Caption("", Right, 134, Look.Mono(8.5f * Zoom, FontStyle.Regular, GraphicsUnit.Point), Faint);
+                applyTo.AutoSize = false;
+                applyTo.Bounds = Box(Right, 134, Panel, 18);
+                int y = 160;
+                volume = Row("Volume", Percent, ref y, out volumeName, "How loud, against her baseline");
+                pitch = Row("Pitch", PitchShift, ref y, out pitchName, "Semitones from her baseline");
+                speed = Row("Speed", Percent, ref y, out speedName, "How fast, against her baseline");
+                robot = Row("Robot", Amount, ref y, out robotName, "How mechanical she sounds");
+                glitch = Row("Glitch", Amount, ref y, out glitchName, "How much her voice tears");
+                Caption("These shift her baseline rather than replacing it, so her own sliders still matter.",
+                    Right, y + 2, Look.Mono(8.5f * Zoom, FontStyle.Regular, GraphicsUnit.Point), Faint);
+                Make("Hear it", Right, y + 26, 100, 22, delegate { HearPicked(); });
+                Make("Back to stock", Right + 112, y + 26, 130, 22, delegate { StockVoices(); });
+            }
+
+            private Slider Row(string label, string[] names, ref int y, out Readout shown, string help)
+            {
+                Caption(label, Right, y + 3, Font, Rose);
+                Slider made = Bar(names, Right + 92, y, Panel - 92, help);
+                shown = new Readout(made);
+                made.Changed += delegate { if (!syncing) Keep(); };
+                made.Released += delegate { if (!syncing) HearPicked(); };
+                y += 30;
+                return made;
+            }
+
+            // What is on the sliders, written to whoever is ticked.
+            private void Keep()
+            {
+                if (syncing) return;
+                VoiceProfile made = new VoiceProfile(
+                    pitch.Value - VoiceFx.MostPitch, speed.Value + 50, volume.Value + 50, robot.Value, glitch.Value);
+                if (OnBaseline)
+                {
+                    owner.capri.SetVolume(made.Volume);
+                    owner.capri.SetVoicePitch(made.Pitch);
+                    owner.capri.SetVoiceSpeed(made.Speed);
+                    owner.Sync();
+                }
+                else foreach (string who in Chosen()) VoiceProfiles.Save(who, made);
+                owner.capri.ApplyVoiceProfile();
+                ShowValues();
+            }
+
+            private void StockVoices()
+            {
+                if (OnBaseline) return;
+                foreach (string who in Chosen()) VoiceProfiles.Forget(who);
+                owner.capri.ApplyVoiceProfile();
+                Sync();
+            }
+
+            // Plays whoever is ticked, not whoever she currently is. Hearing her baseline when you are setting
+            // Dom made the button useless for the thing it is next to.
+            private void HearPicked()
+            {
+                if (OnBaseline) { owner.capri.HearVoiceStyle(); return; }
+                List<string> who = Chosen();
+                if (who.Count == 0) { owner.capri.HearVoiceStyle(); return; }
+                owner.capri.HearAs(VoiceProfiles.For(who[0]));
+            }
+
+            private void ShowValues()
+            {
+                if (volumeName != null) volumeName.Text = Percent[volume.Value];
+                if (pitchName != null) pitchName.Text = PitchShift[pitch.Value];
+                if (speedName != null) speedName.Text = Percent[speed.Value];
+                if (robotName != null) robotName.Text = Amount[robot.Value];
+                if (glitchName != null) glitchName.Text = Amount[glitch.Value];
+            }
+
+            // The sliders show whoever is ticked. More than one and the first is shown, since they are about to
+            // be set to the same thing anyway.
+            private void ShowWhose()
+            {
+                if (volume == null) return;
+                VoiceProfile has;
+                if (OnBaseline) has = new VoiceProfile(owner.capri.BaselinePitch, owner.capri.BaselineSpeed, owner.capri.BaselineVolume, 0, 0);
+                else
+                {
+                    List<string> who = Chosen();
+                    has = who.Count == 0 ? VoiceProfile.Stock : VoiceProfiles.For(who[0]);
+                }
+                volume.Value = Math.Max(0, Math.Min(Percent.Length - 1, has.Volume - 50));
+                pitch.Value = Math.Max(0, Math.Min(PitchShift.Length - 1, has.Pitch + VoiceFx.MostPitch));
+                speed.Value = Math.Max(0, Math.Min(Percent.Length - 1, has.Speed - 50));
+                robot.Value = Math.Max(0, Math.Min(Amount.Length - 1, has.Robot));
+                glitch.Value = Math.Max(0, Math.Min(Amount.Length - 1, has.Glitch));
+                ShowValues();
+            }
+
             internal void Defaults()
             {
                 owner.capri.SetVoiceLayers(new VoiceFx.Layering(owner.capri.VoiceLayers.On, VoiceFx.Layering.HigherPitch, VoiceFx.Layering.Behind, VoiceFx.Layering.LowerPitch, VoiceFx.Layering.Behind));
@@ -7498,6 +7916,10 @@ namespace CapriDesktop
             // Dragged by any spot that isn't a control, like the Mainframe.
             protected override void WndProc(ref Message message)
             {
+                // A caption double click maximises, and this window is all caption, so it happened by accident.
+                // Only her backdrop stretches when it does, so the window comes apart. Dropped before Windows
+                // sees it, since afterwards the maximise has already happened.
+                if (message.Msg == 0x00A3) { message.Result = IntPtr.Zero; return; }
                 base.WndProc(ref message);
                 if (message.Msg == 0x0084 && message.Result == new IntPtr(1)) message.Result = new IntPtr(2);
             }

@@ -17,6 +17,22 @@ namespace CapriDesktop
     internal static class Interests
     {
         internal const string FileName = "interests.md";
+
+        // Three files, not one. interests.md had her settings, her lines, the list of what she is into and a pack
+        // of lines for each of about thirty kinks, which ran to six hundred lines before anything went wrong
+        // with it. Nobody scrolls that far, so the two lists live on their own and interests.md keeps the settings
+        // and her general lines.
+        //
+        // All three are hers only with the toggle on: no tab, no reading, nothing written, with it off.
+        internal const string HersName = "Her_Kinks.md";
+        internal const string YoursName = "Your_Kinks.md";
+        internal static string HersKept, YoursKept;
+
+        private static string[] Files { get { return new[] { Kept, HersKept, YoursKept }; } }
+
+        // How she likes being handled. Was a dropdown on the setup card, which asked before anyone had met her.
+        internal const string HandlingKey = "how she likes it";
+        internal static readonly string[] Handlings = { "Gentle", "Rough", "Both" };
         internal static string Kept;
 
         private static readonly object writing = new object();
@@ -31,29 +47,298 @@ namespace CapriDesktop
             return new WrittenNote(Kept, Text, writing);
         }
 
+        internal static WrittenNote OpenHers()
+        {
+            if (!Brain.Uncensored) throw new IOException("That one only opens with Uncensored on.");
+            Write(false);
+            Split();
+            return new WrittenNote(HersKept, HersHead.Replace("\n", Environment.NewLine), writing);
+        }
+
+        internal static WrittenNote OpenYours()
+        {
+            if (!Brain.Uncensored) throw new IOException("That one only opens with Uncensored on.");
+            Split();
+            return new WrittenNote(YoursKept, YoursHead.Replace("\n", Environment.NewLine), writing);
+        }
+
         // A interests.md from before the split has one combined "how she brings it up". The two new sections are
         // appended so she can tell a reward from a threat, and their own entries are left exactly as they are.
         // Any section the build ships that the file does not have yet is appended, so new kink packs and new
         // template pools turn up in a file written by an older build. Their own lines are never touched.
-        internal static void TopUp()
+        // What belongs in Her_Kinks.md: the list of what she is into, and the pack of lines for each one.
+        private static bool Hers(string heading)
         {
-            if (string.IsNullOrEmpty(Kept) || !Brain.Uncensored) return;
+            string head = (heading ?? "").Trim();
+            return head.StartsWith("kink:", StringComparison.OrdinalIgnoreCase)
+                || head.Equals("what she is into", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private const string YoursHead =
+            "# What you are into\n"
+            + "\n"
+            + "> Yours, not hers. She reads this so she knows what you like without having to be told twice.\n"
+            + "> One a line. Empty is fine and she will not bring any of it up.\n"
+            + "> Only read with Uncensored on.\n"
+            + "\n"
+            + "reset to stock: 0\n"
+            + "\n"
+            + "## what you are into\n"
+            + "\n";
+
+        private const string HersHead =
+            "# What she is into\n"
+            + "\n"
+            + "> Her list, and the lines that go with each one. Kept apart from interests.md so neither gets lost.\n"
+            + "> Only read with Uncensored on.\n"
+            + "\n"
+            + "reset to stock: 0\n"
+            + "\n";
+
+        // Moves her list and her kink packs out of interests.md, once. interests.md keeps the settings and her
+        // general lines; nothing is rewritten, the sections are carried across as they are, edits and all.
+        private static void Carve()
+        {
             try
             {
-                if (!File.Exists(Kept)) { Write(false); return; }
-                Notes.Refresh(Kept, Text);
-                string body = File.ReadAllText(Kept);
+                if (string.IsNullOrEmpty(Kept) || string.IsNullOrEmpty(HersKept) || !File.Exists(Kept)) return;
+                if (File.Exists(HersKept)) return;
+                string[] rows = File.ReadAllText(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+                List<string> stays = new List<string>(), goes = new List<string>();
+                bool moving = false;
+                foreach (string raw in rows)
+                {
+                    string line = raw.Trim();
+                    if (line.StartsWith("##", StringComparison.Ordinal)) moving = Hers(line.TrimStart('#'));
+                    (moving ? goes : stays).Add(raw);
+                }
+                if (goes.Count == 0) return;
+                while (stays.Count > 0 && stays[stays.Count - 1].Trim().Length == 0) stays.RemoveAt(stays.Count - 1);
+                while (goes.Count > 0 && goes[goes.Count - 1].Trim().Length == 0) goes.RemoveAt(goes.Count - 1);
+                File.WriteAllText(HersKept, HersHead.Replace("\n", Environment.NewLine)
+                    + string.Join(Environment.NewLine, goes.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
+                File.WriteAllText(Kept, string.Join(Environment.NewLine, stays.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
+            }
+            catch (Exception) { }
+        }
+
+        private static void MakeYours()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(YoursKept) || File.Exists(YoursKept)) return;
+                File.WriteAllText(YoursKept, YoursHead.Replace("\n", Environment.NewLine), new UTF8Encoding(false));
+            }
+            catch (Exception) { }
+        }
+
+        // Both only exist with the toggle on, like interests.md itself.
+        internal static void Split()
+        {
+            if (!Brain.Uncensored) return;
+            Carve();
+            MakeYours();
+        }
+
+        // Adds the sections of one kind that the file does not have yet.
+        private static void TopUpInto(string file, bool hers)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(file) || !File.Exists(file)) return;
+                string body = File.ReadAllText(file);
                 StringBuilder adding = new StringBuilder();
                 foreach (string heading in Headings(Text))
                 {
-                    if (Regex.IsMatch(body, @"(?mi)^[ 	]*##+[ 	]*" + Regex.Escape(heading) + @"[ 	]*$")) continue;
+                    if (Hers(heading) != hers) continue;
+                    // The \r matters: these files are CRLF and "$" cannot match before a carriage return, so
+                    // every heading read as missing and the whole file was appended to itself on every start.
+                    if (Regex.IsMatch(body, @"(?mi)^[ \t]*##+[ \t]*" + Regex.Escape(heading) + @"[ \t\r]*$")) continue;
                     adding.Append(Chunk(Text, "## " + heading));
                 }
                 if (adding.Length == 0) return;
                 if (!body.EndsWith("\n")) body += Environment.NewLine;
-                File.WriteAllText(Kept, body + adding.ToString(), new UTF8Encoding(false));
+                File.WriteAllText(file, body + adding.ToString(), new UTF8Encoding(false));
             }
             catch (Exception) { }
+        }
+
+        private static void TopUpHers()
+        {
+            if (string.IsNullOrEmpty(HersKept)) return;
+            if (!File.Exists(HersKept)) MakeHers();
+            TopUpInto(HersKept, true);
+        }
+
+        private static void MakeHers()
+        {
+            try { File.WriteAllText(HersKept, HersHead.Replace("\n", Environment.NewLine), new UTF8Encoding(false)); }
+            catch (Exception) { }
+        }
+
+        // Anything of hers left in interests.md after the carve, taken out. Nothing is lost: it is already in
+        // Her_Kinks.md by the time this runs, and anything only in interests.md is moved rather than dropped.
+        private static void NoHersInInterests()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(Kept) || string.IsNullOrEmpty(HersKept) || !File.Exists(Kept) || !File.Exists(HersKept)) return;
+                string had = File.ReadAllText(Kept), theirs = File.ReadAllText(HersKept);
+                string[] rows = had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+                List<string> stays = new List<string>(), moves = new List<string>();
+                bool moving = false, found = false;
+                foreach (string raw in rows)
+                {
+                    string line = raw.Trim();
+                    if (line.StartsWith("##", StringComparison.Ordinal))
+                    {
+                        string head = line.TrimStart('#').Trim();
+                        moving = Hers(head);
+                        if (moving)
+                        {
+                            found = true;
+                            // Already over there: drop this copy rather than making a second one.
+                            moving = !Regex.IsMatch(theirs, @"(?mi)^[ \t]*##+[ \t]*" + Regex.Escape(head) + @"[ \t\r]*$")
+                                ? true : false;
+                            if (!moving) { moving = true; moves.Add(null); continue; }
+                        }
+                    }
+                    if (moving) moves.Add(raw); else stays.Add(raw);
+                }
+                if (!found) return;
+                List<string> real = new List<string>();
+                bool skip = false;
+                foreach (string row in moves)
+                {
+                    if (row == null) { skip = true; continue; }
+                    if (row.TrimStart().StartsWith("##", StringComparison.Ordinal)) skip = false;
+                    if (!skip) real.Add(row);
+                }
+                while (stays.Count > 0 && stays[stays.Count - 1].Trim().Length == 0) stays.RemoveAt(stays.Count - 1);
+                File.WriteAllText(Kept, string.Join(Environment.NewLine, stays.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
+                if (real.Count > 0)
+                {
+                    if (!theirs.EndsWith("\n")) theirs += Environment.NewLine;
+                    File.WriteAllText(HersKept, theirs + string.Join(Environment.NewLine, real.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
+                }
+            }
+            catch (Exception) { }
+        }
+
+        internal static void TopUp()
+        {
+            if (string.IsNullOrEmpty(Kept) || !Brain.Uncensored) return;
+            Split();
+            NoHersInInterests();
+            try
+            {
+                if (!File.Exists(Kept)) { Write(false); Split(); }
+                Notes.Refresh(Kept, Text);
+                // Each section to the file it belongs in. Without this the carve moved her list and her kink
+                // packs out and this put them straight back, so both files had them.
+                TopUpInto(Kept, false);
+                TopUpHers();
+                OnlyOnce();
+                Settle();
+            }
+            catch (Exception) { }
+        }
+
+
+        // Their word from the file, or Gentle. Read fresh so an edit takes without a restart.
+        internal static string Handling()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return "Gentle";
+                foreach (string row in Chunk(File.ReadAllText(Kept), "## " + HandlingKey).Replace("\r\n", "\n").Split('\n'))
+                {
+                    string line = row.Trim();
+                    if (line.Length == 0 || line.StartsWith("#", StringComparison.Ordinal) || line.StartsWith(">", StringComparison.Ordinal)) continue;
+                    foreach (string one in Handlings) if (string.Equals(line, one, StringComparison.OrdinalIgnoreCase)) return one;
+                }
+            }
+            catch (Exception) { }
+            return "Gentle";
+        }
+
+        // Puts "how she likes it" back under "what she is into".
+        //
+        // TopUp appends a missing section to the end of the file, and this one belongs near the top with the two
+        // lists people actually edit. At the bottom of a file this long nobody would ever find it.
+        // One of each section, for a file that grew copies of itself.
+        //
+        // The heading check above anchored with "$", which cannot match before the carriage return a CRLF file
+        // puts there, so every heading read as missing and the whole file was appended again on every start.
+        // Measured here at 125 copies of each section and 63,000 lines. The check is fixed; this clears what it
+        // already wrote.
+        //
+        // The first copy is the one kept, because that is the one anyone has edited. Later copies go whole.
+        private static void OnlyOnce()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
+                string had = File.ReadAllText(Kept);
+                string[] rows = had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+                Dictionary<string, bool> seen = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+                List<string> kept = new List<string>();
+                bool skipping = false, dropped = false;
+                foreach (string raw in rows)
+                {
+                    string line = raw.Trim();
+                    if (line.StartsWith("##", StringComparison.Ordinal))
+                    {
+                        string head = line.TrimStart('#').Trim();
+                        if (seen.ContainsKey(head)) { skipping = true; dropped = true; continue; }
+                        seen[head] = true;
+                        skipping = false;
+                    }
+                    if (!skipping) kept.Add(raw);
+                }
+                if (!dropped) return;
+                while (kept.Count > 0 && kept[kept.Count - 1].Trim().Length == 0) kept.RemoveAt(kept.Count - 1);
+                File.WriteAllText(Kept, string.Join(Environment.NewLine, kept.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
+            }
+            catch (Exception) { }
+        }
+
+        private static void Settle()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
+                List<string> rows = new List<string>(File.ReadAllText(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'));
+                // Every copy comes out, then one goes back in the right place. Appending and moving on separate
+                // runs left two of it, and a settings section that exists twice is worse than one in the wrong spot.
+                List<string> block = null;
+                for (int from = Heading(rows, "## " + HandlingKey); from >= 0; from = Heading(rows, "## " + HandlingKey))
+                {
+                    int ends = Next(rows, from);
+                    if (block == null) block = rows.GetRange(from, ends - from);
+                    rows.RemoveRange(from, ends - from);
+                }
+                int into = Heading(rows, "## what she is into");
+                if (block == null || into < 0) return;
+                rows.InsertRange(Next(rows, into), block);
+                File.WriteAllText(Kept, string.Join(Environment.NewLine, rows.ToArray()).TrimEnd() + Environment.NewLine, new UTF8Encoding(false));
+            }
+            catch (Exception) { }
+        }
+
+        private static int Heading(List<string> rows, string named)
+        {
+            for (int at = 0; at < rows.Count; at++)
+                if (string.Equals(rows[at].Trim(), named, StringComparison.OrdinalIgnoreCase)) return at;
+            return -1;
+        }
+
+        // The line the next section starts on, trailing blanks left with the section being moved.
+        private static int Next(List<string> rows, int from)
+        {
+            for (int at = from + 1; at < rows.Count; at++)
+                if (rows[at].TrimStart().StartsWith("##", StringComparison.Ordinal)) return at;
+            return rows.Count;
         }
 
         private static List<string> Headings(string whole)
@@ -128,17 +413,20 @@ namespace CapriDesktop
             if (!Brain.Uncensored) return null;
             try
             {
-                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return null;
                 System.Collections.Generic.List<string> found = new System.Collections.Generic.List<string>();
-                string under = null;
-                foreach (string raw in File.ReadAllLines(Kept))
+                foreach (string file in Files)
                 {
-                    string one = (raw ?? "").Trim();
-                    if (one.StartsWith("#")) { under = one.TrimStart('#').Trim(); continue; }
-                    if (under == null || one.Length == 0 || one.StartsWith(">")) continue;
-                    if (!string.Equals(under, pool, StringComparison.OrdinalIgnoreCase)) continue;
-                    if (one.StartsWith("-") || one.StartsWith("+")) one = one.Substring(1).Trim();
-                    if (one.Length > 0 && !found.Contains(one)) found.Add(one);
+                    if (string.IsNullOrEmpty(file) || !File.Exists(file)) continue;
+                    string under = null;
+                    foreach (string raw in File.ReadAllLines(file))
+                    {
+                        string one = (raw ?? "").Trim();
+                        if (one.StartsWith("#")) { under = one.TrimStart('#').Trim(); continue; }
+                        if (under == null || one.Length == 0 || one.StartsWith(">")) continue;
+                        if (!string.Equals(under, pool, StringComparison.OrdinalIgnoreCase)) continue;
+                        if (one.StartsWith("-") || one.StartsWith("+")) one = one.Substring(1).Trim();
+                        if (one.Length > 0 && !found.Contains(one)) found.Add(one);
+                    }
                 }
                 if (found.Count == 0) return null;
                 return string.Join(", ", found.ToArray());
@@ -156,20 +444,23 @@ namespace CapriDesktop
             try
             {
                 Write(false);
-                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return null;
                 System.Collections.Generic.List<string> found = new System.Collections.Generic.List<string>();
-                string under = null;
-                foreach (string raw in File.ReadAllLines(Kept))
+                foreach (string file in Files)
                 {
-                    string one = (raw ?? "").Trim();
-                    if (one.StartsWith("#")) { under = one.TrimStart('#').Trim(); continue; }
-                    if (under == null || one.Length == 0 || one.StartsWith(">")) continue;
-                    if (!string.Equals(under, pool, StringComparison.OrdinalIgnoreCase)) continue;
-                    bool cross = one.StartsWith("-");
-                    bool warm = one.StartsWith("+");
-                    if (cross || warm) one = one.Substring(1).Trim();
-                    if (tone != null && (cross || warm) && (tone == "cross") != cross) continue;
-                    if (one.Length > 0) found.Add(one);
+                    if (string.IsNullOrEmpty(file) || !File.Exists(file)) continue;
+                    string under = null;
+                    foreach (string raw in File.ReadAllLines(file))
+                    {
+                        string one = (raw ?? "").Trim();
+                        if (one.StartsWith("#")) { under = one.TrimStart('#').Trim(); continue; }
+                        if (under == null || one.Length == 0 || one.StartsWith(">")) continue;
+                        if (!string.Equals(under, pool, StringComparison.OrdinalIgnoreCase)) continue;
+                        bool cross = one.StartsWith("-");
+                        bool warm = one.StartsWith("+");
+                        if (cross || warm) one = one.Substring(1).Trim();
+                        if (tone != null && (cross || warm) && (tone == "cross") != cross) continue;
+                        if (one.Length > 0) found.Add(one);
+                    }
                 }
                 if (found.Count == 0) return null;
                 // One shared Random, not a new one each call: Random is seeded from the clock, which only ticks
@@ -204,6 +495,19 @@ namespace CapriDesktop
             "shoulders", "ears", "whispering *"
         };
 
+        // What each of the two new files looks like fresh, for reset to stock.
+        internal static string HersText
+        {
+            get
+            {
+                StringBuilder made = new StringBuilder(HersHead.Replace("\n", Environment.NewLine));
+                foreach (string heading in Headings(Text)) if (Hers(heading)) made.Append(Chunk(Text, "## " + heading));
+                return made.ToString();
+            }
+        }
+
+        internal static string YoursText { get { return YoursHead.Replace("\n", Environment.NewLine); } }
+
         internal static string Text
         {
             get
@@ -226,9 +530,7 @@ namespace CapriDesktop
                 made.AppendLine("> So: stepping on your throat. Not: boot worship.");
                 made.AppendLine("> One a line. Empty means she never brings it up.");
                 made.AppendLine(">");
-                made.AppendLine("> Turning one off: put a \">\" in front of it. It stays in the file, she stops using it.");
-                made.AppendLine("> Turning one on: take the \">\" off. Nothing needs deleting either way.");
-                made.AppendLine("> A \"#\" will not work here. A line starting with # is read as a heading.");
+                made.AppendLine("> Put a \">\" in front of a line to switch it off, take it off to switch it on.");
                 made.AppendLine("> A name with a matching \"## kink: name\" section below uses those lines");
                 made.AppendLine("> instead of the templates, so it opens its own path rather than filling a blank.");
                 made.AppendLine();
@@ -249,6 +551,14 @@ namespace CapriDesktop
                 made.AppendLine("> lines rather than being dropped into a template. Add your own the same way.");
                 made.AppendLine();
                 foreach (string more in More) made.AppendLine("> " + more);
+                made.AppendLine();
+                made.AppendLine("## " + HandlingKey);
+                made.AppendLine();
+                made.AppendLine("> Gentle, Rough or Both. One word on the line below.");
+                made.AppendLine("> Rough means being thrown, slapped or talked down to lifts her mood instead of denting it.");
+                made.AppendLine("> Gentle softens those. Both leaves each personality as it is.");
+                made.AppendLine();
+                made.AppendLine("Gentle");
                 made.AppendLine();
                 made.AppendLine("## teasing");
                 made.AppendLine();

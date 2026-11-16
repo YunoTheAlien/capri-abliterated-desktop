@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -96,6 +96,8 @@ namespace CapriDesktop
         [DataMember] public string Text;
         [DataMember] public string When;
         [DataMember] public bool Said;
+        // Empty for a one off. "day", "week", a weekday name, or a number of minutes.
+        [DataMember] public string Repeat;
 
         internal DateTime Due { get { return DateTime.ParseExact(When, "o", CultureInfo.InvariantCulture, DateTimeStyles.None); } }
     }
@@ -140,7 +142,7 @@ namespace CapriDesktop
                 {
                     List<Reminder> waiting = reminders.FindAll(pending => !pending.Said);
                     waiting.Sort(delegate(Reminder left, Reminder right) { return left.Due.CompareTo(right.Due); });
-                    List<string> lines = waiting.ConvertAll(listed => listed.Due.ToString("f") + ": " + listed.Text);
+                    List<string> lines = waiting.ConvertAll(listed => listed.Due.ToString("f") + ": " + listed.Text + (string.IsNullOrEmpty(listed.Repeat) ? "" : " (every " + listed.Repeat + ")"));
                     return lines.Count == 0 ? "You have no reminders waiting." : "Your reminders:\n" + string.Join("\n", lines.ToArray());
                 }
                 List<Reminder> changed = new List<Reminder>(reminders);
@@ -158,11 +160,21 @@ namespace CapriDesktop
                 }
                 DateTime when;
                 if (string.IsNullOrWhiteSpace(args.Text)) return "What should I remind you about?";
-                if (!Parse(args.When, Now(), out when)) return "What time should I remind you? Try in 20 minutes or on 5 December at 9am.";
-                changed.Add(new Reminder { Text = args.Text.Trim(), When = DateTime.SpecifyKind(when, DateTimeKind.Unspecified).ToString("o", CultureInfo.InvariantCulture) });
+                // "every monday at 6" leaves "monday at 6" behind for the time parser, which already reads it.
+                string said = args.When;
+                string over = Repeating(ref said);
+                if (over != null && said.Length == 0)
+                {
+                    // "every 20 minutes" says when the first one is by itself; a named day or a plain day does not.
+                    int each;
+                    said = int.TryParse(over, NumberStyles.Integer, CultureInfo.InvariantCulture, out each) ? "in " + each + " minutes"
+                        : over == "day" ? "tomorrow 9am" : over == "week" || over == "month" ? "tomorrow 9am" : over;
+                }
+                if (!Parse(said, Now(), out when)) return "What time should I remind you? Try in 20 minutes, on Friday at 6, or every day at 9.";
+                changed.Add(new Reminder { Text = args.Text.Trim(), Repeat = over, When = DateTime.SpecifyKind(when, DateTimeKind.Unspecified).ToString("o", CultureInfo.InvariantCulture) });
                 remindersFile.Write(changed, ".new");
                 reminders = changed;
-                return "I'll remind you " + when.ToString("f") + ": " + args.Text.Trim();
+                return (over == null ? "I'll remind you " : "I'll remind you every time, starting ") + when.ToString("f") + ": " + args.Text.Trim();
             }
         }
 
@@ -179,9 +191,11 @@ namespace CapriDesktop
                 foreach (Reminder candidate in reminders)
                     if (!candidate.Said && candidate.Due <= now && (next == null || candidate.Due < next.Due)) next = candidate;
                 if (next == null) return null;
-                next.Said = true;
+                DateTime was = next.Due;
+                if (string.IsNullOrEmpty(next.Repeat)) next.Said = true;
+                else next.When = Again(was, next.Repeat, now).ToString("o", CultureInfo.InvariantCulture);
                 try { remindersFile.Write(reminders, ".new"); }
-                catch { next.Said = false; throw; }
+                catch { next.Said = false; next.When = was.ToString("o", CultureInfo.InvariantCulture); throw; }
                 string line = "Reminder: " + next.Text;
                 string overdue = Overdue(next.Due, now);
                 return overdue == null ? line : line + (Regex.IsMatch(line, @"[.!?]$") ? " " : ". ") + overdue;
@@ -366,6 +380,68 @@ namespace CapriDesktop
             return -1;
         }
 
+        // When a repeating one is next due. Always ahead of now, so a week with her closed does not leave it
+        // firing once for every day it missed.
+        internal static DateTime Again(DateTime was, string repeat, DateTime now)
+        {
+            string how = (repeat ?? "").Trim().ToLowerInvariant();
+            DateTime next = was;
+            int minutes;
+            try
+            {
+                if (how == "day") { do { next = next.AddDays(1); } while (next <= now); }
+                else if (how == "week") { do { next = next.AddDays(7); } while (next <= now); }
+                else if (how == "month") { do { next = next.AddMonths(1); } while (next <= now); }
+                else if (int.TryParse(how, NumberStyles.Integer, CultureInfo.InvariantCulture, out minutes) && minutes > 0)
+                { do { next = next.AddMinutes(minutes); } while (next <= now); }
+                else
+                {
+                    int want = Weekday(how);
+                    if (want < 0) return now.AddDays(1);
+                    do { next = next.AddDays(1); } while (next <= now || (int)next.DayOfWeek != want);
+                }
+            }
+            catch (ArgumentOutOfRangeException) { return now.AddDays(1); }
+            return next;
+        }
+
+        private static readonly string[] Days = { "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday" };
+
+        internal static int Weekday(string word)
+        {
+            string plain = (word ?? "").Trim().ToLowerInvariant();
+            for (int at = 0; at < Days.Length; at++)
+                if (plain == Days[at] || (plain.Length >= 3 && Days[at].StartsWith(plain, StringComparison.Ordinal))) return at;
+            return -1;
+        }
+
+        // "every day at 9", "every monday", "every 20 minutes". What comes back is what to put in Repeat, and
+        // text is left holding the rest so the time still parses the way it always did.
+        internal static string Repeating(ref string text)
+        {
+            string plain = (text ?? "").Trim();
+            Match found = Regex.Match(plain, @"^every\s+(day|week|month|weekday|other day|\d+\s*(?:min(?:ute)?s?|hours?|days?|weeks?)|[a-z]+)\b\s*(.*)$", RegexOptions.IgnoreCase);
+            if (!found.Success) return null;
+            string how = found.Groups[1].Value.Trim().ToLowerInvariant(), rest = found.Groups[2].Value.Trim();
+            string said;
+            Match span = Regex.Match(how, @"^(\d+)\s*(min(?:ute)?s?|hours?|days?|weeks?)$", RegexOptions.IgnoreCase);
+            if (span.Success)
+            {
+                int count = int.Parse(span.Groups[1].Value, CultureInfo.InvariantCulture);
+                string unit = span.Groups[2].Value.ToLowerInvariant();
+                int each = unit.StartsWith("h", StringComparison.Ordinal) ? count * 60
+                    : unit.StartsWith("d", StringComparison.Ordinal) ? count * 1440
+                    : unit.StartsWith("w", StringComparison.Ordinal) ? count * 10080 : count;
+                if (each <= 0) return null;
+                said = each.ToString(CultureInfo.InvariantCulture);
+            }
+            else if (how == "day" || how == "week" || how == "month") said = how;
+            else if (Weekday(how) >= 0) said = Days[Weekday(how)];
+            else return null;
+            text = rest;
+            return said;
+        }
+
         internal static bool Parse(string text, DateTime now, out DateTime when)
         {
             when = now;
@@ -381,6 +457,27 @@ namespace CapriDesktop
                 double minutes = Regex.IsMatch(relative.Groups[2].Value, @"^weeks?$") ? count * 10080 : Regex.IsMatch(relative.Groups[2].Value, @"^days?$") ? count * 1440 : Regex.IsMatch(relative.Groups[2].Value, @"^(?:h|stund|godzin)") ? count * 60 : Regex.IsMatch(relative.Groups[2].Value, @"^(?:sec|seg|sek)") ? count / 60 : count;
                 try { when = now.AddMinutes(minutes); return when > now; }
                 catch (ArgumentOutOfRangeException) { return false; }
+            }
+            // A day by name, which the calendar branch never covered: it wanted a number in the date.
+            Match named = Regex.Match(plain, @"^(?:(next|this|on)\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b\s*(.*)$");
+            if (named.Success)
+            {
+                int want = Weekday(named.Groups[2].Value);
+                string after = named.Groups[3].Value.Trim();
+                int hour2 = 9, minute2 = 0;
+                bool meridiem2;
+                if (after.Length > 0)
+                {
+                    after = Regex.Replace(after, @"^(?:at|a las|a la|um|o|as|pelas)\s+", "");
+                    if (after.Length > 0 && !Clock(after, out hour2, out minute2, out meridiem2)) return false;
+                }
+                DateTime day = now.Date;
+                // "next" always means the one after this week's, even when this week's has not happened yet.
+                bool later = string.Equals(named.Groups[1].Value, "next", StringComparison.OrdinalIgnoreCase);
+                do { day = day.AddDays(1); } while ((int)day.DayOfWeek != want);
+                if (later) day = day.AddDays(7);
+                when = day.AddHours(hour2).AddMinutes(minute2);
+                return when > now;
             }
             bool tomorrow = Regex.IsMatch(plain, @"^(?:tomorrow|manana|demain|morgen|jutro|amanha)(?:\s|$)");
             if (tomorrow) plain = Regex.Replace(plain, @"^\S+\s*", "");

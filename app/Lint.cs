@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -25,11 +25,16 @@ namespace CapriDesktop
 
         private static readonly string[] Tokens =
         {
-            "%boy%", "%he%", "%them%", "%their%", "%is%", "%name%", "%bits%", "%mate%", "%it%"
+            "%boy%", "%he%", "%them%", "%their%", "%is%", "%name%", "%bits%", "%mate%", "%petname%", "%it%"
         };
 
         // Fault lines, worst first. Empty when the pools are clean.
-        internal static List<string> Check(Dictionary<string, string[]> pools)
+        internal static List<string> Check(Dictionary<string, string[]> pools) { return Check(pools, true); }
+
+        // joined: these lines are fragments that get stuck after an opener, so capitals and trailing
+        // punctuation matter. A personality pack writes whole sentences instead, which are correct as they
+        // are, so it passes false and only the faults that are wrong either way are checked.
+        internal static List<string> Check(Dictionary<string, string[]> pools, bool joined)
         {
             List<string> found = new List<string>();
             if (pools == null) return found;
@@ -38,9 +43,9 @@ namespace CapriDesktop
             {
                 string name = pool.Key;
                 if (pool.Value == null) continue;
-                bool core = name.IndexOf("likes it", StringComparison.OrdinalIgnoreCase) >= 0;
-                bool tail = name.StartsWith("tails", StringComparison.OrdinalIgnoreCase);
-                bool opener = name.StartsWith("openers", StringComparison.OrdinalIgnoreCase);
+                bool core = joined && name.IndexOf("likes it", StringComparison.OrdinalIgnoreCase) >= 0;
+                bool tail = joined && name.StartsWith("tails", StringComparison.OrdinalIgnoreCase);
+                bool opener = joined && name.StartsWith("openers", StringComparison.OrdinalIgnoreCase);
 
                 foreach (string raw in pool.Value)
                 {
@@ -77,7 +82,8 @@ namespace CapriDesktop
 
                     if (one.IndexOf("  ", StringComparison.Ordinal) >= 0)
                         found.Add(name + ": double space in \"" + one + "\"");
-                    if (Regex.IsMatch(one, @"[,.!?]{2,}"))
+                    // An ellipsis and an interrobang are both deliberate, so only real doubling counts.
+                    if (Regex.IsMatch(Regex.Replace(one, @"\.\.\.|[?!][?!]", ""), @"[,.!?]{2,}"))
                         found.Add(name + ": doubled punctuation in \"" + one + "\"");
                 }
             }
@@ -100,11 +106,13 @@ namespace CapriDesktop
         }
 
         // Runs the check and logs a summary. Silent when the pools are clean.
-        internal static void Sweep(Dictionary<string, string[]> pools, string what)
+        internal static void Sweep(Dictionary<string, string[]> pools, string what) { Sweep(pools, what, true); }
+
+        internal static void Sweep(Dictionary<string, string[]> pools, string what, bool joined)
         {
             try
             {
-                List<string> faults = Check(pools);
+                List<string> faults = Check(pools, joined);
                 if (faults.Count == 0) return;
                 StringBuilder said = new StringBuilder();
                 said.Append(faults.Count).Append(" line faults in ").Append(what).Append(':');
