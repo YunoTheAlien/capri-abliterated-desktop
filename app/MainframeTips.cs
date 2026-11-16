@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Runtime.InteropServices;
@@ -346,7 +346,7 @@ namespace CapriDesktop
                 return TextRenderer.MeasureText(text, font, new Size(Math.Max(1, width), int.MaxValue), Wrap);
             }
 
-            // Her answers lead with where a setting lives, like "Mainframe > Settings > VOICE > Volume...", which a tip beside
+            // Her answers lead with where a setting lives, like "Mainframe > Settings > VOICE > Volume ...", which a tip beside
             // that setting doesn't need.
             private static readonly Regex Breadcrumb = new Regex(@"^Mainframe(?: > (?:Settings|Simple Settings|Advanced Settings|[A-Z][A-Z &-]+))* > ");
 

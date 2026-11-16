@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -137,7 +137,7 @@ namespace CapriDesktop
             return name;
         }
 
-        // An other app's name: its description, or its exe without.exe when it has none or it would pass for a call app, Auto,
+        // An other app's name: its description, or its exe without .exe when it has none or it would pass for a call app, Auto,
         // you or her, which have their own instructions and captions. A long one is cut to what fits the menu button and the pill.
         internal static string CleanName(string choice, string name)
         {

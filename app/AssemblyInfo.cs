@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("Capri")]
@@ -7,5 +7,5 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyProduct("Capri")]
 [assembly: AssemblyCopyright("Copyright 2026 Lachy")]
 [assembly: AssemblyVersion("0.9.1")]
-[assembly: AssemblyFileVersion("0.9.251")]
+[assembly: AssemblyFileVersion("0.9.310")]
 [assembly: ComVisible(false)]

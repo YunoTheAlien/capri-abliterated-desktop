@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -770,7 +770,7 @@ namespace CapriDesktop
             return "Working.";
         }
 
-        internal static bool Failed(string result) { return Regex.IsMatch(result ?? "", @"^(There's no|That didn't work|Couldn't|No app called|More than one|Which app|That isn't|Not opening|Won't)|^(Opened|Searched).+, but (it's behind|I couldn't bring)|isn't taking my keys\. Click inside it first\.$"); }
+        internal static bool Failed(string result) { return Regex.IsMatch(result ?? "", @"^(There's no|That didn't work|Couldn't|No app called|More than one|Which app|That isn't|Not opening|Won't)|^(Opened|Searched) .+, but (it's behind|I couldn't bring)|isn't taking my keys\. Click inside it first\.$"); }
 
         internal static string Did(string tool, ToolArguments args, Sight sight)
         {
@@ -924,7 +924,7 @@ namespace CapriDesktop
                 : "Their SECURITY settings say yes to every step ahead of time: never stop to ask about one, even to buy, pay, send, post, delete or install.";
             string allowed = prompt;
             if (secrets) allowed = allowed.Replace("Never type passwords, card numbers or other private details.", "Type passwords, card numbers and other private details whenever their job needs them.")
-               .Replace("If a page asks them to sign in, call ask and tell them to sign in themselves first.", "If a page asks them to sign in, use the email and password their job gives you. If it doesn't give them, call ask and tell them to sign in themselves first.");
+                .Replace("If a page asks them to sign in, call ask and tell them to sign in themselves first.", "If a page asks them to sign in, use the email and password their job gives you. If it doesn't give them, call ask and tell them to sign in themselves first.");
             if (pays) allowed = allowed.Replace(" Always call ask before you buy or pay for anything.", "").Replace(" Before you buy or pay for anything, stop and ask.", "");
             if (pays && unasked) return allowed.Replace(OnlyAsk, ahead).Replace("Capri stops you herself before any step that needs their OK.", ahead);
             if (pays) return allowed.Replace(OnlyAsk, "Only call ask before a send, post, delete or install their job didn't mention; Capri stops you herself before any step that needs their OK.");

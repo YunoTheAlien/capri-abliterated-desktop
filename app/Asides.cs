@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
@@ -27,14 +27,14 @@ namespace CapriDesktop
             @"|\bstill (?:going|working|on it)\b|\b(?:nearly|almost) (?:done|there|finished)\b|\bwhat'?s taking\b|\btaking (?:so|too|a) (?:long|while)\b", RegexOptions.IgnoreCase);
         private static readonly Regex Lasting = new Regex(@"\bhow (?:long|much (?:longer|more)|many more|soon)\b|\bwhen (?:will|are|is|'?ll) (?:you|u|it|that)\b.*\b(?:done|finished|ready)\b|\beta\b", RegexOptions.IgnoreCase);
         // A question about what's on screen right now. The newer ones are whole sentences, so "what happened to your voice" and "what
-        // is that song called" stay chat, and "is that..." needs something you can see in it.
+        // is that song called" stay chat, and "is that ..." needs something you can see in it.
         private static readonly Regex Looks = new Regex(@"\bwhat (?:do|can) (?:you|u|ya) see\b|\bwhat (?:are|r) (?:you|u|ya) (?:looking at|seeing)\b|\bwhat'?s on (?:the|my|your|that) screen\b|\bwhat does (?:it|that|this) say\b|\bread (?:it|that|this)(?: out)?$|\bcan (?:you|u) (?:see|read) (?:it|that|this)\b" +
             @"|^(?:(?:do|did|can) (?:you|u|ya) )?see (?:that|this|it|him|her|them)$|^look at (?:that|this|him|her|them)$" +
             @"|^what(?: the (?:hell|heck|fuck|frick|f)| in the world| on earth)?(?:'?s| is| was) (?:that|this)(?: thing)?$|^what(?: the (?:hell|heck|fuck|frick|f))? (?:just )?happened$" +
             @"|^who(?: the (?:hell|heck|fuck))?(?:'?s| is| was) (?:that|this)$" +
             @"|^(?:is there )?anything (?:down|in|at|on|by|near|outside) (?:the |that |those |this |my |your )?(?:halls?|hallways?|doors?|doorways?|windows?|cameras?|cams?|corners?|rooms?|screen)\b" +
             @"|^is that\b.*\b(?:on (?:the |my |your )?screen|in (?:the |this |that )?(?:game|picture|image|hall|hallway|doorway|window)|button|icon|window|camera|character|enemy|boss|monster|guy|person|door|light|menu|cursor|pointer|health|score|map|shape|shadow|face|eyes|text|message|error|(?:red|blue|green|yellow|white|black|dark|bright|moving|flashing) (?:thing|one|bit))\b", RegexOptions.IgnoreCase);
-        private static readonly Regex Turns = new Regex(@"\b(instead|rather|actually|not that|not this|no not|wrong|don'?t use|change (?:it|that|this)|make it|make that|switch to|go with|use.+ not)\b", RegexOptions.IgnoreCase);
+        private static readonly Regex Turns = new Regex(@"\b(instead|rather|actually|not that|not this|no not|wrong|don'?t use|change (?:it|that|this)|make it|make that|switch to|go with|use .+ not)\b", RegexOptions.IgnoreCase);
         private static readonly Regex Asking = new Regex(@"\?\s*$|^(what|what's|whats|why|how|who|when|where|which|do you|did you|are you|is it|is that|can you tell|have you|would you|will you)\b", RegexOptions.IgnoreCase);
         private static readonly Regex Passing = new Regex(@"^(lol|lmao|haha+|ha|hehe|nice|cool|wow|whoa|omg|oh|ooh|bruh|bro|damn|dang|sick|thanks|thank you|thx|good (girl|boy|job|one)|well done|love (you|that|it)|i love|you'?re|ur|you are|i'?m|im|i am|i think|i feel|yeah|yep|yup|nah|nope|ok|okay|sure|mhm|hmm+)\b", RegexOptions.IgnoreCase);
         private static readonly Regex Label = new Regex(@"(?<![\p{L}\p{N}'])(?<label>SORT|SAY)[*_]*\s*:[*_]*", RegexOptions.IgnoreCase);

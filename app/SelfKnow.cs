@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -44,11 +44,11 @@ namespace CapriDesktop
             new Topic("Workspace", "workspace|workspace beta|workspace modes|undo last turn|claude code chats",
                 "Workspace is Capri's beta window for chats with Claude Code in folders you pick, using your Claude Code on your plan or key. Ask me asks before tools beyond reads; Edits only accepts file edits; Plan only asks Claude Code to plan; Everything lets its tools run, and undo restores its file edits but cannot undo commands.", "WorkspaceWindow.cs", "WORKSPACE (beta)"),
             new Topic("Mods", "mods page|mods button|mod menu|your mods|capri mods",
-                "Mods in Mainframe's CAPRI band opens her mods page. A.capri-mod file only changes settings. A.capri-code file runs code with full access to the PC, so she asks before running it and again if it's edited, and lists the permissions it asks for, like chat, memory, screen or settings. A.capri-skin changes how she looks, and several stack: each one turned on goes on top of the others. A.capri-skill file is know-how, like what to build and when in a game, and she follows it whenever she plays that game. She knows the title of every skill that's on and reads one whenever it fits what you ask, so a skill with no games line works for anything. Back returns to BRAIN, VOICE and CAPRI.", "Mainframe.cs", "Mods"),
+                "Mods in Mainframe's CAPRI band opens her mods page. A .capri-mod file only changes settings. A .capri-code file runs code with full access to the PC, so she asks before running it and again if it's edited, and lists the permissions it asks for, like chat, memory, screen or settings. A .capri-skin changes how she looks, and several stack: each one turned on goes on top of the others. A .capri-skill file is know-how, like what to build and when in a game, and she follows it whenever she plays that game. She knows the title of every skill that's on and reads one whenever it fits what you ask, so a skill with no games line works for anything. Back returns to BRAIN, VOICE and CAPRI.", "Mainframe.cs", "Mods"),
             new Topic("Search installed mods", "search installed mods|search your installed mods|find an installed mod|filter installed mods",
                 "Search the installed list by mod name or author as you type. Every word must match, ignoring case. Typing returns to page 1; clearing the search shows all installed mods.", "MainframeMods.cs", "Search installed mods"),
             new Topic("Import mod", "import a mod|import mod|install a mod|add a mod",
-                "Import mod lets you pick a.capri-mod,.capri-code,.capri-skin or.capri-skill file and turns it on. Code mods ask first, a skin changes how she looks, and a skill teaches her a game or anything else. A mod with the same id is replaced, and a broken one is refused with the reason.", "MainframeMods.cs", "Import mod"),
+                "Import mod lets you pick a .capri-mod, .capri-code, .capri-skin or .capri-skill file and turns it on. Code mods ask first, a skin changes how she looks, and a skill teaches her a game or anything else. A mod with the same id is replaced, and a broken one is refused with the reason.", "MainframeMods.cs", "Import mod"),
             new Topic("Browse mods", "browse mods|mods directory|find mods|capri-mods",
                 "Browse mods opens the mods window: what's in her mods directory on GitHub, 3 across, with pictures, names, authors, descriptions, downloads and ratings. Search finds names, authors and descriptions as you type; it only goes online when you press Browse mods.", "MainframeMods.cs", "Browse mods"),
             new Topic("Update mods", "update mods|update my mods|mod updates|update a mod|update skins|update my skins|newer version of a mod|old version of a mod",
@@ -312,7 +312,7 @@ namespace CapriDesktop
             new Topic("Use her cursor", "use her cursor|use your cursor|your pink pointer|your cursor setting",
                 "Mainframe > Settings > HABITS > Use her cursor lets YouTube searches, Apple Music and Spotify's volume slider use her visible pointer when a brain and the mouse permission are available. Spotify music uses play_music directly with either setting. Off uses the quick tools instead; it does not turn off explicit mouse and keyboard jobs.", "Mainframe.cs", "Use her cursor"),
             new Topic("Obsidian vault", "memory vault|obsidian|my vault|in obsidian|to obsidian|obsidian vault",
-                "Mainframe > Settings > HABITS > Obsidian vault lets you pick one of your Obsidian vaults, or Browse to any.md note. Her notes about you, me.md, then live in a Capri Memories note there, so you can read and edit them in Obsidian. Her transcripts and memories.md stay in her own folder. Pick Her own notes to put her back on me.md, and what she learned in the vault comes back with her.", "Mainframe.cs", "Obsidian vault"),
+                "Mainframe > Settings > HABITS > Obsidian vault lets you pick one of your Obsidian vaults, or Browse to any .md note. Her notes about you, me.md, then live in a Capri Memories note there, so you can read and edit them in Obsidian. Her transcripts and memories.md stay in her own folder. Pick Her own notes to put her back on me.md, and what she learned in the vault comes back with her.", "Mainframe.cs", "Obsidian vault"),
             new Topic("Remember our chats", "remember our chats|memories md|chat transcripts|open her memories|your memories",
                 "Mainframe > Settings > HABITS > Remember our chats keeps daily transcripts and folds older chats into memories.md on this PC. Open her memories edits memories.md inside Mainframe; Save writes your changes and Discard + reload reads the saved file again. A note changed elsewhere must be reloaded before saving. Turning Remember our chats off stops writing, folding, searching and reading these memories without deleting them. With a cloud brain, relevant recalled text and chats being folded go to that selected brain as context.", "Mainframe.cs", "Remember our chats"),
             new Topic("Perch", "perch fps|perch frame rate|perch setting|your animation speed",
@@ -384,7 +384,7 @@ namespace CapriDesktop
             new Topic("Copy a reply", "copy a reply|copy your reply|copy her reply|copy what you said|copy your message|copy your text",
                 "Right click her reply bubble to copy the whole reply, even the pages of a long one that aren't showing. The bubble then shows > sys: copied. A left click dismisses the bubble.", null, null),
             new Topic("Handing her a file", "handing her a file|hand you a file|give you a file|drop a file|drag a file|attach a file|read a file|read files|files can you read|files do you read|file types|file formats|read a pdf|read a spreadsheet",
-                "Drag a file onto Capri, or ask read followed by its full path; quote a path with spaces. She reads text and code files, Word.docx, Excel.xlsx, PDFs through Windows OCR, and PNG, JPG, JPEG, GIF, BMP and WebP pictures. Pictures use the selected brain when it can see, otherwise Windows OCR. Her selected brain answers from the contents, which stay available for a few follow-up turns; she reports unreadable files and any omitted contents.", "Hands.cs", "read_file"),
+                "Drag a file onto Capri, or ask read followed by its full path; quote a path with spaces. She reads text and code files, Word .docx, Excel .xlsx, PDFs through Windows OCR, and PNG, JPG, JPEG, GIF, BMP and WebP pictures. Pictures use the selected brain when it can see, otherwise Windows OCR. Her selected brain answers from the contents, which stay available for a few follow-up turns; she reports unreadable files and any omitted contents.", "Hands.cs", "read_file"),
             new Topic("Finding files", "find files|find a folder|find game folders|finding files|file search",
                 "Ask for a file or folder by its name or a plain description, like show me the path to the cyberpunk game folder. She searches names on a worker, in your personal folders and game locations first, and through your fixed drives if nothing turns up there. Results show full paths, closest match first. Say show it to me or open that folder to select the first in File Explorer; say stop to cancel a running search. She does not read file contents to search.", "Hands.cs", "find_file"),
             new Topic("Website nicknames", "website nicknames|website aliases|remember a website|name a website",
@@ -486,7 +486,7 @@ namespace CapriDesktop
             return (" " + text + " ").IndexOf(" " + words + " ", StringComparison.Ordinal) >= 0;
         }
 
-        // The shortcuts she can press here, the way she'd ask to press them: "take a screenshot, open Task Manager and...".
+        // The shortcuts she can press here, the way she'd ask to press them: "take a screenshot, open Task Manager and ...".
         private static string Pressed(Hands.Kit kit)
         {
             List<string> doing = new List<string>();

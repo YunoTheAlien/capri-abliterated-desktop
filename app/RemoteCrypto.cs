@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace CapriDesktop
 {
-    // Capri Remote, protocol 1 (remote/PROTOCOL.md section 6)..NET Framework 4.8 has no AES-GCM, so every envelope is
+    // Capri Remote, protocol 1 (remote/PROTOCOL.md section 6). .NET Framework 4.8 has no AES-GCM, so every envelope is
     // AES-256-CBC with PKCS#7 and an HMAC-SHA256 tag over its 8-byte header, IV and ciphertext (encrypt-then-MAC), with keys
     // from HKDF-SHA256, which is hand-rolled on HMACSHA256 here. All of it is checked byte for byte against
     // remote/test/vectors.json by RemoteVectors, in her smoke test and in app/RemoteTests.
@@ -167,7 +167,7 @@ namespace CapriDesktop
 
         internal static uint SeqOf(byte[] envelope, int offset) { return ((uint)envelope[offset + 4] << 24) | ((uint)envelope[offset + 5] << 16) | ((uint)envelope[offset + 6] << 8) | envelope[offset + 7]; }
 
-        //.NET Framework 4.8 has no FixedTimeEquals: every byte pair is XORed and ORed together, so the time never says where
+        // .NET Framework 4.8 has no FixedTimeEquals: every byte pair is XORed and ORed together, so the time never says where
         // two tags first differ.
         internal static bool Same(byte[] a, int aAt, byte[] b, int bAt, int count)
         {

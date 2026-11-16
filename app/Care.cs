@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -163,6 +163,10 @@ namespace CapriDesktop
         private readonly Random dice = new Random();
 
         internal CareLines(string path) { this.path = path; }
+
+        // Where the file actually is, so anything that opens it for them opens the one she reads rather than
+        // working the path out a second time and landing somewhere else.
+        internal string Kept { get { return path; } }
 
         internal bool Create()
         {

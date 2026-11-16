@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -1083,7 +1083,7 @@ export default {
         }
 
 #if CROSS
-        // EROFS, which.NET gives as the IOException's HResult on Linux and macOS.
+        // EROFS, which .NET gives as the IOException's HResult on Linux and macOS.
         private const int ReadOnlyFileSystem = 30;
         private static readonly List<string> unlinked = new List<string>();
 

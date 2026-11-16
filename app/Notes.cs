@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -101,7 +101,7 @@ namespace CapriDesktop
 
                 StringBuilder made = new StringBuilder();
                 string under = "";
-                bool wrote = false, changed = false;
+                bool wrote = false, changed = false, settings = false;
                 foreach (string raw in had)
                 {
                     string one = (raw ?? "").Trim();
@@ -109,10 +109,16 @@ namespace CapriDesktop
                     {
                         under = one.TrimStart('#').Trim();
                         wrote = false;
+                        settings = false;
                         made.AppendLine(raw);
                         continue;
                     }
-                    if (one.StartsWith(">"))
+                    // In some sections a ">" line is the setting rather than a note: an intro with ">" in front
+                    // of it is switched off. Those sit under the section's own lines, so once a line that is not
+                    // a note has gone by, every ">" after it is left exactly as it is. The note block at the top
+                    // still gets her current wording.
+                    if (one.Length > 0 && !one.StartsWith(">")) settings = true;
+                    if (one.StartsWith(">") && !(settings && Keeps(under)))
                     {
                         // Their notes go; ours take their place once, where theirs began.
                         changed = true;
@@ -132,14 +138,26 @@ namespace CapriDesktop
             catch (Exception) { }
         }
 
+        // Sections where a ">" line is data rather than a note, and has to survive a refresh.
+        private static bool Keeps(string under)
+        {
+            return string.Equals(under, "Her start-up intro", StringComparison.OrdinalIgnoreCase);
+        }
+
         private static Dictionary<string, List<string>> Noted(string[] lines)
         {
             Dictionary<string, List<string>> found = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
             string under = "";
+            bool settings = false;
             foreach (string raw in lines)
             {
                 string one = (raw ?? "").Trim();
-                if (one.StartsWith("#")) { under = one.TrimStart('#').Trim(); continue; }
+                if (one.StartsWith("#")) { under = one.TrimStart('#').Trim(); settings = false; continue; }
+                // Same rule the writer uses: in a section whose ">" lines are settings, only the block above
+                // the first real line counts as notes. Without this her own switches would be read as notes
+                // and written back a second time.
+                if (one.Length > 0 && !one.StartsWith(">")) settings = true;
+                if (settings && Keeps(under)) continue;
                 if (!one.StartsWith(">")) continue;
                 List<string> had;
                 if (!found.TryGetValue(under, out had)) { had = new List<string>(); found[under] = had; }

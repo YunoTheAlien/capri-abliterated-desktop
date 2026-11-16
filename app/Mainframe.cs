@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Drawing;
@@ -269,6 +269,9 @@ namespace CapriDesktop
         private readonly ContextMenuStrip freeKeyMenu;
         private readonly Key planKey;
         private readonly ContextMenuStrip planMenu;
+        // The other of the pair under MAX INTELLIGENCE, when there is one: her plan while a key is in use,
+        // or the key while her plan is. Hidden until there is something to go back to.
+        private readonly ToolStripMenuItem spareBrain;
         private readonly Label freeWarning;
         private readonly Label paidNote;
         private readonly Key movePaid;
@@ -519,6 +522,10 @@ namespace CapriDesktop
             codexPlan.AccessibleName = "ChatGPT plan";
             codexPlan.Tag = "codex";
             planMenu.Items.Add(codexPlan);
+            spareBrain = Choice("", false, delegate { capri.UseSpare(); });
+            spareBrain.Tag = "spare";
+            spareBrain.Available = false;
+            planMenu.Items.Add(spareBrain);
             planKey = Make("My plan", 266, 233, 90, 22, delegate { ShowPlans(); });
             planKey.Chevron = true;
             planKey.AccessibleName = "My plan: Claude through Claude Code, or ChatGPT through Codex";
@@ -2098,8 +2105,8 @@ namespace CapriDesktop
         private static void Pulse(double ms, out float swell, out float beat)
         {
             double t = ms % BeatMs / BeatMs;
-            swell = (float)Between(t, new[] { 0,.04,.08,.12,.16 }, new[] { 1, 1.22, 1, 1.12, 1 });
-            beat = (float)Between(t, new[] { 0,.05,.13,.22 }, new[] { 0, 1, 1, 0.0 });
+            swell = (float)Between(t, new[] { 0, .04, .08, .12, .16 }, new[] { 1, 1.22, 1, 1.12, 1 });
+            beat = (float)Between(t, new[] { 0, .05, .13, .22 }, new[] { 0, 1, 1, 0.0 });
         }
 
         private static double Between(double t, double[] at, double[] value)
@@ -2363,6 +2370,9 @@ namespace CapriDesktop
                 ScrollPage(0);
                 zoom = next;
                 unit = nextUnit;
+                // Last layout's fonts go now, before this one's are made: by here every paint that wanted them
+                // has happened.
+                LayoutItem.FreeRetired();
                 foreach (LayoutItem item in layout) item.Apply(unit, layoutFallback);
                 shownFallback = layoutFallback;
                 foreach (ContextMenuStrip menu in new[] { modelMenu, freeKeyMenu, planMenu, cloudMenu, voiceMenu, speechModelMenu, freeMenu, micMenu, languageMenu, careMenu, hearingMenu, mixInputMenu, mixOutputMenu }) menu.Font = Font;
@@ -2399,6 +2409,28 @@ namespace CapriDesktop
 
         private sealed class LayoutItem : IDisposable
         {
+            // Fonts a layout has replaced. They are let go one layout later, not the moment they are swapped.
+            //
+            // A paint already on its way still draws with the font the control had when it was asked to paint,
+            // and a font disposed under it throws "Parameter is not valid." from inside Windows. In a
+            // measurement that is a failed check; in a paint it lands in a Windows callback where nothing can
+            // catch it and the process is ended outright. It only fires when a paint arrives between the swap
+            // and the dispose, which is why one machine saw it twelve times in a run and another never has.
+            //
+            // One layout's worth is held, so nothing is leaked: the next layout frees the last one's.
+            private static readonly List<Font> retired = new List<Font>();
+
+            private static void Retire(Font font) { if (font != null) retired.Add(font); }
+
+            // The same holding pen, for a font swapped somewhere other than a layout item.
+            internal static void Keep(Font font) { Retire(font); }
+
+            internal static void FreeRetired()
+            {
+                foreach (Font font in retired) { try { font.Dispose(); } catch (Exception) { } }
+                retired.Clear();
+            }
+
             private readonly Control control;
             private readonly Rectangle bounds;
             private readonly Size maximum;
@@ -2442,9 +2474,9 @@ namespace CapriDesktop
                 Toggle toggle = control as Toggle;
                 if (rung != null) { rung.HintFont = scaledHint; rung.FlagFont = scaledFlag; }
                 if (toggle != null) toggle.HintFont = scaledHint;
-                if (oldFont != null) oldFont.Dispose();
-                if (oldHint != null) oldHint.Dispose();
-                if (oldFlag != null) oldFlag.Dispose();
+                Retire(oldFont);
+                Retire(oldHint);
+                Retire(oldFlag);
             }
 
             private static int At(int value, float scale) { return (int)Math.Round(value * scale); }
@@ -2578,7 +2610,9 @@ namespace CapriDesktop
                     Font own = new Font(form.Font, form.Font.Style);
                     strip.Font = own;
                     menus[strip] = own;
-                    if (old != null) old.Dispose();
+                    // Let go a layout later, like the rest: a menu painting itself with the one it was handed
+                    // is the same race, and the same five words come back from Windows if it has been freed.
+                    LayoutItem.Keep(old);
                 }
             }
 
@@ -3868,13 +3902,18 @@ namespace CapriDesktop
         private int KeyRow { get { return (NoAiRowShown ? 24 : 0) + (tier > 0 && !noAi ? 128 + (tier != 1 ? 0 : paidTextKey != null ? 86 : 20) : 94); } }
 
         // paidPlan: MAX INTELLIGENCE runs on their plan, and paidTail names it.
-        internal void ShowTiers(int pick, string nvidiaTail, string paidTail, string mediumKind = null, bool paidPlan = false)
+        internal void ShowTiers(int pick, string nvidiaTail, string paidTail, string mediumKind = null, bool paidPlan = false, string spare = null)
         {
             foreach (ToolStripItem item in planMenu.Items)
             {
                 ToolStripMenuItem choice = item as ToolStripMenuItem;
-                if (choice != null) choice.Checked = paidPlan && paidTail == Plans.Plan((string)choice.Tag);
+                if (choice == null || ReferenceEquals(choice, spareBrain)) continue;
+                choice.Checked = paidPlan && paidTail == Plans.Plan((string)choice.Tag);
             }
+            // Never ticked: it is not what she is on, it is the way back to what she was on.
+            spareBrain.Text = spare == null ? "" : "Back to your " + spare;
+            spareBrain.AccessibleName = spare == null ? "" : "Back to your " + spare;
+            spareBrain.Available = spare != null;
             int old = tier;
             tier = Math.Max(0, Math.Min(rungs.Length - 1, pick));
             if (old != tier) textEntry.Box.Clear();
@@ -3926,7 +3965,12 @@ namespace CapriDesktop
         {
             get
             {
-                if (brainName.Bounds.IntersectsWith(provider.Bounds) || provider.Bottom > brainNote.Top || provider.Right > Scaled(356)) return "Provider overlaps the brain name or note";
+                // With the numbers, since this one is read from another machine: a name and a key that overlap
+                // read the same in words whether they are the wrong width, the wrong height, or parked off the
+                // page because another page is showing.
+                if (brainName.Bounds.IntersectsWith(provider.Bounds) || provider.Bottom > brainNote.Top || provider.Right > Scaled(356))
+                    return "Provider overlaps the brain name or note: name " + brainName.Bounds + ", Provider " + provider.Bounds
+                        + ", note top " + brainNote.Top + ", room " + Scaled(356) + (paged ? ", settings showing" : "") + (modded ? ", mods showing" : "");
                 Rectangle last = rungs[rungs.Length - 1].Bounds;
                 if (textEntry.Visible && textEntry.Top < last.Bottom) return "the key box (top " + textEntry.Top + ") overlaps the last rung (bottom " + last.Bottom + ")";
                 if (textEntry.Visible && !Hidden(textConnect) && textConnect.Right > ClientSize.Width) return "Connect (right " + textConnect.Right + ") runs past the Mainframe (" + ClientSize.Width + ")";
@@ -5543,8 +5587,27 @@ namespace CapriDesktop
                 float s = Unit();
                 int left = (int)(10 * s);
                 int right = (int)((Chevron ? 28 : 10) * s);
-                int height = Box.Multiline ? Height - left * 2 : Box.PreferredHeight;
+                int height = Box.Multiline ? Height - left * 2 : OneLine();
                 Box.SetBounds(left, (Height - height) / 2, Math.Max(1, Width - left - right), height);
+            }
+
+            // How tall one line of her text is in this box. A text box works its own preferred height out against
+            // a device, and on at least one machine that throws "Parameter is not valid." from inside Windows,
+            // which is five words naming neither the box nor the reason.
+            //
+            // The way back must not need a device either, or it fails for the same reason it is standing in for:
+            // Font.GetHeight() with no argument measures against the screen, so only the overload that takes a
+            // resolution answers from the font's own metrics alone. Measured both ways where a device works, they
+            // give the same number. The rest is what Windows adds itself: the borders and the gap.
+            private int OneLine()
+            {
+                try { return Box.PreferredHeight; }
+                catch (ArgumentException)
+                {
+                    Font font = Box.Font;
+                    float dpi = Box.IsHandleCreated ? Box.DeviceDpi : 96;
+                    return (int)Math.Ceiling(font.GetHeight(dpi)) + SystemInformation.BorderSize.Height * 4 + 3;
+                }
             }
 
             protected override void OnMouseMove(MouseEventArgs e)
@@ -5757,7 +5820,7 @@ namespace CapriDesktop
                 Neon.Clip(drop, 10 * s, 4 * s);
             }
 
-            // A menu taller than its screen: WinForms fits it to the screen with scroll buttons, but on.NET Framework they're 9 px
+            // A menu taller than its screen: WinForms fits it to the screen with scroll buttons, but on .NET Framework they're 9 px
             // strips with a black arrow, lost on her dark panel, and the wheel scrolled the Mainframe behind it instead, so a long
             // model list looked cut off at the bottom of the screen (Ashy, 6 Nov). Her menus get her own arrows, scroll on the
             // wheel and while the mouse rests on an arrow, and open with the ticked choice in view.
@@ -6827,13 +6890,13 @@ namespace CapriDesktop
             {
                 using (OpenFileDialog dialog = new OpenFileDialog())
                 {
-                    dialog.Title = "Pick a voice model: its.tar.bz2, or the.onnx in its folder";
+                    dialog.Title = "Pick a voice model: its .tar.bz2, or the .onnx in its folder";
                     dialog.Filter = "Voice models (*.tar.bz2;*.zip;*.onnx)|*.tar.bz2;*.zip;*.onnx|All files (*.*)|*.*";
                     if (dialog.ShowDialog(this) == DialogResult.OK) Take(dialog.FileName);
                 }
             }
 
-            // An.onnx is used where it is. An archive is unpacked into her models folder first, off the UI thread.
+            // An .onnx is used where it is. An archive is unpacked into her models folder first, off the UI thread.
             internal void Take(string path)
             {
                 if (path.EndsWith(".onnx", StringComparison.OrdinalIgnoreCase))
@@ -7531,7 +7594,7 @@ namespace CapriDesktop
                 Sync();
             }
 
-            // Half steps from -12 to +12 semitones: "-12", "-11.5",... "Same",... "+12".
+            // Half steps from -12 to +12 semitones: "-12", "-11.5", ... "Same", ... "+12".
             private static string[] PitchLabels()
             {
                 string[] names = new string[(int)(VoiceFx.Layering.MostPitch * 4) + 1];

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -34,6 +34,10 @@ namespace CapriDesktop
         private static int cringe;
         // How long between her probing questions. Same shape as the mood window, and read by Probes.
         private static double probeLow = 1, probeHigh = 2;
+        // How long her bubble stays up once she has asked one, in seconds. A question wants an answer, and her
+        // bubble's own time is set for lines that want nothing back: twenty seconds is not long enough to notice
+        // one, read it and type.
+        private static double probeWait = 90;
         private static int kinkNow = -1;
         private static DateTime kinkUntil = DateTime.MinValue;
         private static readonly List<string> allowed = new List<string>();
@@ -48,7 +52,10 @@ namespace CapriDesktop
         // How long, from what they wrote: 2, 2h, 90m, 30s, or 1h30m. Hours when nothing says otherwise, which is what
         // every one of these meant before. Returns false for anything it cannot read, so a typo leaves the default
         // alone instead of setting a timer to nothing.
-        internal static bool Span(string said, out double hours)
+        // `bare` is what a number with no unit after it means, in hours. One is the right answer for every setting
+        // that is a stretch of hours; a setting that is a handful of seconds passes the fraction for a second, so
+        // "90" there is a minute and a half rather than most of a working week.
+        internal static bool Span(string said, out double hours, double bare = 1)
         {
             hours = 0;
             if (string.IsNullOrWhiteSpace(said)) return false;
@@ -61,6 +68,7 @@ namespace CapriDesktop
                 string unit = part.Groups[2].Value;
                 if (unit.StartsWith("m")) much /= 60.0;
                 else if (unit.StartsWith("s")) much /= 3600.0;
+                else much *= bare;
                 hours += much;
                 any = true;
             }
@@ -74,6 +82,7 @@ namespace CapriDesktop
 
         internal static double ProbeLow { get { Fresh(); lock (gate) return probeLow; } }
         internal static double ProbeHigh { get { Fresh(); lock (gate) return probeHigh; } }
+        internal static double ProbeWait { get { Fresh(); lock (gate) return probeWait; } }
         internal static int KinkLow { get { Fresh(); lock (gate) return kinkLow; } }
         internal static int KinkHigh { get { Fresh(); lock (gate) return kinkHigh; } }
 
@@ -238,7 +247,7 @@ namespace CapriDesktop
                 lock (gate) { if (about.LastWriteTimeUtc == read && about.Length == wasLong) return; }
                 string[] lines = File.ReadAllLines(Kept);
                 string baseName = "Devoted";
-                double least = 4, most = 8, askLow = 1, askHigh = 2;
+                double least = 4, most = 8, askLow = 1, askHigh = 2, askWait = 90;
                 int low = 2, high = 8, awful = cringe;
                 List<string> moods = new List<string>();
                 Dictionary<string, int> odds = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -266,6 +275,9 @@ namespace CapriDesktop
                             && Span(val, out much)) most = much;
                         else if (Regex.IsMatch(key, @"^probe min$", RegexOptions.IgnoreCase) && Span(val, out much)) askLow = much;
                         else if (Regex.IsMatch(key, @"^probe max$", RegexOptions.IgnoreCase) && Span(val, out much)) askHigh = much;
+                        // Written as a time like the two above it, but seconds unless they say otherwise: a bare
+                        // 90 here means a minute and a half, where a bare 2 in probe min means two hours.
+                        else if (Regex.IsMatch(key, @"^probe wait$", RegexOptions.IgnoreCase) && Span(val, out much, 1.0 / 3600)) askWait = much * 3600;
                         else if (Regex.IsMatch(key, @"^forward min$", RegexOptions.IgnoreCase)
                             && double.TryParse(val, out much)) low = (int)much;
                         else if (Regex.IsMatch(key, @"^forward max$", RegexOptions.IgnoreCase)
@@ -292,6 +304,9 @@ namespace CapriDesktop
                     mostHours = Math.Max(leastHours, most);
                     probeLow = Math.Max(0.02, askLow);
                     probeHigh = Math.Max(probeLow, askHigh);
+                    // Capped under the time the question itself stays pending, so the bubble never sits there
+                    // waiting on an answer she has already stopped listening for.
+                    probeWait = Math.Max(5, Math.Min(300, askWait));
                     int wasLow = kinkLow, wasHigh = kinkHigh;
                     kinkLow = Math.Max(0, Math.Min(10, low));
                     kinkHigh = Math.Max(0, Math.Min(10, high));
@@ -491,9 +506,27 @@ namespace CapriDesktop
                 if (!Regex.IsMatch(had, @"(?mi)^\s*probe (min|max)\s*:"))
                 {
                     string asking = "> How long between her questions about you. Takes 2h, 90m, 30s or 1h30m."
-                        + Environment.NewLine + "probe min: 1h" + Environment.NewLine + "probe max: 2h" + Environment.NewLine
+                        + Environment.NewLine + "> probe wait is how long her bubble stays up waiting for the answer, in seconds."
+                        + Environment.NewLine + "probe min: 1h" + Environment.NewLine + "probe max: 2h"
+                        + Environment.NewLine + "probe wait: 90" + Environment.NewLine
                         ;
                     had = (had.EndsWith(Environment.NewLine) ? had : had + Environment.NewLine) + Environment.NewLine + asking;
+                    File.WriteAllText(Kept, had, new UTF8Encoding(false));
+                    lock (gate) { read = DateTime.MinValue; wasLong = -1; }
+                }
+                // A file that already had the two above it is missing only the wait, which goes in under them. The
+                // note for it is not written here: Refresh keeps this file's notes and has already put it with
+                // the others, so writing it again would leave two copies until the next read.
+                else if (!Regex.IsMatch(had, @"(?mi)^\s*probe wait\s*:"))
+                {
+                    Match last = Regex.Match(had, @"(?mi)^[ \t]*probe (?:min|max)[ \t]*:[^\r\n]*(\r?\n)?", RegexOptions.RightToLeft);
+                    string line = "probe wait: 90" + Environment.NewLine;
+                    if (last.Success)
+                    {
+                        int at = last.Index + last.Length;
+                        had = had.Substring(0, at) + line + had.Substring(at);
+                    }
+                    else had = (had.EndsWith(Environment.NewLine) ? had : had + Environment.NewLine) + Environment.NewLine + line;
                     File.WriteAllText(Kept, had, new UTF8Encoding(false));
                     lock (gate) { read = DateTime.MinValue; wasLong = -1; }
                 }
@@ -580,8 +613,10 @@ namespace CapriDesktop
                 made.AppendLine("forward max: 8");
                 made.AppendLine();
                 made.AppendLine("> How long between her questions about you. Takes 2h, 90m, 30s or 1h30m.");
+                made.AppendLine("> probe wait is how long her bubble stays up waiting for the answer, in seconds.");
                 made.AppendLine("probe min: 1h");
                 made.AppendLine("probe max: 2h");
+                made.AppendLine("probe wait: 90");
                 made.AppendLine();
                 made.AppendLine("> How much she leans into a bit. 0 is dry, 100 is unbearable, over all of them at once.");
                 made.AppendLine("cringe: 0");

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
@@ -58,7 +58,7 @@ namespace CapriDesktop
         private static readonly Regex CallFence = new Regex(@"\A\s*(?:tool_code|tool_calls?|tool_use|function_calls?|functions?)\s*\z", RegexOptions.IgnoreCase);
 
         // Thinking with no tags, in plain words: a brain talking about "the user" or its tools to itself, never to them (PR 245:
-        // "The user is asking me to close discord... the correct tool call would be app_window"). Plenty of honest answers talk
+        // "The user is asking me to close discord ... the correct tool call would be app_window"). Plenty of honest answers talk
         // about "the user" too (a sign-up page, an error, a game's rules), so a paragraph only counts when it also talks to itself
         // about its own reply. After one that does, the paragraphs that carry on about the user or its tools go with it.
         private static readonly Regex Musing = new Regex(
@@ -290,7 +290,7 @@ namespace CapriDesktop
         private static readonly Regex Owner = new Regex(@"""(?:name|tool|tool_name|function|recipient_name)""\s*:\s*""(?:functions\.)?(?<tool>[\w.]+)""", RegexOptions.IgnoreCase);
         private static readonly Regex Given = new Regex(@"""(?:arguments|parameters|args|input)""\s*:", RegexOptions.IgnoreCase);
         private static Regex named, said, python;
-        // Not after. # @ or -, so CSS like.clip { overflow: hidden; } stays theirs.
+        // Not after . # @ or -, so CSS like .clip { overflow: hidden; } stays theirs.
         private static Regex NamedBefore { get { return named ?? (named = new Regex(@"(?:(?<prefix>\bcall\s*:\s*|\bfunctions\.)|(?<![\p{L}\p{N}_.#@-]))(?<tool>" + Names + @")(?::\d+)?\s*\z")); } }
         // Only names like use_computer, so "Remember: you've got this" stays hers, and never a sentence that ends like one, so
         // "pc_status: CPU 12%, RAM 40%." does too.
@@ -466,7 +466,7 @@ namespace CapriDesktop
             text = shapes.Invoke.Replace(text, delegate(Match call) { return Paired(call.Groups[1].Value, call.Groups[2].Value, @"<parameter\s+name=""([\w-]+)""\s*>\s*(.*?)\s*</parameter>"); });
             text = shapes.DeepSeek.Replace(text, "$1$2");
             text = shapes.Kimi.Replace(text, "$1");
-            // OpenAI's own shape copied as text: {"type": "function", "function": {"name":..., "arguments": "{...}"}}.
+            // OpenAI's own shape copied as text: {"type": "function", "function": {"name": ..., "arguments": "{...}"}}.
             Dictionary<int, int> closings = new Dictionary<int, int>();
             for (Match wrap = OpenAiWrap.Match(text); wrap.Success; wrap = OpenAiWrap.Match(text, wrap.Index + 1))
             {
@@ -497,7 +497,7 @@ namespace CapriDesktop
         }
 
         // The calls she took out of her words, for her chat to run. One still in what she shows, like np.clip(a=x) in a Python
-        // example or.clip { } in CSS, is theirs to read and never runs.
+        // example or .clip { } in CSS, is theirs to read and never runs.
         internal static List<KeyValuePair<string, ToolArguments>> Taken(string reply)
         {
             List<KeyValuePair<string, ToolArguments>> all = Calls(reply);

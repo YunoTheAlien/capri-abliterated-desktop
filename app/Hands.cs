@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -36,6 +36,7 @@ namespace CapriDesktop
         [DataMember(Name = "app")] public string App;
         [DataMember(Name = "kind")] public string Kind;
         [DataMember(Name = "task")] public string Task;
+        [DataMember(Name = "folder")] public string Folder;
         [DataMember(Name = "ask")] public string Ask;
         internal string Asked;
         // A plain look-up ("what's the weather tomorrow", "look up X") rather than a site they named, so it goes to whatever
@@ -153,7 +154,7 @@ namespace CapriDesktop
         internal const int Lockdown = 0, Guarded = 1, Trusted = 2, Blackwall = 3, Custom = 4;
         internal static readonly string[] Names = { "Open apps, games and sites", "Music, media and volume", "Shortcuts (screenshots, Game Bar, captions, Discord mute)", "Close and switch apps and tabs", "Shut down, restart, sleep, lock and sign out", "Use your mouse and keyboard for jobs", "Send, post and delete what you asked for", "Pay, buy and book", "Things your request didn't mention", "Type passwords and card numbers", "Listen for \"Hey Capri\"", "Friends on a call can ask, you confirm", "Keep personal details out of her memories", "Use tools your code mods added"
 #if CROSS
-           , "Run terminal commands"
+            , "Run terminal commands"
 #endif
         };
         internal static readonly string[] Lines =
@@ -177,7 +178,7 @@ namespace CapriDesktop
             "On: addresses, emails and numbers stay out. Off: they don't.",
             "On: she uses a mod's tool when it fits. Off: she asks first."
 #if CROSS
-           , "On: she runs shell commands when you ask. Off: she asks before each command."
+            , "On: she runs shell commands when you ask. Off: she asks before each command."
 #endif
         };
         internal static readonly string[] Presets = { "Lockdown", "Guarded", "Trusted", "Blackwall", "Custom" };
@@ -378,6 +379,7 @@ namespace CapriDesktop
                 case "linux_system": return action == "service_start" || action == "service_stop" || action == "service_restart" ? Power : -1;
 #endif
                 case "use_computer": return Mouse;
+                case "workspace": return Hands.WorkspaceStarts(args) ? Mouse : -1;
                 case "stream": return action == "stop" ? -1 : Mouse;
                 case "job_control": return action == "change" ? Mouse : -1;
                 case "clip": return action == "open_folder" || action == "open_last" ? Open : -1;
@@ -673,6 +675,7 @@ namespace CapriDesktop
                 case "draw": return "draw " + Plain(a.Description ?? a.Text, "on your screen");
                 case "desktop_icons": return a.Action == "back" ? "put your desktop icons back" : a.Action == "hide" ? "hide your desktop icons briefly" : a.Action == "rampage" ? "ram your desktop icons into the screen edge and fling them around" : "scatter your desktop icons";
                 case "mini_game": return "play " + Plain(a.Name, "a mini game").Replace('_', ' ');
+                case "workspace": return a.Action == "status" ? "check Workspace" : Hands.WorkspaceStarts(a) ? "start a Workspace chat to " + Plain(Hands.Asked(a.Task ?? ""), "do that") + (string.IsNullOrEmpty(a.Folder) ? "" : " in " + Plain(a.Folder, "that folder")) : "open Workspace";
                 case "fake_crash": return a.Action == "stop" ? "stop the " + Hands.CrashKind : "show the " + Hands.CrashKind;
                 case "listen": return a.Action == "stop" ? "stop listening to PC dialogue" : "listen to PC dialogue";
                 case "list_windows": return "check your open windows";
@@ -1352,9 +1355,11 @@ namespace CapriDesktop
             { "app_window", "Switch to, minimize or close an app or game that's open on their PC, found by its name or a word in its window's title. Naming a site closes that browser tab." + Arranging,
               "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"The app's name or a word from its window's title, or the site in a browser tab\"},\"action\":{\"type\":\"string\",\"description\":\"What to do\",\"enum\":[\"switch_to\",\"minimize\",\"maximize\",\"restore\",\"close\",\"snap_left\",\"snap_right\",\"snap_top\",\"snap_bottom\",\"move_to_screen\",\"move\",\"resize\",\"pin_on_top\",\"unpin\"]}" + Placing + "},\"required\":[\"name\",\"action\"]}",
               "switch to, minimize, maximize, snap, move, resize or close your apps' windows and browser tabs, on any of your monitors", "switch to, minimize, maximize, snap, move, resize or close their windows" },
-            // STOCK 0.8.9 ended at "...leave their choice to call_errand afterwards."; the "Working inside something already
+            // STOCK 0.8.9 ended at "...leave their choice to call_errand afterwards."; the sentence after it is
+            // this fork's. It is kept short on purpose: OpenAI refuses every tool when one description goes
+            // over 1024 characters, and this one is the longest she has.
             // open" sentence at the end is added.
-            { "use_computer", "Use their mouse and keyboard for any job inside an app or website: sending a message or DM, joining, leaving or ending a call, or anything that needs clicking, typing or several steps, like opening an app and searching in it, or in a game: picking a mode, queueing for a match, or waiting for one and accepting it while they're away. This is also how you play a game yourself: when they want you to play one, call this once with their words, open or not. It opens the game, gets into a match or map and keeps playing until they stop you. You always have their mouse and keyboard through this tool. For join the Discord call, hop in the call or join the vc, click a Join button already on screen, or else the server voice channel with people in it; their friends are the people in that call, never Discord's Friends page or DMs. Keep that job to joining; pass messages with call_say and leave their choice to call_errand afterwards. Working inside something already open, like deleting posts on a site, filling a form, or clicking through a page in their browser, is this tool as well: never report that the app or site is open instead of doing the thing they asked.",
+            { "use_computer", "Use their mouse and keyboard for any job inside an app or website: sending a message or DM, joining, leaving or ending a call, or anything that needs clicking, typing or several steps, like opening an app and searching in it, or in a game: picking a mode, queueing for a match, or waiting for one and accepting it while they're away. This is also how you play a game yourself: when they want you to play one, call this once with their words, open or not. It opens the game, gets into a match or map and keeps playing until they stop you. You always have their mouse and keyboard through this tool. For join the Discord call, hop in the call or join the vc, click a Join button already on screen, or else the server voice channel with people in it; their friends are the people in that call, never Discord's Friends page or DMs. Keep that job to joining; pass messages with call_say and leave their choice to call_errand afterwards. Also jobs in an open app or site, like filling a form: do them, don't just say it's open.",
               "{\"type\":\"object\",\"properties\":{\"task\":{\"type\":\"string\",\"description\":\"The whole job in their exact words, including any message to send\"}},\"required\":[\"task\"]}", "do mouse and keyboard jobs in your apps, sites and games, like sending messages, changing settings or playing a game herself", "mouse and keyboard jobs in their apps, sites and games" },
             { "stream", "Start or stop your stream. On stream you play a game yourself, live for their stream, and talk to their chat between plays, until they stop you. Start it whenever they ask, suggest or hint that you stream, go live, play for their chat or viewers, or entertain their chat, in any words, like stream for me, you should stream, wanna go live, or chat wants to see you play. name is the game to play if they named one; leave it out to play the game that's open. stop ends your stream.",
               "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"description\":\"start or stop\",\"enum\":[\"start\",\"stop\"]},\"name\":{\"type\":\"string\",\"description\":\"The game to play, if they named one\"}},\"required\":[\"action\"]}", "stream for you, playing a game herself live and talking to your chat", "stream live for them: play a game yourself and talk to their chat" },
@@ -1410,6 +1415,8 @@ namespace CapriDesktop
             { "animate", "Play one of your own animations on their screen: your idle, your glitch, your grin or a blink, or dance until they tell you to stop. Use it when they ask you to dance, stop dancing, do your glitch, grin, smile or blink, or play an animation by name." + SecretMovesNote,
               "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Which animation\",\"enum\":[\"idle\",\"glitch\",\"grin\",\"blink\",\"dance\",\"stop_dancing\"" + SecretMovesEnum + "]}},\"required\":[\"name\"]}", "dance and play her animations", "dance and play your animations" },
 #if CROSS
+            { "workspace", "Open your Workspace window, start a new Claude Code chat there, or check recent chats when they ask. open is the default; a task with no action means start. start needs task in their words; folder is optional and must exist, otherwise it uses your own Workspace folder. New chats use the window's usual mode: Blackwall Mode under the Blackwall preset, Ask me otherwise. Folder trust and tool approvals stay in the window for them to answer. status gives up to three recent chats, whether they are working, waiting for an OK or finished, and their last answer.",
+              "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"description\":\"open by default, start a chat, or check status\",\"enum\":[\"open\",\"start\",\"status\"]},\"task\":{\"type\":\"string\",\"description\":\"Required for start: their first message in their words\"},\"folder\":{\"type\":\"string\",\"description\":\"For start: an existing folder; omit for your own Workspace folder\"}}}", "open Workspace, start a chat or check recent chats", "open Workspace, start a chat or check recent chats" },
             { "mainframe", "Open Capri Mainframe or a page when they ask, suggest or hint at seeing your controls. This only opens it; they change settings there.",
               "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"The page to open; omit for Mainframe\",\"enum\":[\"main\",\"settings\",\"brain\",\"voice\",\"you\",\"moves\",\"keys\",\"capri\",\"watch\",\"habits\",\"games\",\"security\",\"layers\",\"personality\",\"memories\",\"files\",\"notes\"]}}}", "open Mainframe or one of its pages", "open Mainframe or one of its pages" },
 #endif
@@ -1494,7 +1501,7 @@ namespace CapriDesktop
 #if CROSS
             { "run_terminal", "Run the desktop owner's requested command using their native shell and real working directory. A visible job opens its native terminal itself; do not open a second empty terminal first. Use for terminal tasks instead of a screenshot job or project-scope runner. Returns real job identity/status and output when available; never claim completion from the request alone.", "{\"type\":\"object\",\"properties\":{\"command\":{\"type\":\"string\",\"description\":\"The requested shell command or script; preserve its literal quoting and Unicode.\"},\"cwd\":{\"type\":\"string\",\"description\":\"Real requested working directory. If absent, use the owner's actual home directory; no project root is required.\"},\"visible\":{\"type\":\"boolean\",\"description\":\"Open the actual terminal for this job. Defaults to true; use false for a requested background command.\"}},\"required\":[\"command\"],\"additionalProperties\":false}", "run your requested native terminal task", "run their requested native terminal task" },
             { "terminal_job", "Inspect output/status or stop one native terminal job started for the owner. Use its exact returned job ID. Stop only that owned job; never all terminal processes. An exit code is reported only when actually observed.", "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"status\",\"read\",\"stop\"]},\"job_id\":{\"type\":\"string\"},\"offset\":{\"type\":\"integer\",\"minimum\":0,\"description\":\"Optional output cursor from the previous read.\"}},\"required\":[\"action\",\"job_id\"],\"additionalProperties\":false}", "run your requested native terminal task", "run their requested native terminal task" },
-            { "linux_system", "Read Linux CPU load, memory and disk status or owned process names, or inspect and operate one explicitly named user service. Never a shell or system service. Use a literal.service unit; mutations must be in the owner's request.",
+            { "linux_system", "Read Linux CPU load, memory and disk status or owned process names, or inspect and operate one explicitly named user service. Never a shell or system service. Use a literal .service unit; mutations must be in the owner's request.",
               "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"overview\",\"status\",\"processes\",\"service_failed\",\"service_status\",\"service_start\",\"service_stop\",\"service_restart\"]},\"name\":{\"type\":\"string\"}},\"required\":[\"action\"]}", "read Linux diagnostics or manage your named user service", "read Linux diagnostics or manage their named user service" },
 #endif
         };
@@ -1502,7 +1509,8 @@ namespace CapriDesktop
 
         // A check her brain made only to find out where things stand, which changes nothing: it isn't a job for her transcript,
         // where window titles would end up in her memories, and it isn't something she did.
-        internal static bool Checking(string tool, ToolArguments args) { return (tool == "voice_chat" || tool == "job_control" || tool == "updates") && args != null && args.Action == "status" || tool == "list_windows" || tool == "check_app" || tool == "read_skill" || tool == "capri_settings" && (args == null || args.Action != "on" && args.Action != "off" && args.Action != "set") || tool == "app_volume" && (args == null || args.Action == "now") || tool == "pc_status" || tool == "internet_status"; }
+        internal static bool Checking(string tool, ToolArguments args) { return (tool == "voice_chat" || tool == "job_control" || tool == "updates" || tool == "workspace") && args != null && args.Action == "status" || tool == "list_windows" || tool == "check_app" || tool == "read_skill" || tool == "capri_settings" && (args == null || args.Action != "on" && args.Action != "off" && args.Action != "set") || tool == "app_volume" && (args == null || args.Action == "now") || tool == "pc_status" || tool == "internet_status"; }
+        internal static bool WorkspaceStarts(ToolArguments args) { return args != null && (args.Action == "start" || string.IsNullOrEmpty(args.Action) && Named(args.Task)); }
 
         // Her tools as her brains get them, made from the ones that work here. On a Windows PC with a brain that can see, that's
         // all of them, the same as they always were.
@@ -1532,11 +1540,11 @@ namespace CapriDesktop
             @"^(open|launch|start|run|load up|boot up|fire up|play|shuffle|put on|blast|queue|close|quit|exit|kill|shut down|switch (back |over )?to|back to|go to|take me to|bring up|pull up|show me|minimi[sz]e|pause|unpause|resume|stop the music|skip|next|previous|go back|volume|louder|quieter|mute|unmute|search|google|look up|mind (opening|launching|playing|closing))\b" +
             @"|^remind me(?:$|\s+(?:to|in|at|on|tomorrow|tonight|after|before|next|\d+)\b)|^when i say\b|^(list|show|cancel|remove|delete|forget)\b.*\b(reminders?|routines?)$|^what (are my (reminders|routines)|(reminders|routines) do i have)$" +
             @"|^(recu[eé]rdame|rappelle[- ]moi|erinnere mich|przypomnij mi|lembra[- ]me|lembre[- ]me|me lembre|me lembra)\b" +
-            @"|^(turn|make) (it|this|that|the volume|the music|the sound) (up|down|louder|quieter)\b|^(turn (up|down)|lower|raise) (the )?(volume|music|sound)\b|^put (some |a )?(music|song|tunes) on\b|^(get|bring).+ (going|up)$" +
+            @"|^(turn|make) (it|this|that|the volume|the music|the sound) (up|down|louder|quieter)\b|^(turn (up|down)|lower|raise) (the )?(volume|music|sound)\b|^put (some |a )?(music|song|tunes) on\b|^(get|bring) .+ (going|up)$" +
             @"|^(look at|take a (look|peek)( at)?|check out|check|rate|watch) (this|that|it|my|the|what)\b" +
-            @"|^(click|tap|double click|right click|type|press|scroll|go on|get on|hop on|sign in|log in|fill (in|out)|use (my|the) (mouse|keyboard|computer|pc))\b|^(use|make|create|write|draw|search|find).+ (in|on|with|using|into) (the |my )?\w+" +
+            @"|^(click|tap|double click|right click|type|press|scroll|go on|get on|hop on|sign in|log in|fill (in|out)|use (my|the) (mouse|keyboard|computer|pc))\b|^(use|make|create|write|draw|search|find) .+ (in|on|with|using|into) (the |my )?\w+" +
             @"|^(shut ?down|turn off|power (off|down)|switch off|restart|reboot|lock|sleep|hibernate|put|send) (my |the |this )?(pc|computer|laptop|system|machine|rig|windows|device|screen)\b|^(shut|turn|power|switch) (my |the |this )?(pc|computer|laptop|system|machine|rig|device) (down|off)\b|^(sign|log) me (out|off)$" +
-            @"|^(send|dm|pm|message|text|ping|reply to|respond to|post|tweet)\b|^(tell|ask|say|let|invite|kick|ban|add|react|call|ring|share|pin|block|unblock|unfriend).+\b(on|in|into|through|via|over) (the |my )?(discord|slack|teams|whatsapp|telegram|signal|messenger|skype|instagram|insta|snapchat|snap|reddit|twitter|tiktok|facebook|roblox|steam|chat|call|vc|server|channel|group chat|gc|dms?)\b" +
+            @"|^(send|dm|pm|message|text|ping|reply to|respond to|post|tweet)\b|^(tell|ask|say|let|invite|kick|ban|add|react|call|ring|share|pin|block|unblock|unfriend) .+\b(on|in|into|through|via|over) (the |my )?(discord|slack|teams|whatsapp|telegram|signal|messenger|skype|instagram|insta|snapchat|snap|reddit|twitter|tiktok|facebook|roblox|steam|chat|call|vc|server|channel|group chat|gc|dms?)\b" +
             @"|^(end|leave|hang up|disconnect( from)?|join|accept|decline|pick up|answer|reject|hop (in|on|off)|get off) (the |my |this |that |a |our |their )?(\w+('s)? )?(call|vc|voice (chat|channel|call)|video call|meeting|stream|server|channel)\b|^(hang up|disconnect|hop off|get off)( (the )?(call|vc))?$" +
             @"|^(see|tell me|show me) (what|which)\b|^see (this|that|my screen|the screen)\b|^what('?s| is) (on my screen|on the screen|playing|this song|this track|the song|on spotify)\b" +
             @"|^what ((song|track)( is|'s)? (this|playing|on)|am i (doing|playing|watching|listening)|are we (doing|playing|watching|listening)|do you see|can you see)\b|^what do you think (of|about) (this|that|it|my (build|skin|setup))\b|^do you (see|like) (this|that|my (build|skin|setup))\b" +
@@ -1548,11 +1556,11 @@ namespace CapriDesktop
             @"|^(abr[aeií]r?|[aá]bre(me|lo|la)|inicia(r|lo)?|inicie|lanza(r)?|ejecuta(r|lo)?|arranca(r)?|enciende|prende|activa(r)?|desactiva(r)?|apaga(r)?|cierra|ci[eé]rra(me|lo|la)|cerrar|minimiza(r|lo)?|busca(r)?|b[uú]sca(me|lo)|pon(me|lo|la|le|er)?|reproduce|reproducir|reprod[uú]ce(me|lo)|toca(r)?|t[oó]ca(me|la)|pausa|reanuda|salta|silencia|quita(le)?|sube|s[uú]bele|subir|baja|b[aá]jale|bajar|mu[eé]stra(me)?|ens[eé][ñn]a(me)?|escribe|escr[ií]be(le|me)|manda|m[aá]nda(le|me)|env[ií]a(le|me)?|responde|contesta|ve al?|vete al?|ir al?|entra (al?|en)|haz clic|dale clic|pulsa|presiona|googlea|quiero que (me )?(abras|pongas|reproduzcas|toques|busques|cierres|inicies|lances|mandes|env[ií]es|escribas)|(me )?(abres|pones|pondr[ií]as|abrir[ií]as|buscas|cierras|quitas|subes|bajas|pasas))\b" +
             @"|^(ves|qu[eé] (ves|hay en (mi|la) pantalla|estoy haciendo|est[aá] sonando)|mira (mi pantalla|esto|eso)|qu[eé] (canci[oó]n|m[uú]sica|tema) (es|suena)|(cu[aá]l es|c[oó]mo se llama) (esta|esa) canci[oó]n)\b" +
             // A new install talks in Windows' language, so German, Portuguese, Italian, Polish, Dutch and Russian requests reach her hands too.
-            @"|^(([öo]ffne|[öo]ffnen|starte|spiele?|schlie(ß|ss)e?|suche?|zeig(e|\s+mir)?|pausiere|schalte)\b|mach(e)?.+ (auf|an|aus|lauter|leiser)$|(kannst|k[öo]nntest|w[üu]rdest) du\b.*\b([öo]ffnen|starten|spielen|abspielen|schlie(ß|ss)en|suchen|zeigen|anmachen|aufmachen|ausmachen|pausieren)\b)" +
+            @"|^(([öo]ffne|[öo]ffnen|starte|spiele?|schlie(ß|ss)e?|suche?|zeig(e|\s+mir)?|pausiere|schalte)\b|mach(e)? .+ (auf|an|aus|lauter|leiser)$|(kannst|k[öo]nntest|w[üu]rdest) du\b.*\b([öo]ffnen|starten|spielen|abspielen|schlie(ß|ss)en|suchen|zeigen|anmachen|aufmachen|ausmachen|pausieren)\b)" +
             @"|^(abra|abrir|toque|tocar|coloca|coloque|p[õo]e|bota|fecha|feche|fechar|procura|procure|pesquisa|pesquise|mostra|mostre|pula|pule|aumenta|diminui|(voc[eê] |vc )?(pode|poderia|consegue)s? (me )?(abrir|tocar|colocar|p[ôo]r|fechar|procurar|pesquisar|mostrar|iniciar|pausar))\b" +
             @"|^(apri|aprire|avvia|avviare|lancia|metti|mettimi|riproduci|suona|chiudi|chiudere|cerca|cercare|mostrami|fammi (vedere|sentire)|alza|abbassa|(puoi|potresti|riesci a) (aprire|avviare|mettere|riprodurre|chiudere|cercare|mostrarmi|suonare|alzare|abbassare))\b" +
             @"|^(otw[óo]rz|uruchom|w[łl][aą]cz|pu[śs][ćc]|zamknij|wyszukaj|szukaj|znajd[źz]|poka[żz]|zatrzymaj|(mo[żz]esz|m[óo]g[łl]by[śs]|mog[łl]aby[śs]) (mi )?(otworzy[ćc]|uruchomi[ćc]|w[łl][aą]czy[ćc]|pu[śs]ci[ćc]|zamkn[aą][ćc]|wyszuka[ćc]|znale[źz][ćc]|pokaza[ćc]))(?!\w)" +
-            @"|^(((speel|sluit|zoek|toon|pauzeer)\b(?! (je|jij|jy|julle|u|we|wij|ons)\b)|laat (me )?zien\b)|zet.+ op$|(kun|kan|wil) je\b.*\b(openen|starten|spelen|afspelen|opzetten|sluiten|zoeken|laten zien)\b)" +
+            @"|^(((speel|sluit|zoek|toon|pauzeer)\b(?! (je|jij|jy|julle|u|we|wij|ons)\b)|laat (me )?zien\b)|zet .+ op$|(kun|kan|wil) je\b.*\b(openen|starten|spelen|afspelen|opzetten|sluiten|zoeken|laten zien)\b)" +
             @"|^(открой|открыть|запусти|запустить|включи|включить|поставь|поставить|закрой|закрыть|найди|найти|покажи|показать|выключи|сделай (громче|тише)|(можешь|можете|мог бы|могла бы|не могла бы) (ты )?(открыть|запустить|включить|поставить|закрыть|найти|показать))(?!\w)" +
             // Chinese, Japanese, Korean, Thai, Vietnamese, Indonesian, Turkish, Ukrainian, Arabic and Hindi too. Chinese and Thai write
             // no spaces, and Japanese, Korean, Turkish and Hindi put the verb last, so those match where the verb sits.
@@ -1599,7 +1607,7 @@ namespace CapriDesktop
             // languages, like Portuguese "agora", Vietnamese "cau" or Spanish "vale", are left out.
             @"|^((pecha(me|o|a|lo|la)?|am[oó]sa(me)?)(?!\w)|(podes|poder[ií]as) (abrir|po[ñn]er|pechar|buscar|amosar|reproducir|tocar)(?!\w))" +
             @"|^(ireki|itxi|bilatu|erakutsi|gelditu|bidali|erreproduzitu|piztu|itzali)(?!\w)|(^|\s)(ireki|itxi|bilatu|erakutsi|gelditu|bidali|erreproduzitu|piztu|itzali)( ezazu| ezazue| mesedez)?$|(ireki|itxi|bilatu|erakutsi|gelditu|bidali|piztu|itzali) (dezakezu|ahal duzu|al duzu)(?!\w)" +
-            @"|^((soek|wys my|stuur)(?!\w)|maak.+ (oop|toe)$|sit (die|dit|hom|haar)(.+)? (aan|af|harder|sagter)$|(kan|sal) jy\b.*\b(oopmaak|toemaak|speel|soek|wys|stuur|aansit|afsit)(?!\w))" +
+            @"|^((soek|wys my|stuur)(?!\w)|maak .+ (oop|toe)$|sit (die|dit|hom|haar)( .+)? (aan|af|harder|sagter)$|(kan|sal) jy\b.*\b(oopmaak|toemaak|speel|soek|wys|stuur|aansit|afsit)(?!\w))" +
             @"|^((opnaðu|opnadu|spilaðu|spiladu|lokaðu|lokadu|leitaðu|leitadu|sýndu|syndu|stöðvaðu|stodvadu|stoppaðu|stoppadu|sendu|hækkaðu|haekkadu|lækkaðu|laekkadu|kveiktu|slökktu|slokktu|settu)(?!\w)|(geturðu|geturdu|gætirðu|gaetirdu)\b.*\b(opnað|opnad|spilað|spilad|lokað|lokad|leitað|leitad|sýnt|synt|sett|kveikt|slökkt)(?!\w)|viltu (opna|loka|leita|sýna|syna|setja|kveikja|slökkva|slokkva|senda)(?!\w))" +
             @"|^((hape|luaj|mbyll|mbylle|kërko|kerko|më trego|me trego|ndalo|dërgo|dergo|ndiz)(?!\w)|(a )?(mund|mundesh|mundeni) (të |te |ta |t'i )?(hapësh|hapesh|luash|mbyllësh|mbyllesh|kërkosh|kerkosh|tregosh|ndezësh|ndezesh|dërgosh|dergosh)(?!\w))" +
             @"|^((oscail|seinn|dún|cuardaigh|taispeáin|taispeain|seol|ardaigh|ísligh|isligh|múch)(?!\w)|an (féidir|feidir) leat\b.*\b(oscailt|sheinm|sheinnt|chasadh|dhúnadh|dhunadh|chuardach|thaispeáint|thaispeaint|mhúchadh)(?!\w))" +
@@ -1634,7 +1642,7 @@ namespace CapriDesktop
             // Hebrew, Urdu and Persian. Urdu and Persian put the verb last.
             @"|^(בבקשה )?(פתח|פתחי|תפתח|תפתחי|נגן|נגני|תנגן|תנגני|סגור(?= )|סגרי|תסגור|תסגרי|חפש|חפשי|תחפש|תחפשי|תראה לי|תראי לי|הראה לי|הראי לי|עצור|עצרי|תעצור|תעצרי|הגבר|תגביר|תגבירי|הנמך|תנמיך|תנמיכי|שים(?! לב)|שימי(?! לב)|תשים|תשימי|הפעל|הפעילי|תפעיל|תפעילי|כבה|כבי|תכבה|תכבי|שלח|שלחי|תשלח|תשלחי)(?!\w)|^(את יכולה|אתה יכול|תוכלי|תוכל|אפשר) (בבקשה )?ל(פתוח|נגן|סגור|חפש|הראות|הפעיל|כבות|שים|הגביר|הנמיך|שלוח)(?!\w)" +
             @"|(کھولو|کھول دو|کھولیں|کھول دیں|چلاؤ|چلا دو|چلائیں|چلا دیں|بجاؤ|بجا دو|بجائیں|(?<!(بکواس|ڈرامہ|ڈرامے|مذاق|بولنا|رونا|چلانا|نخرے) )بند (کرو|کر دو|کریں|کر دیں)|ڈھونڈو|ڈھونڈ دو|تلاش کرو|تلاش کریں|دکھاؤ|دکھا دو|دکھائیں|روکو|روک دو|روکیں|بڑھاؤ|بڑھا دو|کم کرو|کم کر دو|بھیجو|بھیج دو)( نا| پلیز| پلز)?[۔.!?؟\s]*$|(کھول|چلا|بجا|بند کر|دکھا|ڈھونڈ) (سکتے|سکتی|سکو) (ہو|ہیں|گے|گی)|کون سا گانا" +
-            @"|(باز کن|بازش کن|باز کنید|پخش کن|پخشش کن|پخش کنید|بذار|بزار|بگذار|بذارش|ببند|ببندش|ببندید|جستجو کن|سرچ کن|بگرد|پیدا کن|نشون بده|نشونم بده|نشان بده|نشانم بده|متوقف کن|قطع کن|زیاد کن|زیادش کن|کم کن|کمش کن|بفرست|اجرا کن)( لطفا| لطفاً| دیگه| پلیز)?[.!?؟\s]*$|^(لطفا |لطفاً )?(می[\u200C ]?(تونی|توانی)|می[\u200C ]?شه).*(باز کنی|بازش کنی|پخش کنی|بذاری|بزاری|بگذاری|ببندی|جستجو کنی|بگردی|پیدا کنی|نشون بدی|نشان بدهی|اجرا کنی|بفرستی)" +
+            @"|(باز کن|بازش کن|باز کنید|پخش کن|پخشش کن|پخش کنید|بذار|بزار|بگذار|بذارش|ببند|ببندش|ببندید|جستجو کن|سرچ کن|بگرد|پیدا کن|نشون بده|نشونم بده|نشان بده|نشانم بده|متوقف کن|قطع کن|زیاد کن|زیادش کن|کم کن|کمش کن|بفرست|اجرا کن)( لطفا| لطفاً| دیگه| پلیز)?[.!?؟\s]*$|^(لطفا |لطفاً )?(می[\u200C ]?(تونی|توانی)|می[\u200C ]?شه) .*(باز کنی|بازش کنی|پخش کنی|بذاری|بزاری|بگذاری|ببندی|جستجو کنی|بگردی|پیدا کنی|نشون بدی|نشان بدهی|اجرا کنی|بفرستی)" +
             // Bengali, Marathi, Gujarati, Punjabi, Tamil, Telugu, Kannada and Malayalam put the verb last too, and English verbs
             // with Tamil, Telugu, Kannada or Malayalam endings ("open pannu") are common.
             @"|(^|\s)(খোলো|খুলে দাও|খুলুন|খোল|চালাও|চালিয়ে দাও|চালান|চালু করো|চালু করে দাও|বাজাও|বাজিয়ে দাও|বাজান|বন্ধ করো|বন্ধ করে দাও|বন্ধ করুন|বন্ধ কর|খোঁজো|খুঁজে দাও|খুঁজুন|দেখাও|দেখিয়ে দাও|দেখান|থামাও|থামিয়ে দাও|থামান|পাঠাও|পাঠিয়ে দাও|পাঠান|বাড়াও|বাড়িয়ে দাও|কমাও|কমিয়ে দাও)( না| প্লিজ| প্লীজ)?[।.!?\s]*$|(খুলতে|চালাতে|বাজাতে|বন্ধ করতে|দেখাতে|খুঁজতে) (পারবে|পারবেন|পারো|পারেন|পারবি)" +
@@ -1649,7 +1657,7 @@ namespace CapriDesktop
 
         private static readonly Regex Errands = new Regex(
             @"^(send|dm|pm|reply to|respond to)\b(?!\s+(me|us|help)\b)|^(message|msg|text|ping) (?!(is|was|are|were|from|looks|said|says|me|us)\b)\w|^(post|tweet) (this|that|it|a|an|my|our|something|on|in|to)\b" +
-            @"|^(tell|ask|say|let|invite|kick|ban|add|react|call|ring|share|pin|block|unblock|unfriend).+\b(on|in|into|through|via|over|to) (the |my )?(#\S+|discord|slack|teams|whatsapp|telegram|signal|messenger|skype|instagram|insta|snapchat|snap|reddit|twitter|tiktok|facebook|roblox|steam|(group )?chat|call|vc|server|channel|gc|dms?)(?!\w)" +
+            @"|^(tell|ask|say|let|invite|kick|ban|add|react|call|ring|share|pin|block|unblock|unfriend) .+\b(on|in|into|through|via|over|to) (the |my )?(#\S+|discord|slack|teams|whatsapp|telegram|signal|messenger|skype|instagram|insta|snapchat|snap|reddit|twitter|tiktok|facebook|roblox|steam|(group )?chat|call|vc|server|channel|gc|dms?)(?!\w)" +
             @"|^type (?!(of|is|was)\b)\w|^(click|tap|double click|right click) (?!(bait|is|was)\b)\w|^scroll (up|down|left|right|to|through)\b|^(fill (in|out)|sign in|log in)\b" +
             @"|^(end|leave|hang up|disconnect( from)?|join|accept|decline|pick up|answer|reject|hop (in|on|off)|get off) (the |my |this |that |a |our |their )?(\w+('s)? )?(call|vc|voice (chat|channel|call)|video call|meeting|stream|server|channel)\b|^(hang up|disconnect|hop off|get off)( (the )?(call|vc))?$", RegexOptions.IgnoreCase);
         private static readonly Regex Opener = new Regex(@"^((great|nice|cool|sweet|perfect|awesome|amazing|alright|alr|aight|bet|thanks|thank you|thx|ty|so|and|now|also|oh|wait|um|uh|hmm|lol|lmao|bro|dude|bruh)[\s,!.]+)+(?=((hey|yo|ok|okay)[\s,]+)?(capri\b|(can|could|would|will) (you|u)\b|please\b|pls\b|plz\b))", RegexOptions.IgnoreCase);
@@ -1760,6 +1768,7 @@ namespace CapriDesktop
         private const string SecretMovesNote = " Two are secret: never list, name, offer or explain them. chair sits you on a white plastic chair when they ask you to sit on one. heart is a little finger heart, yours to send whenever you feel it, asked or not: when they thank or compliment you, share good news, say goodnight, or just because. Send it with your reply, as often as you like, without asking.";
 #endif
         internal static Func<string, string> Mainframe = delegate { return "Couldn't open Mainframe."; };
+        internal static Func<ToolArguments, string> Workspace = delegate { return "Couldn't open Workspace."; };
 #if CROSS
         internal const string CrashKind = "fake crash screen";
 #else
@@ -2067,12 +2076,13 @@ namespace CapriDesktop
                 if (tool == "stream") return Stream(args);
                 if (tool == "shortcut") return Shortcut(args.Name);
                 if (tool == "remember") return args.Action == "forget" ? Brain.Unnote(Theirs(args.Text))
-                    : Probes.Allowed(args.Key) ? Brain.NoteKey(args.Key, Theirs(args.Text))
+                    : Probes.Allowed(args.Key) ? Answered(args.Key, Brain.NoteKey(args.Key, Theirs(args.Text)))
                     : CallMe(args.Text) ?? Brain.Note(Theirs(args.Text));
                 if (tool == "list_windows") return ListWindows(args.Name);
                 if (tool == "check_app") return CheckApp(args.Name);
                 if (tool == "capri_settings") return Settings(args);
                 if (tool == "mainframe") return Valid(tool, args) ? Mainframe(args.Name) : "Couldn't find that Mainframe page.";
+                if (tool == "workspace") return Valid(tool, args) ? Workspace(args) : "Couldn't find that Workspace action or task.";
                 if (tool == "speech") return Valid(tool, args) ? StopSpeech() : "Couldn't find that speech action.";
                 if (tool == "job_control") return Valid(tool, args) ? JobControl(args) : "Couldn't find that job instruction.";
                 if (tool == "quit") return Valid(tool, args) ? Quit(args) : "Couldn't find that quit action.";
@@ -2218,6 +2228,17 @@ namespace CapriDesktop
         }
 
         internal static void Forget() { lock (gate) cached = null; }
+
+        // A question of hers that has just been answered stops being pending. Without this she stays waiting on it
+        // for the full six minutes, and the line that writes the answer down if her brain forgets would write it
+        // a second time over the top of hers.
+        private static string Answered(string key, string said)
+        {
+            // Nothing said back means it went into her notes, or was already there. Every other answer is a
+            // reason it did not, and the question stays pending so the answer can still be caught.
+            if (said != null && said.Length == 0) Probes.Answered(key);
+            return said;
+        }
 
         private static readonly string[] Swaps = { @"\bi'?m\b", "they're", @"\bi am\b", "they are", @"\bi was\b", "they were", @"\bi've\b", "they've", @"\bi'll\b", "they'll", @"\bi'd\b", "they'd", @"\bi\b", "they", @"\bmyself\b", "themselves", @"\bmy\b", "their", @"\bmine\b", "theirs", @"\bme\b", "them" };
 
@@ -2383,7 +2404,8 @@ namespace CapriDesktop
         {
             if (!CallTool(tool) || args == null || !Valid(tool, args)) return false;
             if (tool == "mini_game" && (args.Action == "level" || !string.IsNullOrEmpty(args.Level))) return false;
-            if (tool != "use_computer") return true;
+            if (tool == "workspace" && args.Action == "status") return false;
+            if (tool != "use_computer" && (tool != "workspace" || !WorkspaceStarts(args))) return true;
             return !Regex.IsMatch(args.Task ?? "", @"\b(capri|mainframe|security|settings|preferences|call_errand|call_say|read_file|quit|remember|routine)\b|\b(?:read|inspect|cat|type|print|show)\b.{0,60}\b(?:file|me\.md|personality\.md)\b", RegexOptions.IgnoreCase);
         }
 
@@ -2431,7 +2453,7 @@ namespace CapriDesktop
         private static readonly string[] MacPresses = { "screenshot", "task_manager", "discord_mute", "discord_deafen", "show_desktop", "emoji", "narrator", "magnifier", "record", "clipboard" }, LinuxPresses = { "screenshot", "show_desktop", "task_manager" };
         // Her moves still missing outside Windows.
         private static string[] WindowsMoves { get { return new string[0]; } }
-        private static readonly string[] WindowsTools = { "draw", "desktop_icons", "watch_along", "gaming_mode", "clip", "mini_game", "listen", "voice_chat" };
+        private static readonly string[] WindowsTools = { "draw", "desktop_icons", "watch_along", "gaming_mode", "clip", "mini_game", "workspace", "listen", "voice_chat" };
         // Her window tool's arranging, still missing on Linux.
         private static readonly string[] WindowsArranging = { "maximize", "restore", "snap_left", "snap_right", "snap_top", "snap_bottom", "move_to_screen", "move", "resize", "pin_on_top", "unpin" };
 #endif
@@ -2561,6 +2583,7 @@ namespace CapriDesktop
         // off. Narrow on purpose: talk about drawing or files isn't asking for them.
         private static readonly string[,] GapAsks =
         {
+            { "workspace", @"^(?:open|show(?: me)?|check)\s+(?:your |the )?workspace(?: please)?[.!?]*$|\byour workspace\b|\bworkspace (?:window|chats?)\b" },
             { "draw", @"^(?:draw|sketch|doodle|scribble|annotate)\b|^(?:write|circle|underline|highlight|point (?:at|to))\b.*\bon (?:my|the|your) screen$" },
             { "watch_along", @"^(?:(?:let'?s|wanna|can we)\s+)?watch\s+(?:(?:this|it|that|a|the|some)\s+)?(?:(?:video|stream|movie|show|anime|youtube|episode)\s+)?(?:(?:with|along with)\s+me|together)\b|^watch along\b|^react to (?:this|that|it)\b" },
             { "find_file", @"^(?:find|locate|search for|where(?:'s| is| are))\s+(?:my |the |a )?.*\b(?:files?|folders?|documents?|pdfs?)$|^show me (?:the )?(?:path|folder)\b" },
@@ -3351,7 +3374,7 @@ namespace CapriDesktop
             @"|\bma (nistax|nistgħax) (niftaħ|niftah|indoqq|nikkontrolla|nidħol|nixgħel|nagħlaq)(?!\w)|\bm'?għandix aċċess(?!\w)" +
             @"|אני לא (יכולה|יכול|מסוגלת|מסוגל) ל(פתוח|נגן|הפעיל|שלוט|גשת|סגור|חפש)|אין לי גישה" +
             @"|نہیں (کھول|چلا|بجا|بند کر|کنٹرول کر|ایکسیس کر|رسائی حاصل کر) (سکتی|سکتا)|(رسائی|ایکسیس) (نہیں ہے|حاصل نہیں)|میرے پاس (رسائی|ایکسیس) نہیں" +
-            @"|نمی[\u200C ]?(تونم|توانم).{0,40}?(باز کنم|پخش کنم|اجرا کنم|کنترل کنم|ببندم|بذارم|بگذارم)|دسترسی (ندارم|نداریم)" +
+            @"|نمی[\u200C ]?(تونم|توانم) .{0,40}?(باز کنم|پخش کنم|اجرا کنم|کنترل کنم|ببندم|بذارم|بگذارم)|دسترسی (ندارم|نداریم)" +
             @"|(খুলতে|চালাতে|বাজাতে|বন্ধ করতে|নিয়ন্ত্রণ করতে|অ্যাক্সেস করতে) (পারব না|পারবো না|পারছি না|পারি না|পারবনা|পারছিনা|পারিনা)|(অ্যাক্সেস|প্রবেশাধিকার) নেই" +
             @"|(उघडू|लावू|चालू करू|बंद करू|नियंत्रित करू) शकत नाही|(ऍक्सेस|ॲक्सेस|एक्सेस|प्रवेश) नाही" +
             @"|(ખોલી|વગાડી|ચાલુ કરી|બંધ કરી|નિયંત્રિત કરી) (શકતી|શકતો|શકું) નથી|(ઍક્સેસ|એક્સેસ|પ્રવેશ) નથી" +
@@ -3476,7 +3499,7 @@ namespace CapriDesktop
         private const string Hers = @"(?:[\s,]+(?:now|then|already|again|quick|real quick|for me|for us|please|pls|plz|girl|choom|bestie|" + SpokenName + @"))*$";
         // The window she's told to sit or lie on, by its app's or game's name: "Roblox" in "sit on my Roblox window". Words for
         // a person, a pronoun or her cursor never name one.
-        private const string OnWindow = @"(?!(?:(?:the|my|your|ur|our|that|this) )?(?:it|that|this|there|here|me|you|him|her|them|us|lap|face|head|knees?|bed|couch|sofa|chair|cursor|mouse|pointer|window|ledge|back|side|stomach|tummy)\b)(?:the |my |your |ur |our |that |this )?(?<w>[\p{L}\p{Nd}][\p{L}\p{Nd}.'&+-]{0,40}?)";
+        private const string OnWindow = @"(?!(?:(?:the|my|your|ur|our|that|this) )?(?:it|that|this|there|here|me|you|him|her|them|us|lap|face|head|knees?|bed|couch|sofa|chair|cursor|mouse|pointer|window|ledge|back|side|stomach|tummy)\b)(?:the |my |your |ur |our |that |this )?(?<w>[\p{L}\p{Nd}][\p{L}\p{Nd} .'&+-]{0,40}?)";
         private const string Bidding = @"^(?:(?:go|come|now|please|pls|plz) )?";
         // The taskbar and her own Mainframe are seats she can be told to sit on too.
         internal static readonly Regex TaskbarWords = new Regex(@"^(?:(?:the|my|your|ur) )?(?:task ?bar|floor|ground|bottom of (?:the|my) screen)$", RegexOptions.IgnoreCase);
@@ -4502,7 +4525,7 @@ namespace CapriDesktop
         internal static string MiniName(string text)
         {
             if (Regex.IsMatch((text ?? "").Replace('\u2019', '\''), "^" + MiniOpen + MiniThe + @"(?:native )?chess" + MiniAfter + @"(?:\s+(?:on\s+)?(?:easy|normal|hard))?(?:(?:,?\s+i(?:'ll| will) be|\s+as)\s+(?:white|black))?$", RegexOptions.IgnoreCase)) return "chess";
-            Match mini = Regex.Match(text ?? "", "^" + MiniOpen + MiniArticle + @"(?:(?:easy|normal|hard)\s+)?" + MiniGameOf + @"(tic[ -]?tac[ -]?toe|connect[ -](four|4)|rock[,]+paper[,]+scissors)" + MiniAfter + MiniLevel + @"(?:\s+(?:with|against)\s+(?:me|you|us))?$", RegexOptions.IgnoreCase);
+            Match mini = Regex.Match(text ?? "", "^" + MiniOpen + MiniArticle + @"(?:(?:easy|normal|hard)\s+)?" + MiniGameOf + @"(tic[ -]?tac[ -]?toe|connect[ -](four|4)|rock[ ,]+paper[ ,]+scissors)" + MiniAfter + MiniLevel + @"(?:\s+(?:with|against)\s+(?:me|you|us))?$", RegexOptions.IgnoreCase);
             if (!mini.Success) return null;
             string name = mini.Groups[1].Value.ToLowerInvariant();
             return name.StartsWith("tic", StringComparison.Ordinal) ? "tic_tac_toe" : name.StartsWith("connect", StringComparison.Ordinal) ? "connect_four" : "rock_paper_scissors";
@@ -4537,6 +4560,7 @@ namespace CapriDesktop
             else if (key == "app") args.App = value;
             else if (key == "kind") args.Kind = value;
             else if (key == "task") args.Task = value;
+            else if (key == "folder") args.Folder = value;
             else if (key == "text") args.Text = value;
             else if (key == "description") args.Description = value;
             else if (key == "shapes") args.Shapes = value;
@@ -4714,6 +4738,7 @@ namespace CapriDesktop
 #endif
 #if CROSS
             if (tool == "mainframe") return args != null && (string.IsNullOrEmpty(args.Name) || Regex.IsMatch(args.Name, @"\A(main|settings|brain|voice|you|moves|keys|capri|watch|habits|games|clips|security|extras|layers|mixer|personality|memories|files|notes)\z"));
+            if (tool == "workspace") return args != null && (string.IsNullOrEmpty(args.Action) || args.Action == "open" || args.Action == "status" || args.Action == "start" && Named(args.Task));
 #else
             if (tool == "mainframe") return args != null && (string.IsNullOrEmpty(args.Name) || Regex.IsMatch(args.Name, @"\A(main|settings|brain|voice|you|moves|keys|capri|watch|habits|games|clips|security|extras|layers|mixer|personality|memories)\z"));
             if (tool == "call_errand") return args != null && Regex.IsMatch(args.Action ?? "", @"\A(open_app|play_song|cancel)\z");
@@ -5067,7 +5092,7 @@ namespace CapriDesktop
             if (name.Length == 0) return 0;
             int score = Math.Max(Score(name, want), Score(Plain(app.Name), want));
 #if CROSS
-            // Mac and Linux list every.app and.desktop name, so part of a word doesn't count there: "minecraft" can't open an app
+            // Mac and Linux list every .app and .desktop name, so part of a word doesn't count there: "minecraft" can't open an app
             // that merely has it inside a longer name (a Bazzite user).
             if (score == 1 && name.Contains(want)) score = 0;
             if (score == 0 && want == "minecraft" && MinecraftLauncher(app)) return 1;
@@ -5319,7 +5344,7 @@ namespace CapriDesktop
             [DataMember(Name = "bIsIncompleteInstall")] internal bool Incomplete;
         }
 
-        // Epic's install manifests, the same.item files her file finder reads for game folders. Each game opens through Epic's own
+        // Epic's install manifests, the same .item files her file finder reads for game folders. Each game opens through Epic's own
         // launch link, so Epic signs in and updates it first, as its shortcuts do. Add-ons and half-installed games are left out.
         internal static List<InstalledApp> EpicApps(string folder)
         {
@@ -6171,7 +6196,7 @@ namespace CapriDesktop
             { "show_desktop", "", "5B 44", "Showed the desktop (Win + D).", "show desktop", "show the desktop" },
             { "task_manager", "", "11 10 1B", "Opened Task Manager.", "Task Manager", "open Task Manager" },
             { "clipboard", "", "5B 56", "Opened clipboard history (Win + V).", "clipboard history", "open clipboard history" },
-            { "emoji", "", "5B BE", "Opened the emoji picker (Win +.).", "emoji", "open the emoji picker" },
+            { "emoji", "", "5B BE", "Opened the emoji picker (Win + .).", "emoji", "open the emoji picker" },
             { "voice_typing", "", "5B 48", "Opened voice typing (Win + H). Talk and it types where the cursor is.", "voice typing", "start voice typing" },
             { "live_captions", "", "5B 11 4C", "Turned Live Captions on or off (Win + Ctrl + L).", "Live Captions", "turn Live Captions on or off" },
             { "narrator", "", "5B 11 0D", "Turned Narrator on or off (Win + Ctrl + Enter).", "Narrator", "turn Narrator on or off" },

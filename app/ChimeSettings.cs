@@ -1156,7 +1156,7 @@ namespace CapriDesktop
 
         private void SnapMainframe(string path)
         {
-            using (Bitmap panel = new Bitmap(mainframe.Width, mainframe.Height))
+            using (Bitmap panel = Shot(mainframe, "Mainframe"))
             {
                 mainframe.DrawToBitmap(panel, new Rectangle(Point.Empty, mainframe.Size));
                 mainframe.DrawRims(panel);

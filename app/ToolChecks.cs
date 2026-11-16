@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Net.Sockets;
@@ -20,7 +20,7 @@ namespace CapriDesktop
         // Her window tool on Lachy's three monitors, one of them portrait and one at 150%, with pretend windows that each do what a
         // real one does: Discord won't go narrower than 940 pixels, Task Manager runs as admin, one app has stopped responding.
         // What she says is where each window really ended up (Lachy, 2 Nov: "move, resize, maximize, minimize, restore, snap
-        // left/right, send to another monitor, and bring to front... report truthfully what happened").
+        // left/right, send to another monitor, and bring to front ... report truthfully what happened").
         private static void SmokeWindowTool(List<string> checks)
         {
             Func<List<Arrange.Display>> displaysWas = Arrange.Displays;
@@ -555,6 +555,317 @@ namespace CapriDesktop
                 Brain.Keeping = keepingWas;
                 if (fake != null) fake.Stop();
             }
+        }
+
+        // A question she asked, answered. Her brain is told to call remember with the key, and most of them do not: the
+        // question was asked, the answer given, and me.md stayed blank. So the answer to her own question is written
+        // down from what they said whenever her brain's turn ends without it, and only then.
+        private void SmokeProbeAnswers(List<string> checks)
+        {
+            Func<string, string> thinkWas = Think;
+            Action<long> keepWas = Probes.Keep;
+            string notesWas = Brain.MemoryPath, logWas = Brain.LogPath;
+            bool silentWas = preferences.Silent;
+            string folder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "capri-probes-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                System.IO.Directory.CreateDirectory(folder);
+                Brain.MemoryPath = System.IO.Path.Combine(folder, "me.md");
+                Brain.LogPath = System.IO.Path.Combine(folder, "errors.txt");
+                // Her next question's time is not pushed about by a check.
+                Probes.Keep = delegate { };
+                preferences.Silent = true;
+                CloseTalk();
+
+                // Her brain replies and never calls remember, which is the case that lost the answer.
+                Think = delegate { return "Noted, choom."; };
+                Probes.Said("Am I about right for you, or do you want me different?", "personalityLikes");
+                Hear("be a bit more dominant");
+                WaitedForReply();
+                string kept = System.IO.File.Exists(Brain.MemoryPath) ? System.IO.File.ReadAllText(Brain.MemoryPath) : "";
+                if (kept.IndexOf("personalityLikes=be a bit more dominant", StringComparison.Ordinal) < 0 || Probes.Pending != null || Probes.PendingKey != null)
+                    throw new Exception("Their answer to her own question was not written down: notes [" + kept.Replace("\r\n", " ") + "], still waiting on " + (Probes.Pending ?? "nothing"));
+                CloseTalk();
+
+                // A brush-off tells her nothing, so nothing is written and the question is over: left pending, whatever
+                // they said next would have been filed as the answer to it.
+                Probes.Said("What have you been playing lately?", "gamesUserLikes");
+                Hear("nah");
+                WaitedForReply();
+                kept = System.IO.File.ReadAllText(Brain.MemoryPath);
+                // Her notes ship with a line for every key she can fill, so the name is always in the file. What
+                // says whether anything was kept is the line having something after the equals.
+                if (Probes.Filled(kept, "gamesUserLikes") || Probes.Pending != null)
+                    throw new Exception("A brush-off was filed as an answer or left her waiting: notes [" + kept.Replace("\r\n", " ") + "]");
+                CloseTalk();
+
+                // A brain that does call remember is the only one that writes, and its own words are what is kept.
+                Probes.Said("Anything good in your games list right now?", "gamesUserLikes");
+                if (Hands.Do("remember", new ToolArguments { Key = "gamesUserLikes", Text = "Hollow Knight" }) != "" || Probes.Pending != null)
+                    throw new Exception("Her brain's own remember said something back or left the question pending.");
+                Hear("silksong, mostly");
+                WaitedForReply();
+                kept = System.IO.File.ReadAllText(Brain.MemoryPath);
+                if (kept.IndexOf("gamesUserLikes=Hollow Knight", StringComparison.Ordinal) < 0 || kept.IndexOf("silksong", StringComparison.OrdinalIgnoreCase) >= 0)
+                    throw new Exception("An answer her brain had already saved was written over or added to: notes [" + kept.Replace("\r\n", " ") + "]");
+                CloseTalk();
+
+                // A job for her hands is not an answer, so the question stands and nothing is filed.
+                Func<string, KeyValuePair<string, ToolArguments>> planWas = Hands.Plan;
+                Probes.Said("What do you spend most of your day in on here?", "programsUserLikes");
+                try
+                {
+                    Hands.Plan = delegate { return new KeyValuePair<string, ToolArguments>("animate", new ToolArguments { Name = "blink" }); };
+                    Hear("blink for me");
+                    WaitedForReply();
+                }
+                finally { Hands.Plan = planWas; }
+                kept = System.IO.File.ReadAllText(Brain.MemoryPath);
+                if (Probes.Filled(kept, "programsUserLikes") || Probes.Pending == null)
+                    throw new Exception("A job for her hands was filed as an answer to her question: notes [" + kept.Replace("\r\n", " ") + "]");
+                Probes.Answered("programsUserLikes");
+                CloseTalk();
+
+                // How long her bubble waits for the answer, in seconds, while the two settings beside it stay hours.
+                string dynamicWas = Dynamics.Kept;
+                try
+                {
+                    string dynamic = System.IO.Path.Combine(folder, "dynamic.md");
+                    System.IO.File.WriteAllText(dynamic, "# Dynamic\r\n\r\nbase: Devoted\r\nprobe min: 1h\r\nprobe max: 2h\r\nprobe wait: 45\r\n", new System.Text.UTF8Encoding(false));
+                    Dynamics.Kept = dynamic;
+                    if (Math.Abs(Dynamics.ProbeWait - 45) > 0.01 || Math.Abs(Dynamics.ProbeLow - 1) > 0.01 || Math.Abs(Dynamics.ProbeHigh - 2) > 0.01)
+                        throw new Exception("probe wait was not read as seconds, or it changed the hours beside it: wait " + Dynamics.ProbeWait + ", min " + Dynamics.ProbeLow + ", max " + Dynamics.ProbeHigh);
+                    // Out of range either way, and a line she cannot read, all leave something sensible. The two
+                    // are deliberately different lengths: she reads a file again when its time or its size has
+                    // moved, and two writes of the same size in the same millisecond look to her like no change
+                    // at all. A person editing by hand never hits that; a check writing twice in a row always does.
+                    System.IO.File.WriteAllText(dynamic, "# Dynamic\r\n\r\nprobe wait: 9000\r\n", new System.Text.UTF8Encoding(false));
+                    double capped = Dynamics.ProbeWait;
+                    System.IO.File.WriteAllText(dynamic, "# Dynamic\r\n\r\nprobe wait: not a time at all\r\n", new System.Text.UTF8Encoding(false));
+                    if (capped != 300 || Math.Abs(Dynamics.ProbeWait - 90) > 0.01)
+                        throw new Exception("probe wait out of range or unreadable did not fall back: capped " + capped + ", unreadable " + Dynamics.ProbeWait);
+                }
+                finally { Dynamics.Kept = dynamicWas; }
+
+                // What they said never leaves their own notes file, and what went in is in errors.txt to be found later.
+                string logged = System.IO.File.Exists(Brain.LogPath) ? System.IO.File.ReadAllText(Brain.LogPath) : "";
+                if (logged.IndexOf("personalityLikes", StringComparison.Ordinal) < 0 || logged.IndexOf("be a bit more dominant", StringComparison.Ordinal) >= 0)
+                    throw new Exception("The line about keeping their answer is missing, or it repeated what they said.");
+                checks.Add("PASS the answer to a question she asked is kept: a brain that replies without calling remember still gets their words into me.md under her question's key, a brush-off writes nothing and closes the question, a brain that does call remember keeps its own words with nothing written over them, a job for her hands is not an answer and leaves the question standing, and errors.txt names the key without repeating what they said");
+            }
+            finally
+            {
+                Think = thinkWas;
+                Probes.Keep = keepWas;
+                Probes.Answered(null);
+                Brain.MemoryPath = notesWas;
+                Brain.LogPath = logWas;
+                preferences.Silent = silentWas;
+                CloseTalk();
+                try { System.IO.Directory.Delete(folder, true); } catch (System.IO.IOException) { }
+            }
+        }
+
+        // Her plan and her key both kept under MAX INTELLIGENCE. Picking one used to paste it over the other, so
+        // going back meant pasting the key in again, and Forget left the one it was not looking at behind.
+        private void SmokePlanAndKey(List<string> checks)
+        {
+            string keyWas = preferences.PaidKey, modelWas = preferences.PaidModel;
+            string spareWas = preferences.PaidSpare, spareModelWas = preferences.PaidSpareModel;
+            int tierWas = preferences.Tier;
+            try
+            {
+                preferences.Tier = 2;
+                preferences.PaidKey = Voice.Protect("sk-ant-spare-test");
+                preferences.PaidModel = "claude-sonnet-4";
+                preferences.PaidSpare = null;
+                preferences.PaidSpareModel = null;
+
+                // Her plan arrives. The key goes to the spare rather than being written over. Only the part that
+                // moves the keys about is run here: connecting is her brain's business and wants a network.
+                Spared();
+                if (Voice.Unprotect(preferences.PaidSpare) != "sk-ant-spare-test" || preferences.PaidSpareModel != "claude-sonnet-4")
+                    throw new Exception("Picking her plan did not keep the key that was there: spare " + (Voice.Unprotect(preferences.PaidSpare) ?? "nothing"));
+                if (SpareShown != Voice.Tail("sk-ant-spare-test"))
+                    throw new Exception("The way back was not offered by name: " + (SpareShown ?? "nothing"));
+
+                // And back again, which swaps the pair, so the way back works in both directions.
+                preferences.PaidKey = Voice.Protect(Plans.ClaudeKey);
+                preferences.PaidModel = "sonnet";
+                string went = Voice.Unprotect(preferences.PaidSpare);
+                SwapSpare();
+                if (Voice.Unprotect(preferences.PaidKey) != went || preferences.PaidModel != "claude-sonnet-4")
+                    throw new Exception("Going back did not restore the key and its model: " + (Voice.Unprotect(preferences.PaidKey) ?? "nothing") + " on " + (preferences.PaidModel ?? "no model"));
+                if (Voice.Unprotect(preferences.PaidSpare) != Plans.ClaudeKey || preferences.PaidSpareModel != "sonnet")
+                    throw new Exception("Going back did not leave her plan as the way forward: " + (Voice.Unprotect(preferences.PaidSpare) ?? "nothing"));
+
+                // Forget drops both. The spare holds a real key, so leaving it would keep one they asked her to drop.
+                ForgetText();
+                if (preferences.PaidKey != null || preferences.PaidSpare != null || preferences.PaidSpareModel != null)
+                    throw new Exception("Forget left a key behind: key " + (preferences.PaidKey ?? "none") + ", spare " + (preferences.PaidSpare ?? "none"));
+
+                // And it is scrubbed out of errors.txt like every other key she holds.
+                preferences.PaidSpare = Voice.Protect("sk-ant-spare-test");
+                bool scrubbed = false;
+                foreach (string one in SavedKeys()) if (one == "sk-ant-spare-test") scrubbed = true;
+                if (!scrubbed) throw new Exception("The spare key is not in the list that is kept out of errors.txt.");
+                checks.Add("PASS her plan and her key are both kept under MAX INTELLIGENCE: picking one moves the other to the spare with its own model, the way back is offered by name and swaps the pair so it works in both directions, Forget drops both, and the spare is scrubbed out of errors.txt like every other key");
+            }
+            finally
+            {
+                preferences.PaidKey = keyWas;
+                preferences.PaidModel = modelWas;
+                preferences.PaidSpare = spareWas;
+                preferences.PaidSpareModel = spareModelWas;
+                preferences.Tier = tierWas;
+            }
+        }
+
+        // Her editable files moving into personalSettings, which is the one change in this release that can lose
+        // somebody's own writing if it is wrong. Everything here is a file she would actually move.
+        private void SmokeFilesMoved(List<string> checks)
+        {
+            string root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "capri-moved-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                System.IO.Directory.CreateDirectory(root);
+                string settings = System.IO.Path.Combine(root, Personalities.SettingsName);
+                string[] theirs = { "me.md", "memories.md", "sys.md", "lines.md", "dynamic.md", "check-ins.md", "personality.md", "twitch.md", "interests.md" };
+                foreach (string name in theirs)
+                {
+                    System.IO.File.WriteAllText(System.IO.Path.Combine(root, name), "written by them in " + name + "\r\n", new System.Text.UTF8Encoding(false));
+                    System.IO.File.WriteAllText(System.IO.Path.Combine(root, name + ".bak"), "their spare of " + name + "\r\n", new System.Text.UTF8Encoding(false));
+                }
+                string moods = System.IO.Path.Combine(root, "attitudes");
+                System.IO.Directory.CreateDirectory(moods);
+                System.IO.File.WriteAllText(System.IO.Path.Combine(moods, "Sleepy.md"), "# Sleepy\r\n\r\ntheirs\r\n", new System.Text.UTF8Encoding(false));
+
+                foreach (string name in theirs)
+                {
+                    string went = Mine(root, name);
+                    if (went != System.IO.Path.Combine(settings, name)) throw new Exception(name + " was not moved into " + Personalities.SettingsName + ": " + went);
+                    if (System.IO.File.ReadAllText(went) != "written by them in " + name + "\r\n") throw new Exception(name + " lost what they had written in it.");
+                    if (System.IO.File.Exists(System.IO.Path.Combine(root, name))) throw new Exception(name + " was copied rather than moved, so two of theirs now exist.");
+                    string spare = System.IO.Path.Combine(settings, name + ".bak");
+                    if (!System.IO.File.Exists(spare) || System.IO.File.ReadAllText(spare) != "their spare of " + name + "\r\n") throw new Exception(name + "'s spare did not come with it.");
+                }
+                string movedMoods = Mine(root, "attitudes", true);
+                if (!System.IO.Directory.Exists(movedMoods) || !System.IO.File.Exists(System.IO.Path.Combine(movedMoods, "Sleepy.md")))
+                    throw new Exception("Her moods folder did not come across whole.");
+                if (System.IO.Directory.Exists(moods)) throw new Exception("Her moods folder was copied rather than moved.");
+
+                // Asking again changes nothing: a second start must not move anything a second time.
+                foreach (string name in theirs)
+                    if (Mine(root, name) != System.IO.Path.Combine(settings, name)) throw new Exception("A second start moved " + name + " again.");
+
+                // A file they have open cannot be moved, and must not be treated as moved: she reads theirs where
+                // it is until it can be. Written as a fresh empty file instead, this is where somebody's notes go.
+                string held = System.IO.Path.Combine(root, "held.md");
+                System.IO.File.WriteAllText(held, "the one they had open\r\n", new System.Text.UTF8Encoding(false));
+                using (System.IO.FileStream open = new System.IO.FileStream(held, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read))
+                {
+                    string asked = Mine(root, "held.md");
+                    if (asked != held) throw new Exception("A file they had open was treated as moved: " + asked);
+                    if (System.IO.File.ReadAllText(asked) != "the one they had open\r\n") throw new Exception("The file they had open lost what was in it.");
+                    if (System.IO.File.Exists(System.IO.Path.Combine(settings, "held.md"))) throw new Exception("An empty one was written in the new place while theirs was still open.");
+                }
+                // Let go of, it moves on the next start like any other.
+                if (Mine(root, "held.md") != System.IO.Path.Combine(settings, "held.md")) throw new Exception("A file that was released did not move on the next start.");
+
+                checks.Add("PASS her editable files move into personalSettings once and keep what is in them: every file and its spare moved rather than copied, her moods folder came whole, a second start moves nothing again, and a file they have open is left where it is and read from there until they close it, rather than being written fresh and emptied");
+            }
+            finally
+            {
+                try { System.IO.Directory.Delete(root, true); } catch (System.IO.IOException) { }
+                catch (UnauthorizedAccessException) { }
+            }
+        }
+
+        // Her packs split in two by what is in them, and a folder from before the split moved into the new shape.
+        // The promise being checked is that a censored install's files do not contain her senpai lines at all.
+        private static void SmokePackFolders(List<string> checks)
+        {
+            string folderWas = Personalities.Folder;
+            string root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "capri-packs-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                string old = System.IO.Path.Combine(root, "personalities");
+                System.IO.Directory.CreateDirectory(old);
+                Personalities.Folder = System.IO.Path.Combine(root, Personalities.SettingsName, Personalities.FolderName);
+
+                // One pack with both halves in it, and one that is adult all the way through.
+                string both = "# Testy\r\n\r\n> Notes.\r\n\r\n## Her character\r\n\r\nPlain character.\r\n\r\n## When you pet her\r\n\r\nPlain pet line.\r\n\r\n## When you pet her (uncensored)\r\n\r\nSenpai pet line.\r\n";
+                string whole = "# Marky\r\n\r\n## Her character\r\n\r\nAdult throughout.\r\n\r\n## When you pet her\r\n\r\nAdult pet line.\r\n\r\nuncensored only: yes\r\n";
+                System.IO.File.WriteAllText(System.IO.Path.Combine(old, "Testy.md"), both, new System.Text.UTF8Encoding(false));
+                System.IO.File.WriteAllText(System.IO.Path.Combine(old, "Marky.md"), whole, new System.Text.UTF8Encoding(false));
+
+                Personalities.Install();
+
+                string plain = System.IO.Path.Combine(Personalities.Plain, "Testy.md");
+                string senpai = System.IO.Path.Combine(Personalities.Senpais, "Testy.md");
+                if (!System.IO.File.Exists(plain) || !System.IO.File.Exists(senpai)) throw new Exception("A pack with both halves did not end up in both folders.");
+                string hadPlain = System.IO.File.ReadAllText(plain), hadSenpai = System.IO.File.ReadAllText(senpai);
+                if (hadPlain.IndexOf("Senpai pet line", StringComparison.Ordinal) >= 0 || hadPlain.IndexOf("(uncensored)", StringComparison.OrdinalIgnoreCase) >= 0)
+                    throw new Exception("The censored half still contains her senpai lines.");
+                if (hadPlain.IndexOf("Plain pet line", StringComparison.Ordinal) < 0 || hadPlain.IndexOf("Plain character", StringComparison.Ordinal) < 0)
+                    throw new Exception("The censored half lost her plain lines or her character.");
+                if (hadSenpai.IndexOf("Senpai pet line", StringComparison.Ordinal) < 0 || hadSenpai.IndexOf("# Testy", StringComparison.Ordinal) < 0)
+                    throw new Exception("The uncensored half lost its lines or its title.");
+                if (hadSenpai.IndexOf("Plain pet line", StringComparison.Ordinal) >= 0)
+                    throw new Exception("The uncensored half carries a second copy of the plain lines.");
+
+                // Adult all the way through: one file, in the senpai folder, and nothing in the censored one.
+                if (System.IO.File.Exists(System.IO.Path.Combine(Personalities.Plain, "Marky.md"))
+                    || !System.IO.File.Exists(System.IO.Path.Combine(Personalities.Senpais, "Marky.md")))
+                    throw new Exception("A pack that is adult throughout was split or left in the censored folder.");
+
+                // Nothing is deleted on the way.
+                if (System.IO.File.Exists(System.IO.Path.Combine(old, "Testy.md")) || !System.IO.File.Exists(System.IO.Path.Combine(old, "Testy.md.bak")))
+                    throw new Exception("The file it came from was deleted instead of kept as a .bak.");
+
+                // Her own packs are there too, each with the same split, and every name she ships can be read back.
+                string[] shipped = { "Devoted.md", "Caregiver.md" };
+                foreach (string name in shipped)
+                    if (!System.IO.File.Exists(System.IO.Path.Combine(Personalities.Plain, name))) throw new Exception("She did not write " + name + " into the censored folder.");
+                if (!System.IO.File.Exists(System.IO.Path.Combine(Personalities.Senpais, "Devoted.md"))) throw new Exception("Devoted's senpai half is missing.");
+                if (System.IO.File.ReadAllText(System.IO.Path.Combine(Personalities.Plain, "Devoted.md")).IndexOf("(uncensored)", StringComparison.OrdinalIgnoreCase) >= 0)
+                    throw new Exception("A shipped pack's censored half still has a senpai section in it.");
+
+                // A pack she does not ship has no stock to go back to, so a reset marker set in it resets nothing
+                // and the file is left exactly as it was. It used to be replaced with a two-line stub, which is
+                // somebody's own personality deleted by a flag they were told was safe.
+                string theirs = System.IO.Path.Combine(Personalities.Plain, "Ourown.md");
+                string wrote = "# Ourown\r\nreset to stock: 1\r\n\r\n## Her character\r\n\r\nWritten here, shipped nowhere.\r\n";
+                System.IO.File.WriteAllText(theirs, wrote, new System.Text.UTF8Encoding(false));
+                if (Personalities.Half(theirs, "Ourown") != null) throw new Exception("A pack she does not ship was handed a stock text to be reset to.");
+                CapriDesktop.Notes.Stock(theirs, delegate { return Personalities.Half(theirs, "Ourown"); });
+                if (System.IO.File.ReadAllText(theirs) != wrote) throw new Exception("A reset marker in someone's own pack rewrote it: " + System.IO.File.ReadAllText(theirs));
+
+                // Running again changes nothing, which is what stops a startup rewriting her files every time.
+                Dictionary<string, string> before = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (string file in Personalities.Files()) before[file] = System.IO.File.ReadAllText(file);
+                Personalities.Install();
+                foreach (string file in Personalities.Files())
+                {
+                    string had;
+                    if (!before.TryGetValue(file, out had)) throw new Exception("A second pass added " + System.IO.Path.GetFileName(file) + ".");
+                    if (had != System.IO.File.ReadAllText(file)) throw new Exception("A second pass rewrote " + System.IO.Path.GetFileName(file) + ".");
+                }
+                checks.Add("PASS her packs are split by what is in them: censored\\ holds her plain sections with no senpai line and no senpai heading anywhere in the file, uncensored\\ holds the senpai sections under the pack's title with no second copy of the plain text, a pack that is adult throughout is one file in uncensored\\ only, a folder from before the split is moved into both with the old file kept as a .bak, and a second pass changes nothing, a pack she does not ship has no stock to go back to so a reset marker in it leaves the file exactly as it was");
+            }
+            finally
+            {
+                Personalities.Folder = folderWas;
+                try { System.IO.Directory.Delete(root, true); } catch (System.IO.IOException) { }
+                catch (UnauthorizedAccessException) { }
+            }
+        }
+
+        // Her reply, however it came: these checks drive her real path, which answers on her own message loop.
+        private void WaitedForReply()
+        {
+            System.Diagnostics.Stopwatch waited = System.Diagnostics.Stopwatch.StartNew();
+            while (reply == null && waited.ElapsedMilliseconds < 3000) { Application.DoEvents(); Thread.Sleep(5); }
         }
 
         // One app's own volume in a pretend volume mixer: Spotify, two Discord processes, a game, a muted Chrome and an app that

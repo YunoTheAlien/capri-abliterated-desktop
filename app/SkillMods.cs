@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -243,7 +243,7 @@ namespace CapriDesktop
                 if (skill == null || skill.On) throw new Exception("A skill that was off came back on after a reload.");
                 mods.Set(skill, true, null);
                 if (mods.SkillsFor("Bloons TD 6") == "") throw new Exception("Turning a skill back on didn't bring it back.");
-                checks.Add("PASS skills: a.capri-skill imports, goes into her brief only for its games, and turning it off or reloading is kept");
+                checks.Add("PASS skills: a .capri-skill imports, goes into her brief only for its games, and turning it off or reloading is kept");
                 string[,] cases =
                 {
                     { "skill-bare", "Pop the bloons.", "starts with a --- line" },

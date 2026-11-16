@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -6,7 +6,14 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
-    // Her temperaments, one file each, in personalities\ beside her settings.
+    // Her temperaments, in personalSettings\personalities\ beside her settings, split in two by what is in them:
+    // censored\ holds her plain sections, uncensored\ holds the senpai ones for the same pack under the same file
+    // name, and a pack that is adult as a whole has only the uncensored file. The pair is read together with the
+    // toggle on, so there is no second copy of the plain text to drift out of step.
+    //
+    // The split is the point: a censored install's files do not contain the senpai lines at all, so opening one in a
+    // text editor cannot show them. They used to sit in the same file under "## When you pet her (uncensored)",
+    // which she read correctly and anybody could read too.
     //
     // The point of these is not the prompt text. It is that her *reactions* were nine hardcoded arrays written for one
     // temperament: being thrown always hurt, pets were always grudgingly allowed. Give her a personality that enjoys
@@ -17,8 +24,79 @@ namespace CapriDesktop
     // A file that is missing, empty or half-written falls back to her own lines set by set, never to blank.
     internal static class Personalities
     {
+        internal const string SettingsName = "personalSettings";
         internal const string FolderName = "personalities";
+        internal const string PlainName = "censored";
+        internal const string SenpaiName = "uncensored";
+
+        // personalSettings\personalities. The two below are what actually hold files.
         internal static string Folder;
+
+        internal static string Plain { get { return string.IsNullOrEmpty(Folder) ? null : Path.Combine(Folder, PlainName); } }
+        internal static string Senpais { get { return string.IsNullOrEmpty(Folder) ? null : Path.Combine(Folder, SenpaiName); } }
+
+        // Every pack file she has, plain ones first. Used by the passes that tidy or check each file in turn.
+        internal static List<string> Files()
+        {
+            List<string> found = new List<string>();
+            foreach (string folder in new[] { Plain, Senpais })
+            {
+                if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) continue;
+                try { found.AddRange(Directory.GetFiles(folder, "*.md")); }
+                catch (Exception) { }
+            }
+            return found;
+        }
+
+        // Whether a path sits in the senpai folder, which makes what is in it adult whatever the file says.
+        internal static bool InSenpai(string path)
+        {
+            string folder = Senpais;
+            if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(folder)) return false;
+            try { return string.Equals(Path.GetFullPath(Path.GetDirectoryName(path)).TrimEnd('\\'), Path.GetFullPath(folder).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase); }
+            catch (Exception) { return false; }
+        }
+
+        // One pack's text cut in two: everything that is not a senpai section, and the senpai sections on their own
+        // under the pack's title. A pack that is adult as a whole is not cut, and goes to the senpai folder whole.
+        internal static void Split(string pack, out string plain, out string senpai)
+        {
+            plain = pack;
+            senpai = null;
+            if (string.IsNullOrEmpty(pack)) return;
+            if (Marked(pack)) { plain = null; senpai = pack; return; }
+            string[] rows = pack.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+            List<string> mine = new List<string>(), theirs = new List<string>();
+            string title = null;
+            bool senpaiHere = false, any = false;
+            foreach (string raw in rows)
+            {
+                string one = (raw ?? "").TrimEnd();
+                string trimmed = one.Trim();
+                if (trimmed.StartsWith("#", StringComparison.Ordinal))
+                {
+                    string heading = trimmed.TrimStart('#').Trim();
+                    if (title == null && !trimmed.StartsWith("##", StringComparison.Ordinal)) title = one;
+                    senpaiHere = Regex.IsMatch(heading, @"[\s,]*\(?\b(uncensored|adult|nsfw)\b\)?$", RegexOptions.IgnoreCase)
+                        && !heading.Equals("uncensored", StringComparison.OrdinalIgnoreCase);
+                    if (senpaiHere) any = true;
+                }
+                (senpaiHere ? theirs : mine).Add(one);
+            }
+            plain = string.Join(Environment.NewLine, Trimmed(mine).ToArray());
+            if (!any) return;
+            List<string> made = new List<string>();
+            if (title != null) { made.Add(title); made.Add(""); }
+            made.AddRange(Trimmed(theirs));
+            senpai = string.Join(Environment.NewLine, made.ToArray());
+        }
+
+        private static List<string> Trimmed(List<string> rows)
+        {
+            while (rows.Count > 0 && rows[rows.Count - 1].Trim().Length == 0) rows.RemoveAt(rows.Count - 1);
+            rows.Add("");
+            return rows;
+        }
 
         // The reaction sets, by the heading they are written under. The names on the left are used in code.
         internal static readonly string[,] Sets =
@@ -182,6 +260,11 @@ namespace CapriDesktop
         private static string active = "";
         private static DateTime read = DateTime.MinValue;
         private static long wasLong = -1;
+        // The senpai half of the same pack, watched the same way, plus whether it was being read at all: flipping the
+        // toggle has to reload her lines even though neither file changed.
+        private static DateTime senpaiRead = DateTime.MinValue;
+        private static long senpaiLong = -1;
+        private static bool wasAdult;
 
         // Her own, first and default. "Her own" means the author's lines, so picking it changes nothing at all.
         internal const string Stock = "Her own";
@@ -215,17 +298,20 @@ namespace CapriDesktop
                 List<string> found = new List<string> { Stock, Dynamic };
                 try
                 {
-                    if (!string.IsNullOrEmpty(Folder) && Directory.Exists(Folder))
-                        foreach (string file in Directory.GetFiles(Folder, "*.md"))
-                        {
-                            string named = Path.GetFileNameWithoutExtension(file);
-                            if (!named.Equals(Stock, StringComparison.OrdinalIgnoreCase)
-                                && !named.Equals(Dynamic, StringComparison.OrdinalIgnoreCase)
-                                && !found.Contains(named)
-                                // Same convention as the moods: a personality can say "uncensored only: yes" and
-                                // stays out of the list until the toggle is on.
-                                && (Brain.Uncensored || !AdultOnly(file))) found.Add(named);
-                        }
+                    // The plain folder is the list. A pack whose only file is in the senpai folder is adult as a
+                    // whole and joins the list with the toggle on, which is the same rule as before: what changed
+                    // is that the marker is now the folder it is in.
+                    foreach (string file in Files())
+                    {
+                        string named = Path.GetFileNameWithoutExtension(file);
+                        if (named.Equals(Stock, StringComparison.OrdinalIgnoreCase)
+                            || named.Equals(Dynamic, StringComparison.OrdinalIgnoreCase)
+                            || found.Contains(named)) continue;
+                        // Same convention as the moods: a personality can also say "uncensored only: yes" and
+                        // stays out of the list until the toggle is on.
+                        if (!Brain.Uncensored && (InSenpai(file) || AdultOnly(file))) continue;
+                        found.Add(named);
+                    }
                 }
                 catch (Exception) { }
                 // Stock and Dynamic stay at the top; the rest are offered gentlest first.
@@ -264,14 +350,45 @@ namespace CapriDesktop
 
         internal static string Chosen = Stock;
 
+        // Her plain file for a pack, or its senpai one when that is the only file it has, which is what a pack that is
+        // adult as a whole looks like on disk. Everything that reads, edits or tidies a pack asks for this, so the
+        // one-file packs need no special case anywhere else.
         internal static string PathOf(string named)
         {
-            if (string.IsNullOrEmpty(Folder) || string.IsNullOrEmpty(named)) return null;
+            string path = PlainPathOf(named);
+            if (path == null) return null;
+            try
+            {
+                if (!File.Exists(path))
+                {
+                    string senpai = SenpaiPathOf(named);
+                    if (senpai != null && File.Exists(senpai)) return senpai;
+                }
+            }
+            catch (Exception) { }
+            return path;
+        }
+
+        internal static string PlainPathOf(string named) { return Named(Plain, named); }
+
+        internal static string SenpaiPathOf(string named) { return Named(Senpais, named); }
+
+        // Two paths naming the same file, whatever shape each was written in.
+        private static bool PathIs(string one, string two)
+        {
+            if (string.IsNullOrEmpty(one) || string.IsNullOrEmpty(two)) return false;
+            try { return string.Equals(Path.GetFullPath(one), Path.GetFullPath(two), StringComparison.OrdinalIgnoreCase); }
+            catch (Exception) { return string.Equals(one, two, StringComparison.OrdinalIgnoreCase); }
+        }
+
+        private static string Named(string folder, string named)
+        {
+            if (string.IsNullOrEmpty(folder) || string.IsNullOrEmpty(named)) return null;
             // Dynamic and Her own are modes, not files. Handing back a path for them let callers create empty stubs
-            // in personalities\, which then listed themselves as personalities of their own.
+            // in the folder, which then listed themselves as personalities of their own.
             if (string.Equals(named, Dynamic, StringComparison.OrdinalIgnoreCase)) return null;
             foreach (char bad in Path.GetInvalidFileNameChars()) if (named.IndexOf(bad) >= 0) return null;
-            return Path.Combine(Folder, named + ".md");
+            return Path.Combine(folder, named + ".md");
         }
 
         internal static WrittenNote Open()
@@ -690,11 +807,28 @@ namespace CapriDesktop
                         active = Under;
                         read = DateTime.MinValue;
                         wasLong = -1;
+                        senpaiRead = DateTime.MinValue;
+                        senpaiLong = -1;
                     }
                     return;
                 }
-                if (Under == active && about.LastWriteTimeUtc == read && about.Length == wasLong) return;
+                // Her senpai lines for the same pack live in their own file, and are read only with the toggle on
+                // and off air. One file is the whole pack when it is adult throughout, in which case this is it.
+                bool adult = Brain.Adult;
+                string senpaiPath = SenpaiPathOf(Under);
+                FileInfo senpaiAbout = adult && senpaiPath != null && !PathIs(path, senpaiPath) ? new FileInfo(senpaiPath) : null;
+                bool withSenpai = senpaiAbout != null && senpaiAbout.Exists;
+                DateTime senpaiWhen = withSenpai ? senpaiAbout.LastWriteTimeUtc : DateTime.MinValue;
+                long senpaiSize = withSenpai ? senpaiAbout.Length : -1;
+                if (Under == active && adult == wasAdult && about.LastWriteTimeUtc == read && about.Length == wasLong
+                    && senpaiWhen == senpaiRead && senpaiSize == senpaiLong) return;
                 string[] lines = File.ReadAllLines(path);
+                if (withSenpai)
+                {
+                    List<string> both = new List<string>(lines);
+                    both.AddRange(File.ReadAllLines(senpaiPath));
+                    lines = both.ToArray();
+                }
                 Dictionary<string, int> theirLikes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
                 List<KeyValuePair<string, int>> theirWords = new List<KeyValuePair<string, int>>();
                 List<Drift> theirDrifts = new List<Drift>();
@@ -715,6 +849,9 @@ namespace CapriDesktop
                     active = Under;
                     read = about.LastWriteTimeUtc;
                     wasLong = about.Length;
+                    senpaiRead = senpaiWhen;
+                    senpaiLong = senpaiSize;
+                    wasAdult = adult;
                 }
             }
             catch (Exception) { }
@@ -804,7 +941,7 @@ namespace CapriDesktop
         // the Mainframe, not writing anyone edits by hand. Taken back out of any file that received them.
         private static void NoVoiceSection()
         {
-            foreach (string folder in new[] { Folder, Dynamics.Folder })
+            foreach (string folder in new[] { Plain, Senpais, Dynamics.Folder })
             {
                 if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) continue;
                 foreach (string file in Directory.GetFiles(folder, "*.md"))
@@ -847,7 +984,8 @@ namespace CapriDesktop
                 try
                 {
                     if (!Marked(Packs[pack, 1])) continue;
-                    string file = Path.Combine(Folder, Packs[pack, 0] + ".md");
+                    string file = PathOf(Packs[pack, 0]);
+                    if (file == null) continue;
                     if (!File.Exists(file)) continue;
                     string had = File.ReadAllText(file);
                     if (Marked(had)) continue;
@@ -992,7 +1130,7 @@ namespace CapriDesktop
 
         internal static void TidyAll()
         {
-            foreach (string folder in new[] { Folder, Dynamics.Folder })
+            foreach (string folder in new[] { Plain, Senpais, Dynamics.Folder })
             {
                 if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) continue;
                 try { foreach (string file in Directory.GetFiles(folder, "*.md")) { OneOfEach(file); NothingTwice(file); } }
@@ -1039,7 +1177,8 @@ namespace CapriDesktop
             {
                 try
                 {
-                    string file = Path.Combine(Folder, Reworded[at, 0] + ".md");
+                    string file = PathOf(Reworded[at, 0]);
+                    if (file == null) continue;
                     if (!File.Exists(file)) continue;
                     string had = File.ReadAllText(file);
                     string[] rows = had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
@@ -1090,7 +1229,8 @@ namespace CapriDesktop
             {
                 try
                 {
-                    string file = Path.Combine(Folder, Restocked[at, 0] + ".md");
+                    string file = PathOf(Restocked[at, 0]);
+                    if (file == null) continue;
                     if (!File.Exists(file)) continue;
                     string[] rows = File.ReadAllText(file).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
                     int from, to;
@@ -1154,7 +1294,7 @@ namespace CapriDesktop
             try
             {
                 Dictionary<string, string[]> found = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
-                foreach (string folder in new[] { Folder, Dynamics.Folder })
+                foreach (string folder in new[] { Plain, Senpais, Dynamics.Folder })
                 {
                     if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) continue;
                     foreach (string file in Directory.GetFiles(folder, "*.md"))
@@ -1192,12 +1332,17 @@ namespace CapriDesktop
             try
             {
                 if (!Directory.Exists(Folder)) Directory.CreateDirectory(Folder);
+                if (!Directory.Exists(Plain)) Directory.CreateDirectory(Plain);
+                if (!Directory.Exists(Senpais)) Directory.CreateDirectory(Senpais);
+                Moved();
                 Renamed();
                 for (int pack = 0; pack < Packs.GetLength(0); pack++)
                 {
-                    string named = Packs[pack, 0], file = Path.Combine(Folder, named + ".md");
-                    if (!File.Exists(file)) File.WriteAllText(file, Written(named), new UTF8Encoding(false));
-                    else TopUp(file, Packs[pack, 1]);
+                    string named = Packs[pack, 0];
+                    string plainText, senpaiText;
+                    Split(Packs[pack, 1], out plainText, out senpaiText);
+                    Keep(PlainPathOf(named), plainText, named);
+                    Keep(SenpaiPathOf(named), senpaiText, named);
                 }
                 Reword();
                 Restock();
@@ -1207,6 +1352,76 @@ namespace CapriDesktop
                 LintPacks();
             }
             catch (Exception) { }
+        }
+
+        // Every line ending the way her files have them, whatever the text arrived as.
+        private static string Lines(string text)
+        {
+            return (text ?? "").Replace("\r\n", "\n").Replace('\r', '\n').Replace("\n", Environment.NewLine);
+        }
+
+        // One half of a pack: written once if it is not there, brought up to date if it is. A half she no longer
+        // ships is left exactly as it is, since it may be theirs.
+        private static void Keep(string file, string text, string named)
+        {
+            if (file == null || string.IsNullOrEmpty(text)) return;
+            try
+            {
+                // Written the way her files are read back and written everywhere else. The pack text in the build
+                // is one long literal with plain newlines in it, and top up rebuilds a file with this machine's,
+                // so a pack written straight from the literal came out of its first top up a different file and
+                // was rewritten on every start after that. A clean box found this; here they had already been
+                // through the move, which writes them this way, so nothing showed.
+                if (!File.Exists(file)) { File.WriteAllText(file, Lines(text), new UTF8Encoding(false)); return; }
+                Mended(file, text, named);
+                TopUp(file, text);
+            }
+            catch (Exception) { }
+        }
+
+        // Packs that were written before the split, one file each in personalities\, are cut in two and moved into
+        // censored\ and uncensored\. The file they came from is kept beside them as a .bak and nothing is deleted:
+        // a migration that loses someone's rewritten character text is worse than a folder with old files in it.
+        private static void Moved()
+        {
+            string old = OldFolder;
+            if (string.IsNullOrEmpty(old) || !Directory.Exists(old)) return;
+            foreach (string file in Directory.GetFiles(old, "*.md"))
+            {
+                try
+                {
+                    string named = Path.GetFileNameWithoutExtension(file);
+                    string had = File.ReadAllText(file);
+                    string plainText, senpaiText;
+                    Split(had, out plainText, out senpaiText);
+                    string plainPath = PlainPathOf(named), senpaiPath = SenpaiPathOf(named);
+                    if (plainPath == null || senpaiPath == null) continue;
+                    if (!string.IsNullOrEmpty(plainText) && !File.Exists(plainPath)) File.WriteAllText(plainPath, plainText, new UTF8Encoding(false));
+                    if (!string.IsNullOrEmpty(senpaiText) && !File.Exists(senpaiPath)) File.WriteAllText(senpaiPath, senpaiText, new UTF8Encoding(false));
+                    string kept = file + ".bak";
+                    if (File.Exists(kept)) File.Delete(kept);
+                    File.Move(file, kept);
+                    Brain.Log("packs", -1, named + " moved into " + PlainName + " and " + SenpaiName + ", the file it came from kept as a .bak.");
+                }
+                catch (Exception) { }
+            }
+        }
+
+        // Where they used to live: personalSettings\personalities is the folder now, and this is its parent's
+        // personalities\ from before the move.
+        private static string OldFolder
+        {
+            get
+            {
+                try
+                {
+                    string settings = Path.GetDirectoryName(Folder);
+                    if (string.IsNullOrEmpty(settings)) return null;
+                    string data = Path.GetDirectoryName(settings);
+                    return string.IsNullOrEmpty(data) ? null : Path.Combine(data, FolderName);
+                }
+                catch (Exception) { return null; }
+            }
         }
 
         // The first Sadist.md shipped with the lines of someone who enjoys being thrown, which is masochism, not sadism.
@@ -1220,7 +1435,8 @@ namespace CapriDesktop
         {
             try
             {
-                string was = Path.Combine(Folder, "Sadist.md"), now = Path.Combine(Folder, "Masochist.md");
+                string was = PlainPathOf("Sadist"), now = PlainPathOf("Masochist");
+                if (was == null || now == null) return;
                 if (!File.Exists(was) || File.Exists(now)) return;
                 if (File.ReadAllText(was).IndexOf(WasMasochist, StringComparison.Ordinal) < 0) return;
                 File.Move(was, now);
@@ -1245,6 +1461,72 @@ namespace CapriDesktop
             // silent when the Uncensored toggle goes on.
             "When you pet her (uncensored)", "When you throw her (uncensored)", "When you come back (uncensored)"
         };
+
+        // A pack with no title line of its own is damaged rather than edited: nobody deletes "# Feral" to opt out
+        // of anything, and a file in that state had also lost its character and eight whole reaction sections.
+        // Top up leaves lines sections alone on purpose, so nothing would ever have put them back.
+        //
+        // Every heading the pack ships is restored, in the order it ships them, and every line already in the file
+        // is kept under its own heading. A section of their own that the pack does not ship keeps its place after
+        // the ones that do. Runs only while the title is missing, so a deliberately deleted section stays deleted.
+        private static void Mended(string file, string pack, string named)
+        {
+            try
+            {
+                string had = File.ReadAllText(file);
+                if (had.Trim().Length == 0) return;
+                if (Regex.IsMatch(had, @"(?m)^#[ \t]*[^#\s]")) return;
+                List<KeyValuePair<string, string>> theirs = Parts(had), stock = Parts(pack);
+                if (stock.Count < 2) return;
+                List<string> used = new List<string>();
+                StringBuilder made = new StringBuilder();
+                foreach (KeyValuePair<string, string> part in stock)
+                {
+                    string body = null;
+                    foreach (KeyValuePair<string, string> mine in theirs)
+                        if (mine.Key != null && string.Equals(mine.Key, part.Key, StringComparison.OrdinalIgnoreCase)) { body = mine.Value; break; }
+                    if (body != null) used.Add(part.Key);
+                    made.Append(body ?? part.Value);
+                }
+                foreach (KeyValuePair<string, string> mine in theirs)
+                {
+                    if (mine.Key == null) continue;
+                    bool known = false;
+                    foreach (string name in used) if (string.Equals(name, mine.Key, StringComparison.OrdinalIgnoreCase)) { known = true; break; }
+                    if (!known) made.Append(mine.Value);
+                }
+                // The reset marker is written under the file's first heading, which in a file with no title was
+                // whatever section happened to be first. Notes puts it back under the real one.
+                string done = Regex.Replace(made.ToString(), @"(?mi)^[ \t]*" + Regex.Escape(Notes.ResetKey) + @"[ \t]*:[^\r\n]*\r?\n", "");
+                if (done.Trim() == had.Trim()) return;
+                File.WriteAllText(file, done, new UTF8Encoding(false));
+                Brain.Log("packs", -1, named + ".md had lost its title and " + (stock.Count - 1 - used.Count) + " section(s), restored from the one she ships.");
+            }
+            catch (Exception) { }
+        }
+
+        // A file split at its headings: the text above the first one, then each heading with everything under it.
+        // The key is the heading's words, or null for the part above the first heading.
+        private static List<KeyValuePair<string, string>> Parts(string text)
+        {
+            List<KeyValuePair<string, string>> found = new List<KeyValuePair<string, string>>();
+            string[] rows = (text ?? "").Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+            string under = null;
+            StringBuilder block = new StringBuilder();
+            foreach (string raw in rows)
+            {
+                string one = (raw ?? "").Trim();
+                if (one.StartsWith("#", StringComparison.Ordinal))
+                {
+                    if (under != null || block.ToString().Trim().Length > 0) found.Add(new KeyValuePair<string, string>(under, block.ToString()));
+                    block = new StringBuilder();
+                    under = one.TrimStart('#').Trim();
+                }
+                block.Append(raw == null ? "" : raw.TrimEnd()).Append(Environment.NewLine);
+            }
+            if (under != null || block.ToString().Trim().Length > 0) found.Add(new KeyValuePair<string, string>(under, block.ToString()));
+            return found;
+        }
 
         private static void TopUp(string file, string pack)
         {
@@ -1338,10 +1620,30 @@ namespace CapriDesktop
 
         internal static string Written(string named)
         {
+            return PackText(named) ?? "# " + named + "\n\n> Her character, then what she says when you handle her.\n";
+        }
+
+        // The half of a pack that belongs in the folder this file is in. A file nothing ships gets its own stub, so
+        // a reset to stock on someone's own pack does not hand it a personality it never had.
+        internal static string Half(string path, string named)
+        {
+            // Only a pack she ships has a stock to go back to. For one of theirs there is nothing to hand back, so
+            // a reset marker in it resets nothing and the file is left exactly as it was: a pack that is not in the
+            // build is a pack the build has no opinion about, feature excluded on purpose.
+            string pack = PackText(named);
+            if (pack == null) return null;
+            string plain, senpai;
+            Split(pack, out plain, out senpai);
+            return InSenpai(path) ? senpai : plain;
+        }
+
+        // The pack she ships under that name, or null for one of theirs.
+        private static string PackText(string named)
+        {
+            if (string.IsNullOrEmpty(named)) return null;
             for (int pack = 0; pack < Packs.GetLength(0); pack++)
-                if (Packs[pack, 0].Equals(named, StringComparison.OrdinalIgnoreCase))
-                    return Packs[pack, 1];
-            return "# " + named + "\n\n> Her character, then what she says when you handle her.\n";
+                if (Packs[pack, 0].Equals(named, StringComparison.OrdinalIgnoreCase)) return Packs[pack, 1];
+            return null;
         }
 
         // Each pack is the whole file: her character, then a section per reaction. The sections are the point; the

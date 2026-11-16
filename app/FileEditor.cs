@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -1176,7 +1176,10 @@ namespace CapriDesktop
             // already says which they are and renaming them would break every saved pick.
             // A personality or mood marked uncensored only is absent while the toggle is off, not greyed out,
             // the same as interests.md: a censored install should show no trace that there is anything to unlock.
-            foreach (string each in Sorted(Personalities.Folder)) if (Brain.Uncensored || !Personalities.AdultOnly(each)) Add(found, taken, each, "P_");
+            // Her plain files always; the senpai half of a pack only with the toggle on, under its own tag so the two
+            // are told apart in the list. A censored install has no senpai file to offer in the first place.
+            foreach (string each in Sorted(Personalities.Plain)) if (Brain.Uncensored || !Personalities.AdultOnly(each)) Add(found, taken, each, "P_");
+            if (Brain.Uncensored) foreach (string each in Sorted(Personalities.Senpais)) Add(found, taken, each, "U_");
             foreach (string each in Sorted(Dynamics.Folder)) if (Brain.Uncensored || !Personalities.AdultOnly(each)) Add(found, taken, each, "M_");
             return found.ToArray();
         }

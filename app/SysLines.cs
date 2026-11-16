@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -51,6 +51,7 @@ namespace CapriDesktop
             { "startup", "startup" },
             { "pets you", "pets you" },
             { "slaps you", "slaps you" },
+            { "high five", "high five" },
             { "picks you up", "picks you up" },
             { "clang", "clang" },
             { "throws you", "throws you" },
@@ -273,6 +274,38 @@ namespace CapriDesktop
         // which put it after this block and left the switch stranded in the middle of the file it was meant to end.
         internal const string SenpaiHeading = "## Adult mode";
 
+        // The terms, last but one. Nobody reads the top of a settings file for these, and putting them beside her
+        // calendar only buries the calendar; down here they sit where the file has already ended for most people,
+        // with the senpai switch under them. Plain words, and short enough to be read if anyone does.
+        internal const string DealHeading = "## End User Licence Agreement";
+
+        internal static string[] DealLines()
+        {
+            return new[]
+            {
+                DealHeading,
+                "",
+                "> ACCEPTANCE. By installing or using this software you accept these terms. If you do not accept",
+                "> them, do not use it.",
+                "> LICENCE. Use of the software is governed by LICENSE.md, PolyForm Noncommercial 1.0.0, and by",
+                "> the notices in THIRD-PARTY-NOTICES.md. Noncommercial use only.",
+                "> NO WARRANTY. The software is provided \"as is\", without warranty of any kind, express or",
+                "> implied, including but not limited to the implied warranties of merchantability, fitness for a",
+                "> particular purpose and non-infringement.",
+                "> LIMITATION OF LIABILITY. In no event shall the authors or copyright holders be liable for any",
+                "> claim, damages or other liability, whether in an action of contract, tort or otherwise, arising",
+                "> from, out of or in connection with the software or its use.",
+                "> NO PROFESSIONAL ADVICE. Output is generated text and is not medical, legal, financial or safety",
+                "> advice. Verify anything that matters.",
+                "> USER RESPONSIBILITY. You are responsible for what you instruct the software to do on your",
+                "> computer and for the content you supply to it.",
+                "> THIRD-PARTY SERVICES. If you configure a cloud brain or voice service, your input is sent to",
+                "> that provider and is governed by that provider's own terms and privacy policy.",
+                "> AGE RESTRICTION. The section below this one unlocks adult content and is for persons aged 18 or",
+                "> over, or the age of majority where you live, whichever is greater."
+            };
+        }
+
         // The warning that goes with it, so a block that has to be rebuilt still carries one.
         private static readonly string[] SenpaiNote =
         {
@@ -378,6 +411,57 @@ namespace CapriDesktop
             catch (Exception) { }
         }
 
+        // Her intro is the first section in the file. A sys.md that gained it later has it further down, so it
+        // is moved up once, the same way Adult mode is held at the bottom.
+        private static void IntroFirst()
+        {
+            if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
+            try
+            {
+                string[] rows = File.ReadAllText(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+                int from = -1, to = rows.Length, first = -1;
+                for (int row = 0; row < rows.Length; row++)
+                {
+                    string one = rows[row].Trim();
+                    if (!one.StartsWith("##", StringComparison.Ordinal)) continue;
+                    if (first < 0) first = row;
+                    if (string.Equals(one.TrimStart('#').Trim(), IntroHeading, StringComparison.OrdinalIgnoreCase)) { from = row; continue; }
+                    if (from >= 0) { to = row; break; }
+                }
+                if (from < 0 || first < 0) return;
+                // A refresh once wrote her switch names into the note block, so any that sit above the key
+                // line go: the ones under it are the real setting.
+                int key = -1;
+                for (int row = from; row < to; row++)
+                    if (rows[row].Trim().StartsWith("intros:", StringComparison.OrdinalIgnoreCase)) { key = row; break; }
+                bool trimmed = false;
+                if (key > 0)
+                    for (int row = from; row < key; row++)
+                    {
+                        string one = rows[row].Trim();
+                        if (!one.StartsWith(">", StringComparison.Ordinal)) continue;
+                        if (Known(one.TrimStart('>').Trim()) == null) continue;
+                        rows[row] = null;
+                        trimmed = true;
+                    }
+                if (from == first && !trimmed) return;
+                List<string> block = new List<string>();
+                for (int row = from; row < to; row++) if (rows[row] != null) block.Add(rows[row]);
+                while (block.Count > 0 && block[block.Count - 1].Trim().Length == 0) block.RemoveAt(block.Count - 1);
+                List<string> made = new List<string>();
+                for (int row = 0; row < rows.Length; row++)
+                {
+                    if (row == first) { made.AddRange(block); made.Add(""); }
+                    if (row >= from && row < to) continue;
+                    if (rows[row] != null) made.Add(rows[row]);
+                }
+                File.WriteAllText(Kept, string.Join(Environment.NewLine, made.ToArray()), new UTF8Encoding(false));
+                read = DateTime.MinValue;
+                wasLong = -1;
+            }
+            catch (Exception) { }
+        }
+
         private static void SenpaiLast()
         {
             try
@@ -457,6 +541,24 @@ namespace CapriDesktop
                         adding.Add("");
                         adding.Add(Line(CalendarKey, ""));
                     }
+                    // A file from the two builds where that section was headed "The deal" loses it, so the one
+                    // below replaces it rather than sitting beside it. It was notes only and never held a
+                    // setting, so nothing of theirs can be inside it.
+                    Unheaded("## The deal");
+                    // The terms, for a sys.md written before they existed. Added above Adult mode, which SenpaiLast
+                    // puts back at the bottom whatever else goes in, so they end up last but one.
+                    if (!Regex.IsMatch(File.ReadAllText(Kept), @"(?mi)^[ \t]*" + Regex.Escape(DealHeading) + @"[ \t\r]*$"))
+                    {
+                        adding.Add("");
+                        foreach (string row in DealLines()) adding.Add(row);
+                    }
+                    // The intro list, for a sys.md written before it existed. Added above Adult mode, which
+                    // SenpaiLast puts back at the bottom whatever else goes in.
+                    if (!Regex.IsMatch(File.ReadAllText(Kept), @"(?mi)^[ \t]*##[ \t]*" + Regex.Escape(IntroHeading) + @"[ \t\r]*$"))
+                    {
+                        adding.Add("");
+                        foreach (string row in IntroBlock().Replace("\r\n", "\n").TrimEnd('\n').Split('\n')) adding.Add(row);
+                    }
                     if (!theirs.ContainsKey(OwnLinesKey))
                     {
                         adding.Add("");
@@ -472,13 +574,14 @@ namespace CapriDesktop
                         if (!theirs.ContainsKey(Stock[line, 0])) tags.Add(Line(Stock[line, 0], Stock[line, 1]));
                     if (tags.Count > 0) { adding.Add(""); adding.AddRange(tags); }
                 }
-                if (adding.Count == 0) { Empties(); Tidy(); SenpaiLast(); return; }
+                if (adding.Count == 0) { Empties(); Tidy(); IntroFirst(); SenpaiLast(); return; }
                 File.WriteAllText(Kept, Fitted(File.ReadAllText(Kept), adding), new UTF8Encoding(false));
                 read = DateTime.MinValue;
                 wasLong = -1;
                 Notes.Refresh(Kept, Text);
                 Empties();
                 Tidy();
+                IntroFirst();
                 SenpaiLast();
             }
             catch (Exception) { }
@@ -487,6 +590,32 @@ namespace CapriDesktop
         // A name added by a later build goes under the heading it belongs to, when the file already has that
         // heading. Appending a second copy reads the same to her, but it leaves sys.md with two sections of the
         // same name and the settings for one thing in two places, which is exactly what makes a file unreadable.
+        // Takes one whole section out of her file, heading and all, up to the next heading. For a section that
+        // was renamed: nothing here is theirs to keep, or it would not be safe to cut.
+        private static void Unheaded(string heading)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
+                string had = File.ReadAllText(Kept);
+                if (had.IndexOf(heading, StringComparison.OrdinalIgnoreCase) < 0) return;
+                List<string> made = new List<string>();
+                bool cutting = false;
+                foreach (string raw in had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+                {
+                    string one = (raw ?? "").Trim();
+                    if (one.StartsWith("#", StringComparison.Ordinal))
+                        cutting = string.Equals(one, heading, StringComparison.OrdinalIgnoreCase);
+                    if (!cutting) made.Add(raw);
+                }
+                while (made.Count > 0 && made[made.Count - 1].Trim().Length == 0) made.RemoveAt(made.Count - 1);
+                File.WriteAllText(Kept, string.Join(Environment.NewLine, made.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
+                read = DateTime.MinValue;
+                wasLong = -1;
+            }
+            catch (Exception) { }
+        }
+
         private static string Fitted(string body, List<string> adding)
         {
             List<string> heads = new List<string>();
@@ -532,11 +661,20 @@ namespace CapriDesktop
             after = Put(made, at, after, want, heads);
             while (made.Count > 0 && made[made.Count - 1].Trim().Length == 0) made.RemoveAt(made.Count - 1);
 
-            // Anything left has no heading in their file yet, so it keeps its own, notes and all.
+            // Anything left has no heading in their file yet, so it keeps its own, notes and all. Asked by
+            // whether the heading is there rather than by whether the section has keys: a section that is all
+            // notes has none to place, and was dropped for having none. The terms are exactly that section.
             foreach (string name in heads)
             {
                 if (name.Length == 0) continue;
-                if (!want.ContainsKey(name) || want[name].Count == 0) continue;
+                bool there = false;
+                foreach (string row in made)
+                {
+                    string one = (row ?? "").Trim();
+                    if (!one.StartsWith("#", StringComparison.Ordinal)) continue;
+                    if (string.Equals(one.TrimStart('#').Trim(), name, StringComparison.OrdinalIgnoreCase)) { there = true; break; }
+                }
+                if (there) continue;
                 made.Add("");
                 made.AddRange(whole[name]);
             }
@@ -616,6 +754,65 @@ namespace CapriDesktop
             catch (Exception) { }
         }
 
+        // Her start-up intro. The names sit under the key with a ">" in front, the way a kink does: take the
+        // ">" off one to switch it on, and with more than one on she picks at random. Adult mode still goes
+        // after this, because Adult mode is always the last thing in the file.
+        internal const string IntroHeading = "Her start-up intro";
+        internal static readonly string[] IntroNames = { "shatter", "hijack", "wake" };
+
+        internal static string IntroBlock()
+        {
+            StringBuilder made = new StringBuilder();
+            made.AppendLine("## " + IntroHeading);
+            made.AppendLine();
+            made.AppendLine("> How she turns up. Take the \">\" off one to use it, more than one and she picks.");
+            made.AppendLine("> Needs the Startup Intros mod in mods, approved once under Mainframe > Mods.");
+            made.AppendLine();
+            made.AppendLine("intros:");
+            foreach (string one in IntroNames) made.AppendLine("> " + one);
+            made.AppendLine();
+            return made.ToString();
+        }
+
+        // The intros switched on, in the order they are written. Empty means she starts the way she always has.
+        internal static string[] Intros()
+        {
+            List<string> on = new List<string>();
+            try
+            {
+                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return on.ToArray();
+                bool inside = false;
+                foreach (string raw in File.ReadAllLines(Kept))
+                {
+                    string one = (raw ?? "").Trim();
+                    if (one.StartsWith("#", StringComparison.Ordinal))
+                    {
+                        inside = string.Equals(one.TrimStart('#').Trim(), IntroHeading, StringComparison.OrdinalIgnoreCase);
+                        continue;
+                    }
+                    if (!inside || one.Length == 0 || one.StartsWith(">", StringComparison.Ordinal)) continue;
+                    if (one.StartsWith("intros:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // "intros: shatter, wake" works as well as the lines under it.
+                        foreach (string named in one.Substring(7).Split(','))
+                            if (Known(named.Trim()) != null) on.Add(Known(named.Trim()));
+                        continue;
+                    }
+                    string found = Known(one);
+                    if (found != null && !on.Contains(found)) on.Add(found);
+                }
+            }
+            catch (Exception) { }
+            return on.ToArray();
+        }
+
+        private static string Known(string said)
+        {
+            foreach (string one in IntroNames)
+                if (string.Equals(one, said, StringComparison.OrdinalIgnoreCase)) return one;
+            return null;
+        }
+
         private const int Column = 22;
 
         private static string Line(string name, string said)
@@ -637,6 +834,7 @@ namespace CapriDesktop
                 made.AppendLine("> Names on the left are hers, so keep them as they are.");
                 made.AppendLine("> Delete this file to put everything back.");
                 made.AppendLine();
+                made.Append(IntroBlock());
                 made.AppendLine("## What goes in front of a line");
                 made.AppendLine();
                 made.AppendLine("> Change these to anything. A trailing space is added for you.");
@@ -681,6 +879,8 @@ namespace CapriDesktop
                     made.AppendLine(Line(Stock[line, 0], Stock[line, 1]));
                 made.AppendLine();
                 made.AppendLine("> What she says when handled lives in the personalities folder.");
+                made.AppendLine();
+                foreach (string row in DealLines()) made.AppendLine(row);
                 made.AppendLine();
                 made.AppendLine("## Adult mode");
                 made.AppendLine();

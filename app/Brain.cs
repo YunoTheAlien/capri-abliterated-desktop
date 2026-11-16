@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -81,6 +81,9 @@ namespace CapriDesktop
         [DataMember(Name = "thinking", EmitDefaultValue = false)] public string Thinking;
         // How much of a system prompt stays the same from one message to the next, for Claude's cache.
         internal int Steady;
+        // A picture's own type, and what was typed with it. Both stay out of the JSON: they are for her own
+        // reading of the turn, not for the brain.
+        internal string ImageMime, Typed;
         internal ChatMessage(string role, string content) { Role = role; Content = content; }
     }
 
@@ -1136,7 +1139,7 @@ namespace CapriDesktop
 
         internal static string Nick(string typed)
         {
-            string name = Regex.Replace(typed ?? "", @"[^\p{L}\p{Nd}'._-]", "");
+            string name = Regex.Replace(typed ?? "", @"[^\p{L}\p{Nd}' ._-]", "");
             name = Regex.Replace(name, @"\s+", " ").Trim(' ', '.', '-', '_', '\'');
             if (name.Length > 24) name = name.Substring(0, 24).TrimEnd(' ', '.', '-', '_', '\'');
             return string.Equals(name, "choom", StringComparison.OrdinalIgnoreCase) ? "" : name;
@@ -2676,7 +2679,7 @@ namespace CapriDesktop
 
         internal string Ask(string text, bool followUps, out string followLine, string callContext = null
 #if !CROSS
-           , Func<string> callReply = null, string callLines = null
+            , Func<string> callReply = null, string callLines = null
 #endif
         )
         {
@@ -2694,7 +2697,7 @@ namespace CapriDesktop
                     ) folder.Cancel();
                 return Answer(text, followUps, out followLine, callContext
 #if !CROSS
-                   , callReply, callLines
+                    , callReply, callLines
 #endif
                 );
             }
@@ -2708,7 +2711,7 @@ namespace CapriDesktop
 
         private string Answer(string text, bool followUps, out string followLine, string callContext
 #if !CROSS
-           , Func<string> callReply, string callLines
+            , Func<string> callReply, string callLines
 #endif
         )
         {
@@ -3439,7 +3442,7 @@ namespace CapriDesktop
 #if CROSS
         internal string See(byte[] jpeg, string system, string instruction, int limit, bool job = false, bool selected = false, bool preserveWhitespace = false, bool computerAction = false)
 #else
-        internal string See(byte[] jpeg, string system, string instruction, int limit, bool job = false, bool selected = false)
+        internal string See(byte[] jpeg, string system, string instruction, int limit, bool job = false, bool selected = false, string mime = "image/jpeg")
 #endif
         {
             int ticket;
@@ -3451,10 +3454,10 @@ namespace CapriDesktop
             if (!selected) model = Looker(model);
             string data = Convert.ToBase64String(jpeg);
             string parts = null;
-            if (remote != null && remote.Claude) parts = "[{\"type\":\"image\",\"source\":{\"type\":\"base64\",\"media_type\":\"image/jpeg\",\"data\":\"" + data + "\"}},{\"type\":\"text\",\"text\":" + Voice.Quote(instruction) + "}]";
+            if (remote != null && remote.Claude) parts = "[{\"type\":\"image\",\"source\":{\"type\":\"base64\",\"media_type\":\"" + mime + "\",\"data\":\"" + data + "\"}},{\"type\":\"text\",\"text\":" + Voice.Quote(instruction) + "}]";
             else if (remote != null && !remote.Plan || Local != null || Server != null) parts = "[{\"type\":\"text\",\"text\":" + Voice.Quote(instruction) + "},{\"type\":\"image_url\",\"image_url\":{\"url\":\"data:image/jpeg;base64," + data + "\"}}]";
             ChatMessage asked = new ChatMessage("user", parts != null ? Parts : instruction);
-            if (parts == null) asked.Images = new[] { data };
+            if (parts == null) { asked.Images = new[] { data }; asked.ImageMime = mime; }
             List<ChatMessage> messages = new List<ChatMessage> { new ChatMessage("system", system), asked };
             string raw;
 #if CROSS
@@ -3624,11 +3627,11 @@ namespace CapriDesktop
             return Visible(raw);
         }
 
-        internal void Remember(string asked, string said)
+        internal void Remember(string asked, string said, string typed = null)
         {
             lock (gate)
             {
-                history.Add(new ChatMessage("user", asked));
+                history.Add(new ChatMessage("user", asked) { Typed = typed });
                 history.Add(new ChatMessage("assistant", said));
                 Kept();
             }
@@ -4648,7 +4651,7 @@ namespace CapriDesktop
         private static readonly Regex NoMemory = new Regex(@"out of memory|insufficient memory|not enough memory|failed to allocate|cudaMalloc failed|unable to allocate|requires more system memory", RegexOptions.IgnoreCase);
         private static readonly Regex NoRoom = new Regex(@"no space left on device|not enough space on the disk|there is not enough space|disk (is )?full|ENOSPC|insufficient (disk|storage) space", RegexOptions.IgnoreCase);
 
-        // A Windows or.NET error in plain words, to follow a colon in a line people see, like "Couldn't save that clip: ".
+        // A Windows or .NET error in plain words, to follow a colon in a line people see, like "Couldn't save that clip: ".
         // Its own words, which can be in any language and name system calls, go to errors.txt under place.
         internal static string Plainly(string place, Exception error)
         {
@@ -5143,9 +5146,16 @@ namespace CapriDesktop
         // letters follows that locale's dotless i, and nvapi-, sk-, AIza, password and token all stop matching. The keys
         // then go into errors.txt in the clear, which is the file people paste into bug reports.
         // bounded, so a huge line with no spaces can't hold her up.
+        internal static string RedactedImages(string text, string parts)
+        {
+            if (text == null || parts == null) return text;
+            foreach (Match data in Regex.Matches(parts, @"[A-Za-z0-9+/]{32,}={0,2}")) text = text.Replace(data.Value, "[redacted]");
+            return text;
+        }
+
         internal static string Redacted(string text)
         {
-            string clean = Regex.Replace(text ?? "", @"\bCAPRI(?:-[0-9A-HJKMNP-TV-Z]{4}){4}\b|\b(?:nvapi-|sk-|AIza|gh[pousr]_|github_pat_|glpat-|xox[abprse]-|xapp-|(?:sk|rk)_(?:live|test)_)[A-Za-z0-9_-]+|\b(?:hf|npm)_[A-Za-z0-9]{20,}\b|(?-i:\bAKIA[0-9A-Z]{16}\b)|\bAQ\.[A-Za-z0-9_.-]+|\bBearer\s+[^\s""',}]+|data:image/[\w.+-]{1,64};base64,[A-Za-z0-9+/=]+", "[redacted]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            string clean = Regex.Replace(text ?? "", @"CAPR[I\u0131\u0130](?:-[A-Z0-9\u0131\u0130\u017F]{2,12})?(?:-[0-9A-HJKMNP-TV-Z\u017F]{4}){4}|(?:sk-(?:ant|proj|or-v1|svcacct|adm[i\u0131\u0130]n)-|nvap[i\u0131\u0130]-|gsk_|xa[i\u0131\u0130]-|g[i\u0131\u0130]thub_pat_|glpat-)(?=[A-Za-z0-9_\u0131\u0130\u017F-]{0,200}?[0-9])[A-Za-z0-9_\u0131\u0130\u017F-]{16,}|(?:\b|(?<=\\[nrtfb])|(?<=%[0-9A-Fa-f]{2}))(?:nvap[i\u0131\u0130]-|sk-|A[I\u0131\u0130]za|gh[pousr]_|g[i\u0131\u0130]thub_pat_|glpat-|xox[abprse]-|xapp-|(?:sk|rk)_(?:l[i\u0131\u0130]ve|test)_|sk_(?=[A-Za-z0-9\u0131\u0130\u017F]{32}))[A-Za-z0-9_\u0131\u0130\u017F-]+|\b(?:hf|npm)_[A-Za-z0-9\u0131\u0130\u017F]{20,}\b|(?-i:\bAKIA[0-9A-Z]{16}\b)|\bAQ\.[A-Za-z0-9_.\u0131\u0130\u017F-]+|\bBearer\s+[^\s""',}]+|data:image/[\w.+-]{1,64};base64,[A-Za-z0-9+/=]+", "[redacted]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
             clean = Regex.Replace(clean, @"(://[^/\s:@]*:)[^/\s]+@", "$1[redacted]@");
             // The name is checked for its key word once, from its start, so a long word made of them isn't searched again from each one.
             clean = Regex.Replace(clean, @"(\b(?=[A-Za-z0-9_]{0,200}?(?:token(?!s\b)|secret|password|passwd|sshpass))[A-Za-z0-9_]+\s*=(?!=)\s*)(?:""[^""\r\n]*""?|'[^'\r\n]*'?|[^\s""',}]+)", "$1[redacted]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
@@ -5159,7 +5169,7 @@ namespace CapriDesktop
             // search stops at the end of that command, so a later docker run -p 8080:80 keeps its ports.
             clean = Regex.Replace(clean, @"(\b(?:docker|podman|nerdctl|buildah|helm(?:\s+registry)?)\s+login\b[^\r\n;&|]{0,300}?(?-i:\s-p)(?:=|\s+)?)(?:""[^""\r\n]*""?|'[^'\r\n]*'?|[^\s""',};&|]+)", "$1[redacted]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
             clean = Regex.Replace(clean, @"(\bmysql(?:dump|admin|sh)?\b[^\r\n;&|]{0,300}?(?-i:\s-p))(?:""[^""\r\n]*""?|'[^'\r\n]*'?|[^\s""';&|]+)", "$1[redacted]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-            // A Cookie or Set-Cookie header is one on its own line (curl -v's > and < too) or quoted like curl -H "Cookie:...", and
+            // A Cookie or Set-Cookie header is one on its own line (curl -v's > and < too) or quoted like curl -H "Cookie: ...", and
             // loses its value to the end of the line or its closing quote. "the cookie: SameSite=Lax" in a sentence isn't one.
             clean = Regex.Replace(clean, @"((?:(?<![^\r\n])[ \t]*(?:[<>][ \t]*)?|(?<q>[""']))(?:set-)?cookie(?:\k<q>)?\s*:[ \t]*(?<v>[""'])?)(?(v)(?:(?!\k<v>)[^\r\n])+|(?(q)(?:(?!\k<q>)[^\r\n])+|[^\r\n]+))", "$1[redacted]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
             // password:, secret: and token: count as a key at the end of a longer name like db_password or clientSecret, at the
@@ -5244,6 +5254,35 @@ namespace CapriDesktop
             return "You are unbearable on purpose. Every bit gets run into the ground, every joke gets a callback, and you narrate your own punchlines. Still never cruel, and still stop the moment they actually need something.";
         }
 
+        private static string Without(string text, string key)
+        {
+            string folded = Folded(text), needle = Folded(key);
+            int at = folded.IndexOf(needle, StringComparison.OrdinalIgnoreCase);
+            if (at < 0) return text;
+            StringBuilder kept = new StringBuilder(text.Length);
+            int from = 0;
+            while (at >= 0)
+            {
+                kept.Append(text, from, at - from).Append("[redacted]");
+                from = at + needle.Length;
+                at = folded.IndexOf(needle, from, StringComparison.OrdinalIgnoreCase);
+            }
+            return kept.Append(text, from, text.Length - from).ToString();
+        }
+
+        private static string Folded(string text)
+        {
+            char[] letters = text.ToCharArray();
+            for (int i = 0; i < letters.Length; i++)
+            {
+                if (letters[i] == '\u0131' || letters[i] == '\u0130') letters[i] = 'i';
+                else if (letters[i] == '\u017f') letters[i] = 's';
+            }
+            return new string(letters);
+        }
+
+        private static readonly HashSet<string> cleanedLogs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         internal static string Nameless(string text)
         {
             if (string.IsNullOrEmpty(text)) return text;
@@ -5277,10 +5316,13 @@ namespace CapriDesktop
             {
                 Uri where;
                 string place = Uri.TryCreate(url, UriKind.Absolute, out where) ? where.Host + where.AbsolutePath : url;
-                string line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " | " + Nameless(Scrubbed(place)) + " | " + (took < 0 ? "-" : took + " ms") + " | " + Nameless(Redacted(Scrubbed(what))).Replace("\r", " ").Replace("\n", " ");
+                string line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " | " + Nameless(Redacted(Scrubbed(place))) + " | " + (took < 0 ? "-" : took + " ms") + " | " + Nameless(Redacted(Scrubbed(what))).Replace("\r", " ").Replace("\n", " ");
+                string[] keys = SavedSecrets();
                 lock (typeof(Brain))
                 {
                     List<string> lines = File.Exists(path) ? new List<string>(File.ReadAllLines(path)) : new List<string>();
+                    // Keys an older build left in here go on the first new line written, once per file per run.
+                    if (cleanedLogs.Add(path)) for (int i = 0; i < lines.Count; i++) lines[i] = Nameless(Redacted(Scrubbed(lines[i], keys)));
                     // A freeze's line says what she was doing, what she holds and where she was held up, so it gets more room.
                     int limit = place == "closed" ? 2400 : place == "frozen" ? 1000 : 300;
                     lines.Add(line.Length > limit ? line.Substring(0, limit) : line);
@@ -5302,19 +5344,36 @@ namespace CapriDesktop
         internal static string Scrubbed(string text)
         {
             if (string.IsNullOrEmpty(text) || scrubbing) return text ?? "";
-            string[] keys;
+            return Scrubbed(text, SavedSecrets());
+        }
+
+        internal static string[] Cleaned(string[] lines)
+        {
+            string[] keys = SavedSecrets();
+            string[] clean = new string[lines == null ? 0 : lines.Length];
+            for (int i = 0; i < clean.Length; i++) clean[i] = Redacted(Scrubbed(lines[i], keys));
+            return clean;
+        }
+
+        private static string[] SavedSecrets()
+        {
+            if (scrubbing) return null;
             scrubbing = true;
-            try { keys = Secrets(); }
-            catch (Exception) { return text; }
+            try { return Secrets(); }
+            catch (Exception) { return null; }
             finally { scrubbing = false; }
-            if (keys == null) return text;
+        }
+
+        private static string Scrubbed(string text, string[] keys)
+        {
+            if (string.IsNullOrEmpty(text) || keys == null) return text ?? "";
             foreach (string saved in keys)
             {
                 string key = (saved ?? "").Trim();
                 if (key.Length < 20 || key.Length > 4096) continue;
-                text = text.Replace(key, "[redacted]");
+                text = Without(text, key);
                 string escaped = Uri.EscapeDataString(key);
-                if (escaped != key) text = text.Replace(escaped, "[redacted]");
+                if (escaped != key) text = Without(text, escaped);
             }
             return text;
         }

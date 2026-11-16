@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
@@ -73,6 +73,39 @@ namespace CapriDesktop
                 asked = DateTime.UtcNow;
                 Roll();
             }
+        }
+
+        // Written down, so she stops waiting on it. Called with the key that was saved: a note about something
+        // else, saved while she happens to be waiting, leaves the question standing.
+        internal static void Answered(string key)
+        {
+            lock (gate)
+            {
+                if (waiting == null) return;
+                if (!string.IsNullOrEmpty(key) && !string.Equals(key.Trim(), PendingKey, StringComparison.OrdinalIgnoreCase)) return;
+                waiting = null;
+                PendingKey = null;
+            }
+        }
+
+        // Whether what they said is worth keeping as the answer. A brush-off, a question back or a bare yes tells
+        // her nothing, and filing it would mean she never asks about that line again.
+        private static readonly string[] Brushed =
+        {
+            "no", "nope", "nah", "none", "nothing", "dunno", "idk", "i dont know", "i dont no", "not sure",
+            "no idea", "maybe", "dont care", "doesnt matter", "yes", "yeah", "yep", "yup", "ok", "okay", "k",
+            "sure", "fine", "whatever", "no comment", "cant say", "wont say", "stop", "shut up", "later", "why"
+        };
+
+        internal static bool Answers(string said)
+        {
+            string one = (said ?? "").Trim();
+            if (one.Length < 3 || one.EndsWith("?")) return false;
+            string bare = Regex.Replace(one.ToLowerInvariant(), @"[^a-z0-9 ]", " ");
+            bare = Regex.Replace(bare, @"\s+", " ").Trim();
+            if (bare.Length == 0) return false;
+            foreach (string off in Brushed) if (bare == off) return false;
+            return true;
         }
 
         // A question stops being pending once they have had a fair chance to answer it.

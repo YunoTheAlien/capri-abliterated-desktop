@@ -549,7 +549,7 @@ namespace CapriDesktop
                         mainframe.LayoutScale(dpi, 100);
                         mainframe.ShowSettings(false);
                         UpdateHearing();
-                        using (Bitmap panel = new Bitmap(mainframe.Width, mainframe.Height))
+                        using (Bitmap panel = Shot(mainframe, "Mainframe"))
                         {
                             mainframe.DrawToBitmap(panel, new Rectangle(Point.Empty, mainframe.Size));
                             panel.Save(Path.Combine(output, name + "-" + dpi * 100 / 96 + ".png"), System.Drawing.Imaging.ImageFormat.Png);

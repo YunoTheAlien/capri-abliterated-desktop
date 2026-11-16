@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -500,7 +500,7 @@ namespace CapriDesktop
         // Without a word breaker a line can still break between letters. A Thai or Lao line never breaks before a vowel or
         // tone mark, or a vowel that follows its letter, and never after a vowel written before its letter. Every script keeps
         // each letter with its marks, and with the next letter after a sign that joins them (a virama, or Khmer's coeng), and
-        // a Burmese line never breaks before ါ, ာ or း (newer.NET counts them as letters of their own, like Mac and Linux do)
+        // a Burmese line never breaks before ါ, ာ or း (newer .NET counts them as letters of their own, like Mac and Linux do)
         // or a letter that ends the syllable before it.
         internal static bool[] Letters(string word)
         {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -342,7 +342,7 @@ namespace CapriDesktop
                     {
                         System.Reflection.FieldInfo key = typeof(ToolStripItem).GetField("EventClick", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
                         System.Reflection.PropertyInfo list = typeof(System.ComponentModel.Component).GetProperty("Events", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                        if (key == null || list == null) throw new Exception("Can't read a menu item's Click handlers on this.NET.");
+                        if (key == null || list == null) throw new Exception("Can't read a menu item's Click handlers on this .NET.");
                         Delegate click = ((System.ComponentModel.EventHandlerList)list.GetValue(item, null))[key.GetValue(null)];
                         if (click == null) return false;
                         foreach (Delegate one in click.GetInvocationList()) if (one.Target == target) return true;

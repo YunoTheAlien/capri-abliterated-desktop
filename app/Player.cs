@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -374,11 +374,46 @@ namespace CapriDesktop
                 if (sessions == null) return null;
                 string want = tune.App ?? "";
                 if (want.Length > 0)
+                {
+                    // One app can own several sessions at once: two browser tabs both playing are both Chrome, and
+                    // the first match is a coin toss. The song decides between them, so a press lands on the tab
+                    // they are looking at rather than whichever Windows listed first. Falls back to the app on its
+                    // own, since a session that has moved on to the next song is still the right one to press.
+                    GlobalSystemMediaTransportControlsSession anyOfTheApp = null;
                     foreach (GlobalSystemMediaTransportControlsSession one in sessions.GetSessions())
-                        if (string.Equals(one.SourceAppUserModelId ?? "", want, StringComparison.OrdinalIgnoreCase)) return one;
+                    {
+                        if (!string.Equals(one.SourceAppUserModelId ?? "", want, StringComparison.OrdinalIgnoreCase)) continue;
+                        if (anyOfTheApp == null) anyOfTheApp = one;
+                        if (Same(one, tune)) return one;
+                    }
+                    if (anyOfTheApp != null) return anyOfTheApp;
+                }
                 return sessions.GetCurrentSession();
             }
             catch (Exception) { manager = null; return null; }
+        }
+
+        // Whether a live session is playing the song this Tune was read from. Title and artist only: the session
+        // object itself is a snapshot that goes dead on a track change, which is what made this necessary.
+        private static bool Same(GlobalSystemMediaTransportControlsSession session, Tune tune)
+        {
+            if (session == null || tune == null) return false;
+            try
+            {
+                // Waited on with a short limit, the way every other read here is: this runs on a button press, and
+                // a session that will not answer must not hold her window while it decides.
+                Task<GlobalSystemMediaTransportControlsSessionMediaProperties> asking = session.TryGetMediaPropertiesAsync().AsTask();
+                GlobalSystemMediaTransportControlsSessionMediaProperties about = asking.Wait(400) ? asking.Result : null;
+                if (about == null) return false;
+                // Through the same tidying the Tune's own title went through, or a stray dash would read as a
+                // different song.
+                if (!string.Equals(Clean(about.Title), tune.Title ?? "", StringComparison.OrdinalIgnoreCase)) return false;
+                // The same fallback the read uses: an app that names only an album artist is compared on that.
+                string artist = Clean(about.Artist);
+                if (artist.Length == 0) artist = Clean(about.AlbumArtist);
+                return string.Equals(artist, tune.Artist ?? "", StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception) { return false; }
         }
 
         private static bool SendNow(Tune tune, string what)

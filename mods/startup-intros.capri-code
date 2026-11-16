@@ -69,11 +69,53 @@ public class StartupIntros : ICapriMod, ICapriIntro
         capri = host;
         choiceFile = Path.Combine(host.Folder, "choice.txt");
         Load();
+        // sys.md has the say: the intros with no ">" in front of them are the ones switched on, and one of
+        // those is picked at random each start. Nothing on there means this mod never shows an intro, which
+        // is how it ships. Saying "shatter", "hijack" or "wake" to her still pins one for the next start.
+        int[] allowed = Allowed();
+        if (allowed.Length > 0)
+        {
+            current = allowed[new Random().Next(allowed.Length)];
+            shuffle = false;
+            offByFile = false;
+        }
+        else offByFile = true;
         if (shuffle)
         {
             current = (current + 1) % Names.Length;
             Save();
         }
+    }
+
+    private bool offByFile;
+
+    // Her sys.md sits two folders up from a mod's own folder: mods\<this mod>\ is inside her data folder.
+    private int[] Allowed()
+    {
+        List<int> on = new List<int>();
+        try
+        {
+            string folder = capri.Folder;
+            string file = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(folder)) ?? "", "sys.md");
+            if (!File.Exists(file)) return on.ToArray();
+            bool inside = false;
+            foreach (string raw in File.ReadAllLines(file))
+            {
+                string one = (raw ?? "").Trim();
+                if (one.StartsWith("#"))
+                {
+                    inside = one.TrimStart('#').Trim().Equals("Her start-up intro", StringComparison.OrdinalIgnoreCase);
+                    continue;
+                }
+                if (!inside || one.Length == 0 || one.StartsWith(">")) continue;
+                if (one.StartsWith("intros:", StringComparison.OrdinalIgnoreCase)) one = one.Substring(7);
+                foreach (string part in one.Split(','))
+                    for (int i = 0; i < Names.Length; i++)
+                        if (Names[i].Equals(part.Trim(), StringComparison.OrdinalIgnoreCase) && !on.Contains(i)) on.Add(i);
+            }
+        }
+        catch (Exception) { }
+        return on.ToArray();
     }
 
     public void Stop() { FreeAll(); }
@@ -105,7 +147,7 @@ public class StartupIntros : ICapriMod, ICapriIntro
         return true;
     }
 
-    public double Seconds { get { return Lengths[current]; } }
+    public double Seconds { get { return offByFile ? 0 : Lengths[current]; } }
 
     public void Begin(Bitmap desktop, Rectangle screen, Rectangle her)
     {
