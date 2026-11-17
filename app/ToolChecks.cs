@@ -612,7 +612,7 @@ namespace CapriDesktop
 
                 // A job for her hands is not an answer, so the question stands and nothing is filed.
                 Func<string, KeyValuePair<string, ToolArguments>> planWas = Hands.Plan;
-                Probes.Said("What do you spend most of your day in on here?", "programsUserLikes");
+                Probes.Said("What's open on your screen most of the day?", "programsUserLikes");
                 try
                 {
                     Hands.Plan = delegate { return new KeyValuePair<string, ToolArguments>("animate", new ToolArguments { Name = "blink" }); };
@@ -730,7 +730,7 @@ namespace CapriDesktop
             {
                 System.IO.Directory.CreateDirectory(root);
                 string settings = System.IO.Path.Combine(root, Personalities.SettingsName);
-                string[] theirs = { "me.md", "memories.md", "sys.md", "lines.md", "dynamic.md", "check-ins.md", "personality.md", "twitch.md", "interests.md" };
+                string[] theirs = { "me.md", "memories.md", "sys.md", "lines.md", "dynamic.md", "check-ins.md", "personality.md", "twitch.md", Interests.FileName };
                 foreach (string name in theirs)
                 {
                     System.IO.File.WriteAllText(System.IO.Path.Combine(root, name), "written by them in " + name + "\r\n", new System.Text.UTF8Encoding(false));
@@ -1287,14 +1287,18 @@ namespace CapriDesktop
                 Func<string, string, string> set = delegate(string name, string level) { return Hands.Do("capri_settings", new ToolArguments { Action = "set", Name = name, Level = level }); };
                 string[,] asks =
                 {
-                    { "size", "bigger", "Set my size to Medium+." }, { "size", "Giant", "Set my size to Giant." }, { "size", "a bit bigger", "My size is already Giant, as far as it goes." },
-                    { "size", "giant", "My size is already Giant." }, { "size", "smallest", "Set my size to Tiny." }, { "size", "huge+", "Set my size to Huge+." },
+                    { "size", "bigger", "Set my size to Medium+." }, { "size", "Giant", "Set my size to Giant." }, { "size", "giant", "My size is already Giant." },
+                    // Giant stopped being the top at 0.9.319 and this read as though it still was, which is how
+                    // her two biggest sizes went unreachable: "biggest" landed on Giant and left two above it.
+                    { "size", "a bit bigger", "Set my size to Double." }, { "size", "biggest", "Set my size to Triple." },
+                    { "size", "a bit bigger", "My size is already Triple, as far as it goes." },
+                    { "size", "smallest", "Set my size to Tiny." }, { "size", "huge+", "Set my size to Huge+." },
                     { "wander", "off", "Set Wander to Off." }, { "wander", "more", "Set Wander to Rarely." }, { "wander", "Restless", "Set Wander to Restless." },
                     { "volume", "50", "Set my voice's volume to 50%." }, { "volume", "louder", "Set my voice's volume to 60%." }, { "volume", "max", "Set my voice's volume to 150%." }, { "volume", "mute", "Set my voice's volume to Mute." },
                     { "voice_speed", "1.3", "Set my voice's speed to 1.3x." }, { "voice_speed", "slower", "Set my voice's speed to 1.2x." }, { "voice_speed", "1x", "Set my voice's speed to Normal." }, { "voice_speed", "normal", "My voice's speed is already Normal." },
                     { "sleep", "10 minutes", "Set Sleep to 10 min." }, { "sleep", "never", "Set Sleep to Never." }, { "sleep", "to 30 min", "Set Sleep to 30 min." },
                     { "pop_ins", "often", "Set Pop-ins to Often." }, { "replies", "shorter", "Set Replies to Short." }, { "replies", "shorter", "Replies is already Short, as far as it goes." },
-                    { "bubble", "long", "Couldn't set Bubble to Long: it's still Normal." }, { "size", "humongous", "There's no humongous for my size. It goes Tiny, Small, Small+, Medium, Medium+, Large, Large+, Huge, Huge+, Giant." },
+                    { "bubble", "long", "Couldn't set Bubble to Long: it's still Normal." }, { "size", "humongous", "There's no humongous for my size. It goes Tiny, Small, Small+, Medium, Medium+, Large, Large+, Huge, Huge+, Giant, Double, Triple." },
                     { "brain", "bigger", "There's no slider of mine called brain." }
                 };
                 List<string> wrong = new List<string>();
@@ -1747,6 +1751,461 @@ namespace CapriDesktop
             }
             if (problems.Count > 0) throw new Exception("Her local brain's tools went wrong: " + string.Join("; ", problems.ToArray()));
             checks.Add("PASS her brain on their PC holds her tools (Lachy, 8 Nov): chat is one call without the tool list, a job it names or a plain ask goes to every tool and its own pick runs, the open shortcut waits for it, and a model that turns tools down falls back to written calls for that model alone");
+        }
+
+        // A personality whose file is gone. Her lists are built from the folder so the menus and the editor
+        // lose it on their own; what is checked here is the saved choice, which used to go on naming it.
+        private void SmokeGonePack(List<string> checks)
+        {
+            List<string> problems = new List<string>();
+            if (!Gone("A pack that is not there " + Guid.NewGuid().ToString("N").Substring(0, 6)))
+                problems.Add("a name with no file was not seen as gone");
+            if (Gone(Personalities.Stock)) problems.Add("her own lines were treated as a missing pack");
+            if (Gone(Personalities.Dynamic)) problems.Add("Dynamic was treated as a missing pack");
+            if (Gone(null) || Gone("")) problems.Add("no choice at all was treated as a missing pack");
+            foreach (string one in Personalities.Names)
+                if (Gone(one)) { problems.Add("a pack she lists was seen as gone: " + one); break; }
+            // A drift into a pack with no file is skipped rather than followed, which is the other half of it.
+            if (problems.Count > 0) throw new Exception("A deleted personality went wrong: " + string.Join("; ", problems.ToArray()));
+            checks.Add("PASS a personality whose file is gone: the saved choice falls back to her own lines and is written back, her own lines and Dynamic are modes rather than files and are never treated as missing, and every pack she lists is seen as present");
+        }
+
+        // A sweep of everything she has written, looking for the adult side in a censored install.
+        //
+        // Her wall is built in a dozen places: a folder not made, a section not written, a tab not listed, a
+        // band that reads as nothing. Each has its own check, and each could be right while the install as a
+        // whole still has a trace in it, because the thing that leaks is whichever one nobody thought of.
+        //
+        // So this one does not test a mechanism. It reads every file she has written and looks for what only
+        // exists on the adult side, which is the question actually being asked: can somebody find it.
+        private void SmokeCensoredSweep(List<string> checks)
+        {
+            List<string> problems = new List<string>();
+            if (Brain.Uncensored)
+            {
+                checks.Add("SKIP the censored sweep: the adult switch is on here, and the sweep is about what a censored install has");
+                return;
+            }
+            try
+            {
+                string folder = Personalities.SettingsFolder;
+                if (string.IsNullOrEmpty(folder) || !System.IO.Directory.Exists(folder))
+                {
+                    checks.Add("SKIP the censored sweep: she has written no files to read");
+                    return;
+                }
+
+                // The folders and files that only exist with the switch on.
+                foreach (string named in new[] { Personalities.SenpaiName, Personalities.WasSenpaiName })
+                    foreach (string found in System.IO.Directory.GetDirectories(folder, named, System.IO.SearchOption.AllDirectories))
+                        problems.Add("a senpai folder exists: " + found.Substring(folder.Length).TrimStart('\\'));
+                foreach (string named in new[] { Interests.FileName, Interests.HersName, Interests.YoursName, Interests.WasFileName, Interests.WasHersName, Interests.WasYoursName })
+                    if (System.IO.File.Exists(System.IO.Path.Combine(folder, named))) problems.Add("a senpai file exists: " + named);
+
+                // Every line of the senpai halves of every pack and mood she ships, which is what a leak would
+                // be made of. Read from the build rather than from a list written by hand, so a pack added
+                // later is swept without anybody remembering to add it here.
+                // Only the lines the senpai side has and the censored side does not.
+                //
+                // Being in a senpai section is not the same as being adult. She ships plain greetings to both
+                // halves on purpose, so "There you are, %petname%." sat in a senpai pool and in Caregiver,
+                // Devoted and Welcome Home, and the sweep called three affectionate greetings a leak on
+                // every censored install. A check that cries wolf is worse than no check: the next real one
+                // is read as the same noise.
+                //
+                // So the censored halves are collected first and taken out of the senpai set. What is left is
+                // what only exists with the switch on, which is the only thing finding one proves.
+                HashSet<string> plainLines = new HashSet<string>(StringComparer.Ordinal);
+                List<string> senpaiLines = new List<string>();
+                foreach (string pack in Personalities.Shipped())
+                {
+                    string plain, senpai;
+                    Personalities.Split(pack, out plain, out senpai);
+                    if (string.IsNullOrEmpty(plain)) continue;
+                    foreach (string raw in plain.Replace("\r\n", "\n").Split('\n')) plainLines.Add(raw.Trim());
+                }
+                foreach (string pack in Personalities.Shipped())
+                {
+                    string plain, senpai;
+                    Personalities.Split(pack, out plain, out senpai);
+                    if (string.IsNullOrEmpty(senpai)) continue;
+                    foreach (string raw in senpai.Replace("\r\n", "\n").Split('\n'))
+                    {
+                        string one = raw.Trim();
+                        // Long enough to be hers rather than a word two files share, and not something she
+                        // says on a censored install anyway.
+                        if (one.Length >= 24 && !one.StartsWith("#", StringComparison.Ordinal) && !one.StartsWith(">", StringComparison.Ordinal)
+                            && !plainLines.Contains(one)) senpaiLines.Add(one);
+                    }
+                }
+
+                // The fixture has to exist before the sweep means anything. This check hunts a censored install
+                // for lines that only exist with the switch on, and it builds that list out of the senpai text
+                // compiled into the build. Hand it an empty list and it searches for nothing, finds nothing,
+                // and passes: "0 senpai lines looked for, no senpai folder, file, heading or line anywhere".
+                //
+                // The one check that proves non-exposure would then never fail again, which is the worst shape
+                // a safety net can fail in. It is also exactly what taking the senpai text out of the build and
+                // into a fetched pack would do to it, so the guard goes in before that move rather than after.
+                // Found by the Sapphire box as F-22.
+                //
+                // The floor is well under today's count and is there to catch nothing-at-all rather than to
+                // police the number: the list was 476 lines when this was written.
+                // Nothing attached is not an empty fixture: a build with no senpai half has nothing to hide
+                // and nothing to look for, and that is the build that ships. The floor only means something
+                // when something did attach. Said either way, so a sweep that checked nothing says so.
+                bool attached = Personalities.SenpaiFor != null;
+                if (attached && senpaiLines.Count < 100)
+                    throw new Exception("The censored sweep had almost nothing to look for: " + senpaiLines.Count
+                        + " senpai lines out of " + Personalities.Shipped().Count + " shipped packs, with a senpai half attached. A sweep with an empty fixture passes without checking anything, so it fails instead.");
+                if (!attached && senpaiLines.Count > 0)
+                    throw new Exception("Nothing attached a senpai half and the sweep still found " + senpaiLines.Count + " senpai lines, so the build is carrying some of it.");
+
+                int read = 0;
+                List<string> everything = new List<string>(System.IO.Directory.GetFiles(folder, "*.md", System.IO.SearchOption.AllDirectories));
+                // And what the split left beside them: a backup of a file written before the split holds both
+                // halves of it, which is the adult side in plain sight on a censored install.
+                everything.AddRange(System.IO.Directory.GetFiles(folder, "*.bak", System.IO.SearchOption.AllDirectories));
+                foreach (string file in everything)
+                {
+                    string body;
+                    try { body = System.IO.File.ReadAllText(file); }
+                    catch (System.IO.IOException) { continue; }
+                    read++;
+                    string named = file.Substring(folder.Length).TrimStart('\\');
+                    if (body.IndexOf("(uncensored)", StringComparison.OrdinalIgnoreCase) >= 0) problems.Add("a senpai heading is in " + named);
+                    // Whole lines, not anywhere in the text. A senpai line that happens to be the opening of
+                    // a longer censored one was found inside it: "There you are, %petname%." is a line of
+                    // its own in a senpai pool and the start of "There you are, %petname%. Have you had a
+                    // drink of water today?" in Caregiver, so the sweep called that a leak on every
+                    // censored install. A line she says is a line, and a check that cries wolf is worse
+                    // than no check, because the next real one reads as the same noise.
+                    HashSet<string> inFile = new HashSet<string>(StringComparer.Ordinal);
+                    foreach (string raw in body.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n')) inFile.Add(raw.Trim());
+                    foreach (string line in senpaiLines)
+                        if (inFile.Contains(line)) { problems.Add("a senpai line is in " + named + ": " + line); break; }
+                }
+                if (read == 0) problems.Add("the sweep read no files at all, so it proves nothing");
+                if (problems.Count == 0) checks.Add("PASS the censored sweep: " + read + " of her files read, " + senpaiLines.Count + " senpai lines looked for" + (attached ? "" : " (nothing attached one, so there was none to look for)") + ", no senpai folder, file, heading or line anywhere in a censored install");
+            }
+            catch (Exception bad) { problems.Add("the sweep could not finish: " + bad.Message); }
+            if (problems.Count > 0) throw new Exception("A censored install has the adult side in it: " + string.Join("; ", problems.ToArray()));
+        }
+
+        // Where a hand lands, and the wall around the senpai half of it: that a censored install is written none
+        // of it and can reach none of it, that the switch alone is not enough, and that her forwardness decides.
+        private void SmokeTouchZones(List<string> checks)
+        {
+            List<string> problems = new List<string>();
+            string keptWas = CapriDesktop.Touch.Kept;
+            bool senpaiWas = Brain.Uncensored, airWas = Brain.OnAir;
+            int specialInterestWas = Personalities.SpecialInterestOverride;
+            string folder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "capri-touch-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                System.IO.Directory.CreateDirectory(folder);
+                CapriDesktop.Touch.Kept = System.IO.Path.Combine(folder, CapriDesktop.Touch.FileName);
+
+                // Censored: the senpai sections are not written at all, and asking for one gets nothing whatever
+                // her forwardness says. A file that merely hid them would still be a file naming them.
+                Brain.OnAir = false;
+                Brain.Uncensored = false;
+                CapriDesktop.Touch.Forget();
+                CapriDesktop.Touch.Write(false);
+                string had = System.IO.File.ReadAllText(CapriDesktop.Touch.Kept);
+                if (had.IndexOf("(uncensored)", StringComparison.OrdinalIgnoreCase) >= 0 || had.IndexOf("hips", StringComparison.OrdinalIgnoreCase) >= 0 || had.IndexOf("her chest", StringComparison.OrdinalIgnoreCase) >= 0)
+                    problems.Add("a censored install was written the senpai zones");
+                if (CapriDesktop.Touch.Line(CapriDesktop.Touch.Hips, 10) != null || CapriDesktop.Touch.Line(CapriDesktop.Touch.Chest, 10) != null || CapriDesktop.Touch.Line(CapriDesktop.Touch.Slapped, 10) != null)
+                    problems.Add("a censored install answered for a senpai zone");
+                if (CapriDesktop.Touch.Line(CapriDesktop.Touch.Head, 0) == null) problems.Add("her head said nothing on a censored install");
+
+                // The switch on: the sections are written, and her forwardness decides which answer comes back.
+                Brain.Uncensored = true;
+                CapriDesktop.Touch.Forget();
+                CapriDesktop.Touch.Write(false);
+                had = System.IO.File.ReadAllText(CapriDesktop.Touch.Kept);
+                if (had.IndexOf("(uncensored)", StringComparison.OrdinalIgnoreCase) < 0) problems.Add("the switch did not write the senpai zones");
+                string willing = CapriDesktop.Touch.Line(CapriDesktop.Touch.Hips, CapriDesktop.Touch.Willing);
+                string not = CapriDesktop.Touch.Line(CapriDesktop.Touch.Hips, CapriDesktop.Touch.Willing - 1);
+                if (string.IsNullOrEmpty(willing) || string.IsNullOrEmpty(not)) problems.Add("a senpai zone said nothing with the switch on");
+                else if (willing == not) problems.Add("her forwardness made no difference to a senpai zone");
+                string refused = CapriDesktop.Touch.Line(CapriDesktop.Touch.Chest, 0);
+                if (string.IsNullOrEmpty(refused)) problems.Add("an unwelcome touch said nothing at all");
+
+                // On air her forwardness is zero by its own rule, so nothing senpai can be reached while she is
+                // in front of an audience, switch or no switch.
+                Brain.OnAir = true;
+                Personalities.SpecialInterestOverride = 10;
+                if (Personalities.SpecialInterest != 0) problems.Add("her forwardness was not zero on air: " + Personalities.SpecialInterest);
+            }
+            finally
+            {
+                CapriDesktop.Touch.Kept = keptWas;
+                CapriDesktop.Touch.Forget();
+                Brain.Uncensored = senpaiWas;
+                Brain.OnAir = airWas;
+                Personalities.SpecialInterestOverride = specialInterestWas;
+                try { System.IO.Directory.Delete(folder, true); } catch (System.IO.IOException) { }
+            }
+            if (problems.Count > 0) throw new Exception("Where a hand lands went wrong: " + string.Join("; ", problems.ToArray()));
+            checks.Add("PASS where a hand lands: her ordinary zones answer at any time, a censored install is written none of the senpai ones and answers for none of them, the switch writes them, her forwardness decides whether she welcomes one or moves your hand, and on air her forwardness is zero so none of it is reachable in front of an audience");
+        }
+
+        // Her stories: that a piece is told in order and finished before the next one starts, that a finished
+        // one is left alone until she has been through them all, and that closing her mid-story keeps her place.
+        private void SmokeLoreTelling(List<string> checks)
+        {
+            List<string> problems = new List<string>();
+            string keptWas = Lore.Kept, markWas = Lore.Marked;
+            string folder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "capri-lore-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                System.IO.Directory.CreateDirectory(folder);
+                Lore.Kept = System.IO.Path.Combine(folder, Lore.FileName);
+                Lore.Marked = System.IO.Path.Combine(folder, Lore.MarkName);
+                Lore.Forget();
+                System.IO.File.WriteAllText(Lore.Kept,
+                    "# What she tells you about herself\r\n\r\n## One\r\n\r\nfirst of one\r\nsecond of one\r\n\r\n## Two\r\n\r\nfirst of two\r\nsecond of two\r\n");
+
+                // In order, and the piece is finished before the other one begins.
+                string[] want = { "first of one", "second of one", "first of two", "second of two" };
+                for (int each = 0; each < want.Length; each++)
+                {
+                    string told = Lore.Next();
+                    if (told != want[each]) problems.Add("story line " + (each + 1) + " was " + (told ?? "nothing") + ", wanted " + want[each]);
+                }
+
+                // Been through them all, so they come round again rather than her running out for good.
+                string again = Lore.Next();
+                if (again != "first of one") problems.Add("after both stories she did not start again: " + (again ?? "nothing"));
+
+                // Her place survives being closed mid-story: the bookmark is a file, not something she holds.
+                Lore.Settle();
+                Lore.Forget();
+                Lore.Kept = System.IO.Path.Combine(folder, Lore.FileName);
+                Lore.Marked = System.IO.Path.Combine(folder, Lore.MarkName);
+                // Forget leaves nothing read, so the mark is read back on the next telling.
+                typeof(Lore).GetField("read", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).SetValue(null, false);
+                string resumed = Lore.Next();
+                if (resumed != "second of one") problems.Add("she did not pick her story up where she left it: " + (resumed ?? "nothing"));
+
+                // A file with nothing in it says nothing, rather than throwing or saying an empty line.
+                System.IO.File.WriteAllText(Lore.Kept, "# What she tells you about herself\r\n");
+                Lore.Forget();
+                if (Lore.Next() != null) problems.Add("an empty lore file still told a story");
+            }
+            finally
+            {
+                Lore.Kept = keptWas;
+                Lore.Marked = markWas;
+                Lore.Forget();
+                try { System.IO.Directory.Delete(folder, true); } catch (System.IO.IOException) { }
+            }
+            if (problems.Count > 0) throw new Exception("Her stories went wrong: " + string.Join("; ", problems.ToArray()));
+            checks.Add("PASS her stories are told a piece at a time: the lines of one come in the order they are written, the piece is finished before another starts, the set comes round again once she has been through it, her place survives being closed mid-story, and an empty file says nothing");
+        }
+
+        // The lines she says on her own: that they come out of her file, that her file can be edited and emptied
+        // without leaving her mute, and that topping it up never touches a line of theirs.
+        private void SmokeOwnMoments(List<string> checks)
+        {
+            List<string> problems = new List<string>();
+            string keptWas = Moments.Kept;
+            string folder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "capri-moments-" + Guid.NewGuid().ToString("N"));
+            string[] stock = { "stock one", "stock two" };
+            try
+            {
+                System.IO.Directory.CreateDirectory(folder);
+                Moments.Kept = System.IO.Path.Combine(folder, Moments.FileName);
+                Moments.Write(false);
+                if (!System.IO.File.Exists(Moments.Kept)) problems.Add("her moments file was not written");
+
+                // Every heading the code asks for is a heading the file ships, or that pool silently falls back
+                // to the source for ever and the file looks like it does nothing.
+                string had = System.IO.File.ReadAllText(Moments.Kept);
+                foreach (string heading in Moments.Headings)
+                    if (had.IndexOf("## " + heading, StringComparison.Ordinal) < 0) problems.Add("her moments file has no section for " + heading);
+
+                // A line out of the file, not the source.
+                string said = Moments.Pick(Moments.PopIn, stock);
+                if (said == null || Array.IndexOf(stock, said) >= 0) problems.Add("popping in did not come from her file: " + (said ?? "nothing"));
+
+                // Their own line is the one she says when it is the only one there, and topping up leaves it alone.
+                System.IO.File.WriteAllText(Moments.Kept, "# Capri's own moments\r\n\r\n## " + Moments.Woken + "\r\n\r\nOi.\r\n");
+                said = Moments.Pick(Moments.Woken, stock);
+                if (said != "Oi.") problems.Add("a file with one line of theirs said something else: " + (said ?? "nothing"));
+                Moments.Write(false);
+                had = System.IO.File.ReadAllText(Moments.Kept);
+                if (had.IndexOf("Oi.", StringComparison.Ordinal) < 0) problems.Add("topping up her moments file lost their line");
+                foreach (string heading in Moments.Headings)
+                    if (had.IndexOf("## " + heading, StringComparison.Ordinal) < 0) problems.Add("topping up did not put back the missing section " + heading);
+
+                // A section emptied on purpose falls back to the lines in the build rather than leaving her mute.
+                System.IO.File.WriteAllText(Moments.Kept, "# Capri's own moments\r\n\r\n## " + Moments.PopIn + "\r\n\r\n");
+                said = Moments.Pick(Moments.PopIn, stock);
+                if (said == null || Array.IndexOf(stock, said) < 0) problems.Add("an emptied section did not fall back to the lines in the build: " + (said ?? "nothing"));
+
+                // And with no file at all she still speaks.
+                System.IO.File.Delete(Moments.Kept);
+                said = Moments.Pick(Moments.PopIn, stock);
+                if (said == null || Array.IndexOf(stock, said) < 0) problems.Add("with no file she had nothing to say: " + (said ?? "nothing"));
+            }
+            finally
+            {
+                Moments.Kept = keptWas;
+                try { System.IO.Directory.Delete(folder, true); } catch (System.IO.IOException) { }
+            }
+            if (problems.Count > 0) throw new Exception("Her own moments went wrong: " + string.Join("; ", problems.ToArray()));
+            checks.Add("PASS the lines she says on her own come out of moments.md: every pool the code asks for is a section in it, a line of theirs is what she says, topping it up puts back a missing section without touching their line, and an emptied section or a deleted file falls back to the lines in the build rather than leaving her mute");
+        }
+
+        // Her spells away from the PC: that short ones are not sleep, that a long one gets a question rather than a
+        // guess, that their answer decides what it was, and that the hour she expects them in bed follows the
+        // nights she has seen. Driven with made-up spells, because the real thing takes a week of nights.
+        private void SmokeAwaySpells(List<string> checks)
+        {
+            List<string> problems = new List<string>();
+            string keptWas = Away.Kept, notesWas = Brain.MemoryPath;
+            Func<long> idleWas = Away.Idle;
+            string toldWas = Hours.Told;
+            bool setWas = preferences.CareLateSet;
+            int hourWas = preferences.CareLateHour;
+            string folder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "capri-away-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                System.IO.Directory.CreateDirectory(folder);
+                Away.Kept = System.IO.Path.Combine(folder, Away.FileName);
+                Away.Forget();
+                // A known set of hours for the run, so what counts as a night is the same on every machine. Left to
+                // what she has counted, the box this runs on would decide the answers.
+                Hours.Told = "9am-11pm";
+
+                // A short spell is a meal or a film, not a night, so there is nothing to ask about.
+                DateTime night = new DateTime(2026, 11, 10, 23, 30, 0);
+                Away.Add(night, night.AddHours(2), "");
+                string question;
+                if (Away.Ask(night.AddHours(2), out question)) problems.Add("a two hour gap was asked about: " + question);
+
+                // Eight hours overnight is a night or a shift, and only they can say which. Asked once.
+                Away.Forget();
+                Away.Add(night, night.AddHours(8), "");
+                if (!Away.Ask(night.AddHours(8).AddMinutes(10), out question) || question == null || question.IndexOf("working", StringComparison.OrdinalIgnoreCase) < 0)
+                    problems.Add("a long overnight gap did not ask whether they were working: " + (question ?? "nothing"));
+                string again;
+                if (Away.Ask(night.AddHours(8).AddMinutes(20), out again)) problems.Add("the same gap was asked about twice: " + again);
+
+                // Their answer settles it, and her line to her brain says work rather than sleep.
+                Away.Told("I was at work");
+                string line = Away.Line(night.AddHours(8).AddMinutes(30));
+                if (line == null || line.IndexOf("working", StringComparison.OrdinalIgnoreCase) < 0) problems.Add("after they said work, her line did not say so: " + (line ?? "nothing"));
+
+                // A night they have not called anything reads as sleep, and a short one says so.
+                Away.Forget();
+                DateTime early = new DateTime(2026, 11, 11, 1, 0, 0);
+                Away.Add(early, early.AddHours(4), "");
+                line = Away.Line(early.AddHours(4).AddMinutes(5));
+                if (line == null || line.IndexOf("slept", StringComparison.OrdinalIgnoreCase) < 0 || line.IndexOf("short", StringComparison.OrdinalIgnoreCase) < 0)
+                    problems.Add("four hours overnight did not read as a short sleep: " + (line ?? "nothing"));
+                // And a spell from days ago is not news.
+                if (Away.Line(early.AddDays(2)) != null) problems.Add("a gap from days ago was still being reported to her brain");
+
+                // Three nights beginning at one in the morning make that her idea of their bedtime, and it moves
+                // her sleep nudge off the hour in her settings.
+                Away.Forget();
+                for (int each = 0; each < 3; each++)
+                {
+                    DateTime from = new DateTime(2026, 11, 10 + each, 1, 0, 0);
+                    Away.Add(from, from.AddHours(7), "");
+                }
+                if (Away.SleepsAt() != 1) problems.Add("three nights starting at 1am gave a bedtime of " + Away.SleepsAt());
+                preferences.CareLateSet = false;
+                preferences.CareLateHour = 23;
+                if (CareTimeNow(CareKind.Late) != 1) problems.Add("her sleep nudge ignored the nights she has seen: " + CareTimeNow(CareKind.Late));
+                // Once it has been set by hand it stays where it was put.
+                preferences.CareLateSet = true;
+                if (CareTimeNow(CareKind.Late) != 23) problems.Add("a bedtime set by hand was overruled: " + CareTimeNow(CareKind.Late));
+
+                // Two nights is not enough to call anything usual.
+                Away.Forget();
+                DateTime one = new DateTime(2026, 11, 12, 2, 0, 0);
+                Away.Add(one, one.AddHours(7), "");
+                Away.Add(one.AddDays(1), one.AddDays(1).AddHours(7), "");
+                if (Away.SleepsAt() != -1) problems.Add("two nights were treated as a routine: " + Away.SleepsAt());
+
+                // Their own answer, written the way people actually write it. A real one here was "about midday,
+                // and then it ends at probably like 3 to 5 a.m": the first range in that is "3 to 5", and reading
+                // it alone told her their whole day was one hour long in the middle of the night.
+                int said, until;
+                Hours.Told = "Uh, probably about midday, and then it ends at probably like 3 to 5 a.m";
+                if (!Hours.Usual(out said, out until) || said != 12 || until != 4) problems.Add("a day written as midday until 5am read as " + said + " to " + until);
+                Hours.Told = "9am-1am";
+                if (!Hours.Usual(out said, out until) || said != 9 || until != 0) problems.Add("9am-1am read as " + said + " to " + until);
+                Hours.Told = "midnight to midday";
+                if (!Hours.Usual(out said, out until) || said != 0 || until != 11) problems.Add("midnight until midday read as " + said + " to " + until);
+                // Always on is no answer, so her counting takes over. What that says depends on the machine; what
+                // matters is that the words were not read as a range of their own.
+                Hours.Told = "I'm on it 24/7";
+                if (Hours.Usual(out said, out until) && said == 0 && until == 6) problems.Add("always-on was read as midnight to 7am");
+
+                // A me.md from an older build gains the keys she ships now, and nothing of theirs moves.
+                Brain.MemoryPath = System.IO.Path.Combine(folder, "me.md");
+                System.IO.File.WriteAllText(Brain.MemoryPath,
+                    "# What Capri remembers about you\r\n> She reads this every time you chat.\r\n\r\n- thingsUserLikes=\r\n- awakeHours=9am-1am\r\n- They have a cat called Biscuit\r\n");
+                Brain.TopUpNotes();
+                string notes = System.IO.File.ReadAllText(Brain.MemoryPath);
+                if (!Probes.Filled(notes, "awakeHours") || notes.IndexOf("Biscuit", StringComparison.Ordinal) < 0)
+                    problems.Add("topping up me.md lost something of theirs: [" + notes.Replace("\r\n", " ") + "]");
+                if (notes.IndexOf("- workHours=", StringComparison.Ordinal) < 0 || notes.IndexOf("workHours is when you are working", StringComparison.Ordinal) < 0)
+                    problems.Add("me.md did not gain workHours and its note: [" + notes.Replace("\r\n", " ") + "]");
+                if (notes.IndexOf("- petNames=", StringComparison.Ordinal) < 0)
+                    problems.Add("me.md did not gain petNames, which has been shipped since 0.9.0: [" + notes.Replace("\r\n", " ") + "]");
+                // Run twice, nothing doubles.
+                Brain.TopUpNotes();
+                string twice = System.IO.File.ReadAllText(Brain.MemoryPath);
+                int keys = 0, at = 0;
+                while ((at = twice.IndexOf("- workHours=", at, StringComparison.Ordinal)) >= 0) { keys++; at++; }
+                if (keys != 1) problems.Add("topping up me.md twice wrote workHours " + keys + " times");
+
+                // The angles her glance steers by are a file of hers too, and the same machinery carries it.
+                string anglesWas = Angles.Kept;
+                try
+                {
+                    Angles.Kept = System.IO.Path.Combine(folder, Angles.FileName);
+                    Angles.Forget();
+                    Angles.Write(false);
+                    string angle = Angles.Angle();
+                    if (string.IsNullOrEmpty(angle)) problems.Add("her watching file gave no angle to take");
+                    string anglesHad = System.IO.File.ReadAllText(Angles.Kept);
+                    int many = 0;
+                    foreach (string row in anglesHad.Replace("\r\n", "\n").Split('\n'))
+                        if (row.Trim().Length > 0 && !row.TrimStart().StartsWith("#", StringComparison.Ordinal) && !row.TrimStart().StartsWith(">", StringComparison.Ordinal)) many++;
+                    if (many < 40) problems.Add("her watching file shipped only " + many + " angles");
+                    // Nothing gated reaches a censored install, here as anywhere else.
+                    if (!Brain.Adult && anglesHad.IndexOf("(uncensored)", StringComparison.OrdinalIgnoreCase) >= 0)
+                        problems.Add("a censored install was written a senpai section of her watching file");
+                }
+                finally
+                {
+                    Angles.Kept = anglesWas;
+                    Angles.Forget();
+                }
+
+                // Only keys she asks about may be written, so a brain inventing one cannot put junk in their notes.
+                if (!Probes.Allowed("workHours") || Probes.Allowed("sleepHours")) problems.Add("the keys her brain may write are wrong");
+            }
+            finally
+            {
+                Away.Kept = keptWas;
+                Away.Idle = idleWas;
+                Away.Forget();
+                Brain.MemoryPath = notesWas;
+                Hours.Told = toldWas;
+                preferences.CareLateSet = setWas;
+                preferences.CareLateHour = hourWas;
+                try { System.IO.Directory.Delete(folder, true); } catch (System.IO.IOException) { }
+            }
+            if (problems.Count > 0) throw new Exception("Her idea of sleep and work went wrong: " + string.Join("; ", problems.ToArray()));
+            checks.Add("PASS her spells away from the PC: a short one is not sleep, a long one is asked about once and their answer decides what it was, a short night reads as a short night, a gap from days ago is not news, three nights set the hour she expects them in bed and a bedtime set by hand is not overruled, hours they wrote in their own words are read from the first time to the last rather than the first range in the line, and an older me.md gains the keys she ships without losing a line of theirs or doubling on a second run");
         }
     }
 }

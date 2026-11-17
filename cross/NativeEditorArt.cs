@@ -50,7 +50,7 @@ namespace CapriDesktop
             if (low >= values.Length - 1) return values[values.Length - 1];
             return values[low] + (values[low + 1] - values[low]) * (at - low);
         }
-        internal static double Senpai(double frame, double from, double to) => Math.Clamp((frame - from) / (to - from), 0, 1);
+        internal static double Grown(double frame, double from, double to) => Math.Clamp((frame - from) / (to - from), 0, 1);
         internal static double Glassy(double frame)
         {
             double art = Along(SheetAlphas, 17, frame) / 255, top = SheetAlphas[0] / 255;
@@ -64,7 +64,7 @@ namespace CapriDesktop
         internal static Point[] Spine(double frame)
         {
             double end = Math.Min(frame, 1) * (Along(SpineEnds, 1, frame) - Crown) + Crown;
-            double step = Crown + 4.5 * Senpai(frame, 3, 8), slit = 2.5 * Senpai(frame, 11, 14), cut = Senpai(frame, 4, 12);
+            double step = Crown + 4.5 * Grown(frame, 3, 8), slit = 2.5 * Grown(frame, 11, 14), cut = Grown(frame, 4, 12);
             var p = new List<Point> {new(SpineLeft,step),new(144.5,step),new(150.5,Crown),new(SpineRight,Crown)};
             if (end > 247)
             {
@@ -113,6 +113,6 @@ namespace CapriDesktop
             else if(Stage==Phase.Untyping){Untyped+=frames;if(Untyped>=14){double extra=Untyped-14;Stage=Phase.Closing;Frame=Math.Max(0,Math.Min(Frame,40)-extra);if(Frame==0)Stage=Phase.Gone;}}
             else if(Stage==Phase.Closing){Frame=Math.Max(0,Frame-frames);if(Frame==0)Stage=Phase.Gone;}
         }
-        internal double Words => Stage == Phase.Untyping ? 1-Math.Clamp(Untyped/14,0,1) : Stage==Phase.Closing||Stage==Phase.Gone?0:NativeEditorArt.Senpai(Frame,45,59);
+        internal double Words => Stage == Phase.Untyping ? 1-Math.Clamp(Untyped/14,0,1) : Stage==Phase.Closing||Stage==Phase.Gone?0:NativeEditorArt.Grown(Frame,45,59);
     }
 }

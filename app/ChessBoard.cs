@@ -139,10 +139,14 @@ namespace CapriDesktop
         };
         private static readonly string[] Moments = { "your_queen", "her_queen", "your_check", "her_check", "won", "lost", "blunder", "draw", "resign" };
 
+        // Through chess.md and her recency, with these as the fallback. The roll stays for anything that
+        // asks without her file being set up, which is her checks.
         internal static string Pick(string moment, Random dice)
         {
             int at = Array.IndexOf(Moments, moment);
-            return at < 0 ? null : Lines[at][dice.Next(Lines[at].Length)];
+            if (at < 0) return null;
+            string hers = ChessTalk.Pick(at, Lines[at]);
+            return hers ?? Lines[at][dice.Next(Lines[at].Length)];
         }
     }
 

@@ -178,7 +178,7 @@ namespace CapriDesktop
         {
             shadow.Frame = art.Frame = animation.Frame; shadow.InvalidateVisual(); art.InvalidateVisual();
             page.IsHitTestVisible = !Busy && !animation.Leaving;
-            page.Opacity = animation.Stage == NativeEditorMotion.Phase.Untyping ? animation.Words : NativeEditorArt.Senpai(animation.Frame, 35, 42);
+            page.Opacity = animation.Stage == NativeEditorMotion.Phase.Untyping ? animation.Words : NativeEditorArt.Grown(animation.Frame, 35, 42);
             words.Opacity = animation.Words;
             string name = docs[current].Label;
             int shown = animation.Stage == NativeEditorMotion.Phase.Untyping ? (int)Math.Ceiling(name.Length - animation.Untyped * 1.5) : (int)Math.Floor((animation.Frame - 40) * 1.5) + 1;
@@ -464,7 +464,7 @@ namespace CapriDesktop
                     c.DrawGeometry(null,new Pen(Shadow ? Brushes.Black : new SolidColorBrush(Color.FromArgb(220,235,74,66)),2.4*a),NativeEditorArt.Shape(NativeEditorArt.Sheet(f,1.2),a));
                 }
                 if (!Shadow && NativeEditorArt.Along(NativeEditorArt.SpineEnds,1,f)>NativeEditorArt.TickY+2)
-                    c.DrawRectangle(new SolidColorBrush(Color.FromArgb((byte)(170*NativeEditorArt.Senpai(f,6,14)),0,0,0)),null,Box(141,NativeEditorArt.TickY,148,NativeEditorArt.TickY+1,a));
+                    c.DrawRectangle(new SolidColorBrush(Color.FromArgb((byte)(170*NativeEditorArt.Grown(f,6,14)),0,0,0)),null,Box(141,NativeEditorArt.TickY,148,NativeEditorArt.TickY+1,a));
                 double rule=f<21?NativeEditorArt.RuleLeft:NativeEditorArt.Along(NativeEditorArt.RuleEnds,21,f),block=f<25?NativeEditorArt.RuleLeft:NativeEditorArt.Along(NativeEditorArt.BlockEnds,25,f);
                 c.DrawRectangle(Shadow ? Brushes.Black : new SolidColorBrush(Color.FromArgb(222,235,74,66)),null,Box(NativeEditorArt.RuleLeft,NativeEditorArt.RuleTop,rule,NativeEditorArt.RuleBottom,a));
                 c.DrawRectangle(Shadow ? Brushes.Black : new SolidColorBrush(Color.FromArgb(222,235,74,66)),null,Box(NativeEditorArt.RuleLeft,NativeEditorArt.BlockTop,block,NativeEditorArt.BlockBottom,a));

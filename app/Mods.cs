@@ -5,6 +5,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml;
 
 namespace CapriDesktop
 {
@@ -32,6 +33,11 @@ namespace CapriDesktop
         internal string[] Requires = new string[0];
         internal string[] Games;
         internal string Know;
+        // What a code mod reaches for, read off its source when the file is read. Shown where it is approved.
+        internal string[] Reaches = new string[0];
+        // Pools of hers this mod says instead, by zone name. Read apart from the rest, since a JSON object
+        // with names of its own does not fit a contract with fixed fields.
+        internal Dictionary<string, string[]> Zones;
     }
 
     [DataContract]
@@ -63,7 +69,7 @@ namespace CapriDesktop
     {
         internal const string Extension = ".capri-mod";
         internal const int Format = 1;
-        private const int Largest = 64 * 1024;
+        private const int Largest = 256 * 1024;
         private const int MostNames = 20;
         private const int MostSpellings = 60;
         private const int LogLines = 300;
@@ -251,13 +257,55 @@ namespace CapriDesktop
             Load();
         }
 
+        private const int MostZones = 40, MostZoneLines = 400, LongestZoneLine = 400;
+
+        // The zones a mod claims, read straight from its text. A JSON object whose names are the zones does
+        // not fit a contract with fixed fields, so it is read the way her other loose JSON is.
+        internal static Dictionary<string, string[]> ReadZones(string text)
+        {
+            Dictionary<string, string[]> found = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(text) || text.IndexOf("\"zones\"", StringComparison.OrdinalIgnoreCase) < 0) return found;
+            XmlDocument whole = new XmlDocument();
+            using (XmlDictionaryReader reader = JsonReaderWriterFactory.CreateJsonReader(Encoding.UTF8.GetBytes(text), XmlDictionaryReaderQuotas.Max)) whole.Load(reader);
+            XmlNode zones = whole.SelectSingleNode("/root/zones");
+            if (zones == null) return found;
+            if (zones.Attributes == null || zones.Attributes["type"] == null || zones.Attributes["type"].Value != "object")
+                throw new ModException("zones has to be a list of zone names, each with its lines.");
+            foreach (XmlNode one in zones.ChildNodes)
+            {
+                // A JSON name that is not a legal XML name does not become the element's name: the element
+                // is called item and carries the real name in an attribute of the same word. Every zone
+                // name has a space and a colon in it, so every one of them arrives that way.
+                string named = (one.Attributes != null && one.Attributes["item"] != null
+                    ? one.Attributes["item"].Value
+                    : XmlConvert.DecodeName(one.LocalName) ?? "").Trim();
+                if (named.Length == 0) continue;
+                if (one.Attributes == null || one.Attributes["type"] == null || one.Attributes["type"].Value != "array")
+                    throw new ModException("The zone " + named + " needs a list of lines.");
+                List<string> lines = new List<string>();
+                foreach (XmlNode row in one.ChildNodes)
+                {
+                    string said = (row.InnerText ?? "").Trim();
+                    if (said.Length == 0) continue;
+                    if (said.Length > LongestZoneLine) throw new ModException("A line in the zone " + named + " is too long. " + LongestZoneLine + " characters at most.");
+                    lines.Add(said);
+                }
+                if (lines.Count == 0) continue;
+                if (lines.Count > MostZoneLines) throw new ModException("The zone " + named + " has too many lines. " + MostZoneLines + " at most.");
+                found[named] = lines.ToArray();
+                if (found.Count > MostZones) throw new ModException("A mod can take over " + MostZones + " zones at most.");
+            }
+            return found;
+        }
+
         internal static ModFile Read(string text)
         {
             ModFile read = ReadJson(text);
+            read.Zones = ReadZones(text);
             CheckDetails(read);
             read.WakeNames = read.WakeNames ?? new string[0];
             read.HeardAs = read.HeardAs ?? new string[0];
-            if (read.WakeNames.Length == 0 && read.HeardAs.Length == 0 && !read.SoundsLike && !read.HearingLog && read.Colors == null) throw new ModException("That mod doesn't change anything. It needs wake_names, heard_as, sounds_like, hearing_log or colors.");
+            if (read.WakeNames.Length == 0 && read.HeardAs.Length == 0 && !read.SoundsLike && !read.HearingLog && read.Colors == null && (read.Zones == null || read.Zones.Count == 0)) throw new ModException("That mod doesn't change anything. It needs wake_names, heard_as, sounds_like, hearing_log, colors or zones.");
             if (read.Colors != null) CheckColours(read.Colors);
             if (read.WakeNames.Length > MostNames) throw new ModException("A mod can add up to " + MostNames + " names.");
             if (read.HeardAs.Length > MostSpellings) throw new ModException("A mod can add up to " + MostSpellings + " spellings.");
@@ -320,6 +368,11 @@ namespace CapriDesktop
                 wantSounds |= mod.File.SoundsLike;
                 wantLog |= mod.File.HearingLog;
             }
+            // The pools a mod has taken over. Rebuilt whole from the mods that are on, so turning one off is
+            // enough to give her own lines back and nothing can be left behind.
+            Zones.DropAll();
+            foreach (Mod mod in All) if (mod.On && mod.File.Zones != null && mod.File.Zones.Count > 0) Zones.Claim(mod.File.Name ?? mod.File.Id, mod.File.Zones);
+            Zones.Write();
             called = exact.Count == 0 ? null : new Regex(Pattern(exact.ToArray()), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
             sounds = wantSounds ? new SoundsLike(soundsLike) : null;
             logging = wantLog;

@@ -1839,12 +1839,12 @@ namespace CapriDesktop
                 Disc(graphics, CityLook.Cyan, new PointF(x, bar.Top + high / 2), 2.6f * s);
                 Words(graphics, "ON", CityLook.Cyan, x + Px(7), y);
                 string voice = scene.Voice ? "VOICE ON" : "VOICE OFF";
-                float wide = graphics.MeasureString(voice, smallFont, PointF.Empty, StringFormat.GenericTypographic).Width;
+                float wide = graphics.MeasureString(voice, smallFont, PointF.Empty, Look.Exact).Width;
                 float right = bar.Right - Px(14) - wide;
                 Words(graphics, voice, scene.Voice ? CityLook.Cyan : CityLook.Faint, right, y);
                 if (scene.Quiet)
                 {
-                    float quiet = graphics.MeasureString("QUIET", smallFont, PointF.Empty, StringFormat.GenericTypographic).Width;
+                    float quiet = graphics.MeasureString("QUIET", smallFont, PointF.Empty, Look.Exact).Width;
                     Words(graphics, "QUIET", CityLook.Rose, right - Px(12) - quiet, y);
                 }
             }
@@ -1852,8 +1852,8 @@ namespace CapriDesktop
 
         private float Words(Graphics graphics, string text, Color colour, float x, float y)
         {
-            using (Brush ink = new SolidBrush(colour)) graphics.DrawString(text, smallFont, ink, x, y, StringFormat.GenericTypographic);
-            return x + graphics.MeasureString(text, smallFont, PointF.Empty, StringFormat.GenericTypographic).Width;
+            using (Brush ink = new SolidBrush(colour)) graphics.DrawString(text, smallFont, ink, x, y, Look.Exact);
+            return x + graphics.MeasureString(text, smallFont, PointF.Empty, Look.Exact).Width;
         }
 
         // The box under the strip: LISTENING with their words, THINKING, her line as it types out, or a job's status.
@@ -1930,7 +1930,7 @@ namespace CapriDesktop
             string title = scene.Box == HudBox.Listening ? "LISTENING" : scene.Box == HudBox.Thinking ? "THINKING" : scene.Box == HudBox.Job ? "ON A JOB" : "CAPRI";
             Color colour = scene.Box == HudBox.Listening || scene.Box == HudBox.Job ? CityLook.Cyan : CityLook.Rose;
             if (scene.Box == HudBox.Listening) { Disc(graphics, Look.Red, new PointF(x + 4 * s, y + 8 * s), 4 * s); x += Px(14); }
-            using (Brush ink = new SolidBrush(colour)) graphics.DrawString(title, labelFont, ink, x, y, StringFormat.GenericTypographic);
+            using (Brush ink = new SolidBrush(colour)) graphics.DrawString(title, labelFont, ink, x, y, Look.Exact);
             float right = panel.Right - Px(16);
             if (scene.Box == HudBox.Listening)
             {

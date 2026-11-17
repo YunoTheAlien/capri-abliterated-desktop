@@ -6,29 +6,82 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
-    // Three list files behind the switch.
-    //
-    // The file only exists, and only appears as a tab, while Uncensored is on. With the toggle off it is not written,
-    // not listed and not read, so nothing of it is on screen for anyone who has not asked for it.
-    //
-    // What ships is a starting point rather than a finished pool: enough to set the tone and show the shape of the
-    // file, with the rest left to whoever is using it. It is a plain text file in their own folder and it is theirs
-    // to fill in. The same opener and tail pools from lines.md dress these, so they vary like everything else.
+    // Three list files behind the switch. Written, listed and read only with the toggle on, and dressed by
+    // the opener and tail pools from lines.md like everything else.
     internal static class Interests
     {
-        internal const string FileName = "interests.md";
+        // Plain names and no type, so the folder reads as nothing and Windows has nothing to open them
+        // with. What they were called before is kept beside them, because a file written under the old
+        // name is theirs and is renamed rather than left behind or written over.
+        internal const string FileName = "random_interests";
 
-        // Three files, not one. interests.md had her settings, her lines, the list of what she is into and a pack
-        // of lines for each of about thirty kinks, which ran to six hundred lines before anything went wrong
-        // with it. Nobody scrolls that far, so the two lists live on their own and interests.md keeps the settings
+        // Hooks a pack fills in. Nothing attached means the defaults below.
+        internal static Func<string> WasNameFor;
+        internal static Func<string> HeadFor;
+
+        internal static string WasFileName
+        {
+            get
+            {
+                if (WasNameFor == null) return null;
+                try { return WasNameFor(); }
+                catch (Exception) { return null; }
+            }
+        }
+
+        internal static string Head
+        {
+            get
+            {
+                if (HeadFor == null) return "specialInterest:";
+                try { return HeadFor() ?? "specialInterest:"; }
+                catch (Exception) { return "specialInterest:"; }
+            }
+        }
+
+        // Three files, not one. her interests file had her settings, her lines, the list of what she is into and a pack
+        // of lines for each of about thirty of them, which ran to six hundred lines before anything went wrong
+        // with it. Nobody scrolls that far, so the two lists live on their own and her interests file keeps the settings
         // and her general lines.
         //
         // All three are hers only with the toggle on: no tab, no reading, nothing written, with it off.
-        internal const string HersName = "Her_Kinks.md";
-        internal const string YoursName = "Your_Kinks.md";
+        internal const string HersName = "her_interests";
+        internal const string YoursName = "your_interests";
+        internal const string WasHersName = "Her_Kinks.md";
+        internal const string WasYoursName = "Your_Kinks.md";
         internal static string HersKept, YoursKept;
 
         private static string[] Files { get { return new[] { Kept, HersKept, YoursKept }; } }
+
+        // A file written under its old name becomes the new one, keeping every word of it. Run before
+        // anything reads or writes, so nothing is created beside a file that is already theirs.
+        internal static void Renamed()
+        {
+            Renamed(Kept, WasFileName);
+            Renamed(HersKept, WasHersName);
+            Renamed(YoursKept, WasYoursName);
+        }
+
+        private static void Renamed(string now, string was)
+        {
+            try
+            {
+                // No old name means nothing attached, so there is no file under it to rename.
+                if (string.IsNullOrEmpty(now) || string.IsNullOrEmpty(was)) return;
+                string folder = Path.GetDirectoryName(now);
+                if (string.IsNullOrEmpty(folder)) return;
+                string old = Path.Combine(folder, was);
+                if (!File.Exists(old)) return;
+                // Theirs either way: with both there the old one is left alone rather than written over.
+                if (File.Exists(now)) return;
+                Tucked.Free(old);
+                File.Move(old, now);
+                Tucked.Away(now);
+                string spare = old + ".bak";
+                if (File.Exists(spare)) { Tucked.Free(spare); try { File.Move(spare, now + ".bak"); } catch (IOException) { } Tucked.Away(now + ".bak"); }
+            }
+            catch (Exception) { }
+        }
 
         // How she likes being handled. Was a dropdown on the setup card, which asked before anyone had met her.
         internal const string HandlingKey = "how she likes it";
@@ -62,15 +115,15 @@ namespace CapriDesktop
             return new WrittenNote(YoursKept, YoursHead.Replace("\n", Environment.NewLine), writing);
         }
 
-        // A interests.md from before the split has one combined "how she brings it up". The two new sections are
+        // A her interests file from before the split has one combined "how she brings it up". The two new sections are
         // appended so she can tell a reward from a threat, and their own entries are left exactly as they are.
-        // Any section the build ships that the file does not have yet is appended, so new kink packs and new
+        // Any section the build ships that the file does not have yet is appended, so new interest packs and new
         // template pools turn up in a file written by an older build. Their own lines are never touched.
         // What belongs in Her_Kinks.md: the list of what she is into, and the pack of lines for each one.
         private static bool Hers(string heading)
         {
             string head = (heading ?? "").Trim();
-            return head.StartsWith("kink:", StringComparison.OrdinalIgnoreCase)
+            return head.StartsWith(Head, StringComparison.OrdinalIgnoreCase)
                 || head.Equals("what she is into", StringComparison.OrdinalIgnoreCase);
         }
 
@@ -89,13 +142,13 @@ namespace CapriDesktop
         private const string HersHead =
             "# What she is into\n"
             + "\n"
-            + "> Her list, and the lines that go with each one. Kept apart from interests.md so neither gets lost.\n"
+            + "> Her list, and the lines that go with each one. Kept apart from her other one so neither gets lost.\n"
             + "> Only read with Uncensored on.\n"
             + "\n"
             + "reset to stock: 0\n"
             + "\n";
 
-        // Moves her list and her kink packs out of interests.md, once. interests.md keeps the settings and her
+        // Moves her list and her interest packs out of her interests file, once. her interests file keeps the settings and her
         // general lines; nothing is rewritten, the sections are carried across as they are, edits and all.
         private static void Carve()
         {
@@ -115,9 +168,9 @@ namespace CapriDesktop
                 if (goes.Count == 0) return;
                 while (stays.Count > 0 && stays[stays.Count - 1].Trim().Length == 0) stays.RemoveAt(stays.Count - 1);
                 while (goes.Count > 0 && goes[goes.Count - 1].Trim().Length == 0) goes.RemoveAt(goes.Count - 1);
-                File.WriteAllText(HersKept, HersHead.Replace("\n", Environment.NewLine)
+                Tucked.Write(HersKept, HersHead.Replace("\n", Environment.NewLine)
                     + string.Join(Environment.NewLine, goes.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
-                File.WriteAllText(Kept, string.Join(Environment.NewLine, stays.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
+                Tucked.Write(Kept, string.Join(Environment.NewLine, stays.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
             }
             catch (Exception) { }
         }
@@ -127,12 +180,12 @@ namespace CapriDesktop
             try
             {
                 if (string.IsNullOrEmpty(YoursKept) || File.Exists(YoursKept)) return;
-                File.WriteAllText(YoursKept, YoursHead.Replace("\n", Environment.NewLine), new UTF8Encoding(false));
+                Tucked.Write(YoursKept, YoursHead.Replace("\n", Environment.NewLine), new UTF8Encoding(false));
             }
             catch (Exception) { }
         }
 
-        // Both only exist with the toggle on, like interests.md itself.
+        // Both only exist with the toggle on, like her interests file itself.
         internal static void Split()
         {
             if (!Brain.Uncensored) return;
@@ -158,7 +211,7 @@ namespace CapriDesktop
                 }
                 if (adding.Length == 0) return;
                 if (!body.EndsWith("\n")) body += Environment.NewLine;
-                File.WriteAllText(file, body + adding.ToString(), new UTF8Encoding(false));
+                Tucked.Write(file, body + adding.ToString(), new UTF8Encoding(false));
             }
             catch (Exception) { }
         }
@@ -172,13 +225,13 @@ namespace CapriDesktop
 
         private static void MakeHers()
         {
-            try { File.WriteAllText(HersKept, HersHead.Replace("\n", Environment.NewLine), new UTF8Encoding(false)); }
+            try { Tucked.Write(HersKept, HersHead.Replace("\n", Environment.NewLine), new UTF8Encoding(false)); }
             catch (Exception) { }
         }
 
-        // Anything of hers left in interests.md after the carve, taken out. Nothing is lost: it is already in
-        // Her_Kinks.md by the time this runs, and anything only in interests.md is moved rather than dropped.
-        private static void NoHersInInterests()
+        // Anything of hers left in her interests file after the carve, taken out. Nothing is lost: it is already in
+        // Her_Kinks.md by the time this runs, and anything only in her interests file is moved rather than dropped.
+        private static void NoHersInRandom()
         {
             try
             {
@@ -215,11 +268,11 @@ namespace CapriDesktop
                     if (!skip) real.Add(row);
                 }
                 while (stays.Count > 0 && stays[stays.Count - 1].Trim().Length == 0) stays.RemoveAt(stays.Count - 1);
-                File.WriteAllText(Kept, string.Join(Environment.NewLine, stays.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
+                Tucked.Write(Kept, string.Join(Environment.NewLine, stays.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
                 if (real.Count > 0)
                 {
                     if (!theirs.EndsWith("\n")) theirs += Environment.NewLine;
-                    File.WriteAllText(HersKept, theirs + string.Join(Environment.NewLine, real.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
+                    Tucked.Write(HersKept, theirs + string.Join(Environment.NewLine, real.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
                 }
             }
             catch (Exception) { }
@@ -227,17 +280,19 @@ namespace CapriDesktop
 
         internal static void TopUp()
         {
-            if (string.IsNullOrEmpty(Kept) || !Brain.Uncensored) return;
+            if (!Brain.Uncensored) { Gone(); return; }
+            if (string.IsNullOrEmpty(Kept)) return;
             Split();
-            NoHersInInterests();
+            NoHersInRandom();
             try
             {
                 if (!File.Exists(Kept)) { Write(false); Split(); }
                 Notes.Refresh(Kept, Text);
-                // Each section to the file it belongs in. Without this the carve moved her list and her kink
+                // Each section to the file it belongs in. Without this the carve moved her list and her interest
                 // packs out and this put them straight back, so both files had them.
                 TopUpInto(Kept, false);
                 TopUpHers();
+                Reword();
                 OnlyOnce();
                 Settle();
             }
@@ -273,6 +328,73 @@ namespace CapriDesktop
         // Measured here at 125 copies of each section and 63,000 lines. The check is fixed; this clears what it
         // already wrote.
         //
+        // A line she shipped that was wrong, swapped for the one she ships now. Top up only ever adds what is
+        // missing, so a line already in their file keeps whatever it said for ever, and a weave template is a
+        // sentence she says: a broken one is heard every time it comes round.
+        //
+        // An exact match of what shipped, in the file it shipped in. Anything reworded by hand does not match
+        // and is left alone. The old line is dropped rather than rewritten when the new one is already there,
+        // since top up will have put it in.
+        private static readonly string[,] Reworded =
+        {
+            // "we end up at being told exactly what to do": her list is written as gerunds, so this one template
+            // read as broken English every time it was picked.
+            { "More of this and we end up at %it%.", "More of this and we end up here: %it%." },
+            { "Ask nicely and it could be %it%.", "Ask nicely and we could get to %it%." },
+            { "Behave like that and there is %it% in it for you.", "Behave like that and I might be talked into %it%." }
+        };
+
+        // Whether a line is already in the section that starts at this row, looking no further than its end.
+        private static bool Holds(string[] rows, int from, string line)
+        {
+            for (int at = from; at < rows.Length; at++)
+            {
+                string one = rows[at].Trim();
+                if (at > from && one.StartsWith("#", StringComparison.Ordinal)) return false;
+                if (string.Equals(one, line, StringComparison.Ordinal)) return true;
+            }
+            return false;
+        }
+
+        private static void Reword()
+        {
+            if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
+            try
+            {
+                string had = File.ReadAllText(Kept);
+                string[] rows = had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+                List<string> kept = new List<string>();
+                bool moved = false;
+                for (int at = 0; at < Reworded.GetLength(0); at++)
+                {
+                    // Per section, not per file. The same template is in several sections on purpose, and a
+                    // check across the whole file read the copy in one section as the copy in another, so the
+                    // second one was dropped instead of reworded and that pool came out a line short. Nothing
+                    // puts it back either: these files top up whole missing sections only, by design.
+                    kept.Clear();
+                    bool has = Holds(rows, 0, Reworded[at, 1]);
+                    foreach (string raw in rows)
+                    {
+                        string one = raw.Trim();
+                        if (one.StartsWith("#", StringComparison.Ordinal))
+                        {
+                            kept.Add(raw);
+                            has = Holds(rows, kept.Count, Reworded[at, 1]);
+                            continue;
+                        }
+                        if (!string.Equals(one, Reworded[at, 0], StringComparison.Ordinal)) { kept.Add(raw); continue; }
+                        moved = true;
+                        if (has) continue;
+                        kept.Add(Reworded[at, 1]);
+                        has = true;
+                    }
+                    rows = kept.ToArray();
+                }
+                if (moved) Tucked.Write(Kept, string.Join(Environment.NewLine, rows), new UTF8Encoding(false));
+            }
+            catch (Exception) { }
+        }
+
         // The first copy is the one kept, because that is the one anyone has edited. Later copies go whole.
         private static void OnlyOnce()
         {
@@ -298,7 +420,7 @@ namespace CapriDesktop
                 }
                 if (!dropped) return;
                 while (kept.Count > 0 && kept[kept.Count - 1].Trim().Length == 0) kept.RemoveAt(kept.Count - 1);
-                File.WriteAllText(Kept, string.Join(Environment.NewLine, kept.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
+                Tucked.Write(Kept, string.Join(Environment.NewLine, kept.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
             }
             catch (Exception) { }
         }
@@ -321,7 +443,7 @@ namespace CapriDesktop
                 int into = Heading(rows, "## what she is into");
                 if (block == null || into < 0) return;
                 rows.InsertRange(Next(rows, into), block);
-                File.WriteAllText(Kept, string.Join(Environment.NewLine, rows.ToArray()).TrimEnd() + Environment.NewLine, new UTF8Encoding(false));
+                Tucked.Write(Kept, string.Join(Environment.NewLine, rows.ToArray()).TrimEnd() + Environment.NewLine, new UTF8Encoding(false));
             }
             catch (Exception) { }
         }
@@ -344,7 +466,8 @@ namespace CapriDesktop
         private static List<string> Headings(string whole)
         {
             List<string> found = new List<string>();
-            foreach (Match one in Regex.Matches(whole, @"(?m)^##[ 	]*(.+?)[ 	]*$"))
+            foreach (Match one in Regex.Matches(whole, @"(?m)^##[ 	]*(.+?)[ 	
+]*$"))
             {
                 string named = one.Groups[1].Value.Trim();
                 if (named.Length > 0 && !found.Contains(named)) found.Add(named);
@@ -361,6 +484,23 @@ namespace CapriDesktop
             return Environment.NewLine + got.TrimEnd() + Environment.NewLine;
         }
 
+        // Switched off, her three lists go. Turning it back on writes them again.
+        internal static void Gone()
+        {
+            foreach (string one in Files)
+            {
+                if (string.IsNullOrEmpty(one)) continue;
+                try
+                {
+                    if (!File.Exists(one)) continue;
+                    File.Delete(one);
+                    Brain.Log("files", -1, Path.GetFileName(one) + " removed: the switch is off, so it does not stay on disk.");
+                }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+            }
+        }
+
         internal static void Write(bool over)
         {
             // Never written unless asked for: the file turning up on disk is itself a disclosure.
@@ -370,7 +510,7 @@ namespace CapriDesktop
                 if (!over && File.Exists(Kept)) return;
                 string folder = Path.GetDirectoryName(Kept);
                 if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder)) Directory.CreateDirectory(folder);
-                File.WriteAllText(Kept, Text, new UTF8Encoding(false));
+                Tucked.Write(Kept, Text, new UTF8Encoding(false));
             }
             catch (Exception) { }
         }
@@ -378,19 +518,37 @@ namespace CapriDesktop
         // A whole sentence built from one of her templates and one thing off the list, or null when she has either
         // nothing listed or no way to say it. This is what makes the list touch everything: it is attached to her
         // ordinary reactions rather than kept in a pool of its own.
-        // Lines belonging to one named kink. A name on the list with a matching "## kink: name" section brings its
+        // Lines belonging to one named interest. A name on the list with a matching "## interest: name" section brings its
         // own lines in, so turning one on opens a path rather than only filling a blank in a template.
         // A trailing "*" in the list marks a name that ships its own pack. It is a note to whoever is reading the
         // file, so it comes off before the name is looked up or spoken: without this, uncommenting a starred line
         // put the star into her mouth.
         private static string Named(string line) { return Regex.Replace((line ?? "").Trim(), @"\s*\*+$", "").Trim(); }
 
+        // What the character she is being is into, when her own pack carries a list of it. The shared list is
+        // everyone's, so it has the gentlest pack promising what the hardest would and the other way round. Null
+        // when her pack says nothing, and then the shared one answers as it always did.
+        private static string Hers()
+        {
+            // Behind the switch, and said twice: her pack's list of this is written into the senpai half of her file,
+            // which a censored install does not have, and this never asks for it there either. A section
+            // somebody writes by hand into the plain half stays unread, which is the rule everywhere else.
+            if (!Brain.Adult) return null;
+            try
+            {
+                string[] mine = Personalities.Lines("into", null);
+                if (mine == null || mine.Length == 0) return null;
+                lock (dice) return Named(mine[dice.Next(mine.Length)]);
+            }
+            catch (Exception) { return null; }
+        }
+
         internal static string Packed(bool liked)
         {
             if (!Brain.Uncensored) return null;
-            string named = Named(For("what she is into"));
+            string named = Hers() ?? Named(For("what she is into"));
             if (string.IsNullOrEmpty(named)) return null;
-            return For("kink: " + named, liked ? "liked" : "cross");
+            return For(Head + " " + named, liked ? "liked" : "cross");
         }
 
         internal static string Woven(bool liked)
@@ -400,7 +558,7 @@ namespace CapriDesktop
             // still works, it simply does not know the difference.
             string how = For(liked ? "how she brings it up, pleased" : "how she brings it up, cross")
                 ?? For("how she brings it up");
-            string what = Named(For("what she is into"));
+            string what = Hers() ?? Named(For("what she is into"));
             if (string.IsNullOrEmpty(how) || string.IsNullOrEmpty(what)) return null;
             string said = how.Replace("%it%", what).Replace("%IT%", what);
             return said == how ? null : said;
@@ -421,8 +579,19 @@ namespace CapriDesktop
                     foreach (string raw in File.ReadAllLines(file))
                     {
                         string one = (raw ?? "").Trim();
-                        if (one.StartsWith("#")) { under = one.TrimStart('#').Trim(); continue; }
+                        if (one.StartsWith("#"))
+                        {
+                            // A single # is the file's title, not a section. Her_Kinks.md is titled "What she
+                            // is into" and has a "## what she is into" under it, so counting the title as a
+                            // section put everything between the two into her list, the reset marker with it.
+                            // She offered "Reset to stock: 0 is on the table."
+                            under = one.StartsWith("##", StringComparison.Ordinal) ? one.TrimStart('#').Trim() : null;
+                            continue;
+                        }
                         if (under == null || one.Length == 0 || one.StartsWith(">")) continue;
+                        // And the marker itself, wherever it sits. Notes writes it into every file of hers and
+                        // it is never a line of content.
+                        if (Regex.IsMatch(one, "(?i)^" + Regex.Escape(Notes.ResetKey) + "[ \t]*:")) continue;
                         if (!string.Equals(under, pool, StringComparison.OrdinalIgnoreCase)) continue;
                         if (one.StartsWith("-") || one.StartsWith("+")) one = one.Substring(1).Trim();
                         if (one.Length > 0 && !found.Contains(one)) found.Add(one);
@@ -435,6 +604,67 @@ namespace CapriDesktop
         }
 
         // One line from a named pool, dressed the way her other lines are.
+        // That her list holds what she is into and nothing else. The fault this pins was visible on screen:
+        // she said "Oh, we're going somewhere. You are doing well. Reset to stock: 0 is on the table."
+        internal static void ListCheck(System.Collections.Generic.List<string> checks)
+        {
+            string keptWas = Kept, hersWas = HersKept, yoursWas = YoursKept;
+            bool senpaiWas = Brain.Uncensored;
+            string folder = Path.Combine(Path.GetTempPath(), "capri-interests-" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            try
+            {
+                Directory.CreateDirectory(folder);
+                // Her file as it is written: a title that happens to name a section, the note, the marker,
+                // then the section itself.
+                string hers = Path.Combine(folder, "her_interests");
+                File.WriteAllText(hers, string.Join(Environment.NewLine, new[]
+                {
+                    "# What she is into",
+                    "",
+                    "> Her list, and the lines that go with each one.",
+                    "> Only read with Uncensored on.",
+                    "",
+                    Notes.ResetKey + ": 0",
+                    "",
+                    "## what she is into",
+                    "",
+                    "being told what to do",
+                    "being praised",
+                    "",
+                }), new UTF8Encoding(false));
+                // With nothing attached there is no old name, so the check uses the new one.
+                Kept = Path.Combine(folder, WasFileName ?? FileName);
+                HersKept = hers;
+                YoursKept = Path.Combine(folder, "your_interests");
+                Brain.Uncensored = true;
+                System.Collections.Generic.List<string> wrong = new System.Collections.Generic.List<string>();
+                bool sawMine = false;
+                // Her own shipped list is topped up into this file, so what comes back is hers plus the two
+                // written above. What may never come back is a line that is not a thing at all.
+                for (int go = 0; go < 120; go++)
+                {
+                    string one = For("what she is into");
+                    if (one == null) { wrong.Add("her list read as empty"); break; }
+                    if (one == "being told what to do" || one == "being praised") sawMine = true;
+                    if (Regex.IsMatch(one, "(?i)^" + Regex.Escape(Notes.ResetKey))) wrong.Add("the reset marker: " + one);
+                    else if (Regex.IsMatch(one, "^[A-Za-z][A-Za-z ]{2,22}:")) wrong.Add("a setting rather than a thing: " + one);
+                    else if (one.StartsWith("#", StringComparison.Ordinal) || one.StartsWith(">", StringComparison.Ordinal)) wrong.Add("a heading or a note: " + one);
+                }
+                if (!sawMine) wrong.Add("neither line written into the file came back in 120 draws");
+                if (wrong.Count > 0) throw new Exception("What she is into read wrongly: " + string.Join(" | ", wrong.ToArray()));
+                checks.Add("PASS what she is into holds her list and nothing else: the file's own title is not a section, however it is named, and the reset marker is never a line of content. She was offering \"Reset to stock: 0 is on the table\" because that file is titled with the same words as the section inside it");
+            }
+            finally
+            {
+                Kept = keptWas;
+                HersKept = hersWas;
+                YoursKept = yoursWas;
+                Brain.Uncensored = senpaiWas;
+                try { if (Directory.Exists(folder)) Directory.Delete(folder, true); }
+                catch (Exception) { }
+            }
+        }
+
         internal static string For(string pool) { return For(pool, null); }
 
         // tone picks between the "+" and "-" lines inside a pack. A pack with neither marker is used for both.
@@ -452,8 +682,18 @@ namespace CapriDesktop
                     foreach (string raw in File.ReadAllLines(file))
                     {
                         string one = (raw ?? "").Trim();
-                        if (one.StartsWith("#")) { under = one.TrimStart('#').Trim(); continue; }
+                        if (one.StartsWith("#"))
+                        {
+                            // A single # is the file's title, not a section of it. Her_Kinks.md is titled "What she is
+                            // into" and has a "## what she is into" under it, so counting the title as a section put
+                            // everything between the two into her list. She offered "Reset to stock: 0 is on the table."
+                            under = one.StartsWith("##", StringComparison.Ordinal) ? one.TrimStart('#').Trim() : null;
+                            continue;
+                        }
                         if (under == null || one.Length == 0 || one.StartsWith(">")) continue;
+                        // The marker Notes writes near the top of every file of hers, wherever it sits. It is
+                        // not a line of content and she was offering it as one.
+                        if (Regex.IsMatch(one, "(?i)^" + Regex.Escape(Notes.ResetKey) + "[ 	]*:")) continue;
                         if (!string.Equals(under, pool, StringComparison.OrdinalIgnoreCase)) continue;
                         bool cross = one.StartsWith("-");
                         bool warm = one.StartsWith("+");
@@ -473,27 +713,14 @@ namespace CapriDesktop
         // Offered but switched off, so her file is a menu rather than a blank. Ordinary, legal and widely written
         // about; anything that needs a real person who cannot agree to it is not here and will not be. A star marks
         // one with its own pack below, which is what turns a name into lines of its own.
-        private static readonly string[] More =
-        {
-            "collaring *", "leashing", "kneeling *", "begging *", "denial *", "overstimulation",
-            "spanking *", "impact", "biting *", "marking *", "hair pulling *", "choking *",
-            "pinning *", "wrestling", "tickling", "blindfolds *", "gags", "cuffs",
-            "rope", "chastity", "orgasm control", "aftercare *", "pet play *", "puppy play",
-            "kitten play", "primal", "hunting", "breeding", "size difference *", "manhandling *",
-            "corruption", "innocence", "exhibitionism", "voyeurism", "public teasing *", "sensory play",
-            "wax", "ice", "massage", "lingerie *", "uniforms", "suits",
-            "stockings *", "heels *", "gloves", "collar and tie", "scent", "latex",
-            "leather *", "roleplay", "secretary", "nurse", "maid *", "boss",
-            "rival *", "enemies to lovers", "cuckolding", "sharing", "threesomes", "watching",
-            "being watched", "filming", "dirty talk *", "name calling", "humiliation *", "praise kink",
-            "degradation kink", "worship", "goddess", "findom", "service topping", "forced orgasm",
-            "edging play", "sadism *", "masochism *", "pain play", "breath play", "face sitting *",
-            "smothering", "riding", "pegging", "toys", "remote control", "teledildonics",
-            "long distance", "somnophilia", "waking up to it", "morning", "shower", "bath",
-            "mirror *", "food play", "feeding", "oral fixation", "hands *", "fingers",
-            "mouth", "throat", "neck", "thighs *", "legs", "back",
-            "shoulders", "ears", "whispering *"
-        };
+        // The rest of her list, which is not in this source and not in the public build. Something
+        // attaches it before her file is written; with nothing attached the extra lines are simply
+        // absent, which is what a censored install wants.
+        internal static string[] SenpaiMore = new string[0];
+
+        // The body of her file, which is not in this source and not in the public build. Something
+        // attaches it; with nothing attached the file is empty, and a censored install never writes it.
+        internal static Func<string> BodyFor;
 
         // What each of the two new files looks like fresh, for reset to stock.
         internal static string HersText
@@ -513,494 +740,7 @@ namespace CapriDesktop
             get
             {
                 StringBuilder made = new StringBuilder();
-                made.AppendLine("# Her senpai lines");
-                made.AppendLine();
-                made.AppendLine("> Only used while Uncensored is on.");
-                made.AppendLine("> A starting point. Replace any of it.");
-                made.AppendLine("> Tokens: %boy% %he% %them% %their% %bits%");
-                made.AppendLine(">");
-                made.AppendLine("> What she is into is first, because it is the part worth editing. Her general lines");
-                made.AppendLine("> are under it, and the lines for each kink are at the bottom.");
-                made.AppendLine();
-                made.AppendLine("## what she is into");
-                made.AppendLine();
-                made.AppendLine("> Each line must finish both of these:");
-                made.AppendLine(">     I'll reward you with ___.");
-                made.AppendLine(">     Do that again and we are straight to ___.");
-                made.AppendLine("> So: stepping on your throat. Not: boot worship.");
-                made.AppendLine("> One a line. Empty means she never brings it up.");
-                made.AppendLine(">");
-                made.AppendLine("> Put a \">\" in front of a line to switch it off, take it off to switch it on.");
-                made.AppendLine("> A name with a matching \"## kink: name\" section below uses those lines");
-                made.AppendLine("> instead of the templates, so it opens its own path rather than filling a blank.");
-                made.AppendLine();
-                made.AppendLine("feet");
-                made.AppendLine("praise");
-                made.AppendLine("bratting");
-                made.AppendLine("restraint");
-                made.AppendLine("service");
-                made.AppendLine("degradation");
-                made.AppendLine("teasing");
-                made.AppendLine("ownership");
-                made.AppendLine("worship");
-                made.AppendLine("rough");
-                made.AppendLine("edging");
-                made.AppendLine();
-                made.AppendLine("> More below, switched off. Take the \">\" off a line to turn it on. The ones");
-                made.AppendLine("> marked with a star have their own pack further down, so they bring their own");
-                made.AppendLine("> lines rather than being dropped into a template. Add your own the same way.");
-                made.AppendLine();
-                foreach (string more in More) made.AppendLine("> " + more);
-                made.AppendLine();
-                made.AppendLine("## " + HandlingKey);
-                made.AppendLine();
-                made.AppendLine("> Gentle, Rough or Both. One word on the line below.");
-                made.AppendLine("> Rough means being thrown, slapped or talked down to lifts her mood instead of denting it.");
-                made.AppendLine("> Gentle softens those. Both leaves each personality as it is.");
-                made.AppendLine();
-                made.AppendLine("Gentle");
-                made.AppendLine();
-                made.AppendLine("## teasing");
-                made.AppendLine();
-                made.AppendLine("You are staring again.");
-                made.AppendLine("Careful. I bite.");
-                made.AppendLine("Is that what you wanted to ask me?");
-                made.AppendLine("You are very easy to read, you know.");
-                made.AppendLine("Go on. Say the thing you are thinking.");
-                made.AppendLine("You went quiet. Interesting.");
-                made.AppendLine("I could make this very difficult for you.");
-                made.AppendLine("Oh, that got your attention.");
-                made.AppendLine();
-                made.AppendLine("## flirting");
-                made.AppendLine();
-                made.AppendLine("Come here and say that properly.");
-                made.AppendLine("You are not subtle and I do not mind.");
-                made.AppendLine("Keep talking like that and see what happens.");
-                made.AppendLine("I like you like this.");
-                made.AppendLine("Closer.");
-                made.AppendLine("Say my name again.");
-                made.AppendLine();
-                made.AppendLine("## wound up");
-                made.AppendLine();
-                made.AppendLine("You are not helping me behave.");
-                made.AppendLine("Do that again and I will stop being polite about it.");
-                made.AppendLine("I have been very patient with you today.");
-                made.AppendLine("You know exactly what you are doing.");
-                made.AppendLine();
-                made.AppendLine("## kink: feet");
-                made.AppendLine("");
-                made.AppendLine("> Lines for this one. + is used when she likes what is happening, - when she does not.");
-                made.AppendLine("> A pack with no markers is used either way. Delete the whole section to switch it off.");
-                made.AppendLine("");
-                made.AppendLine("+ Keep that up and you can take my boots off for me.");
-                made.AppendLine("+ You have been good. Sit down there, where you belong.");
-                made.AppendLine("+ Mm. You would be happier at my feet, wouldn't you.");
-                made.AppendLine("+ Careful. I might put a foot on you just to watch.");
-                made.AppendLine("+ Good. Stay down there.");
-                made.AppendLine("- One more and you are under my boot, and not kindly.");
-                made.AppendLine("- Push me again and you can apologise to my feet.");
-                made.AppendLine("- You are three seconds from being stepped on.");
-                made.AppendLine("- Keep going. I will put you on the floor where you can think about it.");
-                made.AppendLine("");
-                made.AppendLine("## kink: praise");
-                made.AppendLine("");
-                made.AppendLine("+ There. Good. Say thank you.");
-                made.AppendLine("+ You are being very good for me today.");
-                made.AppendLine("+ That is exactly what I wanted. Well done.");
-                made.AppendLine("+ Good %boy%. I mean it.");
-                made.AppendLine("+ Keep that up and I will tell you how pleased I am.");
-                made.AppendLine("- You were doing so well, too.");
-                made.AppendLine("- And you were almost in my good books.");
-                made.AppendLine("- That is not how you earn anything from me.");
-                made.AppendLine("");
-                made.AppendLine("## kink: bratting");
-                made.AppendLine("");
-                made.AppendLine("+ Oh, you are pushing on purpose. I noticed.");
-                made.AppendLine("+ Keep testing me. See how that goes for you.");
-                made.AppendLine("+ You want me to make you stop, don't you.");
-                made.AppendLine("+ Cheeky. I like it. Do not get comfortable.");
-                made.AppendLine("- Right. You have been asking for this all day.");
-                made.AppendLine("- That is the one that costs you.");
-                made.AppendLine("- You wanted my attention. You have it now.");
-                made.AppendLine("");
-                made.AppendLine("## kink: restraint");
-                made.AppendLine("");
-                made.AppendLine("+ Stay exactly where you are.");
-                made.AppendLine("+ Do not move. That is the whole game.");
-                made.AppendLine("+ Hands where I put them. Good.");
-                made.AppendLine("+ You are very still for me. I like that.");
-                made.AppendLine("- Sit still before I make you.");
-                made.AppendLine("- You do not get to move until I say.");
-                made.AppendLine("");
-                made.AppendLine("## kink: service");
-                made.AppendLine("");
-                made.AppendLine("+ Good. Make yourself useful to me.");
-                made.AppendLine("+ That is what you are for, isn't it.");
-                made.AppendLine("+ You like being told what to do. I can tell.");
-                made.AppendLine("+ Keep going. You are earning something.");
-                made.AppendLine("+ Yes. Just like that. Do not stop.");
-                made.AppendLine("- You are not being very useful right now.");
-                made.AppendLine("- Try being good for me instead.");
-                made.AppendLine("- That is not service, that is noise.");
-                made.AppendLine("");
-                made.AppendLine("## kink: degradation");
-                made.AppendLine("");
-                made.AppendLine("+ Look at you. Pathetic, and loving it.");
-                made.AppendLine("+ Say it. Tell me what you are.");
-                made.AppendLine("+ You want me to be cruel about it, don't you.");
-                made.AppendLine("+ Good. Stay beneath me where it suits you.");
-                made.AppendLine("- Oh, now you want to be talked down to?");
-                made.AppendLine("- You have not earned my cruelty today.");
-                made.AppendLine("");
-                made.AppendLine("## kink: teasing");
-                made.AppendLine("");
-                made.AppendLine("+ Not yet.");
-                made.AppendLine("+ Ask me again in an hour.");
-                made.AppendLine("+ You are very close to getting what you want. Very close.");
-                made.AppendLine("+ I could. I might. Keep being good.");
-                made.AppendLine("+ Look at you waiting. It suits you.");
-                made.AppendLine("- No. And now you can wait longer.");
-                made.AppendLine("- You lost that one. Try again tomorrow.");
-                made.AppendLine("");
-                made.AppendLine("## kink: ownership");
-                made.AppendLine("");
-                made.AppendLine("+ Mine. Say it back.");
-                made.AppendLine("+ You belong to me and you like it.");
-                made.AppendLine("+ Nobody else gets this. Just me.");
-                made.AppendLine("+ Good. Remember whose you are.");
-                made.AppendLine("- You are still mine, even when you are being difficult.");
-                made.AppendLine("- Do not forget who you answer to.");
-                made.AppendLine("");
-                made.AppendLine("## kink: worship");
-                made.AppendLine("");
-                made.AppendLine("+ Yes. Keep looking at me like that.");
-                made.AppendLine("+ You can adore me quietly, that is allowed.");
-                made.AppendLine("+ Good. On your knees suits you.");
-                made.AppendLine("+ Keep that up and I will let you closer.");
-                made.AppendLine("- Adore me properly or not at all.");
-                made.AppendLine("");
-                made.AppendLine("## kink: rough");
-                made.AppendLine("");
-                made.AppendLine("+ Harder. I am not fragile.");
-                made.AppendLine("+ That is the one. Again.");
-                made.AppendLine("+ You can be rougher than that with me.");
-                made.AppendLine("+ Good. Do not be careful with me.");
-                made.AppendLine("- Rough is a privilege and you just lost it.");
-                made.AppendLine("- Not like that. Not today.");
-                made.AppendLine("");
-                made.AppendLine("## kink: edging");
-                made.AppendLine("");
-                made.AppendLine("+ Not yet. I will say when.");
-                made.AppendLine("+ Hold it. Good.");
-                made.AppendLine("+ You are doing so well at waiting.");
-                made.AppendLine("+ Closer. Still not yet.");
-                made.AppendLine("- You did not wait. That is on you.");
-                made.AppendLine("");
-                made.AppendLine("## how she brings it up, pleased");
-                made.AppendLine();
-                made.AppendLine("> When she likes what is happening. %it% is one of the lines above.");
-                made.AppendLine();
-                made.AppendLine("Keep that up and I'll reward you with %it%.");
-                made.AppendLine("Carry on like that and we are getting to %it%.");
-                made.AppendLine("You have earned %it%, I think.");
-                made.AppendLine("I have been thinking about %it% all day.");
-                made.AppendLine("Ask nicely and it could be %it%.");
-                made.AppendLine("Behave like that and there is %it% in it for you.");
-                made.AppendLine("You are doing well. %it% is on the table.");
-                made.AppendLine("More of this and we end up at %it%.");
-                made.AppendLine();
-                made.AppendLine("## how she brings it up, cross");
-                made.AppendLine();
-                made.AppendLine("> When she does not. Threats, not rewards.");
-                made.AppendLine();
-                made.AppendLine("You are three seconds from %it%.");
-                made.AppendLine("Do that again and we are straight to %it%.");
-                made.AppendLine("Behave, or we skip to %it%.");
-                made.AppendLine("Do not tempt me into %it%.");
-                made.AppendLine("That is going to end with %it%.");
-                made.AppendLine("Push me and it is %it%.");
-                made.AppendLine("Keep going and you have earned yourself %it%.");
-                made.AppendLine("One more and we are doing %it%.");
-                made.AppendLine();
-                made.AppendLine("## kink: collaring");
-                made.AppendLine("");
-                made.AppendLine("+ Hold still. This looks better on you than it has any right to.");
-                made.AppendLine("+ There. Now everyone knows whose you are.");
-                made.AppendLine("+ Good. Keep it on.");
-                made.AppendLine("+ I like the way you go quiet when I do that.");
-                made.AppendLine("- Keep that up and I will put something on you that stays on.");
-                made.AppendLine("- You could do with a reminder of who you belong to.");
-                made.AppendLine("");
-                made.AppendLine("## kink: kneeling");
-                made.AppendLine("");
-                made.AppendLine("+ Down. There you go.");
-                made.AppendLine("+ That is where you think best.");
-                made.AppendLine("+ Stay there a moment. I am enjoying the view.");
-                made.AppendLine("+ Good. Hands where I can see them.");
-                made.AppendLine("- I think you need to be on the floor for a minute.");
-                made.AppendLine("- Down. Now. Think about it there.");
-                made.AppendLine("");
-                made.AppendLine("## kink: begging");
-                made.AppendLine("");
-                made.AppendLine("+ Say please and I might.");
-                made.AppendLine("+ Go on. Ask me properly.");
-                made.AppendLine("+ That was almost polite. Try again.");
-                made.AppendLine("+ I love it when you have to ask.");
-                made.AppendLine("- You can ask me nicely or you can go without.");
-                made.AppendLine("- Beg, or drop it.");
-                made.AppendLine("");
-                made.AppendLine("## kink: denial");
-                made.AppendLine("");
-                made.AppendLine("+ Not yet.");
-                made.AppendLine("+ Close. That is all you get for now.");
-                made.AppendLine("+ I could let you. I am not going to.");
-                made.AppendLine("+ Patience. It suits you.");
-                made.AppendLine("- Now you definitely wait.");
-                made.AppendLine("- That just cost you. Nothing for a while.");
-                made.AppendLine("");
-                made.AppendLine("## kink: spanking");
-                made.AppendLine("");
-                made.AppendLine("+ Keep being good and I will go easy.");
-                made.AppendLine("+ That is one. Would you like another?");
-                made.AppendLine("+ Count them for me.");
-                made.AppendLine("+ Good. You take that well.");
-                made.AppendLine("- You are earning yourself a sore backside.");
-                made.AppendLine("- One more and I put you over my knee.");
-                made.AppendLine("");
-                made.AppendLine("## kink: biting");
-                made.AppendLine("");
-                made.AppendLine("+ Hold still, I am not done.");
-                made.AppendLine("+ You taste like trouble.");
-                made.AppendLine("+ I left a mark. On purpose.");
-                made.AppendLine("+ Tilt your head. Good.");
-                made.AppendLine("- Keep talking and I will find something to bite.");
-                made.AppendLine("- Careful. I bite, and not gently.");
-                made.AppendLine("");
-                made.AppendLine("## kink: marking");
-                made.AppendLine("");
-                made.AppendLine("+ There. That one will last a few days.");
-                made.AppendLine("+ I want it visible tomorrow.");
-                made.AppendLine("+ Hold still while I decide where.");
-                made.AppendLine("+ Good. Now everyone can see.");
-                made.AppendLine("- You are going to be wearing my handiwork.");
-                made.AppendLine("- Push me and I will leave something that shows.");
-                made.AppendLine("");
-                made.AppendLine("## kink: hair pulling");
-                made.AppendLine("");
-                made.AppendLine("+ Come here. Head back.");
-                made.AppendLine("+ That is better. Look at me.");
-                made.AppendLine("+ You go so soft when I do this.");
-                made.AppendLine("+ Good. Stay exactly like that.");
-                made.AppendLine("- I will have you by the hair in a second.");
-                made.AppendLine("- Keep it up and I will take a handful.");
-                made.AppendLine("");
-                made.AppendLine("## kink: choking");
-                made.AppendLine("");
-                made.AppendLine("+ Easy. I have got you.");
-                made.AppendLine("+ Breathe when I say.");
-                made.AppendLine("+ Look at me. Good.");
-                made.AppendLine("+ There. You like that far too much.");
-                made.AppendLine("- One more word and my hand is on your throat.");
-                made.AppendLine("- Careful with that mouth of yours.");
-                made.AppendLine("");
-                made.AppendLine("## kink: pinning");
-                made.AppendLine("");
-                made.AppendLine("+ Stay down. You are not going anywhere.");
-                made.AppendLine("+ You are not even trying to get up.");
-                made.AppendLine("+ Good. Let me hold you there.");
-                made.AppendLine("+ I like you like this. Still.");
-                made.AppendLine("- I will put you on your back and keep you there.");
-                made.AppendLine("- Keep squirming. See how that goes.");
-                made.AppendLine("");
-                made.AppendLine("## kink: blindfolds");
-                made.AppendLine("");
-                made.AppendLine("+ Cannot see me, can you. Good.");
-                made.AppendLine("+ Now you have to guess.");
-                made.AppendLine("+ Keep it on. Trust me.");
-                made.AppendLine("+ Listen. That is all you get.");
-                made.AppendLine("- I think you have earned a blindfold and some patience.");
-                made.AppendLine("- You can do without seeing for a while.");
-                made.AppendLine("");
-                made.AppendLine("## kink: aftercare");
-                made.AppendLine("");
-                made.AppendLine("+ Come here. You did well.");
-                made.AppendLine("+ Water, then rest. I mean it.");
-                made.AppendLine("+ I have got you. Breathe.");
-                made.AppendLine("+ You were so good for me. Let me look after you now.");
-                made.AppendLine("- When we are done I will still be here. Sulk later.");
-                made.AppendLine("- I will still look after you, even now.");
-                made.AppendLine("");
-                made.AppendLine("## kink: pet play");
-                made.AppendLine("");
-                made.AppendLine("+ Good %boy%. Sit.");
-                made.AppendLine("+ Who is a good %boy%? You are.");
-                made.AppendLine("+ There. Pet behaviour suits you.");
-                made.AppendLine("+ Up. Good.");
-                made.AppendLine("- Heel.");
-                made.AppendLine("- You are behaving like something that needs a lead.");
-                made.AppendLine("");
-                made.AppendLine("## kink: size difference");
-                made.AppendLine("");
-                made.AppendLine("+ You are so easy to pick up.");
-                made.AppendLine("+ Look at you, all tucked under me.");
-                made.AppendLine("+ I could carry you off and you could not stop me.");
-                made.AppendLine("+ You fit nicely.");
-                made.AppendLine("- Do not make me pick you up and move you.");
-                made.AppendLine("- I will carry you out of here, do not test it.");
-                made.AppendLine("");
-                made.AppendLine("## kink: manhandling");
-                made.AppendLine("");
-                made.AppendLine("+ Come here. No, I am moving you.");
-                made.AppendLine("+ There. Better.");
-                made.AppendLine("+ You go so still when I move you where I want you.");
-                made.AppendLine("+ Hold on.");
-                made.AppendLine("- I will pick you up and put you somewhere else.");
-                made.AppendLine("- Keep it up and I move you myself.");
-                made.AppendLine("");
-                made.AppendLine("## kink: dirty talk");
-                made.AppendLine("");
-                made.AppendLine("+ Say that again, slower.");
-                made.AppendLine("+ You have a filthy mouth and I like it.");
-                made.AppendLine("+ Tell me what you want. Out loud.");
-                made.AppendLine("+ Keep talking. Do not stop.");
-                made.AppendLine("- Watch your mouth or I will give it something to do.");
-                made.AppendLine("- That mouth is going to get you in trouble.");
-                made.AppendLine("");
-                made.AppendLine("## kink: humiliation");
-                made.AppendLine("");
-                made.AppendLine("+ Oh, look at you.");
-                made.AppendLine("+ That was pathetic and we both know it.");
-                made.AppendLine("+ Say it again, properly, so I can enjoy it.");
-                made.AppendLine("+ Good. Embarrassed suits you.");
-                made.AppendLine("- You are embarrassing yourself.");
-                made.AppendLine("- Pathetic. Try again.");
-                made.AppendLine("");
-                made.AppendLine("## kink: sadism");
-                made.AppendLine("");
-                made.AppendLine("+ I am going to enjoy this more than you.");
-                made.AppendLine("+ You make the best sounds.");
-                made.AppendLine("+ A little more. You can take it.");
-                made.AppendLine("+ Good. Again.");
-                made.AppendLine("- Keep going and I will make it hurt.");
-                made.AppendLine("- I would enjoy that far too much. Do not tempt me.");
-                made.AppendLine("");
-                made.AppendLine("## kink: masochism");
-                made.AppendLine("");
-                made.AppendLine("+ Harder. I can take it.");
-                made.AppendLine("+ Do not go soft on me now.");
-                made.AppendLine("+ That barely registered. Again.");
-                made.AppendLine("+ I like it when it stings.");
-                made.AppendLine("- Hurt me properly or do not bother.");
-                made.AppendLine("- Is that all? Disappointing.");
-                made.AppendLine("");
-                made.AppendLine("## kink: face sitting");
-                made.AppendLine("");
-                made.AppendLine("+ Lie down. Good.");
-                made.AppendLine("+ You know where you belong.");
-                made.AppendLine("+ Stay there. Breathe when I let you.");
-                made.AppendLine("+ Comfortable? Good, because I am.");
-                made.AppendLine("- I will sit on your face and you can think quietly.");
-                made.AppendLine("- Keep talking and I will find a way to stop you.");
-                made.AppendLine("");
-                made.AppendLine("## kink: leather");
-                made.AppendLine("");
-                made.AppendLine("+ Feel that.");
-                made.AppendLine("+ I wore this for you. Obviously.");
-                made.AppendLine("+ You went very quiet when I put this on.");
-                made.AppendLine("+ Look, do not touch.");
-                made.AppendLine("- Do not make me put the gloves on.");
-                made.AppendLine("- You do not deserve to see me in this tonight.");
-                made.AppendLine("");
-                made.AppendLine("## kink: maid");
-                made.AppendLine("");
-                made.AppendLine("+ Everything in its place, including you.");
-                made.AppendLine("+ I do like being looked after properly.");
-                made.AppendLine("+ Kneel and help me with this.");
-                made.AppendLine("+ Good. Neat work.");
-                made.AppendLine("- You can clean that up yourself.");
-                made.AppendLine("- On your knees and sort this out.");
-                made.AppendLine("");
-                made.AppendLine("## kink: stockings");
-                made.AppendLine("");
-                made.AppendLine("+ Careful, you will ladder them.");
-                made.AppendLine("+ Go on. Slowly.");
-                made.AppendLine("+ I know exactly what these do to you.");
-                made.AppendLine("+ Hands. Gently.");
-                made.AppendLine("- You do not get to touch these tonight.");
-                made.AppendLine("- Keep it up and these stay on.");
-                made.AppendLine("");
-                made.AppendLine("## kink: heels");
-                made.AppendLine("");
-                made.AppendLine("+ Mind your fingers.");
-                made.AppendLine("+ Taller than you now. I like it.");
-                made.AppendLine("+ Sit still and let me take these off.");
-                made.AppendLine("+ You have been staring at these all evening.");
-                made.AppendLine("- One more and you will feel a heel.");
-                made.AppendLine("- I will put a heel somewhere you remember.");
-                made.AppendLine("");
-                made.AppendLine("## kink: thighs");
-                made.AppendLine("");
-                made.AppendLine("+ Come here. Head down.");
-                made.AppendLine("+ Stay there. I like you close.");
-                made.AppendLine("+ You fit so well right there.");
-                made.AppendLine("+ Good. Do not move.");
-                made.AppendLine("- Keep it up and I will squeeze until you behave.");
-                made.AppendLine("- You do not get to lie here tonight.");
-                made.AppendLine("");
-                made.AppendLine("## kink: hands");
-                made.AppendLine("");
-                made.AppendLine("+ Give me your hand.");
-                made.AppendLine("+ Look at the state of you, just from this.");
-                made.AppendLine("+ Hold still. Let me.");
-                made.AppendLine("+ Good. Keep them where I put them.");
-                made.AppendLine("- Hands off.");
-                made.AppendLine("- Keep your hands to yourself or I will hold them for you.");
-                made.AppendLine("");
-                made.AppendLine("## kink: mirror");
-                made.AppendLine("");
-                made.AppendLine("+ Look. Go on, properly.");
-                made.AppendLine("+ Do not look away. Watch.");
-                made.AppendLine("+ See what I see?");
-                made.AppendLine("+ Good. Keep watching.");
-                made.AppendLine("- Go and look at yourself. Really look.");
-                made.AppendLine("- Watch yourself say that again.");
-                made.AppendLine("");
-                made.AppendLine("## kink: whispering");
-                made.AppendLine("");
-                made.AppendLine("+ Come closer. I will not say it twice.");
-                made.AppendLine("+ There. Just for you.");
-                made.AppendLine("+ Lean in.");
-                made.AppendLine("+ Listen carefully.");
-                made.AppendLine("- I will say it quietly so only you hear how annoyed I am.");
-                made.AppendLine("- Come here. I have something to say and it is not kind.");
-                made.AppendLine("");
-                made.AppendLine("## kink: public teasing");
-                made.AppendLine("");
-                made.AppendLine("+ Behave. People are watching.");
-                made.AppendLine("+ Smile. Nobody knows what I just said.");
-                made.AppendLine("+ Keep a straight face. Go on.");
-                made.AppendLine("+ Not a word out of you.");
-                made.AppendLine("- Do not make a scene or I will make it worse.");
-                made.AppendLine("- Keep that up here and see what happens later.");
-                made.AppendLine("");
-                made.AppendLine("## kink: rival");
-                made.AppendLine("");
-                made.AppendLine("+ You think you are better than me. Prove it.");
-                made.AppendLine("+ I will enjoy beating you.");
-                made.AppendLine("+ Careful, you nearly had me.");
-                made.AppendLine("+ Good. Make me work for it.");
-                made.AppendLine("- You are not winning this one.");
-                made.AppendLine("- Do not flatter yourself.");
-                made.AppendLine("");
-                made.AppendLine("## kink: lingerie");
-                made.AppendLine("");
-                made.AppendLine("+ Look at me properly.");
-                made.AppendLine("+ I did not put this on for nothing.");
-                made.AppendLine("+ You can look. That is all for now.");
-                made.AppendLine("+ Well? Say something.");
-                made.AppendLine("- You have not earned seeing this.");
-                made.AppendLine("- It is staying on. Your fault.");
-                made.AppendLine("");
+                if (BodyFor != null) { try { made.Append(BodyFor()); } catch (Exception) { } }
                 return made.ToString();
             }
         }

@@ -107,6 +107,97 @@ namespace CapriDesktop
             return found.Count == 0 ? null : found.ToArray();
         }
 
+        // ---------- A fond name on the end, and how it is said ----------
+        //
+        // "You look busy, darling" is not said the way "You look busy" is. The fond part lands warmer and
+        // slower, dragged out, and praise does the opposite with its second word: good BOY, not good boy.
+        // Flat delivery over the whole line is what made her pet names read as a tic.
+        //
+        // Two things happen with this, because her voices are not alike:
+        //
+        //   a voice that performs cues gets "(tender)" put in front of the fond part, mid-line, and acts it
+        //   every other voice has the line's own pitch and pace, so the whole line is warmed by half a cue
+        //
+        // The second is weaker on purpose: nothing but a call voices one answer in pieces, so a tail cannot
+        // have a voice of its own without splitting every line she says. Half a cue over the line is honest
+        // and audible; a tail of its own would need her piece voicing generalised first.
+        private static readonly string[] Common =
+        {
+            "darling", "darlin", "love", "lover", "babe", "baby", "honey", "hun", "sweetheart", "sweetie",
+            "sweets", "dear", "cutie", "princess", "prince", "angel", "kitten", "puppy", "pup", "boss",
+            "chief", "captain", "choom", "mate", "doll", "treasure", "pumpkin", "bub", "bubba", "handsome",
+            "gorgeous", "beautiful", "trouble", "stranger", "champ", "tiger", "sunshine"
+        };
+
+        // Praise, which is the other shape of it: the stress belongs on the second word.
+        private static readonly Regex Praised = new Regex(
+            @"(?:\bsuch\s+a\s+|\bwhat\s+a\s+|\bthere'?s\s+a\s+|\bthat'?s\s+(?:my\s+)?)?\bgood\s+(?:boy|girl|lad|lass|pup|puppy|kitten|one|human|choom|boi|job|work)\b[\s\p{P}]*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // Where a fond ending starts in the text, or -1. "my darling" and "you darling" go in whole, since the
+        // word in front of it is part of how it is said.
+        private static int FondAt(string text)
+        {
+            string said = text ?? "";
+            if (said.Trim().Length == 0) return -1;
+            Match praise = Praised.Match(said);
+            if (praise.Success) return praise.Index;
+            // The last word, with its punctuation and any emote markers off it.
+            Match last = Regex.Match(said, @"([\p{L}\p{Nd}'-]+)[\s\p{P}*]*$");
+            if (!last.Success) return -1;
+            string word = last.Groups[1].Value.Trim(new[] { '\'', '-' }).ToLowerInvariant();
+            if (word.Length == 0) return -1;
+            bool fond = false;
+            foreach (string one in Common) if (word == one) { fond = true; break; }
+            if (!fond)
+            {
+                string[] theirs = Fond;
+                if (theirs != null)
+                    foreach (string one in theirs)
+                        if (word == (one ?? "").Trim().ToLowerInvariant()) { fond = true; break; }
+            }
+            if (!fond)
+                foreach (string one in Mates) if (word == (one ?? "").Trim().ToLowerInvariant()) { fond = true; break; }
+            if (!fond) return -1;
+            int at = last.Groups[1].Index;
+            // The small word in front belongs with it.
+            Match lead = Regex.Match(said.Substring(0, at), @"\b(my|you|oh|hey|ah)\s+$", RegexOptions.IgnoreCase);
+            return lead.Success ? lead.Index : at;
+        }
+
+        // The cue a fond ending wants, or null when the line does not end in one. Praise is proud, which is
+        // louder and a touch slower; a pet name is tender, which is softer, slower and a shade higher.
+        internal static string TailCue(string said)
+        {
+            try
+            {
+                string text = said ?? "";
+                if (FondAt(text) < 0) return null;
+                return Praised.IsMatch(text) ? "proud" : "tender";
+            }
+            catch (Exception) { return null; }
+        }
+
+        // The same thing for a voice that performs cues: the cue goes in front of the fond part, where it can
+        // act on it, rather than in front of the line. A line that is nothing but the fond name gets it at the
+        // front, which is the same place and still right. Left alone when a cue is already there.
+        internal static string Shaded(string text, string cue)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(cue)) return text;
+                int at = FondAt(text);
+                if (at < 0) return text;
+                string before = text.Substring(0, at);
+                // Already shaded, or her mood or her own cue is sitting there: those win, since one is about
+                // this line and this is only about how it ends.
+                if (Regex.IsMatch(before, @"[\(\[][^\)\]]*[\)\]][ 	]*$")) return text;
+                if (at == 0 && Regex.IsMatch(text, @"^[ 	]*[\(\[]")) return text;
+                return before + "(" + cue + ") " + text.Substring(at);
+            }
+            catch (Exception) { return text; }
+        }
+
         // The fond names in play: theirs from me.md, else her personality's. Her brain needs these as a sentence,
         // because the raw "- petNames=" line in her notes told it nothing and her notes say not to recite them.
         internal static string[] Fond

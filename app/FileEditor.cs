@@ -110,22 +110,37 @@ namespace CapriDesktop
                 new Doc(Commands.FileName, delegate { Commands.Write(); return Commands.Open(); }),
                 new Doc(Playlist.FileName, delegate { return Playlist.OpenNote(); }),
                 new Doc(SysLines.FileName, delegate { return SysLines.Open(); }),
-                new Doc(Sayings.FileName, delegate { return Sayings.Open(); })
+                new Doc(Sayings.FileName, delegate { return Sayings.Open(); }),
+                new Doc(Moments.FileName, delegate { return Moments.Open(); }),
+                new Doc(Angles.FileName, delegate { return Angles.Open(); }),
+                // Her stories, while they are a size anybody would open. A lore file can run to megabytes, and
+                // this editor lays a whole document out as pages: handed one that big it would hang rather
+                // than open. Absent rather than greyed out, since a tab that cannot be used is noise.
+                new Doc(Lore.FileName, delegate { return Lore.Open(); }, delegate { return Lore.Editable; }),
+                new Doc(CapriDesktop.Touch.FileName, delegate { return CapriDesktop.Touch.Open(); }),
+                // Her check-ins, which had no tab at all, which is why the button for them went to Notepad.
+                // Absent until her settings folder is known, since there is no file to offer before that.
+                new Doc("check-ins.md", delegate { return CareLines.Open.Note(); }, delegate { return CareLines.Open != null; })
             };
             // Only with Uncensored on, and the tab is absent rather than disabled, so censored shows no trace of it.
             if (!personalities && Interests.Shown)
             {
                 Doc[] senpai = new Doc[docs.Length + 3];
                 Array.Copy(docs, senpai, docs.Length);
-                senpai[docs.Length] = new Doc(Interests.FileName, delegate { return Interests.Open(); });
-                senpai[docs.Length + 1] = new Doc(Interests.HersName, delegate { return Interests.OpenHers(); });
-                senpai[docs.Length + 2] = new Doc(Interests.YoursName, delegate { return Interests.OpenYours(); });
+                senpai[docs.Length] = new Doc("What she is into", delegate { return Interests.Open(); });
+                senpai[docs.Length + 1] = new Doc("Her list", delegate { return Interests.OpenHers(); });
+                senpai[docs.Length + 2] = new Doc("Your list", delegate { return Interests.OpenYours(); });
                 docs = senpai;
             }
             // Her personalities open in her own editor rather than whatever Windows has for.md, which was Notepad
             //. Order: who she is right now, then the dynamic settings, then the rest, then her moods.
             // The tab strip already wraps, so three rows of them is fine.
             if (personalities) docs = PersonalityDocs();
+            // Anything that says it should not be offered right now goes before the strip is built, so there is
+            // no tab for it at all rather than one that cannot be used.
+            List<Doc> offered = new List<Doc>();
+            foreach (Doc one in docs) if (one.Shows) offered.Add(one);
+            if (offered.Count > 0 && offered.Count != docs.Length) docs = offered.ToArray();
             frost = new Frost();
             page = new Page(this);
         }
@@ -198,6 +213,16 @@ namespace CapriDesktop
         }
 
         // Opens the panel on personality.md (0) or me.md (1), or brings it up and turns to that file if it's open already.
+        // The same thing by name, so a button can ask for the file it is about rather than count tabs. An
+        // unknown name opens the first page, which is better than nothing opening at all.
+        internal void Open(string named)
+        {
+            int at = 0;
+            for (int one = 0; one < docs.Length; one++)
+                if (string.Equals(docs[one].Label, named, StringComparison.OrdinalIgnoreCase)) { at = one; break; }
+            Open(at);
+        }
+
         internal void Open(int which)
         {
             if (stage == Stage.Gone) return;
@@ -432,7 +457,12 @@ namespace CapriDesktop
             foreach (Doc doc in docs)
             {
                 if (!doc.Dirty) continue;
-                try { File.WriteAllText(doc.Note.Path + Unsaved, doc.ForFile()); }
+                // An empty draft is not a draft. One was found on disk at nothing bytes beside a file with
+                // real content in it, and coming back it reads as them having emptied the file: she says
+                // their unsaved changes are back, shows nothing, and a save takes the file with it.
+                string keeping = doc.ForFile();
+                if (string.IsNullOrWhiteSpace(keeping)) { ForgetDraft(doc); continue; }
+                try { File.WriteAllText(doc.Note.Path + Unsaved, keeping); }
                 catch (IOException) { }
                 catch (UnauthorizedAccessException) { }
             }
@@ -458,9 +488,16 @@ namespace CapriDesktop
                     string draft = doc.Note.Path + Unsaved;
                     if (File.Exists(draft))
                     {
-                        doc.Draft = Doc.Shown(File.ReadAllText(draft));
-                        if (doc.Dirty) doc.Told = "Your unsaved changes came back.";
-                        else File.Delete(draft);
+                        string back = File.ReadAllText(draft);
+                        // Nothing in it is not something they typed, whatever put it there. Taking it would
+                        // show them an empty file and offer to save it over the one that has their words in.
+                        if (string.IsNullOrWhiteSpace(back)) File.Delete(draft);
+                        else
+                        {
+                            doc.Draft = Doc.Shown(back);
+                            if (doc.Dirty) doc.Told = "Your unsaved changes came back.";
+                            else File.Delete(draft);
+                        }
                     }
                 }
                 else if (!doc.Dirty) { doc.Note.Reload(); doc.Revert(); }
@@ -788,7 +825,7 @@ namespace CapriDesktop
 
         private static void Say(Graphics pen, string words, Font font, Brush ink, PointF at)
         {
-            if (words.Length > 0) pen.DrawString(words, font, ink, at, StringFormat.GenericTypographic);
+            if (words.Length > 0) pen.DrawString(words, font, ink, at, Look.Exact);
         }
 
         // The spine down to `end`. The art's small details come in as it grows: the top corner's step over frames 3 to 8, the bottom corner's
@@ -1175,12 +1212,13 @@ namespace CapriDesktop
             // P_ and M_ in the tab only. The files keep their own names, since the folder they are in
             // already says which they are and renaming them would break every saved pick.
             // A personality or mood marked uncensored only is absent while the toggle is off, not greyed out,
-            // the same as interests.md: a censored install should show no trace that there is anything to unlock.
+            // the same as her interests file: a censored install should show no trace that there is anything to unlock.
             // Her plain files always; the senpai half of a pack only with the toggle on, under its own tag so the two
             // are told apart in the list. A censored install has no senpai file to offer in the first place.
             foreach (string each in Sorted(Personalities.Plain)) if (Brain.Uncensored || !Personalities.AdultOnly(each)) Add(found, taken, each, "P_");
             if (Brain.Uncensored) foreach (string each in Sorted(Personalities.Senpais)) Add(found, taken, each, "U_");
-            foreach (string each in Sorted(Dynamics.Folder)) if (Brain.Uncensored || !Personalities.AdultOnly(each)) Add(found, taken, each, "M_");
+            foreach (string each in Sorted(Dynamics.Plain)) if (Brain.Uncensored || !Personalities.AdultOnly(each)) Add(found, taken, each, "M_");
+            if (Brain.Uncensored) foreach (string each in Sorted(Dynamics.Senpais)) Add(found, taken, each, "U_");
             return found.ToArray();
         }
 
@@ -1189,9 +1227,12 @@ namespace CapriDesktop
             try
             {
                 if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) return new string[0];
-                string[] found = Directory.GetFiles(folder, "*.md");
-                Array.Sort(found, StringComparer.OrdinalIgnoreCase);
-                return found;
+                // Every file, since her senpai ones are numbered and have no type. A backup is a copy of one
+                // of them rather than one of them, so it stays out of her editor.
+                List<string> found = new List<string>();
+                foreach (string file in Directory.GetFiles(folder)) if (!file.EndsWith(".bak", StringComparison.OrdinalIgnoreCase)) found.Add(file);
+                found.Sort(StringComparer.OrdinalIgnoreCase);
+                return found.ToArray();
             }
             catch (Exception) { return new string[0]; }
         }
@@ -1204,7 +1245,9 @@ namespace CapriDesktop
             foreach (string had in taken) if (string.Equals(had, full, StringComparison.OrdinalIgnoreCase)) return;
             if (!File.Exists(full)) return;
             taken.Add(full);
-            string label = Path.GetFileName(full);
+            // What the file calls itself, since her senpai ones are numbered on disk: a tab reading pack3
+            // tells nobody anything, and the file's own title line is what it is.
+            string label = Slots.Shown(full);
             into.Add(new Doc(role + label, delegate { return new WrittenNote(full, "", personalityGate); }));
         }
 
@@ -1217,7 +1260,14 @@ namespace CapriDesktop
             internal WrittenNote Note;
             internal string Draft = "", Problem, Told;
 
-            internal Doc(string label, Func<WrittenNote> open) { Label = label; Open = open; }
+            // Whether this one is offered at all. Null is always, which is what nearly all of them are.
+            internal readonly Func<bool> Offered;
+
+            internal Doc(string label, Func<WrittenNote> open) : this(label, open, null) { }
+
+            internal Doc(string label, Func<WrittenNote> open, Func<bool> offered) { Label = label; Open = open; Offered = offered; }
+
+            internal bool Shows { get { try { return Offered == null || Offered(); } catch (Exception) { return false; } } }
 
             internal string Name { get { return Note != null ? Path.GetFileName(Note.Path) : Label; } }
             internal bool Dirty { get { return Note != null && Plain(Draft) != Plain(Note.Text); } }
@@ -2295,7 +2345,7 @@ namespace CapriDesktop
             internal bool Filled, Mark;
             // A tab, rather than one of the buttons along the bottom. Its text is a file name, it is left aligned
             // because that is the end that tells them which file it is, and it scrolls while the mouse is on it
-            // because the strip is too narrow for "P_Dominatrix.md" and ellipsis loses the part that differs.
+            // because the strip is too narrow for a prefixed pack name and ellipsis loses the part that differs.
             internal bool Rolling;
             private bool hot, down;
             private Timer roll;
@@ -2409,6 +2459,9 @@ namespace CapriDesktop
                             TextRenderer.DrawText(pen, Text, Font, first, ink, how);
                             TextRenderer.DrawText(pen, Text, Font, new Rectangle(first.X + wants + Gap, first.Y, first.Width, first.Height), ink, how);
                             pen.Clip = was;
+                            // Clip is a property that builds a new Region on every read, so the saved one
+                            // is ours to free. This is a scrolling name, redrawn every frame it moves.
+                            was.Dispose();
                         }
                     }
                 }

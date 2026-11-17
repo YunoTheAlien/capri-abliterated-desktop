@@ -206,6 +206,125 @@ namespace CapriDesktop
             return new WrittenNote(Kept, Default, writing);
         }
 
+        // What chat may set off, and what it said before her red alert existed. A list somebody has edited is
+        // theirs: deleting a word is the documented way to switch that prank off, so only a list that still
+        // reads exactly as the old one shipped is brought up to date.
+        internal const string BullyStock = "crash, clones, rampage, dance, mess, alert";
+        private const string BullyWas = "crash, clones, rampage, dance, mess";
+        // The note under that list, which has to go back with the word: a prank nothing explains is half a
+        // prank. Again by exact match, so a note somebody has written over is theirs.
+        private const string BullyNoteWas = "> mess: your icons scatter for a bit. None of them touches a file.";
+        private static readonly string[] BullyNoteNow =
+        {
+            "> mess: your icons scatter for a bit. alert: six seconds of flashing red hexagons across your",
+            "> screens with her alarm over them, ending on any key. None of them touches a file."
+        };
+
+        // The timers she ships and the note explaining them, in one place. The file she writes and the top-up
+        // into a file that already exists are both built from this, so the two can never come to say
+        // different things, which is how prank for ended up shipped in the code and in no file on disk.
+        private static readonly string[,] TimerStock =
+        {
+            { "general", "90s" }, { "callout", "20s" }, { "check every", "20m" }, { "mention again", "3h" },
+            { "still live for", "12h" }, { "at most", "3" }, { "bully", "5m" }, { "prank for", "30s" },
+            { "prefix", "!capri" }
+        };
+
+        private static readonly string[] TimerNotes =
+        {
+            "> Every time takes s, m or h: 30s, 20m, 3h.",
+            "> general: gap between replies to ordinary chat. callout: gap for !capri. 0 means every message.",
+            "> check every: how often she looks for who is live.",
+            "> mention again: how long before she brings the same person up twice.",
+            "> still live for: how long they count as still live, so a long stream is not announced over and over.",
+            "> at most: how many she mentions at once.",
+            "> bully: gap between pranks chat sets off.",
+            "> prank for: how long a prank lasts before she clears it up. 30s is the shortest she will take."
+        };
+
+        private static string TimerBlock
+        {
+            get
+            {
+                List<string> made = new List<string>();
+                for (int one = 0; one < TimerStock.GetLength(0); one++) made.Add(TimerStock[one, 0] + ": " + TimerStock[one, 1]);
+                made.Add("");
+                made.AddRange(TimerNotes);
+                made.Add("");
+                return string.Join(Environment.NewLine, made.ToArray());
+            }
+        }
+
+        // A twitch.md written before a timer existed never gains it: the file is only written when it is not
+        // there at all. So it is read here, and anything missing from the Timers section is put in with the
+        // note that explains it, their own values left exactly as they are. Nothing else in the file is
+        // touched, and a file with everything in it is not rewritten.
+        internal static void Carried(string path)
+        {
+            try
+            {
+                if (path == null || !File.Exists(path)) return;
+                List<string> lines = new List<string>(File.ReadAllLines(path));
+                int heading = -1, ends = lines.Count;
+                for (int one = 0; one < lines.Count; one++)
+                {
+                    string said = lines[one].Trim();
+                    if (heading < 0 && said.StartsWith("#", StringComparison.Ordinal) && said.TrimStart('#').Trim().Equals("Timers", StringComparison.OrdinalIgnoreCase)) { heading = one; continue; }
+                    if (heading >= 0 && said.StartsWith("#", StringComparison.Ordinal)) { ends = one; break; }
+                }
+                if (heading < 0) return;
+                HashSet<string> had = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                int lastSetting = heading;
+                for (int one = heading + 1; one < ends; one++)
+                {
+                    string said = lines[one].Trim();
+                    if (said.Length == 0 || said.StartsWith(">", StringComparison.Ordinal)) continue;
+                    int colon = said.IndexOf(':');
+                    if (colon <= 0) continue;
+                    had.Add(said.Substring(0, colon).Trim());
+                    lastSetting = one;
+                }
+                List<string> adding = new List<string>();
+                for (int one = 0; one < TimerStock.GetLength(0); one++)
+                    if (!had.Contains(TimerStock[one, 0])) adding.Add(TimerStock[one, 0] + ": " + TimerStock[one, 1]);
+                // The prank list, while the file is open anyway. Untouched means the old line and nothing else.
+                bool prankList = false;
+                for (int one = 0; one < lines.Count; one++)
+                {
+                    if (lines[one].Trim() != BullyWas) continue;
+                    lines[one] = lines[one].Replace(BullyWas, BullyStock);
+                    prankList = true;
+                    break;
+                }
+                for (int one = 0; one < lines.Count; one++)
+                {
+                    if (lines[one].Trim() != BullyNoteWas) continue;
+                    lines.RemoveAt(one);
+                    lines.InsertRange(one, BullyNoteNow);
+                    prankList = true;
+                    break;
+                }
+                if (adding.Count == 0)
+                {
+                    if (prankList) File.WriteAllText(path, string.Join(Environment.NewLine, lines.ToArray()) + Environment.NewLine, new System.Text.UTF8Encoding(false));
+                    return;
+                }
+                lines.InsertRange(lastSetting + 1, adding);
+                ends += adding.Count;
+                // The note goes back whole, since a line added with nothing explaining it is half a setting.
+                int from = -1, to = -1;
+                for (int one = lastSetting + 1 + adding.Count; one < ends; one++)
+                {
+                    if (!lines[one].Trim().StartsWith(">", StringComparison.Ordinal)) continue;
+                    if (from < 0) from = one;
+                    to = one;
+                }
+                if (from >= 0) { lines.RemoveRange(from, to - from + 1); lines.InsertRange(from, TimerNotes); }
+                File.WriteAllText(path, string.Join(Environment.NewLine, lines.ToArray()) + Environment.NewLine, new System.Text.UTF8Encoding(false));
+            }
+            catch (Exception bad) { Notes.Failed("carrying a shipped value over in Twitch.cs", bad); }
+        }
+
         // What the file says when she makes it. The doxxing words are the ones asked for; the slur list is left empty on
         // purpose, with a note, so nobody has to read a list of slurs in a source file to know how it works.
         internal static string Default
@@ -241,36 +360,19 @@ namespace CapriDesktop
                     "",
                     "## Timers",
                     "",
-                    "general: 90s",
-                    "callout: 20s",
-                    "check every: 20m",
-                    "mention again: 3h",
-                    "still live for: 12h",
-                    "at most: 3",
-                    "bully: 5m",
-                    "prank for: 30s",
-                    "prefix: !capri",
-                    "",
-                    "> Every time takes s, m or h: 30s, 20m, 3h.",
-                    "> general: gap between replies to ordinary chat. callout: gap for !capri. 0 means every message.",
-                    "> check every: how often she looks for who is live.",
-                    "> mention again: how long before she brings the same person up twice.",
-                    "> still live for: how long they count as still live, so a long stream is not announced over and over.",
-                    "> at most: how many she mentions at once.",
-                    "> bully: gap between pranks chat sets off.",
-                    "> prank for: how long a prank lasts before she clears it up. 30s is the shortest she will take.",
-                    "",
+                    TimerBlock,
                     "## Streamer bully",
                     "",
                     "> What chat can set off on your screen with !capri <word>. Delete a word to switch it off, empty the",
                     "> list and chat can do nothing. These ignore full screen and the stream on purpose, but never fire while",
                     "> she has your mouse or is mid-job. They are the only things chat can ever make her do.",
                     "",
-                    "crash, clones, rampage, dance, mess",
+                    BullyStock,
                     "",
                     "> crash: her fake blue screen for five seconds. clones: copies of her that wander until cleared.",
                     "> rampage: your desktop icons fly around for ten seconds, then go home. dance: she dances.",
-                    "> mess: your icons scatter for a bit. None of them touches a file.",
+                    "> mess: your icons scatter for a bit. alert: six seconds of flashing red hexagons across your",
+                    "> screens with her alarm over them, ending on any key. None of them touches a file.",
                     "",
                     "## Connection",
                     "",

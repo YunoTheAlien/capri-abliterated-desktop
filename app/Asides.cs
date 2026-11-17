@@ -197,9 +197,9 @@ namespace CapriDesktop
         private const double Pause = 0.002;
         // A breath or room tone between her words is a gap too: Fish Audio's voices keep them, and over speakers the mic is still
         // ringing with the word before, which counted as them talking over her and cut her voice off mid-reply (Mika, Ashy, 2 Nov).
-        // In a gap the mic is held against her loudest in the last second, the most her own echo can be, so them talking over
-        // a soft word after a loud one still counts (Codex review, 3 Nov).
-        private const double GapShare = 0.15;
+        // The mic is held against her loudest in this last second, which is the most her own echo can be, so them talking over
+        // a soft word after a loud one still counts, and a mic running behind her does not (Codex review, 3 Nov; the 600 ms
+        // echo on a call, from the smoke run on the Windows box).
         private const int Recent = 10;
         private readonly double[] recent = new double[Recent];
         private int slot;
@@ -250,7 +250,14 @@ namespace CapriDesktop
             if (mine <= Pause) return false;
             double loudest = 0;
             foreach (double level in recent) loudest = Math.Max(loudest, level);
-            double against = mine < loudest * GapShare ? loudest : mine;
+            // Always her loudest in the last second, never only how loud she is this instant. A mic running
+            // behind her carries the word she said half a second ago, so at 600 ms of echo on a call her own
+            // voice from a loud moment landed against a quieter one and read as somebody talking over her: the
+            // smoke run stopped her 1.8 seconds into a call. Her loudest is the most her own echo can be, so
+            // this is the ceiling it has to clear, and somebody genuinely talking over her clears it anyway.
+            // This used to apply in her gaps alone, under GapShare of her loudest, which is the same reasoning
+            // stopping one chunk short of where it leads.
+            double against = loudest;
             bool learned = call ? chunks >= Learning : risen >= Rises || chunks >= LearningMost;
             chunks++;
             if (!call && !learned && mic >= RiseFloor && mic >= quiet * 2) risen++;

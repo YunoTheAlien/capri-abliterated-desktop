@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -37,18 +38,33 @@ namespace CapriDesktop
         // morning for a normal evening is exactly the thing this is meant to stop.
         internal static string Told;
 
+        // Their own answer, however they wrote it. Every time in the line is read and the first and last of them
+        // are their day, rather than the first pair that looks like a range: a real answer here was "about midday,
+        // and then it ends at probably like 3 to 5 a.m", where the first range in it is "3 to 5" and reading that
+        // alone made her think their whole day was one hour long in the middle of the night.
+        //
+        // Words count as times, because people write them: midday, noon and midnight.
         private static bool Stated(out int from, out int to)
         {
             from = to = -1;
             string said = Told;
             if (string.IsNullOrWhiteSpace(said)) return false;
-            System.Text.RegularExpressions.Match range = System.Text.RegularExpressions.Regex.Match(
-                said, @"(\d{1,2})\s*(?::\s*(\d{2}))?\s*([ap]\.?m\.?)?\s*(?:-|to|until|till|\u2013)\s*(\d{1,2})\s*(?::\s*(\d{2}))?\s*([ap]\.?m\.?)?",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            if (!range.Success) return false;
-            from = Hour(range.Groups[1].Value, range.Groups[3].Value);
-            to = Hour(range.Groups[4].Value, range.Groups[6].Value);
-            if (from < 0 || to < 0 || from == to) { from = to = -1; return false; }
+            // Always up is not a range, so it is no answer at all and her counting takes over.
+            if (System.Text.RegularExpressions.Regex.IsMatch(said, @"24\s*/\s*7|all\s*(the\s*)?(day|time)|always", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) return false;
+            List<int> clock = new List<int>();
+            foreach (System.Text.RegularExpressions.Match found in System.Text.RegularExpressions.Regex.Matches(
+                said, @"(?<named>midday|noon|midnight)|(?<hour>\d{1,2})\s*(?::\s*(?<minute>\d{2}))?\s*(?<half>[ap]\.?\s?m\.?)?",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            {
+                string named = found.Groups["named"].Value;
+                if (named.Length > 0) { clock.Add(named.ToLowerInvariant() == "midnight" ? 0 : 12); continue; }
+                int hour = Hour(found.Groups["hour"].Value, found.Groups["half"].Success ? found.Groups["half"].Value : null);
+                if (hour >= 0) clock.Add(hour);
+            }
+            if (clock.Count < 2) return false;
+            from = clock[0];
+            to = clock[clock.Count - 1];
+            if (from == to) { from = to = -1; return false; }
             // Stored as the last hour they are up, the same shape Usual returns.
             to = (to + 23) % 24;
             return true;
@@ -65,18 +81,36 @@ namespace CapriDesktop
             return hour % 24;
         }
 
+        // Whether they are actually at the PC, rather than the PC merely being on. Set by her from the keyboard
+        // and mouse. Left saying yes when nothing sets it, so this file still works on its own.
+        internal static Func<bool> Here = delegate { return true; };
+
         internal static void Mark() { Mark(DateTime.Now); }
 
-        // Called on her tick. Only the first call in an hour counts, so this is cheap and a long session does not
-        // count that hour more than once.
+        // Called on her tick. An hour counts once, and only while they are at the PC: a machine left on all night
+        // used to draw those hours as theirs, so a week of leaving her running said they were up at four in the
+        // morning and her whole idea of their day came out wrong. The fade still has to happen on a new day even
+        // when nobody is here, or a fortnight away would leave every count exactly as it was.
         internal static void Mark(DateTime now)
         {
             lock (gate)
             {
                 Fresh();
-                if (now.Hour == markedHour && now.Date == markedDay) return;
+                bool here = true;
+                try { here = Here(); }
+                catch (Exception) { }
                 if (markedDay != DateTime.MinValue && now.Date > markedDay)
+                {
                     for (int each = 0; each < counts.Length; each++) counts[each] *= Fade;
+                    markedDay = now.Date;
+                    markedHour = -1;
+                    Write();
+                    saved = now;
+                }
+                if (!here) return;
+                // Only the hour that was actually counted is held, so an hour that began with nobody here can
+                // still count when they sit down ten minutes later.
+                if (now.Hour == markedHour && now.Date == markedDay) return;
                 markedHour = now.Hour;
                 markedDay = now.Date;
                 counts[now.Hour] += 1;

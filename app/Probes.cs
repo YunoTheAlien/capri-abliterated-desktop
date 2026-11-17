@@ -24,10 +24,12 @@ namespace CapriDesktop
             { "thingsUserLikes", "What do you do when you're not at this thing?" },
             { "thingsUserLikes", "Go on, tell me something you're into." },
             { "thingsUserLikes", "What would you be doing right now if you could do anything?" },
-            { "programsUserLikes", "What do you spend most of your day in on here?" },
+            { "programsUserLikes", "What's open on your screen most of the day?" },
             { "programsUserLikes", "What are you building or working on these days?" },
             { "awakeHours", "What hours are you usually up? I'd rather not nag you at the wrong time." },
             { "awakeHours", "When does your day normally start and end?" },
+            { "workHours", "When are you usually working? I'd rather know than guess at your quiet spells." },
+            { "workHours", "Are your work hours steady, or all over the place?" },
             { "personalityLikes", "Am I about right for you, or do you want me different?" },
             { "personalityLikes", "What would you change about how I talk to you?" }
         };
@@ -145,6 +147,17 @@ namespace CapriDesktop
             Roll();
         }
 
+        // A question that has a reason to be asked now rather than whenever the next one is due: something
+        // happened that only they can explain. It waits for the same good moment as any other question, and it
+        // is dropped rather than queued if a second one arrives, since the moment it was about has passed.
+        private static string soonKey, soonQuestion;
+
+        internal static void Soon(string key, string question)
+        {
+            if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(question)) return;
+            lock (gate) { soonKey = key; soonQuestion = question; }
+        }
+
         // Whether to ask now, and what. Null when she should not.
         internal static bool Due(DateTime now, out string question, out string key)
         {
@@ -168,6 +181,16 @@ namespace CapriDesktop
                 // out the whole window. Either way she never asks into silence.
                 bool flowing = since <= 90;
                 if (since > 600) return false;
+                // One with a reason behind it goes first and does not wait out the window. The window is still
+                // rolled afterwards, so asking this does not mean two questions in a row.
+                if (soonQuestion != null)
+                {
+                    question = soonQuestion;
+                    key = soonKey;
+                    soonQuestion = null;
+                    soonKey = null;
+                    return true;
+                }
                 if (now.ToUniversalTime() < next && !(flowing && now.ToUniversalTime().AddMinutes(20) >= next)) return false;
 
                 List<int> blank = new List<int>(), rest = new List<int>();

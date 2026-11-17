@@ -13,12 +13,86 @@ namespace CapriDesktop
         internal static readonly string[] LookNames = { "Night City", "Black", "White", "Grey" };
         private static readonly Color[][] Looks =
         {
-            new[] { Color.FromArgb(10, 10, 16), Color.FromArgb(54, 14, 26), Color.FromArgb(16, 12, 20), Color.FromArgb(44, 122, 134), Color.FromArgb(255, 93, 102), Color.FromArgb(236, 236, 241), Color.FromArgb(146, 130, 140), Color.FromArgb(17, 16, 28), Color.FromArgb(30, 20, 36), Color.FromArgb(46, 22, 38), Color.FromArgb(92, 24, 36), Color.FromArgb(232, 66, 70), Color.FromArgb(94, 240, 246), Color.FromArgb(9, 30, 33), Color.FromArgb(40, 120, 132), Color.FromArgb(6, 14, 18), Color.FromArgb(78, 28, 40), Color.FromArgb(245, 90, 86), Color.FromArgb(120, 30, 44), Color.FromArgb(12, 11, 20), Color.FromArgb(72, 28, 40), Color.FromArgb(244, 214, 70), Color.FromArgb(9, 11, 15), Color.FromArgb(232, 236, 240), Color.FromArgb(122, 128, 138), Color.FromArgb(16, 13, 22) },
-            new[] { Gray(0), Gray(24), Gray(8), Gray(110), Gray(255), Gray(238), Gray(150), Gray(16), Gray(34), Gray(52), Gray(84), Gray(245), Gray(205), Gray(22), Gray(120), Gray(1), Gray(70), Gray(250), Gray(96), Gray(6), Gray(76), Gray(230), Gray(4), Gray(232), Gray(140), Gray(14) },
-            new[] { Gray(255), Gray(236), Gray(248), Gray(120), Gray(0), Gray(20), Gray(96), Gray(244), Gray(230), Gray(214), Gray(170), Gray(30), Gray(64), Gray(238), Gray(110), Gray(254), Gray(190), Gray(10), Gray(150), Gray(250), Gray(180), Gray(60), Gray(252), Gray(26), Gray(104), Gray(243) },
-            new[] { Gray(92), Gray(108), Gray(84), Gray(170), Gray(255), Gray(250), Gray(222), Gray(78), Gray(104), Gray(118), Gray(140), Gray(246), Gray(236), Gray(72), Gray(190), Gray(30), Gray(130), Gray(252), Gray(160), Gray(40), Gray(150), Gray(244), Gray(88), Gray(248), Gray(216), Gray(80) }
+            new[] { Color.FromArgb(10, 10, 16), Color.FromArgb(54, 14, 26), Color.FromArgb(16, 12, 20), Color.FromArgb(44, 122, 134), Color.FromArgb(255, 93, 102), Color.FromArgb(236, 236, 241), Color.FromArgb(146, 130, 140), Color.FromArgb(17, 16, 28), Color.FromArgb(30, 20, 36), Color.FromArgb(46, 22, 38), Color.FromArgb(92, 24, 36), Color.FromArgb(232, 66, 70), Color.FromArgb(94, 240, 246), Color.FromArgb(9, 30, 33), Color.FromArgb(40, 120, 132), Color.FromArgb(6, 14, 18), Color.FromArgb(78, 28, 40), Color.FromArgb(245, 90, 86), Color.FromArgb(120, 30, 44), Color.FromArgb(12, 11, 20), Color.FromArgb(72, 28, 40), Color.FromArgb(244, 214, 70), Color.FromArgb(9, 11, 15), Color.FromArgb(232, 236, 240), Color.FromArgb(122, 128, 138), Color.FromArgb(16, 13, 22), Color.FromArgb(58, 214, 235), Color.FromArgb(232, 36, 64), Color.FromArgb(56, 176, 255), Color.FromArgb(255, 46, 136) , Color.FromArgb(9, 11, 15) },
+            new[] { Gray(0), Gray(24), Gray(8), Gray(110), Gray(255), Gray(238), Gray(150), Gray(16), Gray(34), Gray(52), Gray(84), Gray(245), Gray(205), Gray(22), Gray(120), Gray(1), Gray(70), Gray(250), Gray(96), Gray(6), Gray(76), Gray(230), Gray(4), Gray(232), Gray(140), Gray(14), Gray(210), Gray(248), Gray(228), Gray(236) , Gray(4) },
+            new[] { Gray(255), Gray(236), Gray(248), Gray(120), Gray(0), Gray(20), Gray(96), Gray(244), Gray(230), Gray(214), Gray(170), Gray(30), Gray(64), Gray(238), Gray(110), Gray(254), Gray(190), Gray(10), Gray(150), Gray(250), Gray(180), Gray(60), Gray(252), Gray(26), Gray(104), Gray(243), Gray(70), Gray(18), Gray(44), Gray(30) , Gray(252) },
+            new[] { Gray(92), Gray(108), Gray(84), Gray(170), Gray(255), Gray(250), Gray(222), Gray(78), Gray(104), Gray(118), Gray(140), Gray(246), Gray(236), Gray(72), Gray(190), Gray(30), Gray(130), Gray(252), Gray(160), Gray(40), Gray(150), Gray(244), Gray(88), Gray(248), Gray(216), Gray(80), Gray(226), Gray(252), Gray(238), Gray(246) , Gray(88) }
         };
         private static Color[] now = Looks[0];
+        // Theirs, out of layout.md, over whichever look is picked. An entry nobody has set is null and the
+        // look's own colour shows through, so a file naming one colour changes one colour.
+        private static readonly Color?[] theirs = new Color?[31];
+
+        private static Color At(int one) { Color? set = theirs[one]; return set.HasValue ? set.Value : now[one]; }
+
+        // What each entry is called in layout.md. The names are what people type, so they say what the thing
+        // is rather than what the code calls it, and the order is the order the file lists them in.
+        private static readonly string[] Named =
+        {
+            "ground", "glow", "band", "rule", "rose", "text", "faint", "field", "hover", "pressed",
+            "edge", "hot", "cyan", "deep", "deep edge", "on ink", "dash", "lit", "brim", "well",
+            "well edge", "amber", "sheet", "sheet text", "sheet faint", "menu", "bubble outline",
+            "bubble title", "bubble text", "bubble accent", "bubble background"
+        };
+
+        internal static string[] Names { get { return (string[])Named.Clone(); } }
+
+        internal static Color Stock(string name)
+        {
+            int one = Which(name);
+            return one < 0 ? Color.Empty : now[one];
+        }
+
+        private static int Which(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return -1;
+            string want = name.Trim();
+            for (int one = 0; one < Named.Length; one++)
+                if (string.Equals(Named[one], want, StringComparison.OrdinalIgnoreCase)) return one;
+            return -1;
+        }
+
+        // Set one, or clear it by handing nothing. True when the palette actually changed, so the caller
+        // knows whether anything has to be repainted.
+        internal static bool Theirs(string name, Color? colour)
+        {
+            int one = Which(name);
+            if (one < 0) return false;
+            Color? was = theirs[one];
+            if (was.HasValue == colour.HasValue && (!colour.HasValue || was.Value.ToArgb() == colour.Value.ToArgb())) return false;
+            theirs[one] = colour;
+            return true;
+        }
+
+        internal static bool NoneOfTheirs()
+        {
+            bool had = false;
+            for (int one = 0; one < theirs.Length; one++) { if (theirs[one].HasValue) had = true; theirs[one] = null; }
+            return had;
+        }
+
+        // Repaint with the look that is already picked, for when the overlay changed rather than the look.
+        internal static void Again(params Control[] also)
+        {
+            Color[] was = now;
+            now = Looks[shade];
+            Repaint(shade, also);
+            if (was == now) Recolour(was);
+        }
+
+        private static void Recolour(Color[] was)
+        {
+            System.Collections.Generic.List<Control> windows = new System.Collections.Generic.List<Control>();
+            foreach (Form form in Application.OpenForms) if (form is LookWindow && !form.InvokeRequired) windows.Add(form);
+            System.Collections.Generic.HashSet<object> done = new System.Collections.Generic.HashSet<object>();
+            foreach (Control window in windows)
+            {
+                try { Recolour(window, was, done); }
+                catch (Exception) { }
+                try { window.Invalidate(true); }
+                catch (Exception) { }
+            }
+        }
         private static int shade;
 
         internal static int PaletteStamp
@@ -34,32 +108,41 @@ namespace CapriDesktop
             }
         }
 
-        internal static Color Ground { get { return now[0]; } }
-        internal static Color Glow { get { return now[1]; } }
-        internal static Color Band { get { return now[2]; } }
-        internal static Color Rule { get { return now[3]; } }
-        internal static Color Rose { get { return now[4]; } }
-        internal static Color White { get { return now[5]; } }
-        internal static Color Faint { get { return now[6]; } }
-        internal static Color Field { get { return now[7]; } }
-        internal static Color Hover { get { return now[8]; } }
-        internal static Color Pressed { get { return now[9]; } }
-        internal static Color Edge { get { return now[10]; } }
-        internal static Color Hot { get { return now[11]; } }
-        internal static Color Cyan { get { return now[12]; } }
-        internal static Color Deep { get { return now[13]; } }
-        internal static Color DeepEdge { get { return now[14]; } }
-        internal static Color OnInk { get { return now[15]; } }
-        internal static Color Dash { get { return now[16]; } }
-        internal static Color Lit { get { return now[17]; } }
-        internal static Color Brim { get { return now[18]; } }
-        internal static Color Well { get { return now[19]; } }
-        internal static Color WellEdge { get { return now[20]; } }
-        internal static Color Amber { get { return now[21]; } }
-        internal static Color Sheet { get { return now[22]; } }
-        internal static Color SheetInk { get { return now[23]; } }
-        internal static Color SheetDim { get { return now[24]; } }
-        internal static Color MenuBack { get { return now[25]; } }
+        internal static Color Ground { get { return At(0); } }
+        internal static Color Glow { get { return At(1); } }
+        internal static Color Band { get { return At(2); } }
+        internal static Color Rule { get { return At(3); } }
+        internal static Color Rose { get { return At(4); } }
+        internal static Color White { get { return At(5); } }
+        internal static Color Faint { get { return At(6); } }
+        internal static Color Field { get { return At(7); } }
+        internal static Color Hover { get { return At(8); } }
+        internal static Color Pressed { get { return At(9); } }
+        internal static Color Edge { get { return At(10); } }
+        internal static Color Hot { get { return At(11); } }
+        internal static Color Cyan { get { return At(12); } }
+        internal static Color Deep { get { return At(13); } }
+        internal static Color DeepEdge { get { return At(14); } }
+        internal static Color OnInk { get { return At(15); } }
+        internal static Color Dash { get { return At(16); } }
+        internal static Color Lit { get { return At(17); } }
+        internal static Color Brim { get { return At(18); } }
+        internal static Color Well { get { return At(19); } }
+        internal static Color WellEdge { get { return At(20); } }
+        internal static Color Amber { get { return At(21); } }
+        internal static Color Sheet { get { return At(22); } }
+        // Her bubble's background, which used to be set in sys.md and is set here with the rest of her
+        // colours. Stocked to the sheet colour it followed before, so nobody's bubble changes.
+        internal static Color BubbleBack { get { return At(30); } }
+        internal static Color SheetInk { get { return At(23); } }
+        internal static Color SheetDim { get { return At(24); } }
+        internal static Color MenuBack { get { return At(25); } }
+        // Her speech bubble and her type box. They were a palette of their own in Talk.cs, so the setting
+        // that recolours every other window left them exactly as they were.
+        internal static Color SpokenEdge { get { return At(26); } }
+        internal static Color SpokenTitle { get { return At(27); } }
+        internal static Color SpokenInk { get { return At(28); } }
+        internal static Color SpokenAccent { get { return At(29); } }
 
         private static Color Gray(int v) { return Color.FromArgb(v, v, v); }
 
@@ -175,6 +258,10 @@ namespace CapriDesktop
         }
 
         // Bahnschrift's semi-condensed cut, or its semi-bold for buttons and labels. Windows without it get Segoe UI.
+        //
+        // Yours to free. This makes one each time, unlike Fonts, which keeps one and frees none. The two read
+        // alike at the call and the rule is the opposite, so say which: a font from here goes in a using or is
+        // disposed by whatever holds it. ci/audit-fonts.py checks nothing frees one it did not make.
         internal static Font Type(float size, bool bold = false, GraphicsUnit unit = GraphicsUnit.Point)
         {
             FontFamily family = bold ? Heavy : Plain;

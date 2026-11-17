@@ -40,6 +40,14 @@ namespace CapriDesktop
     internal static class SmokeRun
     {
         private const string WorkerVariable = "CAPRI_SMOKE_WORKER";
+        // A folder whose contents are laid into each worker's data folder before it starts.
+        //
+        // Every attempt gets a fresh folder, made here and named with a new guid, so there is nowhere to put
+        // anything a run should find: mods, a settings file, a pack to test against. Setting the data folder
+        // by hand is no use either, since this overwrites it per attempt and sharing one across attempts
+        // would lose the isolation retries depend on. So the seed is copied in instead, and each attempt
+        // still starts from its own clean folder.
+        private const string SeedVariable = "CAPRI_SMOKE_SEED";
         // Sections run inside another, so --only can name a child and its parent still runs to reach it.
         private static readonly Dictionary<string, string[]> Children = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
         {
@@ -66,6 +74,24 @@ namespace CapriDesktop
         }
         private static readonly Stack<SectionTime> timings = new Stack<SectionTime>();
         internal static bool Worker { get { return Environment.GetEnvironmentVariable(WorkerVariable) == "1"; } }
+
+        // What the seed folder holds, copied into a worker's folder before it starts. Nothing when the
+        // variable is unset, which is every ordinary run.
+        private static void Seed(string room)
+        {
+            try
+            {
+                string from = Environment.GetEnvironmentVariable(SeedVariable);
+                if (string.IsNullOrEmpty(from) || !Directory.Exists(from)) return;
+                from = Path.GetFullPath(from);
+                if (!Directory.Exists(room)) Directory.CreateDirectory(room);
+                foreach (string made in Directory.GetDirectories(from, "*", SearchOption.AllDirectories))
+                    Directory.CreateDirectory(Path.Combine(room, made.Substring(from.Length).TrimStart(Path.DirectorySeparatorChar)));
+                foreach (string one in Directory.GetFiles(from, "*", SearchOption.AllDirectories))
+                    File.Copy(one, Path.Combine(room, one.Substring(from.Length).TrimStart(Path.DirectorySeparatorChar)), true);
+            }
+            catch (Exception) { }
+        }
         private static string ownAsync;
         // The last time she showed or moved one of her own windows in a way Windows carries out later on its thread, and from where.
         internal static string OwnAsync { get { return Volatile.Read(ref ownAsync); } }
@@ -170,6 +196,20 @@ namespace CapriDesktop
                 foreach (string item in options.Only)
                     if (string.Equals(child, item.Trim(), StringComparison.OrdinalIgnoreCase)) { matched.Add(item); wanted = true; }
             return wanted;
+        }
+
+        // Sections entered across every attempt of this run, read from the file the workers append to.
+        private static int Entered()
+        {
+            try
+            {
+                string path = folder == null ? null : Path.Combine(folder, "sections-done.txt");
+                if (path == null || !File.Exists(path)) return sectionsDone.Count;
+                int count = 0;
+                foreach (string line in File.ReadAllLines(path)) if (line.Trim().Length > 0) count++;
+                return Math.Max(count, sectionsDone.Count);
+            }
+            catch (Exception) { return sectionsDone.Count; }
         }
 
         internal static bool EnterSection(string name)
@@ -441,7 +481,9 @@ namespace CapriDesktop
                         foreach (string arg in args) arguments.Add(Quote(arg));
                         start.Arguments = string.Join(" ", arguments.ToArray());
                         start.EnvironmentVariables[WorkerVariable] = "1";
-                        start.EnvironmentVariables["CAPRI_SMOKE_DATA"] = Path.Combine(folder, runtime + "-" + attempt);
+                        string room = Path.Combine(folder, runtime + "-" + attempt);
+                        start.EnvironmentVariables["CAPRI_SMOKE_DATA"] = room;
+                        Seed(room);
                         child.StartInfo = start;
                         child.Start();
                         job.Assign(child);
@@ -513,7 +555,12 @@ namespace CapriDesktop
             checks.Add("TOTAL PASS " + checks.FindAll(delegate(string line) { return line.StartsWith("PASS ", StringComparison.Ordinal); }).Count
                 + " / LIMIT " + checks.FindAll(delegate(string line) { return line.StartsWith("LIMIT ", StringComparison.Ordinal); }).Count
                 + " / FAIL " + checks.FindAll(IsFailure).Count
-                + " / SKIP " + checks.FindAll(delegate(string line) { return line.StartsWith("SKIP ", StringComparison.Ordinal); }).Count);
+                + " / SKIP " + checks.FindAll(delegate(string line) { return line.StartsWith("SKIP ", StringComparison.Ordinal); }).Count
+                // How many sections were actually entered, which the totals never said. A run that stops early
+                // reads exactly like a clean one otherwise: a full run on this source enters a known number of
+                // them, so a smaller number here is the only sign that something ended the run rather than
+                // finishing it. A failing section was found on this box that a full run had not reported.
+                + " / SECTIONS " + Entered());
             Flush(checks);
             Begin("finished", failed ? "failed" : "passed", 0);
             return failed ? 1 : 0;

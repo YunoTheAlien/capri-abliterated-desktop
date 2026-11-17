@@ -146,9 +146,13 @@ namespace CapriDesktop
 
     internal sealed class CareLines
     {
+        internal const string FileName = "check-ins.md";
+
+        internal const string Preamble = "Edit the bullet lines under each heading to change what she says. Put a > in front of a bullet to switch that one off and it stays off, the same as every other file of hers. To silence a check-in altogether use its switch under Check in on me in the Mainframe's CAPRI band.";
+
         internal const string Defaults =
             "# Capri's check-ins\n\n" +
-            "Edit the bullet lines under each heading to change what she says. Remove a bullet to stop using it, or all the bullets under a heading to silence that check-in. These lines stay on this PC.\n\n" +
+            Preamble + " These lines stay on this PC.\n\n" +
             "## Water\n- Have a sip of water, choom. I'll keep your spot.\n- Water break. Even you need a refill.\n\n" +
             "## Stretch\n- Unfold yourself a little. Those legs still work.\n- Tiny stretch break. I'll be right here.\n\n" +
             "## Look away\n- Give your eyes 20 seconds looking away from the screen. I'll survive.\n- Look at something far away for 20 seconds. Yes, even farther than me.\n\n" +
@@ -163,6 +167,16 @@ namespace CapriDesktop
         private readonly Random dice = new Random();
 
         internal CareLines(string path) { this.path = path; }
+
+        // The one in play, so her editor can offer this file without being handed the instance. Set where it
+        // is made, and null until then, which is what the editor's own test for it reads.
+        internal static CareLines Open;
+
+        private static readonly object writing = new object();
+
+        // Her own editor opens it, the same as every other file of hers. This used to go to Notepad, which is
+        // the last thing that did.
+        internal WrittenNote Note() { return new WrittenNote(path, Defaults.Replace("\n", Environment.NewLine), writing); }
 
         // Where the file actually is, so anything that opens it for them opens the one she reads rather than
         // working the path out a second time and landing somewhere else.
@@ -261,6 +275,11 @@ namespace CapriDesktop
                     if (missing.Count == 0) continue;
                     made.InsertRange(after, missing);
                 }
+
+                // The line at the top promised that deleting a bullet switched it off, which the top up above
+                // undoes on her next start. Swapped wherever the old wording is, or the file keeps the lie.
+                for (int row = 0; row < made.Count; row++)
+                    if (made[row].IndexOf("Remove a bullet to stop using it", StringComparison.Ordinal) >= 0) made[row] = Preamble;
 
                 string body = string.Join(Environment.NewLine, made.ToArray());
                 if (adding.Length > 0)

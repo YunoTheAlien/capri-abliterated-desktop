@@ -55,31 +55,26 @@ namespace CapriDesktop
         //
         // Pitch stays between -1 and +4 throughout. Lower than that and she stops sounding like herself: the
         // range the slider allows goes to -6, which is a man, and no character here wants that.
+        // The starting voice for a pack or mood that is not in this build. Something attaches to this
+        // before anything asks, and with nothing attached she uses her stock voice, which is what a
+        // censored install wants anyway.
+        internal static Func<string, VoiceProfile> SenpaiVoice;
+
         private static readonly Dictionary<string, VoiceProfile> Starting = new Dictionary<string, VoiceProfile>(StringComparer.OrdinalIgnoreCase)
         {
             // personalities, soft to harsh
             { "Caregiver",    new VoiceProfile(2,  96, 100, 0, 0) },
             { "Welcome Home", new VoiceProfile(2, 102, 100, 0, 0) },
             { "Devoted",      new VoiceProfile(2,  98,  96, 0, 0) },
-            { "Submissive",   new VoiceProfile(3,  96,  88, 0, 0) },
-            { "Dommy Mommy",  new VoiceProfile(1,  94, 100, 0, 0) },
             { "Emo",          new VoiceProfile(0,  92,  92, 0, 6) },
-            { "Tsundere",     new VoiceProfile(3, 110, 100, 0, 0) },
             { "Bratty",       new VoiceProfile(3, 112, 102, 0, 0) },
             { "Sassy",        new VoiceProfile(2, 108, 100, 0, 0) },
-            { "Yandere",      new VoiceProfile(2, 100,  96, 0, 4) },
-            { "Masochist",    new VoiceProfile(3, 104,  96, 0, 0) },
             { "Feral",        new VoiceProfile(4, 118, 104, 0, 8) },
-            { "Dom",          new VoiceProfile(0,  94, 100, 0, 0) },
-            { "Dominatrix",   new VoiceProfile(-1, 90, 100, 0, 0) },
-            { "Sadist",       new VoiceProfile(1,  96,  98, 0, 0) },
             // moods, which sit on top of whoever she is
             { "Sleepy",       new VoiceProfile(1,  86,  92, 0, 0) },
             { "Hyper",        new VoiceProfile(4, 124, 104, 0, 0) },
-            { "Despondent",   new VoiceProfile(0,  88,  88, 0, 0) },
             { "Melancholy",   new VoiceProfile(1,  92,  92, 0, 0) },
             { "Furious",      new VoiceProfile(2, 112, 106, 0, 0) },
-            { "Frantic",      new VoiceProfile(3, 122, 102, 0, 6) },
             { "Playful",      new VoiceProfile(3, 110, 102, 0, 0) },
             { "Mischievous",  new VoiceProfile(3, 108, 100, 0, 0) },
             { "Affectionate", new VoiceProfile(2,  96, 100, 0, 0) },
@@ -89,9 +84,7 @@ namespace CapriDesktop
             { "Smug",         new VoiceProfile(1, 100, 100, 0, 0) },
             { "Moody",        new VoiceProfile(1,  94,  96, 0, 0) },
             { "Jealous",      new VoiceProfile(2, 104,  98, 0, 0) },
-            { "Possessive",   new VoiceProfile(1,  98, 100, 0, 0) },
             { "Focused",      new VoiceProfile(1,  98,  96, 0, 0) },
-            { "Sexual",       new VoiceProfile(1,  92,  96, 0, 0) }
         };
 
         private static string PathOf(string named)
@@ -118,7 +111,13 @@ namespace CapriDesktop
         internal static VoiceProfile Where(string named)
         {
             VoiceProfile had;
-            return Starting.TryGetValue(named ?? "", out had) ? had : VoiceProfile.Stock;
+            if (Starting.TryGetValue(named ?? "", out had)) return had;
+            if (SenpaiVoice != null)
+            {
+                try { VoiceProfile theirs = SenpaiVoice(named ?? ""); if (theirs != null) return theirs; }
+                catch (Exception) { }
+            }
+            return VoiceProfile.Stock;
         }
 
         // Written by hand rather than through a serializer, because the file is meant to be readable and editable.
@@ -220,13 +219,45 @@ namespace CapriDesktop
             { "deadpan", -1, 96, 99 }, { "mocking", 0, 100, 101 }, { "indifferent", -1, 97, 97 },
             { "proud", 0, 102, 106 }, { "confident", 0, 102, 105 }, { "determined", 0, 104, 106 },
             { "curious", 1, 104, 100 }, { "hopeful", 1, 103, 100 }, { "grateful", 1, 99, 100 },
-            { "calm", 0, 95, 98 }, { "relaxed", 0, 94, 98 }
+            { "calm", 0, 95, 98 }, { "relaxed", 0, 94, 98 },
+            { "satisfied", 0, 97, 100 }, { "optimistic", 1, 104, 101 }, { "pessimistic", -1, 94, 97 },
+            { "confused", 1, 97, 99 }, { "uncertain", 0, 95, 97 }, { "doubtful", -1, 96, 98 },
+            { "guilty", -1, 94, 95 }, { "ashamed", -1, 92, 93 }, { "regretful", -1, 92, 95 },
+            { "jealous", -1, 100, 101 }, { "envious", -1, 99, 100 }, { "nostalgic", 0, 92, 97 },
+            { "empathetic", 0, 96, 98 }, { "sympathetic", 0, 96, 98 }, { "compassionate", 0, 95, 98 },
+            { "moved", 0, 94, 97 }, { "disdainful", -1, 96, 101 }, { "annoyed", -1, 102, 103 },
+            { "hysterical", 3, 124, 118 }, { "in a hurry tone", 1, 124, 102 }, { "panting", 2, 112, 96 },
+            { "groaning", -1, 90, 98 }, { "snoring", -2, 78, 92 }, { "sniffling", 1, 94, 94 },
+            { "scoffing", -1, 100, 102 }, { "snorting", 0, 104, 103 }, { "pouting", 1, 96, 97 },
+            { "humming", 0, 96, 90 }, { "singing", 1, 100, 104 }, { "cheerful", 2, 106, 103 },
+            { "dramatic", 1, 96, 108 }, { "shy", 1, 94, 88 }, { "evil", -2, 94, 98 }
         };
 
         // "extremely excited" and "a bit sad" are the same cue, further on or less far. Anything after the feeling
         // itself, like "excited and a little breathless", is ignored rather than guessed at.
         private static readonly string[] More = { "extremely", "really", "very", "super", "so" };
         private static readonly string[] Less = { "slightly", "a bit", "a little", "kind of", "kinda", "quite" };
+
+        // Another written form of a cue above, read only when the cue itself is not in the table: a brain
+        // writes "[whispers]" or "[playfully]" as readily as "[whispering]" or "[playful]".
+        private static readonly string[,] Forms =
+        {
+            { "whisper", "whispering" }, { "whispers", "whispering" }, { "laugh", "laughing" },
+            { "laughs", "laughing" }, { "giggle", "giggling" }, { "giggles", "giggling" },
+            { "chuckle", "chuckling" }, { "chuckles", "chuckling" }, { "sigh", "sighing" },
+            { "sighs", "sighing" }, { "sob", "sobbing" }, { "sobs", "sobbing" },
+            { "cries", "sobbing" }, { "crying", "sobbing" }, { "gasp", "gasping" },
+            { "gasps", "gasping" }, { "yawn", "yawning" }, { "yawns", "yawning" },
+            { "groan", "groaning" }, { "groans", "groaning" }, { "snort", "snorting" },
+            { "snorts", "snorting" }, { "scoff", "scoffing" }, { "scoffs", "scoffing" },
+            { "pout", "pouting" }, { "pouts", "pouting" }, { "sniffle", "sniffling" },
+            { "sniffles", "sniffling" }, { "hum", "humming" }, { "hums", "humming" },
+            { "sing", "singing" }, { "sings", "singing" }, { "mock", "mocking" },
+            { "mockingly", "mocking" }, { "playfully", "playful" }, { "teasingly", "teasing" },
+            { "smugly", "smug" }, { "mischievously", "mischievous" }, { "shyly", "shy" },
+            { "cheerfully", "cheerful" }, { "dramatically", "dramatic" }, { "flirtatious", "flirty" },
+            { "flirtatiously", "flirty" }, { "warm", "warmly" }, { "gentle", "gently" }
+        };
 
         internal static bool Shift(string cue, out int pitch, out int pace, out int loud)
         {
@@ -240,14 +271,11 @@ namespace CapriDesktop
             if (strength == 1)
                 foreach (string word in Less) if (said.StartsWith(word + " ", StringComparison.Ordinal)) { strength = 0.5; said = said.Substring(word.Length + 1); break; }
 
-            int found = -1;
-            for (int at = 0; at < Moves.GetLength(0); at++)
-            {
-                string name = (string)Moves[at, 0];
-                if (!said.Equals(name, StringComparison.Ordinal) && !said.StartsWith(name + " ", StringComparison.Ordinal)) continue;
-                found = at;
-                break;
-            }
+            int found = Row(said);
+            if (found < 0)
+                for (int at = 0; at < Forms.GetLength(0); at++)
+                    if (said.Equals(Forms[at, 0], StringComparison.Ordinal) || said.StartsWith(Forms[at, 0] + " ", StringComparison.Ordinal))
+                    { found = Row(Forms[at, 1]); break; }
             if (found < 0) return false;
             pitch = (int)Math.Round((int)Moves[found, 1] * strength);
             pace = 100 + (int)Math.Round(((int)Moves[found, 2] - 100) * strength);
@@ -256,6 +284,16 @@ namespace CapriDesktop
             pace = Math.Max(70, Math.Min(140, pace));
             loud = Math.Max(55, Math.Min(140, loud));
             return pitch != 0 || pace != 100 || loud != 100;
+        }
+
+        private static int Row(string said)
+        {
+            for (int at = 0; at < Moves.GetLength(0); at++)
+            {
+                string name = (string)Moves[at, 0];
+                if (said.Equals(name, StringComparison.Ordinal) || said.StartsWith(name + " ", StringComparison.Ordinal)) return at;
+            }
+            return -1;
         }
     }
 }

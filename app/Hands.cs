@@ -387,7 +387,7 @@ namespace CapriDesktop
                 // A code mod's tool can do anything its code does, so it has its own toggle, off on Lockdown and Guarded.
                 case "mod": return ModTools;
                 // STOCK 0.8.9: same line without case "new_chat" (that tool did not exist)
-                case "voice_chat": case "speech": case "quit": case "mainframe": case "mini_player": case "fake_crash": case "listen": case "new_chat": case "twitch_live": case "do_again": case "twitch_who": case "playlist": return -1;
+                case "voice_chat": case "speech": case "quit": case "mainframe": case "mini_player": case "fake_crash": case "red_alert": case "listen": case "new_chat": case "twitch_live": case "do_again": case "twitch_who": case "playlist": case "check_writing": return -1;
                 default: return -1;
             }
         }
@@ -677,6 +677,7 @@ namespace CapriDesktop
                 case "mini_game": return "play " + Plain(a.Name, "a mini game").Replace('_', ' ');
                 case "workspace": return a.Action == "status" ? "check Workspace" : Hands.WorkspaceStarts(a) ? "start a Workspace chat to " + Plain(Hands.Asked(a.Task ?? ""), "do that") + (string.IsNullOrEmpty(a.Folder) ? "" : " in " + Plain(a.Folder, "that folder")) : "open Workspace";
                 case "fake_crash": return a.Action == "stop" ? "stop the " + Hands.CrashKind : "show the " + Hands.CrashKind;
+                case "red_alert": return a.Action == "stop" ? "stop her red alert" : "sound her red alert";
                 case "listen": return a.Action == "stop" ? "stop listening to PC dialogue" : "listen to PC dialogue";
                 case "list_windows": return "check your open windows";
                 case "check_app": return "check whether " + Plain(a.Name, "that app") + " is installed or running";
@@ -1110,7 +1111,11 @@ namespace CapriDesktop
 #if CROSS
             new[] { "Tiny", "Small", "Medium", "Large", "Huge", "Giant" },
 #else
-            new[] { "Tiny", "Small", "Small+", "Medium", "Medium+", "Large", "Large+", "Huge", "Huge+", "Giant" },
+            // Double and Triple arrived in her Mainframe at 0.9.319 and this list did not follow, so her two
+            // biggest sizes were out of her own reach: "as big as you go" stopped at Giant, and with the
+            // slider on one of them her settings list answered "can't tell" for her size, which is the guard
+            // at the end of this file catching an index her names had no room for.
+            new[] { "Tiny", "Small", "Small+", "Medium", "Medium+", "Large", "Large+", "Huge", "Huge+", "Giant", "Double", "Triple" },
 #endif
             new[] { "Off", "Rarely", "Sometimes", "Often", "Restless" }, new[] { "Rarely", "Sometimes", "Often" },
             new[] { "Never", "1 min", "2 min", "5 min", "10 min", "30 min" },
@@ -1444,6 +1449,8 @@ namespace CapriDesktop
 #endif
             { "watch_for", "Watch for something that will show on their screen: tell me when, let me know when, warn me if, keep an eye on, or watch for. Stay quiet until it happens. Use remind for anything that goes by the clock. Watches last until she closes; list names them, stop with text stops a matching watch, and stop without text stops them all.",
               "{\"type\":\"object\",\"properties\":{\"text\":{\"type\":\"string\",\"description\":\"What to watch for, in their words, or which watch to stop\"},\"action\":{\"type\":\"string\",\"description\":\"What to do; watch by default\",\"enum\":[\"watch\",\"list\",\"stop\"]},\"often\":{\"type\":\"string\",\"description\":\"Once by default, or every time after the condition clears\",\"enum\":[\"once\",\"every_time\"]}}}", "watch your screen for something and tell you when it happens", "tell them when something shows on their screen" },
+            { "red_alert", "Sound your red alert when they ask, suggest or hint at it: six seconds of flashing red hexagons across their screens with an alarm, ending on any key. It changes nothing and won't start over full screen, a stream or a mouse job. stop takes it down early.",
+              "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"description\":\"show or stop the alert\",\"enum\":[\"show\",\"stop\"]}},\"required\":[\"action\"]}", "sound or stop her red alert", "sound or stop your red alert" },
             { "fake_crash", "Show your five-second " + CrashKind + " or stop it when they ask, suggest or hint at the prank. It never crashes their PC and won't start over full screen, a stream or a mouse job.",
               "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"description\":\"show or stop the prank\",\"enum\":[\"show\",\"stop\"]}},\"required\":[\"action\"]}", "show or stop her " + CrashKind, "show or stop your " + CrashKind },
 #if !CROSS
@@ -1460,6 +1467,8 @@ namespace CapriDesktop
               "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"description\":\"clear the chat\",\"enum\":[\"clear\"]}},\"required\":[\"action\"]}", "start a new chat, keeping her notes", "start a new chat, keeping your notes" },
             { "playlist", "Her own playlist of music folders on this PC. action play starts or resumes it, skip goes to the next song, stop ends it, and remove takes the song that is playing off the playlist without ever deleting the file. add_folder takes a folder path in path and add_song takes one file. Use it when they talk about her playlist, their music folders, skipping a song or taking a song off; play_music is for Spotify and YouTube instead.",
               "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"play\",\"skip\",\"stop\",\"remove\",\"add_folder\",\"add_song\"]},\"path\":{\"type\":\"string\",\"description\":\"The folder or file, for add_folder and add_song only\"}},\"required\":[\"action\"]}", "play, skip and manage her folder playlist", "play, skip and manage your folder playlist" },
+            { "check_writing", "Check a piece of writing and say what is wrong with it, when they ask you to check, proofread, look over or fix the grammar or spelling of something. Put what they want checked in text, word for word. It only reads and answers: it changes nothing they have written, it needs no internet, and the tidied copy goes on their clipboard for them to paste.",
+              "{\"type\":\"object\",\"properties\":{\"text\":{\"type\":\"string\",\"description\":\"The writing to check, word for word\"}},\"required\":[\"text\"]}", "check a piece of their writing", "check a piece of their writing" },
             { "twitch_who", "Check right now which channels on their Twitch watch list are live, when they ask who is live, who is streaming or whether anyone is on. It only looks and answers; it changes nothing and is not about reading Twitch chat.",
               "{\"type\":\"object\",\"properties\":{}}", "check who on their watch list is live", "check who on their watch list is live" },
             // <<< PATCH: the off switch for her Twitch live mentions, by voice or typed
@@ -1775,6 +1784,7 @@ namespace CapriDesktop
         internal const string CrashKind = "fake blue screen";
 #endif
         internal static Func<string, string> Crash = delegate { return "Couldn't show my " + CrashKind + "."; };
+        internal static Func<string, string> Alert = delegate { return "My red alert isn't on this PC yet."; };
         // Makes her clones or clears them, and says how it went. Her window sets it.
         internal static Func<string, int, string> Clone = delegate { return "Couldn't do that just now."; };
         internal static Func<string, string> Hologram = delegate { return "Couldn't do that just now."; };
@@ -2089,11 +2099,13 @@ namespace CapriDesktop
                 if (tool == "new_chat") return Valid(tool, args) ? StartNewChat() : "Couldn't find that new chat action.";
                 if (tool == "twitch_live") return Valid(tool, args) ? SwitchTwitchLive(args.Action) : "Say on or off for Twitch live notifications.";
                 if (tool == "twitch_who") { Func<string> asking = TwitchWho; return asking == null ? "Twitch isn't set up on this PC." : asking(); }
+                if (tool == "check_writing") { Func<string, string> read = CheckWriting; return read == null ? "I can't read writing on this PC yet." : read(args.Text); }
                 if (tool == "playlist") { Func<string, string, string> run = Playlist; return run == null ? "No playlist on this PC." : run(args.Action, args.Path ?? args.Name ?? args.Song); }
                 if (tool == "do_again") { Func<string> over = RunAgain; return over == null ? "There's nothing to do again." : over(); }
                 if (tool == "updates") return Valid(tool, args) ? Updates(args) : "Couldn't find that update action.";
                 if (tool == "draw") return Draw(args);
                 if (tool == "fake_crash") return Valid(tool, args) ? Crash(args.Action) : "Couldn't find that fake crash action.";
+                if (tool == "red_alert") return Valid(tool, args) ? Alert(args.Action) : "Couldn't find that red alert action.";
 #if CROSS
                 if (tool == "clone") return Clone(args.Action, args.Count ?? 1);
 #else
@@ -2397,7 +2409,7 @@ namespace CapriDesktop
 
         internal static bool CallTool(string tool)
         {
-            return Regex.IsMatch(tool ?? "", @"\A(open_app|open_website|media|look_at_screen|play_music|app_window|use_computer|shortcut|power|animate|draw|desktop_icons|clip|mini_game|fake_crash|listen|list_windows|check_app|app_volume|pc_status|internet_status)\z");
+            return Regex.IsMatch(tool ?? "", @"\A(open_app|open_website|media|look_at_screen|play_music|app_window|use_computer|shortcut|power|animate|draw|desktop_icons|clip|mini_game|fake_crash|red_alert|listen|list_windows|check_app|app_volume|pc_status|internet_status)\z");
         }
 
         internal static bool CallAllowed(string tool, ToolArguments args)
@@ -2553,6 +2565,7 @@ namespace CapriDesktop
 #endif
             { "hologram", "hologram mode", NoHologram },
             { "desktop_icons", "messing with their desktop icons", NoIcons },
+            { "red_alert", "her red alert", "Couldn't sound my red alert." },
 #if CROSS
             { "fake_crash", "the fake crash screen", "Couldn't show my fake crash screen." },
 #else
@@ -4807,7 +4820,11 @@ namespace CapriDesktop
             //                  && (string.IsNullOrEmpty(args.Browser) || BrowserName(args.Browser) != null);
             // Site, or anything that can be read as one, or search words to run on a default engine. Refusing the call teaches
             // them nothing and loses the request; OpenSite already explains whatever it could not do.
-            if (tool == "open_website") return Named(args.Site) || Named(args.Search) || Named(args.Name);
+            // A browser she does not know is not a browser. One she knows but cannot find is a different
+            // thing and still valid: that falls back to their default and says so. This never looked at
+            // the name at all, so "browser": "notepad" was accepted and went looking for notepad.exe.
+            if (tool == "open_website") return (Named(args.Site) || Named(args.Search) || Named(args.Name))
+                && (string.IsNullOrWhiteSpace(args.Browser) || BrowserName(args.Browser) != null);
             if (tool == "look_at_screen") return true;
             if (tool == "media")
             {
@@ -4835,6 +4852,7 @@ namespace CapriDesktop
             if (tool == "new_chat") return string.IsNullOrEmpty(args.Action) || args.Action == "clear";
             if (tool == "twitch_live") return args.Action == "on" || args.Action == "off";
             if (tool == "twitch_who") return true;
+            if (tool == "check_writing") return Named(args.Text);
             if (tool == "playlist") return args.Action == "commands" || args.Action == "play" || args.Action == "skip" || args.Action == "back" || args.Action == "stop" || args.Action == "remove"
                 || args.Action == "shuffle" || args.Action == "repeat_one" || args.Action == "repeat_all" || args.Action == "repeat_off"
                 || ((args.Action == "add_folder" || args.Action == "add_song") && Named(args.Path ?? args.Name ?? args.Song));
@@ -5145,6 +5163,9 @@ namespace CapriDesktop
 
         // Set by Capri: looks up the watch list in twitch.md there and then, ignoring every timer.
         internal static Func<string> TwitchWho;
+        // A look over a piece of their writing, answered from rules on this PC. Nothing is sent anywhere and
+        // no brain is needed for the reading: she only needs one to have been asked.
+        internal static Func<string, string> CheckWriting;
 
         // Set by Capri: play, skip, stop, remove, add_folder, add_song.
         internal static Func<string, string, string> Playlist;

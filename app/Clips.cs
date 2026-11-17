@@ -1631,7 +1631,7 @@ namespace CapriDesktop
             using (Font title = Look.Mono(9.5f * s, FontStyle.Bold))
             using (Font name = Look.Mono(12f * s, FontStyle.Regular, GraphicsUnit.Pixel, game))
             using (Font small = Look.Mono(8.5f * s, FontStyle.Regular))
-            using (StringFormat trim = new StringFormat(StringFormat.GenericTypographic))
+            using (StringFormat trim = new StringFormat(Look.Exact))
             {
                 graphics.SmoothingMode = SmoothingMode.AntiAlias;
                 graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
@@ -1643,10 +1643,10 @@ namespace CapriDesktop
                 TalkPill.Plate(graphics, body, s, hovered ? body : Rectangle.Empty, Look.Pink, Look.Cyan);
                 float left = body.Left + 14 * s, right = body.Right - 14 * s, top = body.Top + 10 * s;
                 using (Brush red = new SolidBrush(Look.Red)) graphics.FillEllipse(red, left, top + 2.5f * s, 7 * s, 7 * s);
-                using (Brush pink = new SolidBrush(Look.Pink)) graphics.DrawString("CLIP SAVED", title, pink, left + 13 * s, top, StringFormat.GenericTypographic);
+                using (Brush pink = new SolidBrush(Look.Pink)) graphics.DrawString("CLIP SAVED", title, pink, left + 13 * s, top, Look.Exact);
                 string length = Length(seconds);
-                float wide = graphics.MeasureString(length, title, PointF.Empty, StringFormat.GenericTypographic).Width;
-                using (Brush dim = new SolidBrush(Look.Dim)) graphics.DrawString(length, title, dim, right - wide, top, StringFormat.GenericTypographic);
+                float wide = graphics.MeasureString(length, title, PointF.Empty, Look.Exact).Width;
+                using (Brush dim = new SolidBrush(Look.Dim)) graphics.DrawString(length, title, dim, right - wide, top, Look.Exact);
                 using (Brush ink = new SolidBrush(Look.Ink)) graphics.DrawString(game, name, ink, new RectangleF(left, top + 19 * s, right - left, 18 * s), trim);
                 using (Brush caption = new SolidBrush(hovered ? Look.Cyan : TalkPill.Caption))
                     graphics.DrawString(Caption(graphics, small, clip, hovered, right - left), small, caption, new RectangleF(left, top + 42 * s, right - left, 18 * s), trim);
@@ -1661,7 +1661,7 @@ namespace CapriDesktop
             if (name.Length > 0) folder = name;
             string prefix = hovered ? "Show in " : "", suffix = hovered ? "" : " / click to see it";
             string caption = prefix + folder + suffix;
-            for (int length = folder.Length - 1; length > 0 && graphics.MeasureString(caption, font, PointF.Empty, StringFormat.GenericTypographic).Width > width; length--)
+            for (int length = folder.Length - 1; length > 0 && graphics.MeasureString(caption, font, PointF.Empty, Look.Exact).Width > width; length--)
                 caption = prefix + folder.Substring(0, length).TrimEnd() + "\u2026" + suffix;
             return caption;
         }

@@ -98,7 +98,7 @@ namespace CapriDesktop
 
         private static StringFormat Format(StringAlignment align)
         {
-            StringFormat format = new StringFormat(StringFormat.GenericTypographic);
+            StringFormat format = new StringFormat(Look.Exact);
             format.Alignment = align;
             format.LineAlignment = StringAlignment.Center;
             format.FormatFlags |= StringFormatFlags.NoWrap;
@@ -302,7 +302,7 @@ namespace CapriDesktop
             Lines = lines.ToArray();
         }
 
-        internal static float Measure(Graphics graphics, string text, Font font) { return graphics.MeasureString(text, font, PointF.Empty, StringFormat.GenericTypographic).Width; }
+        internal static float Measure(Graphics graphics, string text, Font font) { return graphics.MeasureString(text, font, PointF.Empty, Look.Exact).Width; }
 
         internal void Draw(Graphics graphics, RectangleF box, CallView view, CallFonts fonts, float s, double fade)
         {

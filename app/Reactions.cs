@@ -912,7 +912,7 @@ namespace CapriDesktop
                 Bitmap image = new Bitmap(wide + margin * 2, tall + margin * 2, PixelFormat.Format32bppPArgb);
                 using (Graphics graphics = Graphics.FromImage(image))
                 using (Brush brush = new SolidBrush(ink))
-                using (StringFormat middle = (StringFormat)StringFormat.GenericTypographic.Clone())
+                using (StringFormat middle = new StringFormat(Look.Exact))
                 {
                     graphics.SmoothingMode = SmoothingMode.AntiAlias;
                     graphics.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
@@ -945,7 +945,7 @@ namespace CapriDesktop
 
         private static float Measured(Graphics graphics, string text, Font font)
         {
-            return graphics.MeasureString(text, font, PointF.Empty, StringFormat.GenericTypographic).Width;
+            return graphics.MeasureString(text, font, PointF.Empty, Look.Exact).Width;
         }
 
         // A line in at most two rows that fit, breaking between words and inside a word too long for a row. A third row's

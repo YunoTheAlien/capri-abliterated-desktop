@@ -75,6 +75,79 @@ namespace CapriDesktop
             else mainframe.Restore();
         }
 
+        // Her Mainframe on a screen shorter than this one. Nothing could check this before: the fit reads the
+        // real monitor's height, so a laptop at 768 or an old 600 px panel was only findable by somebody on
+        // one, and the report that her Mainframe gets bigger while the text does not came from exactly that.
+        //
+        // What is checked is the arithmetic the fit does, not the layout: every size she offers comes back no
+        // taller than the screen allows, and the floor is the floor. The layout itself above 125 per cent is
+        // still only checkable on a real screen.
+        // Her whole Settings page at every size she offers, rather than one message at one size.
+        //
+        // The sweep that existed checked one retained-key line. This opens Settings and asks the page itself:
+        // nothing overlapping, nothing outside the window, at 100 through 200 per cent.
+        //
+        // And it says which sizes the screen actually granted. The fit caps a size against the monitor, so on
+        // a short screen asking for 200 gives something smaller, and a check that did not say so would report
+        // five sizes while testing one twice over.
+        private void SmokeMainframeSizes(List<string> checks)
+        {
+            int was = MainframeSize;
+            bool settingsWas = mainframe.SettingsShown;
+            List<string> wrong = new List<string>(), granted = new List<string>();
+            try
+            {
+                mainframe.ShowSettings(true);
+                foreach (int size in new[] { 100, 125, 150, 175, 200 })
+                {
+                    mainframe.SizeMainframe(size);
+                    mainframe.ShowSettings(true);
+                    int got = (int)Math.Round(mainframe.Zoom * 100);
+                    granted.Add(size + (got == size ? "" : " as " + got));
+                    string bad = mainframe.Overlap() ?? mainframe.Outside() ?? mainframe.TextFits();
+                    if (bad != null) wrong.Add(size + "%: " + bad);
+                }
+            }
+            finally
+            {
+                mainframe.SizeMainframe(was);
+                mainframe.ShowSettings(settingsWas);
+            }
+            if (wrong.Count > 0) throw new Exception("Her Settings page does not hold together at every size: " + string.Join(" | ", wrong.ToArray()));
+            checks.Add("PASS her Settings page holds together at every size she offers: nothing overlapping, nothing outside her window and no text that does not fit, at " + string.Join(", ", granted.ToArray())
+                + " per cent. A size the screen cannot give is capped by the fit, which is why what was granted is named rather than what was asked for");
+        }
+
+        private void SmokeMainframeFits(List<string> checks)
+        {
+            int needs = mainframe.NeedsTall;
+            if (needs <= 0) { checks.Add("LIMIT Mainframe fit: her panel has no height yet, so there is nothing to measure"); return; }
+            List<string> wrong = new List<string>();
+            int[] rooms = { 2160, 1440, 1080, 900, 768, 600 };
+            int[] sizes = { 100, 125, 150, 175, 200 };
+            foreach (int room in rooms)
+                foreach (int size in sizes)
+                {
+                    float want = size / 100f;
+                    float got = mainframe.FitsIn(room, want);
+                    if (got > want + 0.001f) wrong.Add(size + "% on " + room + " grew to " + got.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
+                    // The floor is 0.6: under it she stops being readable at all, so a very short screen gets a
+                    // Mainframe that does not quite fit rather than one nobody can use.
+                    if (got < 0.6f - 0.001f) wrong.Add(size + "% on " + room + " went under the floor at " + got.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
+                    float tall = needs * got;
+                    if (got > 0.6f + 0.001f && tall > room + 1) wrong.Add(size + "% on " + room + " needs " + (int)tall + " px of " + room);
+                }
+            if (wrong.Count > 0) throw new Exception("Her Mainframe did not fit a screen: " + string.Join("; ", wrong.ToArray()));
+            // And the thing the report was actually about, written down as a number: on a short screen a bigger
+            // size cannot give bigger text, because the whole window scales together and the fit caps it.
+            float small = mainframe.FitsIn(600, 2f), large = mainframe.FitsIn(2160, 2f);
+            checks.Add("PASS her Mainframe fits every screen it is given: 100 to 200 per cent across 2160, 1440, 1080, 900, 768 and 600 px, never taller than the screen and never under the 0.6 floor. Her panel needs "
+                + needs + " px at 100 per cent, so 200 per cent on a 600 px screen comes back as "
+                + small.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " against "
+                + large.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+                + " on 2160: a small screen caps the size, which is why bigger text there wants text scaling of its own rather than a bigger window");
+        }
+
         private void SmokeMainframeKey(List<string> checks)
         {
             FormWindowState stateWas = mainframe.WindowState;

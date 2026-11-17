@@ -195,7 +195,10 @@ namespace CapriDesktop
                     default: said = "You are not in the mood to do things for them. You will still talk, and you say no plainly rather than sulking in silence."; break;
                 }
                 if (Upset >= 20) said += " You are genuinely upset with them. A real apology, one that names what they did, would change that. A bare \"sorry\" would not.";
-                return "How you feel right now, which you never mention as a number or a score: " + said;
+                // Willingness, which is what every band above actually says: "You will help with normal things"
+                // is not a feeling. It read "How you feel right now", so the label promised her mood and handed
+                // her a rule about helping, and Persona's own comment beside this calls it how willing she is.
+                return "How willing you are to do things for them right now, which you never mention as a number or a score: " + said;
             }
         }
 
@@ -261,9 +264,12 @@ namespace CapriDesktop
             get
             {
                 if (Willing >= 4) return "";
-                return " However she feels, she always does these without argument: closing her, starting a new chat,"
-                    + " opening her settings or her Mainframe, her voice and listening, her mini player, her playlist"
-                    + " and her nap. Being in a mood never means someone cannot get at her controls.";
+                // To her, as the rest of her prompt is. This was written about her in the third person and
+                // appended straight onto a line addressing her as you, so her prompt changed person halfway
+                // through a paragraph: "...not a flat no. However she feels, she always does these..."
+                return " However you feel, you always do these without argument: closing you, starting a new chat,"
+                    + " opening your settings or your Mainframe, your voice and listening, your mini player, your"
+                    + " playlist and your nap. Being in a mood never means they cannot get at your controls.";
             }
         }
     }

@@ -87,11 +87,33 @@ namespace CapriDesktop
         // key saved, one row under it folds away and the rest moves up; under the other rows, this one folds away instead.
         private const int KeyAt = 310;
         // The four voice sliders that moved into the voice window, and the room they used to take.
-        // The four voice sliders that moved into the voice window, and the room they used to take.
         private const int KeyFold = 36;
         private const int HearingFixAt = 474;
         private const int HearingFixRow = 35;
+        // BRAIN's rungs and the key row under them, spaced as one block. The three rungs are 24 apart from
+        // RungTop, so they end at RungsEnd; the key box takes a clear gap under them and the free-key warning a
+        // smaller one, because a warning belongs to the box above it. Every row under the box is placed off the
+        // one before it, and KeyRow is worked out from whichever of them is showing, so moving one number moves
+        // the rest and the panel grows to match. Reported as crammed at 6 px under the rungs and 4 above the
+        // warning.
+        private const int RungTop = 184;
+        private const int RungTall = 24;
+        private const int RungsEnd = RungTop + RungTall * 3;
+        private const int KeyBoxAt = RungsEnd + 14;
+        private const int KeyBoxTall = 28;
+        private const int FreeWarnAt = KeyBoxAt + KeyBoxTall + 10;
+        private const int FreeWarnTall = 16;
+        private const int PaidNoteAt = FreeWarnAt + 21;
+        private const int MovePaidAt = FreeWarnAt + 56;
+        private const int MovePaidTall = 24;
+        // The gap every section of the Mainframe leaves above the next one's heading.
+        private const int SectionGap = 22;
         private int hearingFold;
+        private Key abliterated;
+        private int abliteratedFold;
+        // The row that button sits on, so the fold below it is measured rather than guessed.
+        private const int AbliteratedAt = 282;
+        private const int AbliteratedRow = 38;
         private float voiceFilled = -1;
         private readonly Label installNote;
         private readonly Companion capri;
@@ -478,7 +500,7 @@ namespace CapriDesktop
                 rung.Font = Type(9.5f, true);
                 rung.HintFont = Type(9f);
                 rung.AccessibleName = tiers[i, 0] + ", " + tiers[i, 1];
-                rung.Bounds = new Rectangle(28, 184 + 24 * i, i > 0 ? 232 : 328, 24);
+                rung.Bounds = new Rectangle(28, RungTop + RungTall * i, i > 0 ? 232 : 328, RungTall);
                 rung.CheckedChanged += delegate { if (!syncing && rungs[picked].Checked) capri.ChooseTier(picked); };
                 Controls.Add(rung);
                 rungs[i] = rung;
@@ -494,7 +516,7 @@ namespace CapriDesktop
             offRung.Font = Type(9.5f, true);
             offRung.HintFont = Type(9f);
             offRung.AccessibleName = "OFF, No AI · no brain at all";
-            offRung.Bounds = new Rectangle(28, 184, 328, 24);
+            offRung.Bounds = new Rectangle(28, RungTop, 328, RungTall);
             offRung.Click += delegate { if (!syncing) capri.SetNoAi(true); };
             Controls.Add(offRung);
             freeKeyMenu = Dropdown();
@@ -508,7 +530,7 @@ namespace CapriDesktop
             ToolStripMenuItem routerKey = Choice("OpenRouter · free models only", false, delegate { capri.OpenRouterKeyPage(); });
             routerKey.AccessibleName = "OpenRouter";
             freeKeyMenu.Items.Add(routerKey);
-            freeKey = Make("Free key", 266, 209, 90, 22, delegate { ShowFreeKeys(); });
+            freeKey = Make("Free key", 266, RungTop + RungTall + 1, 90, 22, delegate { ShowFreeKeys(); });
             freeKey.Chevron = true;
             freeKey.AccessibleName = "Free key: NVIDIA, Google AI Studio (Gemini) or OpenRouter";
             // Their own Claude or ChatGPT plan in place of a key, through Claude Code or Codex on this PC (Lachy, 6 Nov).
@@ -526,18 +548,18 @@ namespace CapriDesktop
             spareBrain.Tag = "spare";
             spareBrain.Available = false;
             planMenu.Items.Add(spareBrain);
-            planKey = Make("My plan", 266, 233, 90, 22, delegate { ShowPlans(); });
+            planKey = Make("My plan", 266, RungTop + RungTall * 2 + 1, 90, 22, delegate { ShowPlans(); });
             planKey.Chevron = true;
             planKey.AccessibleName = "My plan: Claude through Claude Code, or ChatGPT through Codex";
-            textEntry = Input(28, 262, 244);
+            textEntry = Input(28, KeyBoxAt, 244);
             textEntry.Box.UseSystemPasswordChar = true;
             textEntry.Box.AccessibleName = "NVIDIA, Google AI Studio (Gemini) or OpenRouter API key";
             textEntry.Cue = "NVIDIA / Google AI Studio / OpenRouter";
-            textConnect = Make("Connect", 280, 262, 76, 28, delegate { ConnectText(); });
-            freeWarning = Caption("Free keys can be rate limited and slow.", 28, 294, Type(8.5f), Neon.Amber);
-            paidNote = Caption("That's a paid key: it goes under MAX INTELLIGENCE.", 28, 315, Font, Neon.Amber);
+            textConnect = Make("Connect", 280, KeyBoxAt, 76, KeyBoxTall, delegate { ConnectText(); });
+            freeWarning = Caption("Free keys can be rate limited and slow.", 28, FreeWarnAt, Type(8.5f), Neon.Amber);
+            paidNote = Caption("That's a paid key: it goes under MAX INTELLIGENCE.", 28, PaidNoteAt, Font, Neon.Amber);
             paidNote.MaximumSize = new Size(328, 0);
-            movePaid = Make("Move to MAX", 28, 350, 128, 24, delegate { MovePaidText(); });
+            movePaid = Make("Move to MAX", 28, MovePaidAt, 128, MovePaidTall, delegate { MovePaidText(); });
             movePaid.AccessibleName = "Move key to MAX INTELLIGENCE";
             freeWarning.Visible = paidNote.Visible = movePaid.Visible = false;
             textEntry.Box.TextChanged += delegate { RelabelText(); };
@@ -659,6 +681,12 @@ namespace CapriDesktop
             build.TextAlign = ContentAlignment.MiddleRight;
             // The Store copy's "Store 0.8.9" is wider, so it takes the gap up to Remote.
             build.Bounds = Packaged.Is ? new Rectangle(190, 183 + v, 76, 18) : new Rectangle(196, 183 + v, 66, 18);
+            // And it outgrew that gap. "Store 0.9.399" is 85 px of her mono against the 76 it has, so the
+            // caption has been clipped on every Store copy since the build number reached three digits, and
+            // it is right aligned, so what goes is the word Store. There is nowhere to widen into: Remote
+            // ends two pixels to its left and Support starts two to its right. So it shrinks to fit, which
+            // also holds when the number grows again.
+            build.Font = Narrowed(version, build.Width - 2, build.Font);
             showHide = Lower(Make("Hide Capri", 28, 206 + v, 104, 28, delegate { capri.ToggleHidden(); }));
             Lower(Make("Bring here", 140, 206 + v, 104, 28, delegate { capri.BringHere(); }));
             perch = Lower(Make("Ride cursor", 252, 206 + v, 104, 28, delegate { capri.TogglePerch(); }));
@@ -668,8 +696,11 @@ namespace CapriDesktop
             Key quit = Lower(Make("Quit Capri", 256, 250 + v, 100, 28, delegate { capri.Quit(); }));
             quit.Accent = Hot;
             // The full width of the row above it, from Check for updates to Quit Capri.
-            Key abliterated = Lower(Make("Abliterated updates", 28, 282 + v, 328, 28, delegate { capri.OpenAbliterated(); }));
-            abliterated.AccessibleName = "Abliterated updates: opens the folder the uncensored builds are kept in";
+            // Only with the switch on, and gone rather than greyed out when it is off: its own label says what
+            // it opens, and a censored install should not be told what it is missing. The rows under it move up
+            // by its height, so the space it leaves reads as nothing at all.
+            abliterated = Lower(Make("Abliterated updates", 28, AbliteratedAt + v, 328, 28, delegate { capri.OpenAbliterated(); }));
+            abliterated.AccessibleName = "Abliterated updates: opens the folder her own builds are kept in";
             // Says plainly whether adult mode is on. The switch itself is in sys.md and deliberately not here, so
             // without this there is nothing anywhere telling them which way it is set.
             updateNote = Lower(Caption("", 28, 320 + v, small, Faint));
@@ -1552,9 +1583,9 @@ namespace CapriDesktop
                         Size child = item.DropDown.GetPreferredSize(Size.Empty);
                         size = new Size(Math.Max(size.Width, child.Width), Math.Max(size.Height, child.Height));
                     }
-                if (size.Width <= area.Width - 4 && size.Height <= area.Height - 4 || languageMenu.Font.SizeInPoints <= 1f) return;
+                if (size.Width <= area.Width - 4 && size.Height <= area.Height - 4 || Points(languageMenu.Font) <= 1f) return;
                 float ratio = Math.Min((area.Width - 4f) / size.Width, (area.Height - 4f) / size.Height);
-                Font font = new Font(Font.FontFamily, Math.Max(1f, languageMenu.Font.SizeInPoints * ratio * 0.9f), Font.Style, GraphicsUnit.Point);
+                Font font = new Font(Font.FontFamily, Math.Max(1f, Points(languageMenu.Font) * ratio * 0.9f), Font.Style, GraphicsUnit.Point);
                 languageMenu.Font = font;
                 foreach (ToolStripMenuItem item in LanguageItems(languageMenu.Items)) if (item.HasDropDownItems) item.DropDown.Font = font;
                 if (languageFont != null) languageFont.Dispose();
@@ -2321,11 +2352,61 @@ namespace CapriDesktop
         // the desktop, with no way to reach it, and the move-up afterwards cannot help when the window is taller
         // than the working area. A picked size is held to the same limit, since a panel cut in half is worse than
         // one smaller than asked for.
+        // The largest size of her mono that fits the room, down to something still readable. Whatever is
+        // handed in is kept when it already fits, so nothing changes for a caption that was never tight.
+        // A font's size in points, worked out rather than asked for. SizeInPoints goes to a screen device for
+        // any font not already in Points and throws "Parameter is not valid" when it cannot have one, which is
+        // the fault that took her whole layout down once. Her layout is built on 96 to the inch everywhere
+        // else, so working it out here is both consistent and exact against Pixels.
+        internal static float Points(Font one)
+        {
+            if (one == null) return 0;
+            switch (one.Unit)
+            {
+                case GraphicsUnit.Point: return one.Size;
+                case GraphicsUnit.Pixel: return one.Size * 72f / 96f;
+                case GraphicsUnit.Inch: return one.Size * 72f;
+                case GraphicsUnit.Millimeter: return one.Size * 72f / 25.4f;
+                case GraphicsUnit.Document: return one.Size * 72f / 300f;
+                default: return one.Size;
+            }
+        }
+
+        internal static Font Narrowed(string text, int room, Font had)
+        {
+            if (string.IsNullOrEmpty(text) || room <= 0 || had == null) return had;
+            if (TextRenderer.MeasureText(text, had).Width <= room) return had;
+            for (float size = Points(had) - 0.5f; size >= 6f; size -= 0.5f)
+            {
+                Font made = Look.Mono(size, FontStyle.Regular, GraphicsUnit.Point);
+                if (TextRenderer.MeasureText(text, made).Width <= room) return made;
+                made.Dispose();
+            }
+            return Look.Mono(6f, FontStyle.Regular, GraphicsUnit.Point);
+        }
+
+        // The screen height Fitted works against, for a check: there is no way to ask Windows for a shorter
+        // monitor, and a Mainframe that does not fit a small screen is only findable on one. Nought is the
+        // real screen, which is every case but a check.
+        internal static int RoomForChecks;
+
+        // What a given screen height allows, so a check can ask without a monitor that size. Public shape of
+        // the same arithmetic Fitted does.
+        internal float FitsIn(int room, float want)
+        {
+            int was = RoomForChecks;
+            try { RoomForChecks = room; return Fitted(want); }
+            finally { RoomForChecks = was; }
+        }
+
+        // What her Mainframe needs at 100%, which is what the fit is measured against.
+        internal int NeedsTall { get { return Tall + (expanded ? SetupHeight : 0) + KeyRow + (voiceFilled >= 0 ? InstallRow : 0); } }
+
         private float Fitted(float want)
         {
             try
             {
-                int room = Screen.FromControl(this).WorkingArea.Height;
+                int room = RoomForChecks > 0 ? RoomForChecks : Screen.FromControl(this).WorkingArea.Height;
                 float per = DeviceScale() * TextScale();
                 if (room <= 0 || per <= 0) return want;
                 // The same height Arrange sizes the frame from, not the worst case: capping against the worst
@@ -2420,16 +2501,15 @@ namespace CapriDesktop
             // One layout's worth is held, so nothing is leaked: the next layout frees the last one's.
             private static readonly List<Font> retired = new List<Font>();
 
-            private static void Retire(Font font) { if (font != null) retired.Add(font); }
+            // Nothing is retired any more: her fonts come from one cache that frees none, so a replaced
+            // font is still the same object something else may be holding. Kept as a call so every place
+            // that used to hand one over still reads the same.
+            private static void Retire(Font font) { }
 
             // The same holding pen, for a font swapped somewhere other than a layout item.
             internal static void Keep(Font font) { Retire(font); }
 
-            internal static void FreeRetired()
-            {
-                foreach (Font font in retired) { try { font.Dispose(); } catch (Exception) { } }
-                retired.Clear();
-            }
+            internal static void FreeRetired() { retired.Clear(); }
 
             private readonly Control control;
             private readonly Rectangle bounds;
@@ -2437,6 +2517,19 @@ namespace CapriDesktop
             private readonly Font font;
             private readonly Font hint;
             private readonly Font flag;
+            // The size each of those was designed at, taken once and kept as a number.
+            //
+            // Asking a font for its size in points looks free and is not: Font.SizeInPoints hands back the
+            // size directly only for a font measured in points, and for any other unit it converts, which
+            // means building a Graphics against the screen to find the resolution. A layout that asks it
+            // once per control per rescale is opening a screen device that many times, in the middle of a
+            // measurement, and that is where a run of these fell over.
+            //
+            // It cannot be avoided by only ever handing in point fonts either: a layout item captures the
+            // control's font as it finds it, and after one rescale that is the pixel font the last one
+            // made. So the size is converted here, with the same 96 the scaling uses on the way back up,
+            // which makes the round trip exact and needs no device at all.
+            private readonly float fontPoints, hintPoints, flagPoints;
             private Font scaledFont, scaledHint, scaledFlag;
 
             internal LayoutItem(Control control)
@@ -2449,6 +2542,9 @@ namespace CapriDesktop
                 Toggle toggle = control as Toggle;
                 hint = rung != null ? rung.HintFont : toggle != null ? toggle.HintFont : null;
                 flag = rung != null ? rung.FlagFont : null;
+                fontPoints = Points(font);
+                hintPoints = Points(hint);
+                flagPoints = Points(flag);
             }
 
             internal void Apply(float scale, bool fallback)
@@ -2466,9 +2562,9 @@ namespace CapriDesktop
             internal void Refont(float scale, bool fallback)
             {
                 Font oldFont = scaledFont, oldHint = scaledHint, oldFlag = scaledFlag;
-                scaledFont = Pixels(font, scale, fallback);
-                scaledHint = Pixels(hint, scale, fallback);
-                scaledFlag = Pixels(flag, scale, fallback);
+                scaledFont = Pixels(font, fontPoints, scale, fallback);
+                scaledHint = Pixels(hint, hintPoints, scale, fallback);
+                scaledFlag = Pixels(flag, flagPoints, scale, fallback);
                 control.Font = scaledFont;
                 Rung rung = control as Rung;
                 Toggle toggle = control as Toggle;
@@ -2481,26 +2577,27 @@ namespace CapriDesktop
 
             private static int At(int value, float scale) { return (int)Math.Round(value * scale); }
 
-            private static Font Pixels(Font original, float scale, bool fallback)
+            private static Font Pixels(Font original, float points, float scale, bool fallback)
             {
                 if (original == null) return null;
-                float points = original.SizeInPoints;
                 FontStyle style = original.Style;
                 if (fallback)
                 {
                     bool face = original.Name.StartsWith("Bahnschrift", StringComparison.OrdinalIgnoreCase);
                     if (face) { points -= points >= 15 ? 3f : 0.5f; style = FontStyle.Regular; }
-                    return Look.FallbackMono(points * 96f / 72f * scale, style, GraphicsUnit.Pixel);
+                    return Fonts.Mono(points * 96f / 72f * scale, style, GraphicsUnit.Pixel);
                 }
-                return new Font(original.FontFamily, points * 96f / 72f * scale, style, GraphicsUnit.Pixel);
+                // From the cache, and never freed. A font handed to a control is held by the control, by its
+                // menus, by whatever is measuring it and by any paint already on its way, and there is no
+                // moment when all of them have finished with it. Fonts drawn with inside a using are a
+                // different thing and are still made and freed on the spot.
+                return Fonts.Of(original.FontFamily, points * 96f / 72f * scale, style, GraphicsUnit.Pixel);
             }
 
-            public void Dispose()
-            {
-                if (scaledFont != null) scaledFont.Dispose();
-                if (scaledHint != null) scaledHint.Dispose();
-                if (scaledFlag != null) scaledFlag.Dispose();
-            }
+            // Nothing is freed. These came from the cache and are shared with every other control drawn at
+            // the same size, so freeing one here would take it out from under all of them, and the fault
+            // would land in whatever painted next rather than here.
+            public void Dispose() { }
         }
 
         private float TextScale()
@@ -2649,7 +2746,7 @@ namespace CapriDesktop
             }
         }
 
-        private static Font Bigger(Font font, float factor) { return font == null ? null : new Font(font.FontFamily, font.SizeInPoints * factor, font.Style, GraphicsUnit.Point); }
+        private static Font Bigger(Font font, float factor) { return font == null ? null : new Font(font.FontFamily, Points(font) * factor, font.Style, GraphicsUnit.Point); }
 
         // How much bigger a screen's desktop is than the panel showing it, from Windows' display paths: 2 for a 3840 x 2160
         // desktop that AMD's Virtual Super Resolution or NVIDIA's DSR draws onto a 1920 x 1080 screen, 1 for an ordinary one.
@@ -2929,29 +3026,34 @@ namespace CapriDesktop
             // Each tier row reaches down to the next row's top. Their heights were rounded once where they were first laid out
             // and their tops are rounded here, and with OFF above them at some sizes (text 225%, size 175%) the two roundings
             // disagreed and a row poked a pixel into the one below. At 100% every row is 24 px, as before.
-            offRung.Top = Scaled(184 + top - off);
-            offRung.Height = Scaled(208 + top - off) - offRung.Top;
+            offRung.Top = Scaled(RungTop + top - off);
+            offRung.Height = Scaled(RungTop + RungTall + top - off) - offRung.Top;
             offRung.Visible = NoAiRowShown;
             for (int i = 0; i < rungs.Length; i++)
             {
-                rungs[i].Top = Scaled(184 + 24 * i + top);
-                rungs[i].Height = Scaled(208 + 24 * i + top) - rungs[i].Top;
+                rungs[i].Top = Scaled(RungTop + RungTall * i + top);
+                rungs[i].Height = Scaled(RungTop + RungTall * (i + 1) + top) - rungs[i].Top;
             }
-            freeKey.Top = Scaled(209 + top);
-            planKey.Top = Scaled(233 + top);
-            textEntry.Top = Scaled(262 + top);
+            freeKey.Top = Scaled(RungTop + RungTall + 1 + top);
+            planKey.Top = Scaled(RungTop + RungTall * 2 + 1 + top);
+            textEntry.Top = Scaled(KeyBoxAt + top);
             textConnect.Top = textEntry.Top;
             textEntry.Visible = textConnect.Visible = tier > 0 && !noAi;
-            freeWarning.Top = Scaled(294 + top);
+            freeWarning.Top = Scaled(FreeWarnAt + top);
             freeWarning.Visible = tier == 1 && !noAi;
-            paidNote.Top = Scaled(315 + top);
+            paidNote.Top = Scaled(PaidNoteAt + top);
             paidNote.MaximumSize = new Size(Scaled(328), 0);
-            movePaid.Top = Scaled(350 + top);
+            movePaid.Top = Scaled(MovePaidAt + top);
             paidNote.Visible = movePaid.Visible = tier == 1 && paidTextKey != null && !noAi;
             int below = voiceFilled >= 0 ? InstallRow : 0;
             int fold = arrangedFold = Fold;
             hearingFold = hearingActions.Length == 0 ? HearingFixRow : 0;
-            foreach (KeyValuePair<Control, int> entry in lower) entry.Key.Top = Scaled(entry.Value + shift + (entry.Value >= InstallAt ? below : 0) - (entry.Value > KeyAt ? fold : 0) - (entry.Value > HearingFixAt ? hearingFold : 0));
+            bool ownBuilds = false;
+            try { ownBuilds = Brain.Uncensored; } catch (Exception) { }
+            if (abliterated != null) abliterated.Visible = ownBuilds;
+            abliteratedFold = ownBuilds ? 0 : AbliteratedRow;
+            int locked = abliteratedFold;
+            foreach (KeyValuePair<Control, int> entry in lower) entry.Key.Top = Scaled(entry.Value + shift + (entry.Value >= InstallAt ? below : 0) - (entry.Value > KeyAt ? fold : 0) - (entry.Value > HearingFixAt ? hearingFold : 0) - (entry.Value > AbliteratedAt ? locked : 0));
             installNote.Top = Scaled(InstallAt + 2 + shift - fold - hearingFold);
             installNote.Visible = below > 0;
             foreach (Label step in steps) step.Visible = setupShown;
@@ -2972,7 +3074,7 @@ namespace CapriDesktop
             }
             if (keysNote != null) keysNote.MaximumSize = new Size(Scaled(328), 0);
             if (paged) pageView = Fit();
-            ClientSize = new Size(Scaled(paged ? Wide + Column : Wide), Scaled(paged ? pageView : Tall + shift + below - fold - hearingFold));
+            ClientSize = new Size(Scaled(paged ? Wide + Column : Wide), Scaled(paged ? pageView : Tall + shift + below - fold - hearingFold - abliteratedFold));
             ScrollPage(ShownScroll);
             bool scrolls = paged && pageView < PageNow;
             topRim.Visible = bottomRim.Visible = scrolls;
@@ -3447,7 +3549,7 @@ namespace CapriDesktop
             }
             for (int first = 0; first < text.Count; first++)
                 for (int second = first + 1; second < text.Count; second++)
-                    if (text[first].Value.IntersectsWith(text[second].Value)) return text[first].Key + " overlaps " + text[second].Key;
+                    if (text[first].Value.IntersectsWith(text[second].Value)) return text[first].Key + " " + text[first].Value + " overlaps " + text[second].Key + " " + text[second].Value + " by " + Rectangle.Intersect(text[first].Value, text[second].Value);
             return null;
         }
 
@@ -3787,9 +3889,9 @@ namespace CapriDesktop
                 string crowded = provider.Crowded();
                 if (crowded != null) return "The provider sheet is crowded: " + crowded;
                 ContextMenuStrip[] menus = server.Menus;
-                float size = server.Font.SizeInPoints;
+                float size = Points(server.Font);
                 foreach (ContextMenuStrip menu in menus)
-                    if (Math.Abs(menu.Font.SizeInPoints - size) > 0.1f || ReferenceEquals(menu.Font, server.Font)) return "A voice panel menu doesn't hold its own copy of the panel's font.";
+                    if (Math.Abs(Points(menu.Font) - size) > 0.1f || ReferenceEquals(menu.Font, server.Font)) return "A voice panel menu doesn't hold its own copy of the panel's font.";
                 if (ReferenceEquals(menus[0].Font, menus[1].Font)) return "The voice panel's menus share one font.";
                 int dpi = Native.GetDpiForWindow(server.Handle);
                 if (dpi <= 0) return "The voice panel has no screen DPI.";
@@ -3801,9 +3903,9 @@ namespace CapriDesktop
                     Native.SendMessage(server.Handle, 0x02E0, new IntPtr(denser | (denser << 16)), suggested);
                 }
                 finally { Marshal.FreeHGlobal(suggested); }
-                if (Math.Abs(server.Font.SizeInPoints - size * 1.5f) > 0.1f) return "The voice panel's text didn't follow a denser screen.";
+                if (Math.Abs(Points(server.Font) - size * 1.5f) > 0.1f) return "The voice panel's text didn't follow a denser screen.";
                 foreach (ContextMenuStrip menu in menus)
-                    if (Math.Abs(menu.Font.SizeInPoints - size * 1.5f) > 0.1f) return "A voice panel menu didn't follow a denser screen.";
+                    if (Math.Abs(Points(menu.Font) - size * 1.5f) > 0.1f) return "A voice panel menu didn't follow a denser screen.";
                 return null;
             }
         }
@@ -3899,7 +4001,20 @@ namespace CapriDesktop
             Arrange(false);
         }
 
-        private int KeyRow { get { return (NoAiRowShown ? 24 : 0) + (tier > 0 && !noAi ? 128 + (tier != 1 ? 0 : paidTextKey != null ? 86 : 20) : 94); } }
+        // The room BRAIN needs under its heading, which is what everything below it is pushed down by. Measured off
+        // the bottom of whatever is actually showing plus the gap above the next section, so a number moved in the
+        // key row's block moves this with it. No brain picked means no key row, and the rungs are the end of it.
+        private int KeyRow
+        {
+            get
+            {
+                int ends = !(tier > 0 && !noAi) ? RungsEnd
+                    : tier != 1 ? KeyBoxAt + KeyBoxTall
+                    : paidTextKey != null ? MovePaidAt + MovePaidTall
+                    : FreeWarnAt + FreeWarnTall;
+                return (NoAiRowShown ? RungTall : 0) + ends + SectionGap - RungTop;
+            }
+        }
 
         // paidPlan: MAX INTELLIGENCE runs on their plan, and paidTail names it.
         internal void ShowTiers(int pick, string nvidiaTail, string paidTail, string mediumKind = null, bool paidPlan = false, string spare = null)
@@ -3972,12 +4087,14 @@ namespace CapriDesktop
                     return "Provider overlaps the brain name or note: name " + brainName.Bounds + ", Provider " + provider.Bounds
                         + ", note top " + brainNote.Top + ", room " + Scaled(356) + (paged ? ", settings showing" : "") + (modded ? ", mods showing" : "");
                 Rectangle last = rungs[rungs.Length - 1].Bounds;
-                if (textEntry.Visible && textEntry.Top < last.Bottom) return "the key box (top " + textEntry.Top + ") overlaps the last rung (bottom " + last.Bottom + ")";
+                // Not overlap but breathing room, since the fault reported here was a key box six pixels under the
+                // rungs and a warning four under the box: crammed reads as broken even though nothing touches.
+                if (textEntry.Visible && textEntry.Top < last.Bottom + Scaled(10)) return "the key box (top " + textEntry.Top + ") is crammed against the last rung (bottom " + last.Bottom + "), wanted " + Scaled(10) + " clear";
                 if (textEntry.Visible && !Hidden(textConnect) && textConnect.Right > ClientSize.Width) return "Connect (right " + textConnect.Right + ") runs past the Mainframe (" + ClientSize.Width + ")";
                 int end = textEntry.Visible ? textEntry.Bottom : last.Bottom;
                 if (freeWarning.Visible)
                 {
-                    if (freeWarning.Top < end || freeWarning.Right > Scaled(356)) return "the free-key warning (" + freeWarning.Bounds + ") overlaps the key box (bottom " + end + ") or runs past " + Scaled(356);
+                    if (freeWarning.Top < end + Scaled(6) || freeWarning.Right > Scaled(356)) return "the free-key warning (" + freeWarning.Bounds + ") is crammed against or past the key box (bottom " + end + "), or runs past " + Scaled(356);
                     end = freeWarning.Bottom;
                 }
                 if (paidNote.Visible)
@@ -4428,8 +4545,8 @@ namespace CapriDesktop
             // Text is measured at this screen's own scale, so each font is sized for the scale being checked.
             float here = Unit();
             foreach (float zoom in new[] { 1f, 1.25f, 1.5f, 1.75f, 2f })
-                using (Font note = new Font(styleNote.Font.FontFamily, styleNote.Font.SizeInPoints * zoom / here, styleNote.Font.Style, GraphicsUnit.Point))
-                using (Font key = new Font(layersKey.Font.FontFamily, layersKey.Font.SizeInPoints * zoom / here, layersKey.Font.Style, GraphicsUnit.Point))
+                using (Font note = new Font(styleNote.Font.FontFamily, Points(styleNote.Font) * zoom / here, styleNote.Font.Style, GraphicsUnit.Point))
+                using (Font key = new Font(layersKey.Font.FontFamily, Points(layersKey.Font) * zoom / here, layersKey.Font.Style, GraphicsUnit.Point))
                 {
                     int wide = styleNote.Visible ? TextRenderer.MeasureText(styleNote.Text, note).Width : 0, room = (int)(styleNote.Width / here * zoom);
                     if (wide > room) return "\"" + styleNote.Text + "\" is " + wide + " px in " + room + " at " + zoom;
@@ -5063,7 +5180,7 @@ namespace CapriDesktop
         {
             personalityMenu.Items.Clear();
             // The same block her right-click menu uses, built once in Companion so the two cannot drift again.
-            capri.FillPersonality(personalityMenu.Items);
+            capri.FillPersonality(personalityMenu.Items, false);
             personalityMenu.Items.Add(new ToolStripSeparator());
             personalityMenu.Items.Add(Choice("Edit personality.md", false, delegate { capri.OpenPersonality(); }));
             ToolStripMenuItem reset = Choice("Reset to her default", false, delegate { capri.ResetPersonality(); });
@@ -5091,8 +5208,8 @@ namespace CapriDesktop
             return false;
         }
 
-        // Back from editing personality.md in Notepad, her personality key catches up, and she looks at your devices again in the
-        // background.
+        // Back from editing personality.md in her editor, her personality key catches up, and she looks at your
+        // devices again in the background. It was Notepad when this was written.
         protected override void OnActivated(EventArgs e)
         {
             base.OnActivated(e);
@@ -5291,7 +5408,9 @@ namespace CapriDesktop
                 TabStop = true;
             }
 
-            private int Tab { get { return Math.Max(12, (int)Math.Round(16 * ScaleOf(this))); } }
+            // The width of the part that ticks. Reported as too small to hit at 16, so it is half as wide
+            // again and the tick inside it grew with it.
+            private int Tab { get { return Math.Max(18, (int)Math.Round(24 * ScaleOf(this))); } }
 
             protected override void OnMouseEnter(EventArgs e) { hot = true; Invalidate(); base.OnMouseEnter(e); }
             protected override void OnMouseLeave(EventArgs e) { hot = false; Invalidate(); base.OnMouseLeave(e); }
@@ -5343,11 +5462,11 @@ namespace CapriDesktop
                 using (Brush brush = new SolidBrush(Ticked ? OnInk : onTab && hot ? Hot : Edge)) graphics.FillRectangle(brush, strip);
                 if (Ticked)
                 {
-                    using (Pen pen = new Pen(Cyan, 1.8f * s))
+                    using (Pen pen = new Pen(Cyan, 2.4f * s))
                     {
                         float x = tab / 2f + line, y = Height / 2f;
-                        graphics.DrawLine(pen, x - 3.2f * s, y, x - 0.6f * s, y + 2.8f * s);
-                        graphics.DrawLine(pen, x - 0.6f * s, y + 2.8f * s, x + 3.4f * s, y - 2.6f * s);
+                        graphics.DrawLine(pen, x - 4.6f * s, y, x - 0.9f * s, y + 4f * s);
+                        graphics.DrawLine(pen, x - 0.9f * s, y + 4f * s, x + 4.8f * s, y - 3.7f * s);
                     }
                 }
                 Rectangle area = new Rectangle(tab + (int)(8 * s), 0, Width - tab - (int)(12 * s), Height);
@@ -5654,6 +5773,7 @@ namespace CapriDesktop
             private readonly Label status;
             private readonly Button close, reload;
             private bool discard;
+            private SlimBar draftBar;
 
             internal NoteWindow(WrittenNote page, string title)
             {
@@ -5669,7 +5789,12 @@ namespace CapriDesktop
                 ClientSize = new Size(580, 460);
                 MinimumSize = new Size(380, 300);
                 Label path = new Label { Text = note.Path, Bounds = new Rectangle(16, 14, 548, 24), AutoEllipsis = true, ForeColor = Faint, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, AccessibleName = "Note file" };
-                draft = new TextBox { Text = note.Text, Multiline = true, AcceptsReturn = true, AcceptsTab = true, WordWrap = true, ScrollBars = ScrollBars.Vertical, MaxLength = int.MaxValue, Bounds = new Rectangle(16, 44, 548, 324), BorderStyle = BorderStyle.FixedSingle, BackColor = Field, ForeColor = White, Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right, AccessibleName = title };
+                draft = new TextBox { Text = note.Text, Multiline = true, AcceptsReturn = true, AcceptsTab = true, WordWrap = true, ScrollBars = ScrollBars.None, MaxLength = int.MaxValue, Bounds = new Rectangle(16, 44, 540, 324), BorderStyle = BorderStyle.FixedSingle, BackColor = Field, ForeColor = White, Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right, AccessibleName = title };
+                // Her own bar rather than Windows' grey one. The box still scrolls itself by typing, by the
+                // wheel and by the arrow keys; this follows it and drives it.
+                draftBar = new SlimBar { Bounds = new Rectangle(560, 44, SlimBar.Thin, 324), BackColor = Ground, Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right };
+                draftBar.Watch(draft);
+                Controls.Add(draftBar);
                 status = new Label { Bounds = new Rectangle(16, 376, 548, 34), ForeColor = Cyan, Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right };
                 Button save = DialogButton("Save", 16, 414, 100, Cyan);
                 reload = DialogButton("Reload", 124, 414, 164, Edge);
@@ -5804,12 +5929,44 @@ namespace CapriDesktop
             protected override void Initialize(ToolStrip strip)
             {
                 base.Initialize(strip);
+                // Her colours go on the strip here rather than at the place that made it. WinForms hands a submenu
+                // the manager's renderer instead of its parent's, so a drop-down under an item came up in Windows'
+                // own colours and its words were drawn in black on her dark panel. Every menu this renderer touches
+                // is dressed, its submenus are handed this renderer so they come back through here, and an item
+                // added later is caught on the way in.
+                strip.ForeColor = Ink;
+                strip.BackColor = Panel;
+                Dress(strip);
+                strip.ItemAdded += delegate(object sender, ToolStripItemEventArgs added) { Dress(added.Item); };
                 ToolStripDropDown drop = strip as ToolStripDropDown;
                 if (drop == null) return;
                 drop.DropShadowEnabled = false;
                 drop.SizeChanged += delegate { Shape(drop); };
                 Shape(drop);
                 Scrolling(drop as ToolStripDropDownMenu);
+            }
+
+            // Her words, when what was asked for would vanish into the panel behind them. Faint on her menu is
+            // a long way clear of this, so a disabled item still reads as disabled.
+            private static Color Legible(Color ink, Color on)
+            {
+                return Math.Abs(Grey(ink) - Grey(on)) >= 36 ? ink : Ink;
+            }
+
+            private static int Grey(Color one) { return (one.R * 299 + one.G * 587 + one.B * 114) / 1000; }
+
+            private void Dress(ToolStrip strip)
+            {
+                foreach (ToolStripItem item in strip.Items) Dress(item);
+            }
+
+            private void Dress(ToolStripItem item)
+            {
+                if (item == null) return;
+                item.ForeColor = Ink;
+                ToolStripMenuItem one = item as ToolStripMenuItem;
+                if (one == null || !one.HasDropDownItems || one.DropDown.Renderer == this) return;
+                one.DropDown.Renderer = this;
             }
 
             // Cuts a menu to its clipped corners: big at the top left and bottom right, small at the others.
@@ -6060,7 +6217,10 @@ namespace CapriDesktop
             {
                 ToolStripItem item = e.Item;
                 Color colour = item.Tag == Title ? Rose : !item.Enabled ? Faint : (item.Selected || item.Pressed) && e.ToolStrip is ToolStripDropDown ? Cyan : e.TextColor;
-                TextRenderer.DrawText(e.Graphics, e.Text, e.TextFont, e.TextRectangle, colour, e.TextFormat);
+                // Whatever the item was handed, it is drawn in something that can be read on her panel. An item
+                // that nobody dressed arrives holding Windows' own black, which on a dark wine menu is a row of
+                // words nobody can see, and that has happened once too often to leave to the place that made it.
+                TextRenderer.DrawText(e.Graphics, e.Text, e.TextFont, e.TextRectangle, Legible(colour, Panel), e.TextFormat);
             }
 
             protected override void OnRenderItemCheck(ToolStripItemImageRenderEventArgs e)
@@ -6461,6 +6621,7 @@ namespace CapriDesktop
         {
             private readonly Mainframe owner;
             private readonly Entry extra;
+            private SlimBar extraBar;
             private readonly Label note;
             internal readonly float Zoom;
             internal string Source;
@@ -6491,7 +6652,10 @@ namespace CapriDesktop
                 extra = new Entry { Bounds = new Rectangle(28, 112, 328, 160) };
                 extra.Box.Multiline = true;
                 extra.Box.AcceptsReturn = true;
-                extra.Box.ScrollBars = ScrollBars.Vertical;
+                extra.Box.ScrollBars = ScrollBars.None;
+                extraBar = new SlimBar { Bounds = new Rectangle(360, 112, SlimBar.Thin, 160), BackColor = Ground };
+                extraBar.Watch(extra.Box);
+                Controls.Add(extraBar);
                 extra.Box.AccessibleName = extra.AccessibleName = "Extra request JSON";
                 Controls.Add(extra);
                 Key save = Make("Save", 28, 282, 160, delegate { Save(); });
@@ -7488,7 +7652,10 @@ namespace CapriDesktop
             // Who the settings on the right are being set for. Nothing ticked means her baseline.
             private readonly List<WhoRow> whoRows = new List<WhoRow>();
             private readonly List<string> whoNames = new List<string>();
-            private readonly Panel whoBox = new Panel();
+            // Her own bar rather than Windows' grey one, in her palette, so this list follows the Mainframe
+            // colours setting like everything around it.
+            private readonly ScrollPanel whoBox = new ScrollPanel();
+            private readonly SlimBar whoBar = new SlimBar();
             private Slider volume, pitch, speed, robot, glitch;
             private Readout volumeName, pitchName, speedName, robotName, glitchName;
             private Label applyTo;
@@ -7680,15 +7847,22 @@ namespace CapriDesktop
                 whoBox.AutoScroll = true;
                 whoBox.Bounds = Box(24, 108, Picks, Tall - 148);
                 Controls.Add(whoBox);
+                // Beside the list rather than inside it, so nothing in the list has to make room for it.
+                whoBar.Bounds = new Rectangle(whoBox.Right + Z(3), whoBox.Top, Z(SlimBar.Thin), whoBox.Height);
+                whoBar.BackColor = Ground;
+                whoBar.Watch(whoBox);
+                whoBox.Scrolled += delegate { whoBar.Invalidate(); };
+                Controls.Add(whoBar);
+                whoBar.BringToFront();
                 int y = 0;
                 AddWho("Her baseline", null, ref y, true, false);
-                Divider("PERSONALITIES", ref y);
+                Divider("PERSONALITIES", ref y, false);
                 foreach (string named in Personalities.Names)
                 {
                     if (named == Personalities.Stock || named == Personalities.Dynamic) continue;
                     AddWho(named, named, ref y, false, false);
                 }
-                Divider("MOODS", ref y);
+                Divider("MOODS", ref y, true);
                 foreach (string named in Dynamics.Allowed) AddWho(named, named, ref y, false, true);
             }
 
@@ -7710,8 +7884,10 @@ namespace CapriDesktop
                 y += 24;
             }
 
-            // A label between the two kinds, so the list does not read as one long run of names.
-            private void Divider(string text, ref int y)
+            // A label between the two kinds, so the list does not read as one long run of names, with an All on
+            // the end of it. Giving one voice to every personality at once was ten ticks and giving it to every
+            // mood was eighteen, which is what the ticking was for in the first place.
+            private void Divider(string text, ref int y, bool mood)
             {
                 y += 6;
                 Label head = new Note();
@@ -7720,9 +7896,33 @@ namespace CapriDesktop
                 head.ForeColor = Faint;
                 head.BackColor = Ground;
                 head.AutoSize = false;
-                head.Bounds = new Rectangle(Z(2), Z(y), Z(Picks - 22), Z(14));
+                head.Bounds = new Rectangle(Z(2), Z(y), Z(Picks - 70), Z(14));
                 whoBox.Controls.Add(head);
+                Key all = new Key();
+                all.Text = "All";
+                all.Font = Look.Mono(8f * Zoom, FontStyle.Regular, GraphicsUnit.Point);
+                all.Bounds = new Rectangle(Z(Picks - 68), Z(y - 3), Z(44), Z(18));
+                all.AccessibleName = "Tick every " + (mood ? "mood" : "personality") + ", or untick them all";
+                all.Click += delegate { Every(mood); };
+                whoBox.Controls.Add(all);
                 y += 16;
+            }
+
+            // Every personality, or every mood: on if any of them is off, and off when they are all on, so the
+            // same button both gives and takes away. Her baseline is left out of it, since it is the one thing
+            // that cannot be set alongside the others.
+            private void Every(bool mood)
+            {
+                bool turningOn = false;
+                foreach (WhoRow one in whoRows) if (one.Tag != null && one.Mood == mood && !one.Ticked) turningOn = true;
+                foreach (WhoRow one in whoRows)
+                {
+                    if (one.Tag == null) { if (turningOn) one.Ticked = false; continue; }
+                    if (one.Mood == mood) one.Ticked = turningOn;
+                }
+                foreach (WhoRow one in whoRows) one.Invalidate();
+                ShowApplyTo();
+                Sync();
             }
 
             // The right of a row: this one and nothing else.
@@ -7788,7 +7988,12 @@ namespace CapriDesktop
             }
 
             private static readonly string[] PitchShift = ShiftNames(-VoiceFx.MostPitch, VoiceFx.MostPitch, "");
-            private static readonly string[] Percent = ShiftNames(50, 150, "%");
+            // Each of these covers exactly what the setting underneath it accepts, no more. A slider that offers
+            // a number the setting clamps away is a slider that moves and springs back, which is how the robot
+            // and glitch ones read when they were writing nowhere: loudness goes down to silence, her speed
+            // stops where her voice stops.
+            private static readonly string[] Loudness = ShiftNames(0, 150, "%");
+            private static readonly string[] Pace = ShiftNames(VoiceFx.Slowest, VoiceFx.Fastest, "%");
             private static readonly string[] Amount = ShiftNames(0, 100, "%");
 
             private void BuildSettings()
@@ -7798,9 +8003,9 @@ namespace CapriDesktop
                 applyTo.AutoSize = false;
                 applyTo.Bounds = Box(Right, 134, Panel, 18);
                 int y = 160;
-                volume = Row("Volume", Percent, ref y, out volumeName, "How loud, against her baseline");
+                volume = Row("Volume", Loudness, ref y, out volumeName, "How loud, against her baseline");
                 pitch = Row("Pitch", PitchShift, ref y, out pitchName, "Semitones from her baseline");
-                speed = Row("Speed", Percent, ref y, out speedName, "How fast, against her baseline");
+                speed = Row("Speed", Pace, ref y, out speedName, "How fast, against her baseline");
                 robot = Row("Robot", Amount, ref y, out robotName, "How mechanical she sounds");
                 glitch = Row("Glitch", Amount, ref y, out glitchName, "How much her voice tears");
                 Caption("These shift her baseline rather than replacing it, so her own sliders still matter.",
@@ -7825,12 +8030,17 @@ namespace CapriDesktop
             {
                 if (syncing) return;
                 VoiceProfile made = new VoiceProfile(
-                    pitch.Value - VoiceFx.MostPitch, speed.Value + 50, volume.Value + 50, robot.Value, glitch.Value);
+                    pitch.Value - VoiceFx.MostPitch, speed.Value + VoiceFx.Slowest, volume.Value, robot.Value, glitch.Value);
                 if (OnBaseline)
                 {
                     owner.capri.SetVolume(made.Volume);
                     owner.capri.SetVoicePitch(made.Pitch);
                     owner.capri.SetVoiceSpeed(made.Speed);
+                    // Robot and glitch too. Without these two the baseline kept three of the five, and the sync
+                    // underneath put the other two back to nought the instant they were moved, so the sliders
+                    // read as dead: they went up and came straight back down.
+                    owner.capri.SetVoiceRobot(made.Robot);
+                    owner.capri.SetVoiceGlitch(made.Glitch);
                     owner.Sync();
                 }
                 else foreach (string who in Chosen()) VoiceProfiles.Save(who, made);
@@ -7858,9 +8068,9 @@ namespace CapriDesktop
 
             private void ShowValues()
             {
-                if (volumeName != null) volumeName.Text = Percent[volume.Value];
+                if (volumeName != null) volumeName.Text = Loudness[volume.Value];
                 if (pitchName != null) pitchName.Text = PitchShift[pitch.Value];
-                if (speedName != null) speedName.Text = Percent[speed.Value];
+                if (speedName != null) speedName.Text = Pace[speed.Value];
                 if (robotName != null) robotName.Text = Amount[robot.Value];
                 if (glitchName != null) glitchName.Text = Amount[glitch.Value];
             }
@@ -7871,15 +8081,16 @@ namespace CapriDesktop
             {
                 if (volume == null) return;
                 VoiceProfile has;
-                if (OnBaseline) has = new VoiceProfile(owner.capri.BaselinePitch, owner.capri.BaselineSpeed, owner.capri.BaselineVolume, 0, 0);
+                if (OnBaseline) has = new VoiceProfile(owner.capri.BaselinePitch, owner.capri.BaselineSpeed, owner.capri.BaselineVolume,
+                    owner.capri.BaselineRobot, owner.capri.BaselineGlitch);
                 else
                 {
                     List<string> who = Chosen();
                     has = who.Count == 0 ? VoiceProfile.Stock : VoiceProfiles.For(who[0]);
                 }
-                volume.Value = Math.Max(0, Math.Min(Percent.Length - 1, has.Volume - 50));
+                volume.Value = Math.Max(0, Math.Min(Loudness.Length - 1, has.Volume));
                 pitch.Value = Math.Max(0, Math.Min(PitchShift.Length - 1, has.Pitch + VoiceFx.MostPitch));
-                speed.Value = Math.Max(0, Math.Min(Percent.Length - 1, has.Speed - 50));
+                speed.Value = Math.Max(0, Math.Min(Pace.Length - 1, has.Speed - VoiceFx.Slowest));
                 robot.Value = Math.Max(0, Math.Min(Amount.Length - 1, has.Robot));
                 glitch.Value = Math.Max(0, Math.Min(Amount.Length - 1, has.Glitch));
                 ShowValues();
@@ -8662,7 +8873,7 @@ namespace CapriDesktop
             // The width its name has before the pair, in px.
             internal int NameRoom { get { return Width - (int)Math.Ceiling((Switch + 10) * ScaleOf(this)); } }
 
-            internal Font SmallFont() { return Font.Unit == GraphicsUnit.Pixel ? new Font(Font.FontFamily, Font.Size * 8.75f / 9.5f, Font.Style, GraphicsUnit.Pixel) : Type(Font.SizeInPoints - 0.75f, true); }
+            internal Font SmallFont() { return Font.Unit == GraphicsUnit.Pixel ? new Font(Font.FontFamily, Font.Size * 8.75f / 9.5f, Font.Style, GraphicsUnit.Pixel) : Type(Points(Font) - 0.75f, true); }
 
             private int Part(int x)
             {

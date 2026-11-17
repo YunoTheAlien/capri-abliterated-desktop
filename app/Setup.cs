@@ -44,21 +44,75 @@ namespace CapriSetup
             return string.Equals(name, "Updater", StringComparison.OrdinalIgnoreCase) || string.Equals(name, "Update", StringComparison.OrdinalIgnoreCase);
         }
 
+        // How many spares of one program are kept. Four programs at about 30 MB each grew by 120 MB an update and
+        // nothing ever took one away, so a PC updated often carried gigabytes of builds nobody asked to keep.
+        internal const int MostSpares = 3;
+
         // The programs an update overwrites are kept beside the new ones, so a build that turns out bad can be put back by
-        // hand without downloading anything. The first spare is .bak, then .bak2, .bak3 and on, so an older one is never lost.
+        // hand without downloading anything. The spare is numbered past the highest there, so the largest number is always
+        // the newest, and the oldest go once there are more than MostSpares.
         private static string Spare(string path)
         {
             try
             {
                 if (!File.Exists(path)) return null;
                 string spare = path + ".bak";
-                for (int next = 2; File.Exists(spare); next++) spare = path + ".bak" + next.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                if (File.Exists(spare))
+                {
+                    int highest = 1;
+                    foreach (string found in Spares(path))
+                    {
+                        int number;
+                        string tail = Path.GetFileName(found).Substring(Path.GetFileName(path).Length + 4);
+                        if (tail.Length == 0) number = 1;
+                        else if (!int.TryParse(tail, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out number)) continue;
+                        if (number > highest) highest = number;
+                    }
+                    spare = path + ".bak" + (highest + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                }
                 File.Copy(path, spare);
+                Prune(path);
                 return spare;
             }
             // A spare that cannot be written must not stop the update: they came here to get the new build.
             catch (IOException) { return null; }
             catch (UnauthorizedAccessException) { return null; }
+        }
+
+        internal static string SpareForTest(string path) { return Spare(path); }
+
+        internal static string[] SparesForTest(string path) { return Spares(path).ToArray(); }
+
+        // Every spare of one program: name.bak and name.bak2 upwards, and nothing else in the folder.
+        private static List<string> Spares(string path)
+        {
+            List<string> found = new List<string>();
+            string folder = Path.GetDirectoryName(path), name = Path.GetFileName(path);
+            if (string.IsNullOrEmpty(folder) || string.IsNullOrEmpty(name) || !Directory.Exists(folder)) return found;
+            foreach (string one in Directory.GetFiles(folder, name + ".bak*"))
+                if (System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(one),
+                    "^" + System.Text.RegularExpressions.Regex.Escape(name) + @"\.bak[0-9]*$",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase)) found.Add(one);
+            return found;
+        }
+
+        // The oldest spares removed until MostSpares are left. Ordered by when each was written rather than by the
+        // number in its name, so one put back or copied in by hand is not taken for the oldest.
+        private static void Prune(string path)
+        {
+            try
+            {
+                List<string> spares = Spares(path);
+                if (spares.Count <= MostSpares) return;
+                spares.Sort(delegate(string a, string b) { return File.GetLastWriteTimeUtc(b).CompareTo(File.GetLastWriteTimeUtc(a)); });
+                for (int at = MostSpares; at < spares.Count; at++)
+                {
+                    try { File.Delete(spares[at]); }
+                    catch (IOException) { }
+                    catch (UnauthorizedAccessException) { }
+                }
+            }
+            catch (Exception) { }
         }
 
         private static readonly string[] Programs = { "Capri.exe", "Uninstall.exe", "Capri-Setup.exe", "Updater.exe" };
@@ -177,7 +231,7 @@ namespace CapriSetup
                     using (Process.Start(new ProcessStartInfo(app) { UseShellExecute = true, WorkingDirectory = destination })) { }
                 if (quiet) return 0;
                 using (Notice done = new Notice("Capri is now " + version + ".\n\nYour settings, keys, notes, personalities and model packs were all left where they were."
-                    + (spared > 0 ? "\n\nThe old programs are beside the new ones as .bak files, in case you want to go back. They are about 30 MB each, so delete them once you're happy." : "")
+                    + (spared > 0 ? "\n\nThe old programs are beside the new ones as .bak files, in case you want to go back. The last " + MostSpares + " are kept and older ones go on their own, so they can be deleted but do not have to be." : "")
                     + (wasUp ? "\n\nShe's starting again now." : ""), "Capri updated", false)) done.ShowDialog();
                 return 0;
             }
@@ -262,6 +316,38 @@ namespace CapriSetup
                 using (SHA256 sha = SHA256.Create()) File.WriteAllText(Path.Combine(output, "payload.sha256"), BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-", "").ToLowerInvariant());
                 if (!Ours(Path.Combine(output, "Capri.exe"))) throw new InvalidDataException("The installer doesn't recognise its own Capri.exe.");
                 if (Ours(Path.Combine(Environment.SystemDirectory, "notepad.exe")) || Ours(Path.Combine(output, "missing.exe"))) throw new InvalidDataException("The installer takes other programs for Capri.");
+                // Starting fresh, on a folder built for it: her packs must still be there afterwards and every
+                // file of theirs must be in the dated folder, because this is the one path that moves their
+                // files and the cost of it being wrong is somebody's memories.
+                string fresh = Path.Combine(output, "fresh");
+                Directory.CreateDirectory(Path.Combine(fresh, "personalSettings"));
+                Directory.CreateDirectory(Path.Combine(fresh, "ears"));
+                Directory.CreateDirectory(Path.Combine(fresh, "voice"));
+                File.WriteAllText(Path.Combine(fresh, "settings.json"), "{}");
+                File.WriteAllText(Path.Combine(fresh, "settings.json.bak"), "{}");
+                File.WriteAllText(Path.Combine(fresh, "chat.json"), "[]");
+                File.WriteAllText(Path.Combine(fresh, "personalSettings", "me.md"), "# me");
+                File.WriteAllText(Path.Combine(fresh, "ears", "model.bin"), "pack");
+                File.WriteAllText(Path.Combine(fresh, "Capri.package"), "package");
+                File.WriteAllText(Path.Combine(fresh, "lore.md"), "# pack");
+                if (!Started(fresh)) throw new InvalidDataException("A folder with their files in it did not read as started.");
+                int keptBack;
+                string put = Aside(fresh, out keptBack);
+                if (put == null || keptBack != 0) throw new InvalidDataException("Starting fresh moved nothing, or could not move " + keptBack + " of them.");
+                foreach (string gone in new[] { "settings.json", "settings.json.bak", "chat.json", "personalSettings" })
+                    if (File.Exists(Path.Combine(fresh, gone)) || Directory.Exists(Path.Combine(fresh, gone)))
+                        throw new InvalidDataException("Starting fresh left " + gone + " where it was.");
+                foreach (string there in new[] { "settings.json", "settings.json.bak", "chat.json" })
+                    if (!File.Exists(Path.Combine(put, there))) throw new InvalidDataException("Starting fresh lost " + there + " instead of keeping a copy.");
+                if (!File.Exists(Path.Combine(put, "personalSettings", "me.md"))) throw new InvalidDataException("Starting fresh lost their me.md.");
+                foreach (string stays in new[] { "ears", "voice" })
+                    if (!Directory.Exists(Path.Combine(fresh, stays))) throw new InvalidDataException("Starting fresh carried off her " + stays + " pack.");
+                foreach (string stays in new[] { "Capri.package", "lore.md" })
+                    if (!File.Exists(Path.Combine(fresh, stays))) throw new InvalidDataException("Starting fresh carried off " + stays + ".");
+                if (Started(fresh)) throw new InvalidDataException("A folder that has just been cleared still reads as started.");
+                if (Aside(fresh, out keptBack) != null) throw new InvalidDataException("Starting fresh twice moved something the second time.");
+                if (!Started(Path.Combine(output, "nowhere")) == false) throw new InvalidDataException("A folder that is not there read as started.");
+
                 string home = Path.Combine(output, "Capri");
                 if (!Inside(Path.Combine(home, "Capri.exe"), home) || !Inside(Path.Combine(home, "brain", "llama-server.exe"), home + "\\") || Inside(Path.Combine(output, "Capri2", "Capri.exe"), home) || Inside(Path.Combine(Environment.SystemDirectory, "notepad.exe"), home) || Inside(home, home)) throw new InvalidDataException("The uninstaller would close the wrong programs.");
                 string link = Path.Combine(output, "Capri.lnk");
@@ -328,6 +414,87 @@ namespace CapriSetup
 
         // A shortcut Windows won't save, often because of an antivirus, doesn't stop the install. She's installed either way,
         // so its reason comes back for the installer to show. Null means every shortcut was saved.
+        // ---------- Starting fresh ----------
+        //
+        // An install over the top keeps everything of theirs on purpose, which is right nearly always and
+        // wrong when somebody wants her as she comes. So the setup can move their files aside first.
+        //
+        // Named rather than swept: an allow list cannot carry off her speech model, her voice pack, her mods
+        // or anything else that runs to gigabytes, where a deny list would the first time something new
+        // appeared beside them. The cost is that a personal file added later has to be added here too, which
+        // is the safe direction to be wrong in.
+        //
+        // Nothing is deleted. It all goes into a dated folder inside her own, so a clean install is undone by
+        // moving one folder back.
+        private static readonly string[] Theirs =
+        {
+            "settings.json", "settings.crashed.json", "apps.json", "apps-used.txt", "away.txt", "chat.json",
+            "errors.txt", "hours.txt", "lines-log.txt", "lines-said.txt", "lore.txt", "lore.pack",
+            "playlist.json", "reminders.json", "running.on", "websites.json", "security.json", "routines.json",
+            "me.md", "memories.md", "personality.md", "personality.backup.md", "twitch.md", "check-ins.md"
+        };
+
+        private static readonly string[] TheirFolders = { "personalSettings", "personalities", "attitudes", "transcripts", "workspace", "clips" };
+
+        // Whether there is anything of theirs here at all, which decides whether the choice is offered: on a
+        // first install there is nothing to start fresh from and the tick would be noise.
+        internal static bool Started() { return Started(InstallPath); }
+
+        internal static bool Started(string home)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(home) || !Directory.Exists(home)) return false;
+                foreach (string name in Theirs) if (File.Exists(Path.Combine(home, name))) return true;
+                foreach (string name in TheirFolders) if (Directory.Exists(Path.Combine(home, name))) return true;
+                return false;
+            }
+            catch (Exception) { return false; }
+        }
+
+        // Moves their files into a dated folder and says what it moved, or null when there was nothing. A name
+        // it cannot move is left where it is and counted, since half a clean install is better than a failed
+        // one and the window says how many.
+        internal static string Aside(out int kept) { return Aside(InstallPath, out kept); }
+
+        internal static string Aside(string home, out int kept)
+        {
+            kept = 0;
+            if (string.IsNullOrEmpty(home) || !Directory.Exists(home)) return null;
+            string into = Path.Combine(home, "before-" + DateTime.Now.ToString("yyyy-MM-dd-HHmm", System.Globalization.CultureInfo.InvariantCulture));
+            int moved = 0;
+            foreach (string name in Theirs)
+            {
+                string from = Path.Combine(home, name);
+                if (!File.Exists(from) && !File.Exists(from + ".bak")) continue;
+                foreach (string each in new[] { name, name + ".bak" })
+                {
+                    string one = Path.Combine(home, each);
+                    if (!File.Exists(one)) continue;
+                    try
+                    {
+                        Directory.CreateDirectory(into);
+                        File.Move(one, Path.Combine(into, each));
+                        moved++;
+                    }
+                    catch (Exception) { kept++; }
+                }
+            }
+            foreach (string name in TheirFolders)
+            {
+                string from = Path.Combine(home, name);
+                if (!Directory.Exists(from)) continue;
+                try
+                {
+                    Directory.CreateDirectory(into);
+                    Directory.Move(from, Path.Combine(into, name));
+                    moved++;
+                }
+                catch (Exception) { kept++; }
+            }
+            return moved > 0 ? into : null;
+        }
+
         internal static string Install(bool desktop, bool quiet = false)
         {
             string destination = InstallPath;
@@ -365,6 +532,21 @@ namespace CapriSetup
             }
             finally { if (File.Exists(temporary)) File.Delete(temporary); }
             File.Copy(Application.ExecutablePath, Path.Combine(destination, "Uninstall.exe"), true);
+            // What the build leaves beside this file rather than inside it, carried over with her. Her
+            // stories are 1.4 MB and sit next to the setup for that reason, and nothing was placing them,
+            // so a fresh install had no stories at all. Her notice sits there too. Neither replaces one
+            // that is already there, since the one there may be theirs.
+            string beside = Path.GetDirectoryName(Application.ExecutablePath);
+            foreach (string spare in new[] { "lore.md", "NOTICE.txt" })
+            {
+                try
+                {
+                    string from = Path.Combine(beside, spare), to = Path.Combine(destination, spare);
+                    if (File.Exists(from) && !File.Exists(to)) File.Copy(from, to, false);
+                }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+            }
             string unsaved = Shortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs, Environment.SpecialFolderOption.Create), "Capri.lnk"), target);
             string onDesktop = desktop ? Shortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory, Environment.SpecialFolderOption.Create), "Capri.lnk"), target) : null;
             using (RegistryKey key = Registry.CurrentUser.CreateSubKey(RegistryPath))
@@ -704,6 +886,7 @@ namespace CapriSetup
         private readonly Plate primary;
         private readonly Tick desktop;
         private readonly Tick launch;
+        private readonly Tick fresh;
         private readonly Label section;
         private readonly Label status;
         private readonly Label stage;
@@ -752,9 +935,17 @@ namespace CapriSetup
             launch.Checked = true;
             launch.Bounds = Box(34, 314, 340, 26);
             launch.Visible = !removing;
+            // Only when there is something of theirs to move: on a first install there is nothing to start
+            // fresh from. Off by default, because an install over the top keeping their files is the right
+            // thing nearly every time.
+            fresh = new Tick();
+            fresh.Text = "Start fresh, keeping a copy of my current files";
+            fresh.Bounds = Box(34, 344, 440, 26);
+            fresh.Visible = !removing && Program.Started();
             Controls.Add(desktop);
             Controls.Add(launch);
-            status = LabelAt(removing ? "Your saved position and size will be kept." : "", 34, 352, 604, 22, Neon.Type(9.5f), Neon.Faint);
+            Controls.Add(fresh);
+            status = LabelAt(removing ? "Your saved position and size will be kept." : "", 34, 374, 604, 22, Neon.Type(9.5f), Neon.Faint);
             stage = LabelAt("", 34, 282, 604, 28, Neon.Type(13f, true), Neon.White);
             stage.Visible = false;
             note = LabelAt("", 34, 314, 604, 22, Neon.Type(10f), Neon.Faint);
@@ -870,6 +1061,13 @@ namespace CapriSetup
             try
             {
                 if (removing) { Program.BeginUninstall(); Close(); return; }
+                if (fresh.Checked)
+                {
+                    status.Text = "Putting your files aside…";
+                    int keptBack;
+                    string into = Program.Aside(out keptBack);
+                    if (into != null) status.Text = "Your files are in " + Path.GetFileName(into) + (keptBack > 0 ? ", and " + keptBack + " could not be moved" : "");
+                }
                 status.Text = "Making a little room for Capri…";
                 noShortcut = Program.Install(desktop.Checked);
                 try { SetupFiles.Mark(Program.InstallPath, "manual"); }

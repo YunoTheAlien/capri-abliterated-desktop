@@ -474,6 +474,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to build her, test her and send a
 
 **Voices:** see [Her voice](#her-voice) for what Capri supplies and what you may use with her.
 
+**What is ours:** the code, none of it proprietary, with parts from other open source projects under their own licences ([THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)). The artwork, stills, sounds and voices are not ours. Strip what you do not own before passing any of it on.
+
 Free for anything non-commercial: use her, share her, change her. No selling her or putting her in paid products. Credit Capri, with a link to this page, when you use any part of her: her code, her art and animations, or anything else. Full terms in [LICENSE.md](LICENSE.md) (PolyForm Noncommercial 1.0.0). The credit is one of its Required Notices, so anyone who passes on any part of her has to pass it on too.
 
 Have fun and more updates to come!

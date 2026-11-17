@@ -169,8 +169,17 @@ namespace CapriDesktop
         }
 
         // Theirs, for this kind of thing, or null when nothing has been in front enough to say.
+        // What they have written in a file of theirs for a kind of app. Set at startup, so nothing in here
+        // reads her files or knows which file it is.
+        internal static Func<string, string> Written = delegate { return null; };
+
         internal static string Best(string kind)
         {
+            // Written down beats counted and beats picked: typing an app's name into a file of hers is the
+            // most deliberate thing anybody can do about it, and it was being ignored entirely.
+            string wrote = null;
+            try { wrote = Written(kind); } catch (Exception) { }
+            if (!string.IsNullOrEmpty(wrote)) return wrote;
             string told = Picked(kind);
             if (told != null) return told;
             string[] names;
@@ -214,7 +223,7 @@ namespace CapriDesktop
         {
             string plain = Plain(program);
             if (plain.Length == 0) return;
-            lock (gate) { marked = plain; markedAt = DateTime.Now; }
+            lock (gate) { marked = plain; markedAt = DateTime.UtcNow; }
         }
 
         private static string Plain(string program)

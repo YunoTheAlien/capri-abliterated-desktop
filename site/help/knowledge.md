@@ -619,7 +619,7 @@ A skill's game also counts when it runs in a browser tab, like Five Nights at Fr
 To make one: a .capri-skill file starts with a header between two --- lines (capri-skill: 1, then id, name, author, description and games, the game names separated by commas), then the know-how in plain words. Publish it like any other mod.
 
 ### Workspace (beta) (0.9.0, Windows)
-Workspace is her window for chats with Claude Code. Open it from Mainframe > BRAIN > WORKSPACE (beta), or ask her to "open workspace".
+Workspace is her window for chats with Claude Code. Open it from Mainframe > BRAIN > WORKSPACE, or ask her to "open workspace". The key says WORKSPACE on its own now, with BETA on the window itself.
 - It runs your own Claude Code, on your Claude plan or key. Install Claude Code and sign in to it first.
 - It opens straight into a new chat in her folder, C:\Users\<you>\Capri\Workspace. The folder is only made when the first message goes. Press "change" to pick another folder, or + to add folders (Add folders) or files (Add files) through Windows' own file picker. Files go with one message, like attachments, and show under it once it's sent. Folders stay with the chat.
 - Chats are listed down the left. A chat is named from its first message, and keeps its own Claude Code session, so you can pick it up later.
@@ -635,6 +635,15 @@ Workspace is her window for chats with Claude Code. Open it from Mainframe > BRA
 - Claude's replies show headings, lists, task boxes, quotes, rules, tables, code blocks and links.
 - She finishes saving a chat before the Workspace closes.
 - Workspace is a beta: it was tested with a stand-in Claude Code and real chats on one PC. Local models aren't in it yet.
+
+### Her log
+LOG, beside WORKSPACE in Mainframe's BRAIN band, opens her log. It's also on her right-click menu as "Her log".
+- What she said is every line she built, with who she was at the time, like "Dynamic as Caregiver".
+- What went wrong is her faults, the same ones that go to errors.txt.
+- Both fill as they happen. Follow holds the view where it is; press it again to go back to the end.
+- It keeps the last 500 lines on screen and opens near the end of the file, not the start.
+- Nothing can be typed into it. It only reads the two files she is already writing, so it can't change anything she does.
+- Escape closes it.
 
 ### Code/Husk Mode (0.8.3)
 Right-click her > Open Capri Mainframe > Settings > Advanced Settings > BRAIN > Code/Husk Mode. Pick Off, Claude Code, Codex or Both. Picking a coding assistant installs her hooks with backups and keeps your other hooks and settings. Restart Claude Code or Codex after setting it up. In Codex, trust her hooks when it asks.

@@ -15,15 +15,17 @@ namespace CapriDesktop
 
     internal static class Look
     {
-        internal static readonly Color Panel = Color.FromArgb(9, 11, 15);
-        internal static readonly Color Cyan = Color.FromArgb(58, 214, 235);
-        internal static readonly Color Red = Color.FromArgb(232, 36, 64);
-        internal static readonly Color Yellow = Color.FromArgb(244, 214, 70);
-        internal static readonly Color Neon = Color.FromArgb(56, 176, 255);
-        internal static readonly Color Ink = Color.FromArgb(232, 236, 240);
-        internal static readonly Color Dim = Color.FromArgb(122, 128, 138);
+        // Each of these is the palette's, so her bubble follows the Mainframe colours setting like every
+        // other window of hers. The values for Night City are what this file used to hold.
+        internal static Color Panel { get { return CapriDesktop.Neon.Sheet; } }
+        internal static Color Cyan { get { return CapriDesktop.Neon.SpokenEdge; } }
+        internal static Color Red { get { return CapriDesktop.Neon.SpokenTitle; } }
+        internal static Color Yellow { get { return CapriDesktop.Neon.Amber; } }
+        internal static Color Neon { get { return CapriDesktop.Neon.SpokenInk; } }
+        internal static Color Ink { get { return CapriDesktop.Neon.SheetInk; } }
+        internal static Color Dim { get { return CapriDesktop.Neon.SheetDim; } }
 
-        internal static readonly Color Pink = Color.FromArgb(255, 46, 136);
+        internal static Color Pink { get { return CapriDesktop.Neon.SpokenAccent; } }
         private static readonly PrivateFontCollection fonts = new PrivateFontCollection();
         private static IntPtr fontMemory;
         private static readonly FontFamily embedded = Embedded("Capri.Font.Mono.ttf");
@@ -185,6 +187,8 @@ namespace CapriDesktop
             return true;
         }
 
+        // Yours to free: this makes one each time. Fonts keeps one and frees none, and Myanmar below hands
+        // back one of those, so the two sitting beside each other have opposite rules. See ci/audit-fonts.py.
         internal static Font Mono(float size, FontStyle style, GraphicsUnit unit = GraphicsUnit.Pixel, string text = null)
         {
             if (embedded != null && Drawable(text)) return new Font(embedded, size, embedded.IsStyleAvailable(style) ? style : FontStyle.Regular, unit);
@@ -206,7 +210,7 @@ namespace CapriDesktop
         {
             using (Bitmap scratch = new Bitmap(1, 1))
             using (Graphics graphics = Graphics.FromImage(scratch))
-                return graphics.MeasureString(new string('M', 20), font, PointF.Empty, StringFormat.GenericTypographic).Width / 20f;
+                return graphics.MeasureString(new string('M', 20), font, PointF.Empty, Look.Exact).Width / 20f;
         }
 
         internal static GraphicsPath Plate(RectangleF box, float cut, float tipX, float tipY, float tail, bool both = false)
@@ -281,33 +285,60 @@ namespace CapriDesktop
 
         // Her mono font has no stand-in for Burmese, so GDI+ would draw nothing there. Burmese draws in Myanmar Text instead,
         // on the same baseline as the rest of the line, which stays in her font.
+        // From the cache and never freed, since it is handed out line after line while a bubble is drawn.
         internal static Font Myanmar(Font font)
         {
             foreach (string family in new[] { "Myanmar Text", "Segoe UI" })
             {
-                Font found = new Font(family, font.Size, font.Style, font.Unit);
-                if (found.Name == family) return found;
-                found.Dispose();
+                Font found = Fonts.Of(family, font.Size, font.Style, font.Unit);
+                if (found != null && string.Equals(found.Name, family, StringComparison.OrdinalIgnoreCase)) return found;
             }
-            return new Font(FontFamily.GenericSansSerif, font.Size, font.Style, font.Unit);
+            return Fonts.Of(FontFamily.GenericSansSerif, font.Size, font.Style, font.Unit);
         }
 
         // Draws a line like DrawString does, with any Burmese in Myanmar Text. Returns where a Burmese line ends, or x for
         // any other line, which draws exactly as before.
         internal static float Draw(Graphics graphics, string text, Font font, Brush brush, float x, float y)
         {
-            if (!Burmese(text)) { graphics.DrawString(text, font, brush, x, y, StringFormat.GenericTypographic); return x; }
-            using (Font burmese = Myanmar(font))
+            // Nothing in it the font cannot draw, which is almost every line almost always: one call, as before.
+            if (!Burmese(text) && Glyphs.Draws(font, text)) { graphics.DrawString(text, font, brush, x, y, Look.Exact); return x; }
+            if (Burmese(text))
             {
+                // Her mono has no stand-in for Burmese at all, so it is split by script rather than by glyph: the
+                // marks have to stay with the letters they sit on or the shaping comes apart.
+                Font burmese = Myanmar(font);
                 float lift = Ascent(burmese) - Ascent(font);
                 foreach (string piece in Pieces(text))
                 {
                     Font used = Myanmar(piece[0]) ? burmese : font;
-                    graphics.DrawString(piece, used, brush, x, used == font ? y : y - lift, StringFormat.GenericTypographic);
+                    graphics.DrawString(piece, used, brush, x, used == font ? y : y - lift, Look.Exact);
                     x += graphics.MeasureString(piece, used, PointF.Empty, Spaced).Width;
                 }
+                return x;
+            }
+            // Letters her face does not have, drawn in one that does, a run at a time. Without this they come
+            // out as the font's own stand-in, which in most faces is a hollow box and in many a box with a
+            // cross through it.
+            foreach (KeyValuePair<string, Font> run in Glyphs.Runs(font, text))
+            {
+                Font used = run.Value ?? font;
+                float lift = used == font ? 0 : Ascent(used) - Ascent(font);
+                graphics.DrawString(run.Key, used, brush, x, y - lift, Look.Exact);
+                x += graphics.MeasureString(run.Key, used, PointF.Empty, Spaced).Width;
             }
             return x;
+        }
+
+        // What Draw will take, so a caller laying out a line asks the same question the drawing answers.
+        internal static float Width(Graphics graphics, string text, Font font)
+        {
+            if (string.IsNullOrEmpty(text)) return 0;
+            if (!Burmese(text) && Glyphs.Draws(font, text)) return graphics.MeasureString(text, font, PointF.Empty, Spaced).Width;
+            if (Burmese(text)) return Mixed(graphics, text, font, Myanmar(font));
+            float width = 0;
+            foreach (KeyValuePair<string, Font> run in Glyphs.Runs(font, text))
+                width += graphics.MeasureString(run.Key, run.Value ?? font, PointF.Empty, Spaced).Width;
+            return width;
         }
 
         private static float Mixed(Graphics graphics, string text, Font font, Font burmese)
@@ -345,7 +376,10 @@ namespace CapriDesktop
             string[] words = text.Split(' ');
             foreach (string word in words)
             {
-                if (!Indic(word)) { foreach (char c in word) cells += Cells(c); continue; }
+                // Counted by letter only while her own face draws the word. Anything it does not have is now
+                // drawn in a face that does, at that face's width, so counting cells here would wrap the line
+                // against a width nothing is drawn at. Those words are measured the way they are drawn.
+                if (!Indic(word) && Drawable(word)) { foreach (char c in word) cells += Cells(c); continue; }
                 lock (measured)
                 {
                     double width;
@@ -357,11 +391,11 @@ namespace CapriDesktop
                             ruler = Graphics.FromImage(rulerPage);
                             ruler.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
                             rulerFont = Mono(14f, FontStyle.Regular, GraphicsUnit.Pixel, "क");
-                            rulerColumn = ruler.MeasureString(new string('M', 20), rulerFont, PointF.Empty, StringFormat.GenericTypographic).Width / 20f;
+                            rulerColumn = ruler.MeasureString(new string('M', 20), rulerFont, PointF.Empty, Look.Exact).Width / 20f;
                             rulerBurmese = Myanmar(rulerFont);
                         }
                         // A shade over, since hinting at other sizes can draw a little wider.
-                        width = (Burmese(word) ? Mixed(ruler, word, rulerFont, rulerBurmese) : ruler.MeasureString(word, rulerFont, PointF.Empty, StringFormat.GenericTypographic).Width) / rulerColumn * 1.03;
+                        width = (Burmese(word) ? Mixed(ruler, word, rulerFont, rulerBurmese) : Width(ruler, word, rulerFont)) / rulerColumn * 1.03;
                         if (measured.Count > 4000) measured.Clear();
                         measured[word] = width;
                     }
@@ -383,6 +417,16 @@ namespace CapriDesktop
             return false;
         }
 
+        // The plain typographic format, made once for the whole program.
+        //
+        // StringFormat.GenericTypographic reads like a thing that already exists and builds a new one on
+        // every read instead. Forty seven places asked for it, most of them inside a paint, so she was
+        // making and dropping drawing objects by the thousand a minute for no reason. Ask for this one.
+        //
+        // Never change a flag on it. Anything that needs different flags clones it:
+        // new StringFormat(Look.Exact), and frees its own copy.
+        internal static readonly StringFormat Exact = new StringFormat(StringFormat.GenericTypographic);
+
         // Right-to-left lines sit against the bubble's right edge and never wrap inside it.
         internal static readonly StringFormat Leftward = Mirrored();
 
@@ -391,14 +435,14 @@ namespace CapriDesktop
 
         private static StringFormat Trailing()
         {
-            StringFormat format = (StringFormat)StringFormat.GenericTypographic.Clone();
+            StringFormat format = new StringFormat(Look.Exact);
             format.FormatFlags |= StringFormatFlags.MeasureTrailingSpaces;
             return format;
         }
 
         private static StringFormat Mirrored()
         {
-            StringFormat format = (StringFormat)StringFormat.GenericTypographic.Clone();
+            StringFormat format = new StringFormat(Look.Exact);
             // Arabic fonts can stand taller than her line, and a line that doesn't fully fit the box would otherwise not draw.
             format.FormatFlags = (format.FormatFlags | StringFormatFlags.DirectionRightToLeft | StringFormatFlags.NoWrap) & ~StringFormatFlags.LineLimit;
             return format;
@@ -1014,7 +1058,7 @@ namespace CapriDesktop
         {
             using (GraphicsPath path = new GraphicsPath())
             {
-                path.AddString(label, font.FontFamily, (int)font.Style, font.Size, PointF.Empty, StringFormat.GenericTypographic);
+                path.AddString(label, font.FontFamily, (int)font.Style, font.Size, PointF.Empty, Look.Exact);
                 RectangleF ink = path.GetBounds();
                 return Rectangle.FromLTRB((int)Math.Floor(ink.Left), (int)Math.Floor(ink.Top), (int)Math.Ceiling(ink.Right), (int)Math.Ceiling(ink.Bottom));
             }
@@ -1119,7 +1163,7 @@ namespace CapriDesktop
         private static void DrawLabel(Graphics graphics, string label, Font font, Rectangle box, Color colour)
         {
             Rectangle ink = Ink(font, label);
-            using (Brush brush = new SolidBrush(colour)) graphics.DrawString(label, font, brush, box.Left - ink.Left, box.Top - ink.Top, StringFormat.GenericTypographic);
+            using (Brush brush = new SolidBrush(colour)) graphics.DrawString(label, font, brush, box.Left - ink.Left, box.Top - ink.Top, Look.Exact);
         }
 
         // The wave as five bars of square segments. Out of voice chat it's the whole wave; in voice chat the segments light up to
@@ -2179,7 +2223,7 @@ namespace CapriDesktop
 
         private static StringFormat Typographic()
         {
-            StringFormat format = (StringFormat)StringFormat.GenericTypographic.Clone();
+            StringFormat format = new StringFormat(Look.Exact);
             format.FormatFlags |= StringFormatFlags.MeasureTrailingSpaces;
             return format;
         }
@@ -3259,7 +3303,7 @@ namespace CapriDesktop
                         for (int i = 0; i < said.Count; i++)
                         {
                             int name = i == 0 ? Math.Min(said[i].Length, Speaker.Length - 1) : 0;
-                            if (name > 0) graphics.DrawString(said[i].Substring(0, name), bold, red, x, y, StringFormat.GenericTypographic);
+                            if (name > 0) graphics.DrawString(said[i].Substring(0, name), bold, red, x, y, Look.Exact);
                             Look.Draw(graphics, said[i].Substring(name), text, ink, x + name * cw, y);
                             y += line;
                         }
@@ -3274,7 +3318,7 @@ namespace CapriDesktop
                     if (running)
                         using (Font small = Look.Mono(12 * s, FontStyle.Regular, GraphicsUnit.Pixel))
                         using (Brush dim = new SolidBrush(Color.FromArgb(a, Look.Dim)))
-                            graphics.DrawString("ESC STOPS ME", small, dim, panel.Right - 15 * s - graphics.MeasureString("ESC STOPS ME", small, PointF.Empty, StringFormat.GenericTypographic).Width, y + 2 * s, StringFormat.GenericTypographic);
+                            graphics.DrawString("ESC STOPS ME", small, dim, panel.Right - 15 * s - graphics.MeasureString("ESC STOPS ME", small, PointF.Empty, Look.Exact).Width, y + 2 * s, Look.Exact);
                 }
                 return image;
             }
@@ -3478,14 +3522,23 @@ namespace CapriDesktop
                     graphics.SmoothingMode = SmoothingMode.AntiAlias;
                     graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
                     graphics.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-                    using (Pen glow = new Pen(Color.FromArgb(46, Look.Cyan), 7 * s)) graphics.DrawPath(glow, path);
-                    using (Brush fill = new SolidBrush(Color.FromArgb(238, Look.Panel))) graphics.FillPath(fill, path);
+                    // Theirs out of sys.md, or hers. The alpha each is drawn at is hers either way: the glow and
+                    // the fill are deliberately not solid, and a colour they picked is wanted at the same weight
+                    // rather than suddenly opaque. One they set solid themselves still wins, through eight digits.
+                    // Set in layout.md with the rest of her colours. They were in sys.md as well and sys.md
+                    // won, which left the same four colours in two files with one of them doing nothing.
+                    Color edgeColour = CapriDesktop.Neon.SpokenEdge;
+                    Color backColour = CapriDesktop.Neon.BubbleBack;
+                    Color titleColour = CapriDesktop.Neon.SpokenTitle;
+                    Color inkColour = CapriDesktop.Neon.SpokenInk;
+                    using (Pen glow = new Pen(Color.FromArgb(edgeColour.A < 255 ? edgeColour.A : 46, edgeColour), 7 * s)) graphics.DrawPath(glow, path);
+                    using (Brush fill = new SolidBrush(Color.FromArgb(backColour.A < 255 ? backColour.A : 238, backColour))) graphics.FillPath(fill, path);
                     graphics.SetClip(path);
                     using (Pen scan = new Pen(Color.FromArgb(9, 255, 255, 255), Math.Max(1, s)))
                         for (float row = panel.Top; row < panel.Bottom; row += 3 * s) graphics.DrawLine(scan, panel.Left, row, panel.Right, row);
                     graphics.ResetClip();
-                    using (Pen edge = new Pen(Look.Cyan, 2 * s)) graphics.DrawPath(edge, path);
-                    using (Brush red = new SolidBrush(Look.Red)) graphics.FillRectangle(red, panel.Left + 10 * s, panel.Top + 13 * s, 3 * s, panel.Height - 26 * s);
+                    using (Pen edge = new Pen(edgeColour, 2 * s)) graphics.DrawPath(edge, path);
+                    using (Brush red = new SolidBrush(titleColour)) graphics.FillRectangle(red, panel.Left + 10 * s, panel.Top + 13 * s, 3 * s, panel.Height - 26 * s);
                     float x = panel.Left + 24 * s;
                     float row2 = panel.Top + 12 * s;
                     if (above > 0)
@@ -3499,15 +3552,15 @@ namespace CapriDesktop
                     }
                     int[] takes = Look.Takes(lines, Speaker + (Reply ?? ""), Speaker.Length + (State == TalkState.Thinking ? (Reply ?? "").Length : Math.Max(0, Revealed)));
                     PointF caret = new PointF(x, row2);
-                    using (Brush red = new SolidBrush(Look.Red))
-                    using (Brush ink = new SolidBrush(Look.Neon))
+                    using (Brush red = new SolidBrush(titleColour))
+                    using (Brush ink = new SolidBrush(inkColour))
                     {
                         float right = x + columns * cw;
                         for (int i = firstLine; i < firstLine + visibleLines && takes[i] > 0; i++)
                         {
                             string shown = lines[i].Substring(0, takes[i]);
                             int name = i == 0 ? Math.Min(takes[i], Speaker.Length - 1) : 0;
-                            if (name > 0) graphics.DrawString(shown.Substring(0, name), bold, red, x, row2, StringFormat.GenericTypographic);
+                            if (name > 0) graphics.DrawString(shown.Substring(0, name), bold, red, x, row2, Look.Exact);
                             string words = shown.Substring(name);
                             float from = x + name * cw;
                             // An Arabic, Urdu, Persian or Hebrew line grows leftwards from the right edge as she types it. The whole
@@ -3532,8 +3585,8 @@ namespace CapriDesktop
                     }
                     if (Choosing)
                     {
-                        using (Pen edge = new Pen(Look.Cyan, Math.Max(1, s)))
-                        using (Brush ink = new SolidBrush(Look.Neon))
+                        using (Pen edge = new Pen(edgeColour, Math.Max(1, s)))
+                        using (Brush ink = new SolidBrush(inkColour))
                         {
                             graphics.DrawRectangle(edge, yesButton.X, yesButton.Y, yesButton.Width, yesButton.Height);
                             graphics.DrawRectangle(edge, noButton.X, noButton.Y, noButton.Width, noButton.Height);
@@ -3684,14 +3737,11 @@ namespace CapriDesktop
                 label = Neon.Type(12.5f * s, true, GraphicsUnit.Pixel);
                 input.Font = typed;
                 prompt.Font = label;
-                if (oldTyped != null) { oldTyped.Dispose(); oldLabel.Dispose(); }
+                // Not freed: they come from the cache and anything still painting with one would die on it.
             }
-            int width = (int)SpeechBox.PanelWidth(s);
-            int height = (int)((calling ? 122 : 76) * s);
-            bool below = head.Y - height - 20 * s < area.Top;
-            int left = Math.Max(area.Left, Math.Min(area.Right - width, (int)(head.X - width * 0.7f)));
-            int top = below ? feet.Y + (int)(8 * s) : head.Y - height - (int)(18 * s);
-            Bounds = new Rectangle(left, Math.Max(area.Top, Math.Min(top, area.Bottom - height)), width, height);
+            Place(head, feet, area, s);
+            // Always laid out on the way in, since a reopen at the same place with a new scale would otherwise
+            // keep the old fonts' spacing.
             Arrange();
             if (!above.IsEmpty) Follow(above, area);
             Show();
@@ -3700,9 +3750,25 @@ namespace CapriDesktop
             input.SelectionStart = input.Text.Length;
         }
 
+        // Above her head, or under her feet when there is no room up there. Where it opens, and where it goes
+        // back to whenever there is no bubble to sit on: it used to be placed once and then follow the bubble
+        // for ever, and the bubble's last place is not where she is.
+        internal void Place(Point head, Point feet, Rectangle area, float s)
+        {
+            int width = (int)SpeechBox.PanelWidth(s);
+            int height = (int)((calling ? 122 : 76) * s);
+            bool below = head.Y - height - 20 * s < area.Top;
+            int left = Math.Max(area.Left, Math.Min(area.Right - width, (int)(head.X - width * 0.7f)));
+            int top = below ? feet.Y + (int)(8 * s) : head.Y - height - (int)(8 * s);
+            Rectangle want = new Rectangle(left, Math.Max(area.Top, Math.Min(top, area.Bottom - height)), width, height);
+            if (Bounds == want) return;
+            Bounds = want;
+            Arrange();
+        }
+
         internal void Follow(Rectangle above, Rectangle area)
         {
-            int top = above.Top - Height - (int)(16 * scale);
+            int top = above.Top - Height - (int)(8 * scale);
             if (top < area.Top) top = above.Bottom + (int)(8 * scale);
             top = Math.Max(area.Top, Math.Min(top, area.Bottom - Height));
             Point target = new Point(above.Left, top);

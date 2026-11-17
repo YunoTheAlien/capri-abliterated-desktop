@@ -103,8 +103,6 @@ namespace CapriDesktop
         private static RectangleF watching = RectangleF.Empty;
 
         internal static bool On { get { return running; } }
-        internal static int Width { get { return width; } }
-        internal static int Height { get { return height; } }
 
         // True when OBS's filter is registered, which is what decides whether this is available at all.
         internal static bool Available

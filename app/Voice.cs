@@ -170,6 +170,17 @@ namespace CapriDesktop
 
         // The first cue in a line, as written. Her Fish Audio voice acts these out itself; every other voice of hers
         // has to be moved by hand, so this hands the word over and VoiceFeel turns it into pitch and pace.
+        // Whether a word is one her cue vocabulary knows, so a mood can be offered as a cue without inventing
+        // one. Her moods are named like feelings on purpose, and the ones that are not simply do not become cues.
+        internal static bool Feeling(string word)
+        {
+            if (string.IsNullOrEmpty(word)) return false;
+            string one = word.Trim().ToLowerInvariant();
+            foreach (string known in (Feelings + "|" + Tones).Split('|'))
+                if (known == one) return true;
+            return false;
+        }
+
         internal static string FeelingOf(string text)
         {
             if (string.IsNullOrEmpty(text)) return null;
@@ -189,7 +200,8 @@ namespace CapriDesktop
             string plain = Cue.Replace(text, "");
             // The carriage return matters on a line that arrived CRLF: without it the space a cue left behind
             // sits in front of it and survives.
-            plain = Regex.Replace(plain, @"[ \t]*(?:[ \t]*)*[ \t]*(?=[.,!?…;:]|?$)", "", RegexOptions.Multiline);
+            plain = Regex.Replace(plain, @"[ \t]*(?:[ \t]*)*[ \t]*(?=[.,!?…;:]|
+?$)", "", RegexOptions.Multiline);
             return Regex.Replace(plain, @"[ \t]*", "").Trim();
         }
 
@@ -3841,6 +3853,82 @@ namespace CapriDesktop
         // The last problem she noted, so a server that stays down is said once, until it answers again.
         private volatile string noted;
 
+        // The name a voice server on this PC uses to say it reads her emotion cues. Fish Audio understands them
+        // natively; everything else was handed the line with the cues stripped, which is right for a service that
+        // would read "(joyful)" out loud and wrong for one written to act on it.
+        internal const string CuedModel = "capri-voice";
+
+        // Whether the server she is set to takes her cues as cues. Fish always; otherwise a server on this machine
+        // whose model says so. Loopback is part of the test on purpose: a cue is only worth sending to something
+        // that asked for it, and a local server is the only one that can have.
+        internal bool TakesCues
+        {
+            get
+            {
+                string api, url, model;
+                lock (Changing) { api = Api; url = Url; model = Model; }
+                if (api == Fish) return true;
+                if (string.IsNullOrEmpty(model) || model.IndexOf(CuedModel, StringComparison.OrdinalIgnoreCase) < 0) return false;
+                return Loopback(url);
+            }
+        }
+
+        // Whether her cues reach a server, which decides whether it is handed "[excited] We won!" or
+        // "We won!". Nothing checked this, and it is the gate between a server performing a feeling and a
+        // server reading the word "excited" out loud to somebody.
+        internal static void CueGate(System.Collections.Generic.List<string> checks)
+        {
+            string[,] cases =
+            {
+                // Fish Audio performs them natively, wherever it is.
+                { Fish, FishCloud, FishFree, "yes", "Fish Audio in the cloud" },
+                { Fish, "http://127.0.0.1:8080/v1", "anything", "yes", "Fish Audio on this PC" },
+                // A server on this machine saying it is hers, by the name it reports.
+                { OpenAi, "http://127.0.0.1:8710/v1", CuedModel, "yes", "a local server named for her" },
+                { OpenAi, "http://localhost:8710/v1", "capri-voice-12hz", "yes", "the same with a longer name" },
+                { OpenAi, "http://[::1]:8710/v1", "CAPRI-VOICE", "yes", "the same again, other letters and v6" },
+                // Anything else is handed the words with the cues taken out.
+                { OpenAi, "http://127.0.0.1:8880/v1", "kokoro", "no", "another local server" },
+                { OpenAi, "http://127.0.0.1:8880/v1", null, "no", "a local server naming no model" },
+                { OpenAi, "http://127.0.0.1:8880/v1", "", "no", "a local server with an empty model" },
+                // And never off this machine, however it names itself: a cue is worth sending only to
+                // something that asked for it, and only something local can have.
+                { OpenAi, OpenAiCloud, CuedModel, "no", "a cloud server using her name" },
+                { OpenAi, "http://192.168.1.40:8710/v1", CuedModel, "no", "another machine on the network" },
+                { OpenAi, "http://capri-voice.example.com/v1", CuedModel, "no", "a host named after her" },
+            };
+            VoiceServer one = new VoiceServer();
+            System.Collections.Generic.List<string> wrong = new System.Collections.Generic.List<string>();
+            for (int at = 0; at < cases.GetLength(0); at++)
+            {
+                lock (one.Changing) { one.Api = cases[at, 0]; one.Url = cases[at, 1]; one.Model = cases[at, 2]; }
+                bool want = cases[at, 3] == "yes";
+                if (one.TakesCues != want)
+                    wrong.Add(cases[at, 4] + ": " + cases[at, 1] + " as " + (cases[at, 2] ?? "no model") + " gave " + one.TakesCues);
+            }
+            if (wrong.Count > 0) throw new Exception("Her cues would reach the wrong servers: " + string.Join(" | ", wrong.ToArray()));
+            checks.Add("PASS her cues only reach a voice that asked for them: Fish Audio anywhere, and a server on this PC whose model names her in any letters, on v4, v6 or localhost. Not another local server, not one naming no model, and not a cloud or network address however it names itself, since a server not written for them reads \"excited\" out loud");
+        }
+
+        // Her own machine, however the address is written.
+        internal static bool Loopback(string url)
+        {
+            if (string.IsNullOrEmpty(url)) return false;
+            try
+            {
+                Uri where = new Uri(url.IndexOf("://", StringComparison.Ordinal) >= 0 ? url : "http://" + url);
+                // DnsSafeHost rather than Host: an IPv6 address comes back from Host in brackets and canonical
+                // form, so comparing it against the text "::1" misses, and her cues were being stripped from a
+                // local server reached over IPv6 as though it were somebody else's machine. Found by the check
+                // below this, which is the first thing ever to ask.
+                string host = where.DnsSafeHost;
+                System.Net.IPAddress address;
+                if (System.Net.IPAddress.TryParse(host.Trim('[', ']'), out address)) return System.Net.IPAddress.IsLoopback(address);
+                return string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception) { return false; }
+        }
+
         // Ready-made choices for its panel. Picking one fills in its API, address, model and voice; the last keeps what's typed.
         internal static readonly Service[] Services =
         {
@@ -4132,8 +4220,10 @@ namespace CapriDesktop
                 key = Key;
             }
             bool fish = api == Fish;
-            // Only Fish Audio says her emotion cues, and its old s1 takes its own names in round brackets.
-            if (!fish) text = Voice.Uncued(text);
+            // Fish Audio says her emotion cues, and a server on this PC that names itself for them is written to
+            // act on them. Everything else gets the line without them, since a service that does not understand a
+            // cue reads it out loud.
+            if (!fish && !TakesCues) text = Voice.Uncued(text);
             else if (string.Equals(model, "s1", StringComparison.OrdinalIgnoreCase)) text = Rounded(text);
             string name = Name(url, api);
             int pitch = VoiceFx.Pitch, speed = VoiceFx.Speed, robot = VoiceFx.ServerRobot, glitch = VoiceFx.ServerGlitch;

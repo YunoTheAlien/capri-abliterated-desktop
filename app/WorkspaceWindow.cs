@@ -14,15 +14,22 @@ namespace CapriDesktop
 {
     internal sealed partial class Mainframe
     {
-        private Key workspaceKey;
+        private Key workspaceKey, logKey;
         internal float WorkspaceScale { get { return DeviceScale() * TextScale(); } }
 
         private void MakeWorkspaceKey()
         {
-            workspaceKey = Make("WORKSPACE (beta)", 190, 57, 166, 18, delegate { capri.OpenWorkspace(); });
+            // The key said WORKSPACE (beta) and took the whole band to the right edge, for a word it says again on its own
+            // window with a BETA plate beside it. Shortened to the name alone, which frees the end of the row for LOG: the
+            // one thing worth opening from here that had nowhere to live but the right-click menu.
+            workspaceKey = Make("WORKSPACE", 168, 57, 128, 18, delegate { capri.OpenWorkspace(); });
             workspaceKey.Accent = Cyan;
             workspaceKey.AccessibleName = "Workspace: Claude Code chats in your folders";
-            Explain(workspaceKey, "workspace", "WorkspaceWindow.cs", null, "Workspace");
+            Explain(workspaceKey, "WORKSPACE", "WorkspaceWindow.cs", null, "Workspace");
+            logKey = Make(LogSheet.KeyText, 302, 57, 54, 18, delegate { capri.ShowLog(); });
+            logKey.Accent = Cyan;
+            logKey.AccessibleName = "Her log: the lines she builds and the faults she hits, as they happen";
+            Explain(logKey, LogSheet.KeyText, "LogSheet.cs", null, "Her log");
         }
 
         internal string WorkspaceKeyFits()
@@ -33,6 +40,8 @@ namespace CapriDesktop
                 if (control.Bounds.IntersectsWith(workspaceKey.Bounds)) return "Workspace key overlaps " + control.Text;
             }
             if (TextRenderer.MeasureText(workspaceKey.Text, workspaceKey.Font).Width + Scaled(12) > workspaceKey.Width) return "Workspace key text is clipped.";
+            if (logKey != null && TextRenderer.MeasureText(logKey.Text, logKey.Font).Width + Scaled(12) > logKey.Width) return "Log key text is clipped.";
+            if (logKey != null && logKey.Visible && logKey.Right > ClientSize.Width) return "Log key runs off her right edge.";
             return null;
         }
     }

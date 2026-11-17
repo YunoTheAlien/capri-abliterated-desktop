@@ -272,7 +272,11 @@ namespace CapriDesktop
                 checks.Add("PASS her chimes never stack or repeat fast: the same one waits 700 ms, any two 300 ms, one still ringing drops the next, and her ears' mask covers each chime and 700 ms after; Glass at 40% plays out of the box");
 
                 // Her real chime speaker: silent in the smoke, Plain, and apart from her voice, which plays on through a chime.
-                short[] tone = new short[Chimes.Rate / 2];
+                // Three seconds, not half of one. The wait below allows the chime two seconds to reach its own
+                // speaker, so a shorter tone of hers could finish on its own while this stood there waiting and
+                // read as a chime having cut her off. That is what failed on a box where the first open of an
+                // audio device is slow, and it was the check being wrong rather than her.
+                short[] tone = new short[Chimes.Rate * 3];
                 for (int i = 0; i < tone.Length; i++) tone[i] = (short)(Math.Sin(i * 0.05) * 8000);
                 speaker.Open(Chimes.Rate);
                 speaker.Play(tone);

@@ -20,9 +20,214 @@ namespace CapriDesktop
     internal sealed partial class Mods
     {
         internal const string CodeExtension = ".capri-code";
-        private const int LargestCode = 256 * 1024;
+        // A quarter of a megabyte of source was about six thousand lines, which a real mod can pass. Raised
+        // now that source nobody can read is refused outright: the cap was doing two jobs and only one of
+        // them was its own.
+        private const int LargestCode = 1024 * 1024;
         private const string ApprovedFile = "approved.txt";
         private static readonly Regex HeaderLine = new Regex(@"^//\s*([a-z-]+)\s*:\s*(.*?)\s*$");
+
+        // What a code mod reaches for, named so somebody approving one sees it without reading 256 KB. Not a
+        // block: a code mod is code and the approval is the boundary. The case this exists for is a mod whose
+        // source reads as nothing because the behaviour is packed, encrypted or fetched at run time.
+        internal const string Loads = "loads code while it runs", Packs = "unpacks hidden text";
+
+        private static readonly string[,] Reaches =
+        {
+            { Loads, @"Assembly\.Load|AppDomain|Reflection\.Emit|DynamicMethod|CompileAssembly|CodeProvider" },
+            { Packs, @"FromBase64String|Aes\.|AesManaged|Rijndael|TripleDES|DESCryptoServiceProvider|GZipStream|DeflateStream" },
+            { "calls Windows directly", @"DllImport|Marshal\.|GetProcAddress|VirtualAlloc" },
+            { "starts programs", @"Process\.Start|ProcessStartInfo|cmd\.exe|powershell" },
+            { "uses the network", @"HttpClient|WebClient|WebRequest|TcpClient|UdpClient|Socket\(" },
+            { "reaches outside her folder", @"SpecialFolder|Registry|DriveInfo|GetTempPath" },
+            { "reads the keyboard", @"GetAsyncKeyState|SetWindowsHookEx|keybd_event|SendKeys" },
+            // What her brain is told, which is the one a readout of permissions never used to mention. A mod
+            // can ask her brain and can claim a pool of her lines, and both change what she is told or says.
+            { "changes what her brain is told", @"ICapriBrain|ICapriChat|Zones\.|ChatMessage|AddTool|system prompt" },
+        };
+
+        // Every outside address in the source. "uses the network" says that it does; this says where, which
+        // is the difference between a warning and a readout. Her own and the loopback are left out: those
+        // are a mod talking to her rather than to somebody else.
+        internal static string[] Addresses(string text)
+        {
+            List<string> found = new List<string>();
+            if (string.IsNullOrEmpty(text)) return found.ToArray();
+            // Three ways a mod can name somewhere: a full address, a bare host in a string, and a numeric
+            // address for a mod that skips names altogether. The whole address is kept rather than the host
+            // alone, so the readout says what it would fetch and not only who from.
+            string[] ways =
+            {
+                @"[a-z][a-z0-9+.-]*://[A-Za-z0-9._:~%/?#@!$&()*+,;=-]+",
+                @"\x22(?:[A-Za-z0-9-]+\.)+(?:com|net|org|io|dev|ai|co|me|app|cloud|xyz|ru|cn|info|biz|site|online|top)(?::[0-9]{1,5})?(?:/[^\x22]*)?\x22",
+                @"\x22(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?::[0-9]{1,5})?\x22",
+            };
+            foreach (string way in ways)
+                foreach (Match one in Regex.Matches(text, way, RegexOptions.IgnoreCase))
+                {
+                    string said = one.Value.Trim('"').Trim();
+                    string low = said.ToLowerInvariant();
+                    if (low.Contains("localhost") || low.Contains("127.0.0.1") || low.StartsWith("0.0.0.0")) continue;
+                    if (low.Contains("schemas.microsoft.com") || low.Contains("www.w3.org")) continue;
+                    if (said.Length < 4 || !found.Contains(said)) { if (!found.Contains(said)) found.Add(said); }
+                }
+            return found.ToArray();
+        }
+
+        // Source with the whitespace taken out of it, put back so somebody can read it before approving it.
+        // No model and nothing sent anywhere: braces, semicolons and strings still delimit everything, so
+        // this is exact rather than a guess. It gives back the code itself, which is the point. Asking her
+        // to describe a mod would give back her opinion of it, and approving on that means approving
+        // something that is not what runs.
+        //
+        // Strings, chars and comments are copied through untouched, so a brace or a semicolon inside one
+        // cannot move a line.
+        internal static string Tidied(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            StringBuilder made = new StringBuilder();
+            int deep = 0;
+            bool fresh = true;
+            for (int at = 0; at < text.Length; at++)
+            {
+                char one = text[at];
+
+                // Anything quoted goes through as it is.
+                if (one == '"' || one == '\'')
+                {
+                    bool verbatim = one == '"' && at > 0 && text[at - 1] == '@';
+                    if (fresh) { Indent(made, deep); fresh = false; }
+                    made.Append(one);
+                    for (at++; at < text.Length; at++)
+                    {
+                        char inside = text[at];
+                        made.Append(inside);
+                        if (verbatim)
+                        {
+                            if (inside == '"')
+                            {
+                                if (at + 1 < text.Length && text[at + 1] == '"') { made.Append(text[++at]); continue; }
+                                break;
+                            }
+                            continue;
+                        }
+                        if (inside == '\\' && at + 1 < text.Length) { made.Append(text[++at]); continue; }
+                        if (inside == one) break;
+                    }
+                    continue;
+                }
+
+                // A comment to the end of its line, or a block comment, both as they are.
+                if (one == '/' && at + 1 < text.Length && text[at + 1] == '/')
+                {
+                    if (fresh) { Indent(made, deep); fresh = false; }
+                    while (at < text.Length && text[at] != '\n') made.Append(text[at++]);
+                    made.Append(Environment.NewLine);
+                    fresh = true;
+                    continue;
+                }
+                if (one == '/' && at + 1 < text.Length && text[at + 1] == '*')
+                {
+                    if (fresh) { Indent(made, deep); fresh = false; }
+                    made.Append(one);
+                    for (at++; at < text.Length; at++)
+                    {
+                        made.Append(text[at]);
+                        if (text[at] == '/' && text[at - 1] == '*') break;
+                    }
+                    made.Append(Environment.NewLine);
+                    fresh = true;
+                    continue;
+                }
+
+                if (one == '\n' || one == '\r') { if (!fresh) { made.Append(Environment.NewLine); fresh = true; } continue; }
+                if ((one == ' ' || one == '\t') && fresh) continue;
+
+                if (one == '}')
+                {
+                    if (!fresh) { made.Append(Environment.NewLine); }
+                    deep = deep > 0 ? deep - 1 : 0;
+                    Indent(made, deep);
+                    made.Append(one);
+                    made.Append(Environment.NewLine);
+                    fresh = true;
+                    continue;
+                }
+
+                if (fresh) { Indent(made, deep); fresh = false; }
+                made.Append(one);
+
+                if (one == '{') { deep++; made.Append(Environment.NewLine); fresh = true; continue; }
+                if (one == ';') { made.Append(Environment.NewLine); fresh = true; continue; }
+            }
+            return made.ToString();
+        }
+
+        private static void Indent(StringBuilder made, int deep)
+        {
+            for (int one = 0; one < deep; one++) made.Append("    ");
+        }
+
+        // Whether the source is something a person can actually read. A mod whose behaviour is minified,
+        // packed onto one line or carried in a long run of base64 is not disclosed by naming what it
+        // reaches for: the point of reading it is lost either way. Refused rather than reported, for the
+        // same reason as unpacking and loading together.
+        internal static string Unreadable(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return null;
+            string[] rows = text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+            int longest = 0, code = 0;
+            foreach (string row in rows)
+            {
+                if (row.Trim().Length > 0) code++;
+                if (row.Length > longest) longest = row.Length;
+            }
+            if (longest > 600) return "one line of " + longest + " characters";
+            if (code <= 3 && text.Length > 4000) return "all on " + code + " line(s)";
+            int spaces = 0;
+            foreach (char one in text) if (one == ' ' || one == '\t' || one == '\n') spaces++;
+            if (text.Length > 4000 && spaces * 20 < text.Length) return "minified";
+            Match run = Regex.Match(text, @"[A-Za-z0-9+/]{800,}={0,2}");
+            if (run.Success) return "a " + run.Value.Length + " character packed blob";
+            return null;
+        }
+
+        // The list for one mod's source, in the order above, each named once.
+        internal static string[] Reaching(string text)
+        {
+            List<string> found = new List<string>();
+            if (string.IsNullOrEmpty(text)) return found.ToArray();
+            // Comments are source too: a packed payload sits in a string, and a comment cannot hide one.
+            for (int at = 0; at < Reaches.GetLength(0); at++)
+                if (Regex.IsMatch(text, Reaches[at, 1], RegexOptions.IgnoreCase)) found.Add(Reaches[at, 0]);
+            return found.ToArray();
+        }
+
+        // That the list says what the source does, including the shape this is for: a mod that looks empty
+        // and unpacks itself.
+        internal static void ReachCheck(System.Collections.Generic.List<string> checks)
+        {
+            string header = "// capri-mod: 1\n// id: " + "quiet" + "\n// name: test\n// version: 1\n// author: Smoke\n// description: A test.\n";
+            string packed = header + "using System;\nclass M { void Go() { var b = Convert.FromBase64String(\"...\"); "
+                + "System.Reflection.Assembly.Load(b); } }";
+            string plain = "// capri-mod: 1\n// id: " + "tidy" + "\n// name: test\n// version: 1\n// author: Smoke\n// description: A test.\n" + "using System;\nclass M { void Go() { Console.Write(\"hello\"); } }";
+            string[] packedSays = Reaching(packed), plainSays = Reaching(plain);
+            if (Array.IndexOf(packedSays, "loads code while it runs") < 0 || Array.IndexOf(packedSays, "unpacks hidden text") < 0)
+                throw new Exception("A mod that unpacks and loads code was not named as doing either: " + string.Join(", ", packedSays));
+            if (plainSays.Length != 0)
+                throw new Exception("A mod that does nothing of the sort was named anyway: " + string.Join(", ", plainSays));
+            // And the pair that has no fair use is refused outright rather than listed.
+            string refused = null;
+            try { ReadCode(packed); }
+            catch (ModException stopped) { refused = stopped.Message; }
+            if (refused == null || refused.IndexOf("not what would run", StringComparison.Ordinal) < 0)
+                throw new Exception("A mod that unpacks hidden text and loads code was approved anyway: " + (refused ?? "no refusal"));
+            try { ReadCode(plain); }
+            catch (ModException fine) { throw new Exception("An ordinary mod was refused: " + fine.Message); }
+
+            checks.Add("PASS a code mod that both unpacks hidden text and loads code while it runs is refused, since the source somebody reads is then not what runs; the other six reaches are named and left to them");
+            checks.Add("PASS a code mod says what it reaches for before it is approved: loading code while it runs, unpacking hidden text, calling Windows directly, starting programs, using the network, reaching outside her folder, reading the keyboard. A mod whose source reads as nothing because the payload is packed is the case it exists for");
+        }
         private readonly Dictionary<string, ICapriMod> running = new Dictionary<string, ICapriMod>();
         private readonly Dictionary<string, ICapriHost> hosts = new Dictionary<string, ICapriHost>();
         internal Func<string, ICapriHost> HostFor;
@@ -77,6 +282,33 @@ namespace CapriDesktop
             }
             if (!marked) throw new ModException("A code mod starts with a // capri-mod: 1 line.");
             CheckDetails(read);
+            read.Reaches = Reaching(text);
+            // And where it would reach, so the question says the address rather than only that there is one.
+            string[] where = Addresses(text);
+            if (where.Length > 0)
+            {
+                List<string> saying = new List<string>(read.Reaches);
+                // Short: a small box, and three addresses is already the point made. The rest is a count.
+                string said = string.Join(", ", where.Length > 3 ? new[] { where[0], where[1], where[2] } : where);
+                if (where.Length > 3) said += " and " + (where.Length - 3) + " more";
+                saying.Add("contacts " + said);
+                read.Reaches = saying.ToArray();
+            }
+            // Unpacking hidden text and loading code at run time, together, is a packed assembly and nothing
+            // else. The source somebody approves is then not the code that runs, which is the whole point of
+            // reading it. Refused rather than disclosed: the other six are things a fair mod may do.
+            if (Array.IndexOf(read.Reaches, Packs) >= 0 && Array.IndexOf(read.Reaches, Loads) >= 0)
+                throw new ModException((read.Name ?? read.Id) + " unpacks hidden text and loads code while it runs. Together those mean the source you are reading is not what would run, so it cannot be approved here. A mod needing both has to say why and be put in by hand.");
+            // Source nobody can read is said rather than refused. The approval is the boundary here as it is
+            // everywhere else: being told the source cannot be read is what somebody needs to decide with,
+            // and deciding to run it anyway is theirs to make.
+            string hidden = Unreadable(text);
+            if (hidden != null)
+            {
+                List<string> saying = new List<string>(read.Reaches);
+                saying.Insert(0, "not readable source: " + hidden);
+                read.Reaches = saying.ToArray();
+            }
             if (read.NeedsApi > Api) throw new ModException((read.Name ?? read.Id) + " needs a newer Capri: it's written for mod API " + read.NeedsApi + ", and this Capri has " + Api + ".");
             return read;
         }

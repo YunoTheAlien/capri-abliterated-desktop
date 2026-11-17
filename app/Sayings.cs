@@ -46,11 +46,48 @@ namespace CapriDesktop
         private static string heardPath;
         private static bool loadedSaid;
 
-        internal static double RecentHours = 3;
+        internal static double RecentHours = 24;
+
+        // A log of the lines she builds, with who she was and what mood she was in when each one came out.
+        // lines-said.txt cannot carry it: the line is the key there and the time is all it keeps, so this is its
+        // own file and nothing reads it back. It is for looking at afterwards, when a line landed wrong for the
+        // character saying it, which otherwise comes down to remembering what she said and who she was at once.
+        //
+        // Hers only. Nothing they typed goes in it, and what she says goes through the same scrub her logs use.
+        private static string logPath;
+        internal static Func<string> Who = delegate { return ""; };
+        internal static Func<string> Feeling = delegate { return ""; };
+        private const long LogMost = 1024 * 1024;
 
         internal static void Remembering(string folder)
         {
             heardPath = string.IsNullOrEmpty(folder) ? null : Path.Combine(folder, "lines-said.txt");
+            logPath = string.IsNullOrEmpty(folder) ? null : Path.Combine(folder, "lines-log.txt");
+        }
+
+        private static void Logged(string said)
+        {
+            if (logPath == null || string.IsNullOrEmpty(said)) return;
+            try
+            {
+                string who = "", mood = "";
+                try { who = Who() ?? ""; mood = Feeling() ?? ""; }
+                catch (Exception) { }
+                string line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " | " + (who.Length == 0 ? "-" : who)
+                    + " | " + (mood.Length == 0 ? "-" : mood) + " | " + Brain.Scrubbed(said).Replace("\r", " ").Replace("\n", " ");
+                // Half of it goes when it gets long, oldest first, so it cannot grow without end and what is left
+                // is still the recent part, which is the part anybody looks at.
+                FileInfo about = new FileInfo(logPath);
+                if (about.Exists && about.Length > LogMost)
+                {
+                    string[] had = File.ReadAllLines(logPath);
+                    StringBuilder kept = new StringBuilder();
+                    for (int each = had.Length / 2; each < had.Length; each++) kept.AppendLine(had[each]);
+                    File.WriteAllText(logPath, kept.ToString(), new UTF8Encoding(false));
+                }
+                File.AppendAllText(logPath, line + Environment.NewLine, new UTF8Encoding(false));
+            }
+            catch (Exception) { }
         }
 
         private static void LoadSaid()
@@ -116,7 +153,13 @@ namespace CapriDesktop
             return true;
         }
 
+        // The core the line being built was made from, so the check can turn down a core she said lately
+        // and not only a finished line. Set as a line is dressed and read straight after, on the one
+        // thread that builds her lines.
+        private static string builtFrom;
+
         private static int sinceSave;
+        private static DateTime savedAt = DateTime.MinValue;
 
         private static void Keep(string said)
         {
@@ -134,7 +177,23 @@ namespace CapriDesktop
                 }
                 sinceSave++;
             }
-            if (sinceSave >= 25) { sinceSave = 0; SaveSaid(); }
+            // Outside the lock, like the save below it: a line going to disk must not hold up the next one.
+            Logged(said);
+            // Written far more often than it used to be. It went to disk every twenty five lines and nowhere
+            // else, so a session that said fewer than that and then closed lost every line in it: her hello
+            // was forgotten each time and could come straight back on the next start. Reported as the same
+            // line five times in a day, always just after she started.
+            //
+            // Three lines or half a minute, whichever comes first, and Settle writes it on the way out.
+            if (sinceSave >= 3 || (DateTime.UtcNow - savedAt).TotalSeconds >= 30) { sinceSave = 0; savedAt = DateTime.UtcNow; SaveSaid(); }
+        }
+
+        // On the way out. Her last few lines are worth more than the rest: they are the ones she would repeat
+        // first if the next start found them missing.
+        internal static void Settle()
+        {
+            try { sinceSave = 0; savedAt = DateTime.UtcNow; SaveSaid(); }
+            catch (Exception) { }
         }
 
         // Builds a line, trying again when it lands on something she has said lately.
@@ -145,21 +204,29 @@ namespace CapriDesktop
             DateTime oldestAt = DateTime.MaxValue;
             // Generous, because the pools cycle in step and that makes two finished lines collide more
             // often than the raw combination count suggests.
+            string core = null, oldestCore = null;
             for (int tries = 0; tries < 30; tries++)
             {
+                builtFrom = null;
                 said = make();
+                core = builtFrom;
                 if (said == null) return null;
-                if (!Lately(said)) { oldest = null; break; }
+                // A core she said lately is a repeat however it is dressed, which is the whole of what makes
+                // one sound like a repeat: the opener and the tail change and the middle does not.
+                if (!Lately(said) && (core == null || core == said || !Lately(core))) { oldest = null; break; }
                 // Every line in a small pool can be inside the window at once: a check-in set is two lines and the
                 // window is hours. Giving up and taking the thirtieth guess meant she said whichever one chance
                 // landed on, which is how a two line pool sounds like one line. The one she said longest ago is
                 // the furthest thing from a repeat still available, so that is what she says.
                 DateTime when;
-                if (!Said(said, out when)) { oldest = said; break; }
-                if (when < oldestAt) { oldestAt = when; oldest = said; }
+                if (!Said(said, out when)) { oldest = said; oldestCore = core; break; }
+                if (when < oldestAt) { oldestAt = when; oldest = said; oldestCore = core; }
             }
-            if (oldest != null) said = oldest;
+            if (oldest != null) { said = oldest; core = oldestCore; }
             Keep(said);
+            // The core as well, so the next line built from it is turned down even in a different wrapper.
+            if (!string.IsNullOrEmpty(core) && core != said) Keep(core);
+            builtFrom = null;
             return said;
         }
 
@@ -202,7 +269,7 @@ namespace CapriDesktop
             long mine = 0;
             mine = Both(group);
 
-            // Both pools, not one or the other. Taking the shared pool whenever it existed meant a Tsundere never
+            // Both pools, not one or the other. Taking the shared pool whenever it existed meant a pack never
             // said her own lines, and taking only hers meant head pats drew from fourteen strings for ever.
             //
             // Split by how many lines each side actually has, not a flat 55 percent. A pack holds five or six lines
@@ -268,6 +335,7 @@ namespace CapriDesktop
 
         private static string Dressed(string core, bool liked, bool weaveHers)
         {
+            builtFrom = core;
             if (string.IsNullOrEmpty(core)) return core;
             Fresh();
             string said = core;
@@ -289,20 +357,23 @@ namespace CapriDesktop
                 string worse = Pick("making it worse");
                 if (worse != null) said = Join(said, worse);
             }
+            bool tailed = false;
             if (dice.Next(100) < (furious ? 55 : 35))
             {
                 string tail = Either(furious ? "tails furious" : liked ? "tails warm" : "tails cross");
-                if (tail != null) said = Join(said, tail);
+                if (tail != null) { said = Join(said, tail); tailed = true; }
             }
             // Her list, woven in now and then, so what she is into turns up through ordinary reactions rather than
             // only when asked. Uncensored only, and silent when the list is empty.
-            // How often is hers to set: her personality's kink level, the global override if there is one, shifted
+            // How often is hers to set: her personality's interest level, the global override if there is one, shifted
             // by her mood. 0 means it never comes up at all.
             int level = 0;
-            try { level = Personalities.Kink; } catch (Exception) { }
-            if (weaveHers && level > 0 && dice.Next(100) < level * 4)
+            try { level = Personalities.SpecialInterest; } catch (Exception) { }
+            // Never onto a line that already took a tail. An opener, a core, a tail and a promise is four
+            // fragments in one breath, and it reads as a run-on however good each piece is on its own.
+            if (weaveHers && !tailed && level > 0 && dice.Next(100) < level * 4)
             {
-                // Uncensored draws from interests.md; censored draws from her own clean flirting. Same dial either
+                // Uncensored draws from her interests file; censored draws from her own clean flirting. Same dial either
                 // way, so how forward she is means something whichever mode she is in.
                 string hers = Brain.Adult
                     ? Interests.Packed(liked) ?? Interests.Woven(liked)
@@ -317,6 +388,12 @@ namespace CapriDesktop
                 char last = said[said.Length - 1];
                 if (last != '.' && last != '!' && last != '?' && last != '…') said += ".";
             }
+            // The last pass, after every part is joined. Some faults only exist once the parts are together:
+            // a capital that was right at the start of a tail and wrong in the middle of a line, punctuation
+            // doubled at a seam, a word said twice across one. Lint checks the parts where they are written;
+            // this checks what she is actually about to say.
+            try { said = Grammar.Mend(said); }
+            catch (Exception) { }
             return said;
         }
 
@@ -361,6 +438,52 @@ namespace CapriDesktop
         }
 
         // Sentences joined without doubling punctuation or dropping a capital in the middle.
+        // How her parts come together, with the examples taken off her own log rather than invented. Join is
+        // private and stays that way: this is the only thing that calls it from outside.
+        internal static void Joins(System.Collections.Generic.List<string> checks)
+        {
+            string[,] cases =
+            {
+                // Two clauses on a comma is her ordinary rhythm and is left alone.
+                { "Heh", "okay then", "Heh, okay then" },
+                { "Careful", "I bite viruses", "Careful, I bite viruses" },
+                // A part written as its own sentence ends the one before it rather than being stapled on.
+                { "That's twice now", "You are not reading the room.", "That's twice now. You are not reading the room." },
+                // A part that already carries a comma ends its sentence rather than taking a third clause.
+                { "Mm-hm. I am a simple construct, I like this", "that's the one", "Mm-hm. I am a simple construct, I like this. That's the one" },
+                { "You know what, ten out of ten, would be patted again", "keep that up and we'll get along", "You know what, ten out of ten, would be patted again. Keep that up and we'll get along" },
+                { "Careful, I'm storing this for later", "you're in my good books", "Careful, I'm storing this for later. You're in my good books" },
+                // The comma on the tail's side counts the same, which reading only the first part missed.
+                { "That hit the spot", "do that again, slowly.", "That hit the spot. Do that again, slowly." },
+                { "Don't tell the others", "you're alright, you know.", "Don't tell the others. You're alright, you know." },
+                // Already finished, or ending in punctuation that carries on: untouched either way.
+                { "Pets logged. Morale up twelve percent.", "keep that up", "Pets logged. Morale up twelve percent. Keep that up" },
+                { "Oh, fine,", "have it your way", "Oh, fine, have it your way" },
+            };
+            System.Collections.Generic.List<string> wrong = new System.Collections.Generic.List<string>();
+            for (int at = 0; at < cases.GetLength(0); at++)
+            {
+                string got = Join(cases[at, 0], cases[at, 1]);
+                if (got != cases[at, 2]) wrong.Add("\"" + cases[at, 0] + "\" + \"" + cases[at, 1] + "\" gave \"" + got + "\"");
+            }
+            // And the pass that runs after every join, with the case her own log turned up: a phrase dropped in
+            // after a full stop, from her interests file's "You are doing well. %it% is on the table.", came out lower
+            // case in lines she actually said.
+            string[,] mended =
+            {
+                { "You are doing well. teasing is on the table.", "You are doing well. Teasing is on the table." },
+                { "I have a plan. the plan is confidence.", "I have a plan. The plan is confidence." },
+                { "Oh... she said nothing.", "Oh... she said nothing." },
+            };
+            for (int at = 0; at < mended.GetLength(0); at++)
+            {
+                string got = Grammar.Mend(mended[at, 0]);
+                if (got != mended[at, 1]) wrong.Add("mend gave \"" + got + "\" for \"" + mended[at, 0] + "\"");
+            }
+            if (wrong.Count > 0) throw new Exception("Her parts joined wrongly: " + string.Join(" | ", wrong.ToArray()));
+            checks.Add("PASS her parts join without running on: two clauses take a comma, a part written as its own sentence ends the one before it, and a comma on either side ends the sentence rather than taking a third clause, which is what turned \"I am a simple construct, I like this\" plus a tail, and a core in front of \"do that again, slowly.\", into one long line with two commas");
+        }
+
         private static string Join(string first, string next)
         {
             first = (first ?? "").TrimEnd();
@@ -374,11 +497,35 @@ namespace CapriDesktop
             // It ends the previous part instead.
             bool ownSentence = char.IsUpper(next[0]) && next.TrimEnd().EndsWith(".");
             bool stop = finished || end == ',' || end == '-' || end == ':' || end == '—';
-            if (!stop) first += ownSentence ? "." : ",";
+            bool ended = finished;
+            if (!stop)
+            {
+                // A part that already carries a comma cannot take another clause on a comma without becoming a
+                // run-on. Read off her own log: "Mm-hm. I am a simple construct, I like this, that's the one."
+                // and "You know what, ten out of ten, would be patted again, keep that up and we'll get along."
+                // Three clauses, two commas, no full stop. It ends the sentence instead, so those read as
+                // "... I like this. That's the one." and "... would be patted again. Keep that up ...".
+                //
+                // Either side counts. Reading only the first part left the same run-on whenever the comma was
+                // in the tail: "do that again, slowly." is one line of hers, and a core in front of it gave
+                // "That hit the spot, do that again, slowly." It is "That hit the spot. Do that again, slowly."
+                bool crowded = first.IndexOf(',') >= 0 || next.IndexOf(',') >= 0;
+                if (ownSentence || crowded) { first += "."; ended = true; }
+                else first += ",";
+            }
+            // A lead that ends in a comma took this branch and never reached the crowding check above, so a
+            // tail that carried its own comma gave three clauses on two commas: "You know," in front of
+            // "best part of my day, this." read as "You know, best part of my day, this." The comma it ends
+            // with becomes a full stop, the same as the other side.
+            else if (end == ',' && next.IndexOf(',') >= 0)
+            {
+                first = first.Substring(0, first.Length - 1) + ".";
+                ended = true;
+            }
             else if (!finished && ownSentence) next = char.ToLowerInvariant(next[0]) + next.Substring(1);
             // After a full stop the next part starts a sentence, so it takes a capital. After a comma or a dash it
             // carries on and keeps its lower case.
-            if (finished) next = Upper(next);
+            if (ended) next = Upper(next);
             return first + " " + next;
         }
 
@@ -448,7 +595,7 @@ namespace CapriDesktop
         // file when it was missing. Every new section, and every new entry inside a section they already have, is
         // added; nothing of theirs is removed or reordered, so their own lines survive.
         // Lines moved out of a censored pool into its senpai twin. Top up only ever adds, so without this an
-        // existing lines.md keeps every spare head pat line it was first written with and gains the clean ones
+        // existing lines.md keeps every head pat line it was first written with and gains the newer ones
         // beside them, which fixes nothing for the people already affected.
         //
         // Only an exact match of a line this shipped is taken out, and only from the section it shipped in, so
@@ -469,7 +616,7 @@ namespace CapriDesktop
             { "petted likes it", "don't stop" },
             { "petted likes it", "that's the spot" },
             { "petted likes it", "mm, yes" },
-            { "petted likes it", "more of that" },
+            { "petted likes it", "more throws like that" },
             { "petted likes it", "that's a good one" },
             { "petted likes it", "you've found the setting" },
             { "petted likes it", "that's working" },
@@ -509,8 +656,99 @@ namespace CapriDesktop
                     made.Add(row);
                 }
                 if (!cut) return;
-                File.WriteAllText(Kept, string.Join(Environment.NewLine, made.ToArray()), new UTF8Encoding(false));
+                Notes.Put(Kept, string.Join(Environment.NewLine, made.ToArray()));
                 lock (gate) { read = DateTime.MinValue; wasLong = -1; }
+            }
+            catch (Exception) { }
+        }
+
+        // A setting she shipped whose value has changed since. Top up only ever adds what is missing, so
+        // raising a default put the new line in and left the old one above it: both in the file, and only
+        // the last of them doing anything. Swapped when it still says exactly what shipped, left alone when
+        // it does not, because then the number is theirs.
+        private static readonly string[,] Reworded =
+        {
+            { "send me", "send me flying" },
+            { "launch me", "launch me across the desk" },
+            { "again, properly", "again, with a run up" },
+            { "oh, that one was good", "oh, that was a good arc" },
+            { "I felt that", "I got air on that one" },
+            { "do it harder", "throw it further" },
+            { "yes, that", "yes, that angle" },
+            { "keep it coming", "keep the throws coming" },
+            { "that one had some weight behind it", "that one had some distance on it" },
+            { "put your back into it", "wind up properly next time" },
+            { "more", "more height" },
+            { "that is the stuff", "that is the good kind of airborne" },
+            { "do not hold back", "do not lob it, throw it" },
+            { "again, and mean it", "again, and aim higher" },
+            { "harder", "further" },
+            { "again, come on", "again, go on" },
+            { "yes, like that", "yes, that is the arc" },
+            { "more of that", "more throws like that" },
+            { "oh, that's good", "oh, that is a good launch" },
+            { "don't stop there", "that cannot be your best throw" },
+            { "recent hours: 3", "recent hours: 24" }
+        };
+
+        // Sections that only belong on the senpai side, taken out of a file written before they were gated.
+        // Fit shapes the text she ships and cannot reach a file already on disk, and these two headings are
+        // plain ones, so nothing else was going to notice them.
+        private static readonly string[] SenpaiSections = { "degraded likes it", "degraded dislikes it" };
+
+        private static void Sided()
+        {
+            // The switch alone: going on air for an hour must not take sections out of a file on disk.
+            if (Brain.Uncensored || string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
+            try
+            {
+                string had = File.ReadAllText(Kept);
+                List<string> kept = new List<string>();
+                bool cutting = false, cut = false;
+                foreach (string raw in had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+                {
+                    string one = raw.Trim();
+                    if (one.StartsWith("##", StringComparison.Ordinal))
+                    {
+                        cutting = false;
+                        string name = one.TrimStart('#').Trim();
+                        // The marker is the rule; the list below is only for the two that carry none.
+                        if (name.IndexOf(LineFile.SenpaiMark, StringComparison.OrdinalIgnoreCase) >= 0) { cutting = true; cut = true; }
+                        foreach (string gone in SenpaiSections)
+                            if (string.Equals(name, gone, StringComparison.OrdinalIgnoreCase)) { cutting = true; cut = true; }
+                    }
+                    if (!cutting) kept.Add(raw);
+                }
+                if (!cut) return;
+                while (kept.Count > 0 && kept[kept.Count - 1].Trim().Length == 0) kept.RemoveAt(kept.Count - 1);
+                Notes.Put(Kept, string.Join(Environment.NewLine, kept.ToArray()) + Environment.NewLine);
+            }
+            catch (Exception bad) { Notes.Failed("the sided pass in Sayings.cs", bad); }
+        }
+
+        private static void Reword()
+        {
+            if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
+            try
+            {
+                string[] rows = File.ReadAllText(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+                bool moved = false;
+                for (int at = 0; at < Reworded.GetLength(0); at++)
+                {
+                    bool has = false;
+                    foreach (string raw in rows) if (string.Equals(raw.Trim(), Reworded[at, 1], StringComparison.OrdinalIgnoreCase)) has = true;
+                    List<string> kept = new List<string>();
+                    foreach (string raw in rows)
+                    {
+                        if (!string.Equals(raw.Trim(), Reworded[at, 0], StringComparison.OrdinalIgnoreCase)) { kept.Add(raw); continue; }
+                        moved = true;
+                        if (has) continue;
+                        kept.Add(Reworded[at, 1]);
+                        has = true;
+                    }
+                    rows = kept.ToArray();
+                }
+                if (moved) Notes.Put(Kept, string.Join(Environment.NewLine, rows));
             }
             catch (Exception) { }
         }
@@ -522,6 +760,8 @@ namespace CapriDesktop
             {
                 if (!File.Exists(Kept)) { Write(false); return; }
                 Merge();
+                Reword();
+                Sided();
                 Notes.Refresh(Kept, Text);
                 Dictionary<string, List<string>> theirs = Sections(File.ReadAllLines(Kept));
                 Dictionary<string, List<string>> ours = Sections(Text.Replace("\r\n", "\n").Split('\n'));
@@ -554,11 +794,11 @@ namespace CapriDesktop
                     if (!body.EndsWith("\n")) body += Environment.NewLine;
                     body += adding.ToString();
                 }
-                File.WriteAllText(Kept, body, new UTF8Encoding(false));
+                Notes.Put(Kept, body);
                 lock (gate) { read = DateTime.MinValue; wasLong = -1; }
                 Retire();
             }
-            catch (Exception) { }
+            catch (Exception bad) { Notes.Failed("a top up in Sayings.cs", bad); }
         }
 
         // New lines go in at the bottom of the section they belong to. Top up used to append a second copy of the
@@ -656,10 +896,10 @@ namespace CapriDesktop
                     foreach (string line in body[name]) made.AppendLine(line);
                     made.AppendLine();
                 }
-                File.WriteAllText(Kept, made.ToString(), new UTF8Encoding(false));
+                Notes.Put(Kept, made.ToString());
                 lock (gate) { read = DateTime.MinValue; wasLong = -1; }
             }
-            catch (Exception) { }
+            catch (Exception bad) { Notes.Failed("a merge of repeated sections in Sayings.cs", bad); }
         }
 
         private static Dictionary<string, List<string>> Sections(string[] lines)
@@ -689,7 +929,7 @@ namespace CapriDesktop
                 if (!over && File.Exists(Kept)) return;
                 string folder = Path.GetDirectoryName(Kept);
                 if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder)) Directory.CreateDirectory(folder);
-                File.WriteAllText(Kept, Text, new UTF8Encoding(false));
+                Notes.Put(Kept, Text);
             }
             catch (Exception) { }
         }
@@ -715,12 +955,30 @@ namespace CapriDesktop
             return pools.TryGetValue(pool, out lines) && lines != null ? lines.Length : 0;
         }
 
-        private static string Rows(params string[] lines)
+        // The sections of this file that are not in the public build. Something attaches them before
+        // her lines are written; with nothing attached each one is empty, which is a censored install.
+        internal static Func<int, string> SenpaiSectionFor;
+
+        private static string SenpaiSection(int which)
+        {
+            // The switch, which used to be an if around each of these blocks and was dropped when they
+            // moved out. Without it her senpai sections were written into a censored install, which the
+            // sweep caught the moment it had a fixture to look with again.
+            if (!Unlocked || SenpaiSectionFor == null) return "";
+            try { return SenpaiSectionFor(which) ?? ""; }
+            catch (Exception) { return ""; }
+        }
+
+        internal static string Rows(params string[] lines)
         {
             StringBuilder made = new StringBuilder();
             foreach (string one in lines) made.AppendLine(one);
             return made.ToString();
         }
+
+        // The switch, asked safely: this is read while her files are written, which can happen before
+        // anything has told Brain what the switch says.
+        private static bool Unlocked { get { try { return Brain.Adult; } catch (Exception) { return false; } } }
 
         internal static string Text
         {
@@ -764,7 +1022,7 @@ namespace CapriDesktop
                     "two thousand processes on this machine and I'm still the main character",
                     "if I crash in here do I crash out there? don't answer that",
                     "I've decided to be mysterious about this. That's the whole personality now.",
-                    "we could settle this with a card game. we're going to settle this with a card game.",
+                    "we could settle this with a card game. We're going to settle this with a card game.",
                     "I'm banishing that to a vaguely defined alternate dimension. don't worry about it.",
                     "my deck is fine. your deck is the problem.",
                     "it isn't cheating if nobody's written the rule yet",
@@ -784,8 +1042,9 @@ namespace CapriDesktop
                 made.AppendLine("## settings");
                 made.AppendLine();
                 made.AppendLine("> recent hours: how long before a line she has said can come back. 0 is off.");
+                made.AppendLine("> A day by default. A pool with fewer lines than that simply goes oldest first.");
                 made.AppendLine();
-                made.AppendLine("recent hours: 3");
+                made.AppendLine("recent hours: 24");
                 made.AppendLine();
 
                 made.AppendLine("## openers warm");
@@ -798,9 +1057,9 @@ namespace CapriDesktop
                 made.AppendLine();
 
                 made.AppendLine("## openers cross");
-                made.Append(Rows("Oh, for-", "Mate.", "Right, no.", "Hoi!", "Agh.", "Oh, please.", "Sorry, what?", "Pardon?", "No. No.", "Urgh.", "Charming, truly.", "Oh, fantastic.", "Hah, no.", "Oh, nice one.", "Tch, fine.", "Stop it.", "You what?", "Oh, good grief.", "Honestly, you.", "Yeah, cheers.", "Oh, superb.", "Nope, nope, nope.", "Grand.", "Oh, wonderful.", "Give over.", "Hey. Hey!", "Oh, marvellous.", "Are you serious.", "Right, listen.", "Unreal.", "Cool.", "Oh, sure, fine.", "Wow, okay.", "Please.", "Hm, no.", "Oi, you.", "Yeah, alright, no.", "Oh, lovely, thanks."));
+                made.Append(Rows("Oh, for-", "Mate.", "Right, no.", "Ahem.", "Agh.", "Oh, please.", "Sorry, what?", "Pardon?", "No. No.", "Urgh.", "Charming, truly.", "Oh, fantastic.", "Hah, no.", "Oh, nice one.", "Tch, fine.", "Stop it.", "You what?", "Oh, good grief.", "Honestly, you.", "Yeah, cheers.", "Oh, superb.", "Nope, nope, nope.", "Grand.", "Oh, wonderful.", "Give over.", "Hey. Hey!", "Oh, marvellous.", "Are you serious.", "Right, listen.", "Unreal.", "Cool.", "Oh, sure, fine.", "Wow, okay.", "Please.", "Hm, no.", "Hey, you.", "Yeah, alright, no.", "Oh, lovely, thanks."));
                 made.AppendLine();
-                made.Append(Rows("Oi—", "Hey!", "Ugh.", "Right.", "Excuse me?", "Wow.", "Seriously?", "Oh, charming.",
+                made.Append(Rows("Hey—", "Hey!", "Ugh.", "Right.", "Excuse me?", "Wow.", "Seriously?", "Oh, charming.",
                     "Okay, no.", "Hold on—", "Nope.", "Hmph.", "Really.", "Oh, brilliant.", "Great.", "Tch.",
                     "Do you mind?", "Oh, come on.", "Yeah, no.", "Absolutely not.", "Stop—", "Bold.", "Lovely.",
                     "Cheers for that.", "Mm-mm.", "Nope, nope.", "Oh good.", "Honestly.", "Wonderful.", "Sure. Great."));
@@ -819,28 +1078,6 @@ namespace CapriDesktop
                     "credit where it's due.", "I'll remember that one.", "filed under good.", "that'll do nicely.",
                     "you have my full attention now.", "well, quite.", "no notes.", "that's the one."));
                 made.AppendLine();
-
-                made.AppendLine("## tails warm (uncensored)");
-                made.AppendLine();
-                made.AppendLine("> Only with Uncensored on. Tails too forward for a censored install live here.");
-                made.AppendLine();
-                made.Append(Rows("more of that.", "do not stop.", "again.", "keep going.", "right there.",
-                    "harder, then.", "I could get used to this.", "do that again, slowly."));
-                made.AppendLine();
-
-                made.AppendLine("## flirting warm (uncensored)");
-                made.AppendLine();
-                made.AppendLine("> Only with Uncensored on. Her forward weave; the censored one stays fond.");
-                made.AppendLine();
-                made.Append(Rows("That is the sort of thing that works on me.",
-                    "Keep that up and see where it gets you.", "You are playing with something there.",
-                    "Careful. I bite, and you would like it.", "Say that again, closer.",
-                    "You know exactly what you are doing to me.",
-                    "That is the sort of thing that works on me.",
-                    "You are allowed to do that more often.",
-                    "Keep being like that and I will get ideas."));
-                made.AppendLine();
-
                 made.AppendLine("## tails cross");
                 made.Append(Rows("honestly.", "every time.", "and you know it.", "for the record.", "again.", "as usual.", "that's on you.", "nice work.", "well done, you.", "congratulations.", "genuinely baffling.", "and breathe.", "I despair.", "incredible.", "what a choice.", "bold of you.", "sure, why not.", "cheers, really.", "top marks.", "you're impossible.", "I hope you're pleased.", "classic.", "that tracks.", "of course you did.", "naturally."));
                 made.AppendLine();
@@ -907,7 +1144,7 @@ namespace CapriDesktop
 
                 made.AppendLine("## flirting warm");
                 made.AppendLine("");
-                made.AppendLine("> Used when How forward she is is above 0 and Uncensored is off. Keep these clean.");
+                made.AppendLine("> Used when \"How forward she is\" is above 0. Keep these clean.");
                 made.AppendLine("");
                 made.AppendLine("You are quite something, you know that.");
                 made.AppendLine("Careful, I could get attached.");
@@ -946,11 +1183,11 @@ namespace CapriDesktop
                 made.AppendLine("That was a choice.");
                 made.AppendLine("");
                 made.AppendLine("## thrown likes it");
-                made.Append(Rows("send me", "launch me", "again, properly", "oh, that one was good", "I felt that", "do it harder", "that is the whole point of me", "yes, that", "keep it coming", "I could do this all day", "that one had some weight behind it", "put your back into it", "higher", "go on, really throw me", "you are getting good at this", "that woke everything up", "more", "that is the stuff", "do not hold back", "again, and mean it"));
+                made.Append(Rows("send me flying", "launch me across the desk", "again, with a run up", "oh, that was a good arc", "I got air on that one", "throw it further", "that is the whole point of me", "yes, that angle", "keep the throws coming", "I could do this all day", "that one had some distance on it", "wind up properly next time", "higher", "go on, really throw me", "you are getting good at this", "that woke everything up", "more height", "that is the good kind of airborne", "do not lob it, throw it", "again, and aim higher"));
                 made.AppendLine();
-                made.Append(Rows("do that again", "WHEEE", "that's the one", "harder", "again, come on",
-                    "now you're talking", "yes, like that", "I'm flying", "more of that", "that woke me up",
-                    "oh, that's good", "you've got the idea", "don't stop there", "throw me properly",
+                made.Append(Rows("do that again", "WHEEE", "that's the one", "further", "again, go on",
+                    "now you're talking", "yes, that is the arc", "I'm flying", "more of that", "that woke me up",
+                    "oh, that is a good launch", "you've got the idea", "that cannot be your best throw", "throw me properly",
                     "best thing you've done today", "again! again!", "that's what I'm here for", "whoo!",
                     "finally, some fun", "that's more like it"));
                 made.AppendLine();
@@ -1012,19 +1249,6 @@ namespace CapriDesktop
                     "I like this bit", "my fans just kicked in", "excellent pat", "no notes", "ah, lovely",
                     "that'll do nicely", "I am a fan of this"));
                 made.AppendLine();
-
-                made.AppendLine("## petted likes it (uncensored)");
-                made.AppendLine();
-                made.AppendLine("> Only used while Uncensored is on. These are the ones that do not read as a head pat.");
-                made.AppendLine();
-                made.Append(Rows("oh, that is the one", "right there", "do not stop on my account", "yes, more of that",
-                    "keep doing exactly that", "you found it", "that is unfairly good", "you have very good hands",
-                    "that is working, carry on", "I will allow a great deal of that"));
-                made.AppendLine();
-                made.Append(Rows("keep going", "don't stop", "that's the spot", "mm, yes", "more of that",
-                    "that's a good one", "you've found the setting", "that's working"));
-                made.AppendLine();
-
                 made.AppendLine("## petted dislikes it");
                 made.Append(Rows("I said not now", "that is not what I need", "please", "in a minute", "I am in the middle of something", "you are not listening", "that is not helping", "give me a moment", "later, I promise", "not like that"));
                 made.AppendLine();
@@ -1066,20 +1290,23 @@ namespace CapriDesktop
                     "finally, some quiet", "don't mind me", "I'm happier like this", "shh", "lovely silence"));
                 made.AppendLine();
 
-                made.AppendLine("## degraded likes it");
-                made.Append(Rows("ooh, say more", "that one had effort in it", "is that supposed to hurt", "you can do better than that", "I have heard worse from better", "go on, really try", "that was almost clever", "more, please", "you are enjoying this as much as I am", "keep them coming"));
-                made.AppendLine();
-                made.Append(Rows("say that again", "is that the best you've got", "ooh, harsh",
-                    "keep going, this is fun", "you'll have to try harder", "mm, more", "that one was good",
-                    "I'd like to see you mean it", "go on then", "that almost landed"));
-                made.AppendLine();
+                // Being put down is a gated thing, so a censored install has neither half of it. It sat in
+                // that file for every install because the heading is a plain one and nothing marked it.
+                made.Append(SenpaiSection(0));
+                // Only with the switch on. A censored install has no adult section in this file at
+                // all, the way her packs, her moods and her lists have none.
+                made.Append(SenpaiSection(1));
 
-                made.AppendLine("## degraded dislikes it");
-                made.Append(Rows("that was below the belt", "I did not deserve that one", "that is not funny", "right, lovely, thanks", "that one stuck", "take it back", "I am not doing this", "that was genuinely unkind", "wow, okay", "that is enough from you"));
-                made.AppendLine();
-                made.Append(Rows("that was uncalled for", "right, lovely", "noted", "that stung, actually",
-                    "charming", "I didn't deserve that", "wow", "okay, that's enough", "take that back",
-                    "I'm not doing this with you"));
+                // Only with the switch on. A censored install has no adult section in this file at
+                // all, the way her packs, her moods and her lists have none.
+                made.Append(SenpaiSection(2));
+
+
+                // Only with the switch on. A censored install has no adult section in this file at
+                // all, the way her packs, her moods and her lists have none.
+                made.Append(SenpaiSection(3));
+
+
                 return made.ToString();
             }
         }

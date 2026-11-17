@@ -26,6 +26,9 @@ namespace CapriDesktop
         private readonly Timer ticks = new Timer();
         private readonly Func<bool> blocked;
         private readonly Clip rest, glitch, talk;
+        // Made once. StringFormat.GenericTypographic builds a new one on every read, and this paints
+        // twenty five times a second.
+        private readonly StringFormat exact = new StringFormat(Look.Exact);
         private Native.Surface surface;
         private double born, drawAt;
         internal readonly bool Motion;
@@ -115,8 +118,7 @@ namespace CapriDesktop
                 graphics.TranslateTransform((room.Width - 1920 * s) / 2, (room.Height - 1080 * s) / 2);
                 graphics.ScaleTransform(s, s);
                 graphics.TextRenderingHint = TextRenderingHint.AntiAlias;
-                StringFormat exact = StringFormat.GenericTypographic;
-                using (Font face = new Font("Segoe UI Light", 195, GraphicsUnit.Pixel))
+                    using (Font face = new Font("Segoe UI Light", 195, GraphicsUnit.Pixel))
                 using (Font text = new Font("Segoe UI Light", 43, GraphicsUnit.Pixel))
                 using (Font small = new Font("Segoe UI", 19, GraphicsUnit.Pixel))
                 using (Brush white = new SolidBrush(Color.White))
@@ -125,10 +127,10 @@ namespace CapriDesktop
                 using (Brush green = new SolidBrush(Color.FromArgb(230, HudPaint.Skin)))
                 using (Brush ink = new SolidBrush(Blue))
                 {
-                    if (Revealed) Split(graphics, ":)", face, hair, pink, green, 181, 123, 7);
+                    if (Revealed) Split(graphics, exact, ":)", face, hair, pink, green, 181, 123, 7);
                     else graphics.DrawString(":(", face, white, 181, 123, exact);
                     for (int line = 0; line < Message.Length; line++) graphics.DrawString(Message[line], text, white, 208, 388 + 64 * line, exact);
-                    if (Revealed) Split(graphics, Punchline, text, white, pink, green, 208, 606, 3);
+                    if (Revealed) Split(graphics, exact, Punchline, text, white, pink, green, 208, 606, 3);
                     else graphics.DrawString(Percent + "% complete", text, white, 208, 606, exact);
                     graphics.FillRectangle(white, 208, 700, 108, 108);
                     Code(graphics, ink, 208, 700, 4);
@@ -143,9 +145,8 @@ namespace CapriDesktop
             surface.Show(Handle, room.Location);
         }
 
-        private static void Split(Graphics graphics, string words, Font font, Brush top, Brush left, Brush right, float x, float y, float apart)
+        private static void Split(Graphics graphics, StringFormat exact, string words, Font font, Brush top, Brush left, Brush right, float x, float y, float apart)
         {
-            StringFormat exact = StringFormat.GenericTypographic;
             graphics.DrawString(words, font, left, x - apart, y, exact);
             graphics.DrawString(words, font, right, x + apart, y + 1, exact);
             graphics.DrawString(words, font, top, x, y, exact);
@@ -192,6 +193,7 @@ namespace CapriDesktop
             if (disposing)
             {
                 ticks.Dispose();
+                exact.Dispose();
                 if (surface != null) { surface.Dispose(); surface = null; }
             }
             base.Dispose(disposing);

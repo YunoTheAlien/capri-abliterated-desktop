@@ -332,7 +332,7 @@ namespace CapriDesktop
                 if (shape.Kind == "text")
                 {
                     using (FontFamily font = FontFamily.GenericSansSerif)
-                    using (StringFormat format = StringFormat.GenericTypographic) path.AddString(shape.Text, font, (int)FontStyle.Regular, 28, first, format);
+                    path.AddString(shape.Text, font, (int)FontStyle.Regular, 28, first, Look.Exact);
                 }
                 else if (shape.Kind == "circle" || shape.Kind == "box")
                 {

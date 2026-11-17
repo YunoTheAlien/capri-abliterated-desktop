@@ -125,18 +125,38 @@ namespace CapriDesktop
                 if (Array.IndexOf(panel.Choices, "personality.md *") < 0) throw new Exception("An unsaved file has no star: " + string.Join(",", panel.Choices));
                 panel.Turn(1);
                 panel.Draft = "- They like café music.\r\n- 日本語 too.\r\n";
-                panel.Next();
-                if (panel.FileShown != "personality.md" || !panel.Draft.Contains("soft and calm") || File.ReadAllText(personality) != before || File.Exists(notes)) throw new Exception("Switching files lost a draft or wrote one.");
-                panel.Next();
+                // Back to each by its own tab. This used Next, which walks the whole strip and wraps, so it
+                // only came back round to personality.md while the editor had two tabs. It has had more than
+                // that for a long time: with twelve of them Next landed on twitch.md and this read as a lost
+                // draft on every run, which is the kind of failure that teaches people to ignore the suite.
+                panel.Turn(0);
+                if (panel.FileShown != "personality.md" || !panel.Draft.Contains("soft and calm") || File.ReadAllText(personality) != before || File.Exists(notes)) throw new Exception("Switching files lost a draft or wrote one: landed on " + panel.FileShown + " out of " + panel.Choices.Length + " tabs, " + string.Join(",", panel.Choices));
+                panel.Turn(1);
                 if (!panel.Draft.Contains("café") || !panel.Dirty) throw new Exception("me.md lost its draft when switching.");
-                checks.Add("PASS file editor switches between personality.md and me.md, keeping each one's unsaved draft, with a star on it and nothing written");
+                // And Next walks the strip in order and wraps at the end, whatever is on it.
+                int tabs = panel.Choices.Length;
+                panel.Next();
+                if (panel.FileShown != "twitch.md") throw new Exception("Next did not step along the strip: " + panel.FileShown);
+                panel.Turn(tabs - 1);
+                panel.Next();
+                if (panel.FileShown != "personality.md") throw new Exception("Next did not wrap round to the first tab: " + panel.FileShown);
+                panel.Turn(1);
+                if (!panel.Draft.Contains("café") || !panel.Dirty) throw new Exception("Walking the whole strip lost me.md's draft.");
+                checks.Add("PASS file editor switches between personality.md and me.md, keeping each one's unsaved draft, with a star on it and nothing written, and Next steps along the whole tab strip and wraps without losing one");
 
                 // Saving: through her own note code, into what she reads next, with each file's line ends kept.
                 if (!panel.Save() || panel.Status != "Saved." || !Brain.Notes().Contains("café music") || !Brain.Notes().Contains("日本語")) throw new Exception("me.md didn't save: " + panel.Status);
                 if (File.ReadAllText(notes).Contains("\r\n")) throw new Exception("Saving me.md changed its line ends.");
                 panel.Turn(0);
                 if (!panel.Save() || !panel.Status.StartsWith("Saved.", StringComparison.Ordinal)) throw new Exception("personality.md didn't save: " + panel.Status);
-                if (Brain.Personality != "You are Capri, but soft and calm." || !Brain.Persona.EndsWith(Brain.Holds + "\n" + Brain.Safety + "\n" + Brain.Machinery, StringComparison.Ordinal)) throw new Exception("A saved personality.md didn't reach her prompt with her safety lines after it: " + Brain.Personality);
+                // Both halves say which one they are. This named the personality either way, so a prompt whose
+                // tail had something appended after her safety lines reported the half that was fine.
+                if (Brain.Personality != "You are Capri, but soft and calm.") throw new Exception("A saved personality.md didn't reach her prompt: " + Brain.Personality);
+                // Her safety lines come straight after her own personality. Not last in the prompt: her mood,
+                // her willingness, her hours and the spell she has just come back from all go on after them,
+                // and asking for last meant this failed whenever she had a mood on, which is most of the time.
+                string safely = Brain.Personality + "\n" + Brain.Holds + "\n" + Brain.Safety + "\n" + Brain.Machinery;
+                if (Brain.Persona.IndexOf(safely, StringComparison.Ordinal) < 0) throw new Exception("Her safety lines do not follow her own personality in her prompt: " + Voice.Quote(Brain.Persona));
                 if (!File.ReadAllText(personality).Contains("\r\n")) throw new Exception("Saving personality.md changed its line ends.");
                 if (!mainframe.PersonalityShown.StartsWith("Your personality", StringComparison.Ordinal)) throw new Exception("The Mainframe's key didn't catch up: " + mainframe.PersonalityShown);
                 if (panel.Dirty || Array.IndexOf(panel.Choices, "personality.md") < 0) throw new Exception("A saved file still looks unsaved.");
@@ -190,10 +210,20 @@ namespace CapriDesktop
                 panel.Draft = panel.Draft + "One more line.\r\n";
                 panel.Turn(1);
                 panel.Draft = "- Both unsaved.\r\n";
+                string endsWere = File.ReadAllText(notes).Contains("\r\n") ? "CRLF" : "LF";
                 panel.Ask();
                 if (panel.Status.IndexOf("personality.md and me.md", StringComparison.Ordinal) < 0) throw new Exception("The guard didn't name both files: " + panel.Status);
                 panel.GuardSave();
-                if (!panel.Over || !File.ReadAllText(personality).Contains("One more line") || File.ReadAllText(notes) != "- Both unsaved.\n") throw new Exception("Save + close didn't save both files.");
+                // The words, and separately that the save kept whatever line ends the file already had, which is
+                // what Doc.ForFile is for. This asked for the words with a bare \n, so it only passed while
+                // me.md happened to be LF at this point and read as a lost save the moment it was not.
+                string meNow = File.ReadAllText(notes);
+                if (!panel.Over || !File.ReadAllText(personality).Contains("One more line")
+                    || meNow.Replace("\r\n", "\n") != "- Both unsaved.\n"
+                    || meNow.Contains("\r\n") != (endsWere == "CRLF")) throw new Exception("Save + close didn't save both files: "
+                    + (panel.Over ? "it closed" : "it stayed open") + ", personality.md "
+                    + (File.ReadAllText(personality).Contains("One more line") ? "kept its line" : "lost its line") + ", me.md was " + endsWere + " before the save and holds "
+                    + Voice.Quote(meNow));
 
                 // Going down with no chance to ask, like a Windows shutdown: the changes wait beside the file and come back.
                 OpenFiles(1);
@@ -203,7 +233,8 @@ namespace CapriDesktop
                 panel.Draft = "- Written just before shutdown.\r\n";
                 panel.KeepDrafts();
                 string kept = notes + ".unsaved";
-                if (!File.Exists(kept) || File.ReadAllText(notes) != "- Both unsaved.\n") throw new Exception("Unsaved changes weren't kept beside the file.");
+                if (!File.Exists(kept) || File.ReadAllText(notes).Replace("\r\n", "\n") != "- Both unsaved.\n") throw new Exception("Unsaved changes weren't kept beside the file: "
+                    + (File.Exists(kept) ? "the spare is there" : "no spare at " + kept) + ", me.md holds " + Voice.Quote(File.ReadAllText(notes)));
                 string held = File.ReadAllText(kept);
                 panel.Ask();
                 panel.GuardDiscard();
@@ -214,7 +245,8 @@ namespace CapriDesktop
                 panel.Motion = false;
                 panel.Finish();
                 if (!panel.Draft.Contains("just before shutdown") || !panel.Dirty || panel.Status != "Your unsaved changes came back.") throw new Exception("Kept changes didn't come back: " + panel.Status);
-                if (!panel.Save() || File.Exists(kept) || !File.ReadAllText(notes).Contains("just before shutdown")) throw new Exception("Saving kept changes went wrong.");
+                if (!panel.Save() || File.Exists(kept) || !File.ReadAllText(notes).Contains("just before shutdown")) throw new Exception("Saving kept changes went wrong: status "
+                    + panel.Status + ", " + (File.Exists(kept) ? "the spare is still there" : "the spare is gone") + ", me.md holds " + Voice.Quote(File.ReadAllText(notes)));
                 panel.Ask();
                 if (!panel.Over) throw new Exception("With nothing unsaved, closing asked anyway.");
                 checks.Add("PASS file editor: Save + close saves every unsaved file, and a shutdown with no chance to ask keeps them beside the file, to come back as unsaved changes");
