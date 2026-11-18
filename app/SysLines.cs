@@ -1040,6 +1040,33 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
+        // Yes deletes the senpai side's own files when the switch goes off.
+        internal const string CleanupKey = "cleanup files";
+
+        private static bool OnFullSide
+        {
+            get
+            {
+                try { return !string.IsNullOrEmpty(Kept) && string.Equals(Path.GetFileName(Path.GetDirectoryName(Kept)), Personalities.SenpaiName, StringComparison.OrdinalIgnoreCase); }
+                catch (Exception) { return false; }
+            }
+        }
+
+        internal static bool Cleanup
+        {
+            get
+            {
+                try
+                {
+                    if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return false;
+                    Match said = Regex.Match(File.ReadAllText(Kept), @"(?mi)^[ \t]*" + Regex.Escape(CleanupKey) + @"[ \t]*:[ \t]*(\S+)");
+                    string value = said.Success ? said.Groups[1].Value : "";
+                    return value.Equals("yes", StringComparison.OrdinalIgnoreCase) || value == "1" || value.Equals("true", StringComparison.OrdinalIgnoreCase);
+                }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return false; }
+            }
+        }
+
         private static void SenpaiLast()
         {
             try
@@ -1053,10 +1080,20 @@ namespace CapriDesktop
                 if (block.Count == 0) { block.Add(SenpaiHeading); block.AddRange(SenpaiNote); }
                 // A blank line under the heading, like every other section in the file has.
                 if (block.Count > 1 && block[1].Length > 0) block.Insert(1, "");
+                // The cleanup choice sits under the terms and above the answer, on the senpai side only.
+                string cleanup = null;
+                for (int at = rest.Count - 1; at >= 0; at--)
+                    if (Regex.IsMatch(rest[at], @"^[ \t]*" + Regex.Escape(CleanupKey) + @"[ \t]*:", RegexOptions.IgnoreCase))
+                    {
+                        if (cleanup == null) cleanup = rest[at].Trim();
+                        rest.RemoveAt(at);
+                    }
+                if (OnFullSide) { if (cleanup == null) cleanup = CleanupKey + ": No"; }
+                else cleanup = null;
                 string made = string.Join(Environment.NewLine, rest.ToArray()).TrimEnd()
                             + Environment.NewLine + Environment.NewLine
                             + string.Join(Environment.NewLine, block.ToArray())
-                            + Environment.NewLine + Environment.NewLine + key + Environment.NewLine;
+                            + Environment.NewLine + Environment.NewLine + (cleanup == null ? "" : cleanup + Environment.NewLine) + key + Environment.NewLine;
                 if (made == had) return;
                 Notes.Put(Kept, made);
                 lock (writing) { read = DateTime.MinValue; wasLong = -1; }

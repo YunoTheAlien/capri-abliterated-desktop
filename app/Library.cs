@@ -176,5 +176,79 @@ namespace CapriDesktop
             catch (Exception caughtOne) { Brain.Caught(caughtOne); }
         }
     }
-}
+    // Each mode keeps its own copy of every file that holds, or could hold, anything from the other side, in
+    // a plain folder and a senpai folder in personalSettings, and neither reads or writes the other's. Only the
+    // switch crosses. Games have a folder of their own.
+    internal static class Sides
+    {
+        internal const string Games = "games";
+        internal static readonly string[] Both =
+        {
+            "lines.md", "dynamic.md", "sys.md", "touch.md", "watching.md", "moments.md", "mod-zones.txt",
+            "me.md", "memories.md", "personality.md", "personality.backup.md", "mood.txt", "mood.when"
+        };
+        internal static readonly string[] OneSide = { "her_interests", "random_interests", "your_interests" };
+        internal static readonly string[] Played = { "chess.md" };
+        // A censored copy was made from a file that had both halves, and the rest of it still wants scrubbing.
+        internal static bool MadePlain;
+        // Line files whose marked sections a censored copy drops when it is made.
+        private static readonly string[] Marked = { "lines.md", "touch.md", "watching.md", "moments.md" };
 
+        // The mode she last ran in, read before anything else loads.
+        internal static bool LastRan(string data)
+        {
+            try
+            {
+                string file = Path.Combine(data, "settings.json");
+                return File.Exists(file) && Regex.IsMatch(File.ReadAllText(file), "\"Uncensored\"\\s*:\\s*true");
+            }
+            catch (Exception caughtOne) { Brain.Caught(caughtOne); return false; }
+        }
+
+        private static bool Has(string[] list, string name)
+        {
+            foreach (string one in list) if (string.Equals(one, name, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+
+        // Where a file lives for this side, from the loose path it had. A loose one moves in on the first start.
+        // Turning on, a side with no copy yet starts from the censored one; nothing is ever copied the other way
+        // except once, when a loose file from before the split is laid out on a machine that is on.
+        internal static string Place(string loose, bool full)
+        {
+            if (string.IsNullOrEmpty(loose)) return loose;
+            string name = Path.GetFileName(loose), settings = Path.GetDirectoryName(loose) ?? "";
+            string into = Has(Played, name) ? Games
+                : Has(Both, name) ? (full ? Personalities.SenpaiName : Personalities.PlainName)
+                : Has(OneSide, name) && full ? Personalities.SenpaiName : null;
+            if (into == null) return loose;
+            string placed = Path.Combine(settings, into, name), plain = Path.Combine(settings, Personalities.PlainName, name);
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(placed));
+                if (File.Exists(loose) && !File.Exists(placed))
+                {
+                    if (full && Has(Both, name) && !File.Exists(plain))
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(plain));
+                        File.Copy(loose, plain);
+                        if (Has(Marked, name)) LineFile.Sided(plain);
+                        if (name.Equals("mod-zones.txt", StringComparison.OrdinalIgnoreCase))
+                        {
+                            List<string> zones = new List<string>();
+                            foreach (string line in File.ReadAllLines(plain))
+                                if (line.IndexOf(LineFile.SenpaiMark, StringComparison.OrdinalIgnoreCase) < 0) zones.Add(line);
+                            File.WriteAllLines(plain, zones.ToArray());
+                        }
+                        MadePlain = true;
+                    }
+                    File.Move(loose, placed);
+                    SpareFiles.Carry(loose, placed);
+                }
+                else if (full && Has(Both, name) && !File.Exists(placed) && File.Exists(plain)) File.Copy(plain, placed);
+            }
+            catch (Exception caughtOne) { Brain.Caught(caughtOne); return File.Exists(placed) || !File.Exists(loose) ? placed : loose; }
+            return placed;
+        }
+    }
+}

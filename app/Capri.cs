@@ -3149,15 +3149,18 @@ namespace CapriDesktop
             updateExit = delegate { quitting = true; ClearMarks(); Close(); };
             startMarker = running == null ? null : Path.Combine(data, Program.StartMarker);
             Brain.LogPath = Path.Combine(data, "errors.txt");
-            Brain.MemoryPath = Mine(data, "me.md");
+            sidesData = data;
+            sideFull = !smoke && Sides.LastRan(data);
+            Brain.MemoryPath = Side(data, "me.md");
             // A key she ships that an older me.md has not got, put in by name. Her other files top themselves up
             // the same way: without it a new key reaches new installs and nobody else.
             Brain.TopUpNotes();
             // personality.md is made only when they press Edit, so an old one from 0.7.4 or 0.7.5 is read as it is.
-            Brain.PersonalityPath = Mine(data, Brain.PersonalityName);
+            Brain.PersonalityPath = Side(data, Brain.PersonalityName);
+            Side(data, "personality.backup.md");
             if (smoke) foreach (string old in new[] { Brain.PersonalityPath, Brain.PersonalityBackup }) if (File.Exists(old)) File.Delete(old);
             reminders = new Reminders(data, DateTime.Now);
-            Brain.MemoriesPath = Mine(data, "memories.md");
+            Brain.MemoriesPath = Side(data, "memories.md");
             Hands.CatalogPath = Path.Combine(data, "apps.json");
             // <<< PATCH: twitch.md sits beside her other notes and is written once, with its own instructions inside it.
             twitchPath = Mine(data, TwitchRules.FileName);
@@ -3165,15 +3168,15 @@ namespace CapriDesktop
             playlistPath = Path.Combine(data, Playlist.FileName);
             Playlist.Kept = playlistPath;
             Commands.Kept = Mine(data, Commands.FileName);
-            Sayings.Kept = Mine(data, Sayings.FileName);
+            Sayings.Kept = Side(data, Sayings.FileName);
             // The lines she says on her own. Theirs to edit, beside the rest of what they edit.
-            Moments.Kept = Mine(data, Moments.FileName);
+            Moments.Kept = Side(data, Moments.FileName);
             // How she comes at a look over their shoulder. Her glance asks for one of these every time.
-            Angles.Kept = Mine(data, Angles.FileName);
+            Angles.Kept = Side(data, Angles.FileName);
             // Beside her files, since it is about her files: what a mod can take over, written by her.
             // What she says over a chess board, hers to edit like the rest of what she says.
-            ChessTalk.Kept = Mine(data, ChessTalk.FileName);
-            Zones.Listed = Mine(data, Zones.ListFile);
+            ChessTalk.Kept = Side(data, ChessTalk.FileName);
+            Zones.Listed = Side(data, Zones.ListFile);
             // The calendar they named in sys.md. That line has been in the file, and in the note above it,
             // without anything reading it: "open my calendar" went to whichever one they happen to keep in
             // front, however plainly they had written down which one they meant.
@@ -3195,7 +3198,7 @@ namespace CapriDesktop
             CapriDesktop.Layout.Kept = Mine(data, CapriDesktop.Layout.FileName);
             CapriDesktop.Layout.Changed = delegate { if (!quitting && !IsDisposed) { try { Post(delegate { Neon.Again(this); }); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } } };
             // What she says for a hand in one place rather than another.
-            Touch.Kept = Mine(data, Touch.FileName);
+            Touch.Kept = Side(data, Touch.FileName);
             // The pools she has, read off the files rather than waited for: a modder opening the list wants
             // to see what is claimable now, not whatever she has happened to say since she started. After
             // every one of these has its path, since this needs all of them.
@@ -3251,9 +3254,9 @@ namespace CapriDesktop
                 FetchLore();
             }
             Sayings.TopUp();
-            Interests.Kept = Mine(data, Interests.FileName);
-            Interests.HersKept = Mine(data, Interests.HersName);
-            Interests.YoursKept = Mine(data, Interests.YoursName);
+            Interests.Kept = Side(data, Interests.FileName);
+            Interests.HersKept = Side(data, Interests.HersName);
+            Interests.YoursKept = Side(data, Interests.YoursName);
             // Written under their old names before they had plain ones: renamed, keeping every word.
             Interests.Renamed();
             VoiceProfiles.Folder = Mine(data, VoiceProfiles.FolderName, true);
@@ -3264,7 +3267,7 @@ namespace CapriDesktop
             // Once, now: a flag set while she was closed has nobody to tell, and neither Save nor the watcher can
             // hear a save that happened before she started. Off her window's thread like the rest of it.
             StockFiles();
-            SysLines.Kept = Mine(data, SysLines.FileName);
+            SysLines.Kept = Side(data, SysLines.FileName);
             Hours.Kept = Path.Combine(data, Hours.FileName);
             // Which hours are theirs is about them being here, not the PC being on, and a spell with no keyboard
             // or mouse at all is the only thing that tells the two apart.
@@ -3283,10 +3286,10 @@ namespace CapriDesktop
             // Her mood can change while she is closing, and Post on a window going away throws. Her voice does
             // not matter at that point anyway.
             Dynamics.MoodChanged = delegate { if (!quitting && !IsDisposed) { try { Post(ApplyVoiceProfile); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } } MoodWritten(); };
-            moodPath = Path.Combine(Path.Combine(data, Personalities.SettingsName), "mood.txt");
+            moodPath = Side(data, "mood.txt");
             // Her mood with its deadline, which mood.txt cannot carry: that one is a single word for anything
             // else on this PC that follows her.
-            Dynamics.MoodKept = Path.Combine(Path.Combine(data, Personalities.SettingsName), "mood.when");
+            Dynamics.MoodKept = Side(data, "mood.when");
             MoodWritten();
             Hands.ShowHerFeet = ShowFeet;
             Probes.Saved = delegate { return preferences.ProbeAt; };
@@ -3296,7 +3299,7 @@ namespace CapriDesktop
             Working.Ahead = delegate { try { return Computer.Glimpse(); } catch (Exception) { return null; } };
             SysLines.Write(false);
             SysLines.TopUp();
-            Them.Watch(Brain.MemoryPath ?? Mine(data, "me.md"));
+            Them.Watch(Brain.MemoryPath ?? Side(data, "me.md"));
             Personalities.Folder = Path.Combine(data, Personalities.SettingsName, Personalities.FolderName);
             Personalities.Install();
             // LOCAL ONLY JOINT: this is where a file in app\ named *.local.cs attaches, after her packs are
@@ -3304,9 +3307,10 @@ namespace CapriDesktop
             // that way. With no such file the compiler removes this call, so the build is the ordinary one.
             // Grep LOCAL ONLY JOINT to find every place a local file can attach.
             LocalPacks(data);
-            Dynamics.Kept = Mine(data, Dynamics.FileName);
+            Dynamics.Kept = Side(data, Dynamics.FileName);
             Dynamics.Folder = Mine(data, Dynamics.FolderName, true);
             Dynamics.Install();
+            ScrubPlain(data);
             // Which one she is using is read once preferences exist, further down. Reading it here crashed every start
             // in the constructor, since preferences is not loaded until later.
             // Rewritten every start, so the list can never drift from what the build actually understands.
@@ -3377,6 +3381,7 @@ namespace CapriDesktop
             else preferences.Uncensored = written.Value;
             Brain.Uncensored = preferences.Uncensored;
             Brain.OnAir = preferences.OnAir;
+            if (!smoke && Brain.Uncensored != sideFull) SwitchSides(Brain.Uncensored);
             // After the toggle is known, not up with the other paths: it checks Uncensored, which is false until
             // preferences load, so the split sections never reached an existing file.
             Interests.TopUp();
@@ -12802,6 +12807,162 @@ namespace CapriDesktop
         //
         // Her own state is not moved: settings.json, her chat, her logs, her transcripts and her model packs stay
         // in her folder, so what is hers to edit and what is hers to write are not in one heap.
+        // Which side's copies she is using, and the folder they hang off.
+        private bool sideFull;
+        private string sidesData;
+
+        private string Side(string data, string name) { return Sides.Place(Mine(data, name), sideFull); }
+
+        // Every file that has a copy per side, pointed at the other side's. The side switched to is told the
+        // switch, so its own sys.md agrees and does not switch her straight back.
+        private void SwitchSides(bool full)
+        {
+            if (string.IsNullOrEmpty(sidesData) || sideFull == full) return;
+            // Asked of the side being left, before she leaves it.
+            bool wipe = !full && SysLines.Cleanup;
+            sideFull = full;
+            string data = sidesData;
+            if (wipe)
+            {
+                string over = Path.Combine(data, Personalities.SettingsName, Personalities.SenpaiName);
+                try
+                {
+                    if (Directory.Exists(over)) Directory.Delete(over, true);
+                    Brain.Log("files", -1, "Cleanup files was Yes, so the " + Personalities.SenpaiName + " side's files are gone.");
+                }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            }
+            bool ownMemory = string.IsNullOrEmpty(ownNotes) || Brain.MemoryPath == ownNotes;
+            string notes = Side(data, "me.md");
+            if (ownMemory) Brain.MemoryPath = notes;
+            ownNotes = notes;
+            Brain.PersonalityPath = Side(data, Brain.PersonalityName);
+            Side(data, "personality.backup.md");
+            Brain.MemoriesPath = Side(data, "memories.md");
+            Sayings.Kept = Side(data, Sayings.FileName);
+            Moments.Kept = Side(data, Moments.FileName);
+            Angles.Kept = Side(data, Angles.FileName);
+            Touch.Kept = Side(data, Touch.FileName);
+            Zones.Listed = Side(data, Zones.ListFile);
+            Interests.Kept = Side(data, Interests.FileName);
+            Interests.HersKept = Side(data, Interests.HersName);
+            Interests.YoursKept = Side(data, Interests.YoursName);
+            SysLines.Kept = Side(data, SysLines.FileName);
+            Dynamics.Kept = Side(data, Dynamics.FileName);
+            moodPath = Side(data, "mood.txt");
+            Dynamics.MoodKept = Side(data, "mood.when");
+            try
+            {
+                SysLines.Write(false);
+                SysLines.SetSenpai(full);
+                Sayings.Write(false);
+                Moments.Write(false);
+                Angles.Write(false);
+                Touch.Write(false);
+                Brain.TopUpNotes();
+                Zones.Offer(Moments.Kept, Moments.Sections);
+                Zones.Offer(Angles.Kept, Angles.Sections);
+                Zones.Offer(Touch.Kept, Touch.Sections);
+                Them.Watch(Brain.MemoryPath);
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            Brain.Log("files", -1, "Her files are the " + (full ? Personalities.SenpaiName : Personalities.PlainName) + " side's now.");
+        }
+
+        // Packs and moods written before they split kept rows that belong to the other side, and an existing file is
+        // never rewritten whole. Each censored copy is cut again: score rows for acts from over there, and drifts
+        // into a pack or mood from over there.
+        private static void ScrubHalves()
+        {
+            List<string> over = new List<string>(Dynamics.SenpaiNames());
+            foreach (string pack in Personalities.Order()) if (Array.IndexOf(Personalities.Softest, pack) < 0) over.Add(pack);
+            foreach (string folder in new[] { Personalities.Plain, Dynamics.Plain })
+            {
+                if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) continue;
+                foreach (string file in Directory.GetFiles(folder, "*.md"))
+                {
+                    try
+                    {
+                        string had = File.ReadAllText(file), plain, senpai;
+                        Personalities.Split(had, out plain, out senpai);
+                        if (plain == null) { File.Delete(file); continue; }
+                        List<string> kept = new List<string>();
+                        string named = Path.GetFileNameWithoutExtension(file);
+                        string shipped = folder == Personalities.Plain ? Personalities.Half(file, named) : Dynamics.MoodHalf(file, named);
+                        string[] stock = (shipped ?? "").Replace("\r\n", "\n").Split('\n');
+                        foreach (string row in plain.Replace("\r\n", "\n").Split('\n'))
+                        {
+                            Match drift = Regex.Match(row, @"^[ \t]*[A-Za-z][A-Za-z ]* over [0-9]+[ \t]*:[ \t]*(.+?)[ \t\r]*$");
+                            if (drift.Success && over.Exists(delegate(string one) { return one.Equals(drift.Groups[1].Value, StringComparison.OrdinalIgnoreCase); })) continue;
+                            // A line of prose naming one from over there: the line she ships now in its place, or gone.
+                            string line = row;
+                            if (over.Exists(delegate(string one) { return Regex.IsMatch(line, @"\b" + Regex.Escape(one) + @"\b", RegexOptions.IgnoreCase); }))
+                            {
+                                string start = line.Trim().Length > 20 ? line.Trim().Substring(0, 20) : null;
+                                string now = start == null ? null : Array.Find(stock, delegate(string one) { return one.Trim().StartsWith(start, StringComparison.Ordinal); });
+                                if (now != null) kept.Add(now);
+                                continue;
+                            }
+                            kept.Add(row);
+                        }
+                        string made = string.Join(Environment.NewLine, kept.ToArray());
+                        if (made.Replace("\r\n", "\n").Trim() != had.Replace("\r\n", "\n").Trim()) CapriDesktop.Notes.Overwrite(file, made);
+                    }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                }
+            }
+        }
+
+        private static void ScrubSpares()
+        {
+            string settings = Path.GetDirectoryName(Dynamics.Folder ?? "");
+            if (string.IsNullOrEmpty(settings) || !Directory.Exists(settings)) return;
+            string[] moods = Dynamics.SenpaiNames();
+            try
+            {
+                foreach (string spare in Directory.GetFiles(settings, "*.bak*", SearchOption.AllDirectories))
+                {
+                    if (spare.IndexOf(Path.DirectorySeparatorChar + Personalities.SenpaiName + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    try
+                    {
+                        string name = Path.GetFileName(spare);
+                        bool gone = false;
+                        foreach (string mood in moods)
+                            if (name.StartsWith(mood + ".", StringComparison.OrdinalIgnoreCase)) gone = true;
+                        if (!gone)
+                        {
+                            LineFile.Sided(spare);
+                            string body = File.ReadAllText(spare);
+                            foreach (string mood in moods)
+                                if (Regex.IsMatch(body, @"(?mi)^[ \t]*" + Regex.Escape(mood) + @"\b")) gone = true;
+                        }
+                        if (gone) File.Delete(spare);
+                    }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                }
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+        }
+
+        // A censored copy just made from a file with both halves gets the same pass the switch going off gives
+        // hers. Here her mode is not loaded yet and reads as off, which is what that pass needs.
+        private static void ScrubPlain(string data)
+        {
+            if (!Sides.MadePlain || Brain.Uncensored) return;
+            Sides.MadePlain = false;
+            string plain = Path.Combine(data, Personalities.SettingsName, Personalities.PlainName);
+            string dynamicWas = Dynamics.Kept, sysWas = SysLines.Kept;
+            try
+            {
+                Dynamics.Kept = Path.Combine(plain, Dynamics.FileName);
+                Dynamics.TopUpNow();
+                SysLines.Kept = Path.Combine(plain, SysLines.FileName);
+                SysLines.TopUp();
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            finally { Dynamics.Kept = dynamicWas; SysLines.Kept = sysWas; }
+        }
+
         private static string Mine(string data, string name, bool folder = false)
         {
             if (string.IsNullOrEmpty(data) || string.IsNullOrEmpty(name)) return null;
@@ -12979,6 +13140,7 @@ namespace CapriDesktop
             preferences.Uncensored = written.Value;
             Brain.Uncensored = preferences.Uncensored;
             SavePreferences();
+            SwitchSides(Brain.Uncensored);
             Personalities.Forget();
             // Switched on, her senpai halves are written for the first time: a censored install never had them on
             // disk. Switched off they are left where they are, since by then they may have been edited, and
@@ -13011,6 +13173,10 @@ namespace CapriDesktop
             if (Brain.Uncensored) return;
             Personalities.Away(Personalities.Senpais, "packs");
             Personalities.Away(Dynamics.Senpais, "moods");
+            // Spares from before her files split held both halves. Each one outside the other side's folders is cut
+            // the way a line file is, and one that still names a mood from over there goes.
+            ScrubSpares();
+            ScrubHalves();
             Interests.Gone();
             try
             {
