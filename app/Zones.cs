@@ -102,7 +102,7 @@ namespace CapriDesktop
                 more = true;
             }
             foreach (KeyValuePair<string, Func<string[]>> one in asking)
-                try { Offer(one.Key, one.Value()); } catch (Exception) { }
+                try { Offer(one.Key, one.Value()); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // The lines a mod has put in this zone, or null for her own.
@@ -140,7 +140,7 @@ namespace CapriDesktop
                 }
             foreach (string one in fought)
                 try { Brain.Log("mods", -1, mod + " took the zone " + one + "."); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         internal static void Drop(string mod)
@@ -196,7 +196,7 @@ namespace CapriDesktop
                 if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder)) Directory.CreateDirectory(folder);
                 File.WriteAllText(Listed, made.ToString(), new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
     }
 

@@ -265,8 +265,8 @@ namespace CapriDesktop
             if (current == null) return true;
             ThreadPool.QueueUserWorkItem(delegate
             {
-                try { current.ContinuousRecognitionSession.CancelAsync().AsTask().Wait(3000); } catch (Exception) { }
-                try { current.Dispose(); } catch (Exception) { }
+                try { current.ContinuousRecognitionSession.CancelAsync().AsTask().Wait(3000); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                try { current.Dispose(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             });
             return true;
         }

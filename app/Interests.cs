@@ -77,10 +77,9 @@ namespace CapriDesktop
                 Tucked.Free(old);
                 File.Move(old, now);
                 Tucked.Away(now);
-                string spare = old + ".bak";
-                if (File.Exists(spare)) { Tucked.Free(spare); try { File.Move(spare, now + ".bak"); } catch (IOException) { } Tucked.Away(now + ".bak"); }
+                SpareFiles.Carry(old, now);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // How she likes being handled. Was a dropdown on the setup card, which asked before anyone had met her.
@@ -172,7 +171,7 @@ namespace CapriDesktop
                     + string.Join(Environment.NewLine, goes.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
                 Tucked.Write(Kept, string.Join(Environment.NewLine, stays.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static void MakeYours()
@@ -182,7 +181,7 @@ namespace CapriDesktop
                 if (string.IsNullOrEmpty(YoursKept) || File.Exists(YoursKept)) return;
                 Tucked.Write(YoursKept, YoursHead.Replace("\n", Environment.NewLine), new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Both only exist with the toggle on, like her interests file itself.
@@ -213,7 +212,7 @@ namespace CapriDesktop
                 if (!body.EndsWith("\n")) body += Environment.NewLine;
                 Tucked.Write(file, body + adding.ToString(), new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static void TopUpHers()
@@ -226,7 +225,7 @@ namespace CapriDesktop
         private static void MakeHers()
         {
             try { Tucked.Write(HersKept, HersHead.Replace("\n", Environment.NewLine), new UTF8Encoding(false)); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Anything of hers left in her interests file after the carve, taken out. Nothing is lost: it is already in
@@ -275,7 +274,7 @@ namespace CapriDesktop
                     Tucked.Write(HersKept, theirs + string.Join(Environment.NewLine, real.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         internal static void TopUp()
@@ -296,7 +295,7 @@ namespace CapriDesktop
                 OnlyOnce();
                 Settle();
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
 
@@ -313,7 +312,7 @@ namespace CapriDesktop
                     foreach (string one in Handlings) if (string.Equals(line, one, StringComparison.OrdinalIgnoreCase)) return one;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return "Gentle";
         }
 
@@ -392,7 +391,7 @@ namespace CapriDesktop
                 }
                 if (moved) Tucked.Write(Kept, string.Join(Environment.NewLine, rows), new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // The first copy is the one kept, because that is the one anyone has edited. Later copies go whole.
@@ -422,7 +421,7 @@ namespace CapriDesktop
                 while (kept.Count > 0 && kept[kept.Count - 1].Trim().Length == 0) kept.RemoveAt(kept.Count - 1);
                 Tucked.Write(Kept, string.Join(Environment.NewLine, kept.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static void Settle()
@@ -445,7 +444,7 @@ namespace CapriDesktop
                 rows.InsertRange(Next(rows, into), block);
                 Tucked.Write(Kept, string.Join(Environment.NewLine, rows.ToArray()).TrimEnd() + Environment.NewLine, new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static int Heading(List<string> rows, string named)
@@ -512,7 +511,7 @@ namespace CapriDesktop
                 if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder)) Directory.CreateDirectory(folder);
                 Tucked.Write(Kept, Text, new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // A whole sentence built from one of her templates and one thing off the list, or null when she has either
@@ -661,7 +660,7 @@ namespace CapriDesktop
                 YoursKept = yoursWas;
                 Brain.Uncensored = senpaiWas;
                 try { if (Directory.Exists(folder)) Directory.Delete(folder, true); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
 
@@ -740,7 +739,7 @@ namespace CapriDesktop
             get
             {
                 StringBuilder made = new StringBuilder();
-                if (BodyFor != null) { try { made.Append(BodyFor()); } catch (Exception) { } }
+                if (BodyFor != null) { try { made.Append(BodyFor()); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
                 return made.ToString();
             }
         }

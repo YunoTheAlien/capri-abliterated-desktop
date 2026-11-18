@@ -27,7 +27,7 @@ namespace CapriDesktop
                 if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder)) Directory.CreateDirectory(folder);
                 File.WriteAllText(Kept, Text, new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Her editor is a plain text box in a monospace font, so the columns are padded with spaces rather than written

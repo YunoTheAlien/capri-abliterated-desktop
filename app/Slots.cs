@@ -39,7 +39,7 @@ namespace CapriDesktop
                     return title.Length == 0 ? null : title;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return null;
         }
 
@@ -67,7 +67,7 @@ namespace CapriDesktop
                     if (!File.Exists(path)) return path;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return System.IO.Path.Combine(folder, Stem + Guid.NewGuid().ToString("N").Substring(0, 6));
         }
 
@@ -84,7 +84,7 @@ namespace CapriDesktop
                 foreach (string file in files)
                 {
                     try { FileInfo about = new FileInfo(file); stamp += about.LastWriteTimeUtc.Ticks + about.Length; }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
                 lock (gate)
                 {
@@ -104,7 +104,7 @@ namespace CapriDesktop
                     stamps[folder] = stamp;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return found;
         }
 
@@ -124,12 +124,11 @@ namespace CapriDesktop
                     string path = Free(folder);
                     Tucked.Free(file);
                     File.Move(file, path);
-                    string spare = file + ".bak";
-                    if (File.Exists(spare)) { Tucked.Free(spare); try { File.Move(spare, path + ".bak"); } catch (IOException) { } }
+                    SpareFiles.Carry(file, path);
                 }
                 lock (gate) { known.Remove(folder); stamps.Remove(folder); }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // For her editor and anything else that shows one to a person: what the file calls itself, or its

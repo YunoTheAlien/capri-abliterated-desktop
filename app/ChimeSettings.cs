@@ -63,7 +63,7 @@ namespace CapriDesktop
                         chimeSpeaker.Open(Chimes.Rate);
                         chimeSpeaker.Play(sound);
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     finally { Monitor.Exit(chimeGate); }
                 });
             };
@@ -149,7 +149,7 @@ namespace CapriDesktop
             preferences.NoChimes = !preferences.NoChimes;
             ShowChimes();
             // Off stops one still ringing too.
-            if (preferences.NoChimes && chimeSpeaker != null) ThreadPool.QueueUserWorkItem(delegate { lock (chimeGate) { try { chimeSpeaker.Clear(); } catch (Exception) { } } });
+            if (preferences.NoChimes && chimeSpeaker != null) ThreadPool.QueueUserWorkItem(delegate { lock (chimeGate) { try { chimeSpeaker.Clear(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } } });
             SavePreferences();
             mainframe.Sync();
         }

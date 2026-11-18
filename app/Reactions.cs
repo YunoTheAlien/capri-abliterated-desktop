@@ -235,7 +235,7 @@ namespace CapriDesktop
             {
                 string tab = null;
                 try { if (watcher.Front() == found.Window && Jealous.Same(found, watcher.Look())) tab = watcher.Tab(found.Window); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 Post(delegate
                 {
                     if (turn != jealousTurn || jealousOffer != found) return;
@@ -1392,7 +1392,7 @@ namespace CapriDesktop
                     graphics.FillRectangle(Brushes.Black, box);
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
     }
 }

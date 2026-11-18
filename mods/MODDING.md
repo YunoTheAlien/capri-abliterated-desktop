@@ -61,7 +61,7 @@ She asks before a code mod runs, and asks again whenever the file changes. The a
 
 The same `.capri-code` file runs on Windows, Mac and Linux. Mac and Linux compile it as C# 5 too, so a mod that runs on one runs on the others. A few parts use Windows' own pictures and windows, so they're Windows only:
 
-- `capri.Art`, Startup Intros (`ICapriIntro`), `Ui.Drawing` and `CapriFrame`
+- `capri.Art`, Startup Intros (`ICapriIntro`, and `ICapriIntroNames` to list more than one in her Test menu), `Ui.Drawing` and `CapriFrame`
 - `Ui.SetOptions`, `Ui.Window`, `Mainframe.ShowPage` and `Mainframe.Window`
 - `Screen.Looked` and `Screen.Capture`
 - `System.Windows.Forms`, and `System.Drawing` pictures like `Bitmap` and `Graphics`. `Point`, `Rectangle`, `Size` and `Color` work everywhere.

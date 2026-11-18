@@ -125,7 +125,7 @@ namespace CapriDesktop
             double low = Dynamics.ProbeLow, high = Dynamics.ProbeHigh;
             if (high < low) { double swap = low; low = high; high = swap; }
             next = DateTime.UtcNow.AddHours(low + dice.NextDouble() * Math.Max(0, high - low));
-            try { Keep(next.Ticks); } catch (Exception) { }
+            try { Keep(next.Ticks); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // The time from her settings, the first time it is wanted. A saved time further out than the longest the
@@ -134,7 +134,7 @@ namespace CapriDesktop
         {
             if (next != DateTime.MinValue) return;
             long had = 0;
-            try { had = Saved(); } catch (Exception) { }
+            try { had = Saved(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             if (had > 0)
             {
                 try
@@ -142,7 +142,7 @@ namespace CapriDesktop
                     DateTime when = new DateTime(had, DateTimeKind.Utc);
                     if (when <= DateTime.UtcNow.AddHours(Math.Max(Dynamics.ProbeLow, Dynamics.ProbeHigh))) { next = when; return; }
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
             Roll();
         }
@@ -172,11 +172,11 @@ namespace CapriDesktop
                 // questions by something you are cross with is worse than silence.
                 int sore = 0;
                 string band = "steady";
-                try { sore = Upset(); band = Band() ?? "steady"; } catch (Exception) { }
+                try { sore = Upset(); band = Band() ?? "steady"; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 if (sore >= 15 || band == "off") return false;
 
                 double since = 99999;
-                try { since = Quiet(); } catch (Exception) { }
+                try { since = Quiet(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 // Mid-conversation is the natural moment, so a flowing chat brings it forward; otherwise she waits
                 // out the whole window. Either way she never asks into silence.
                 bool flowing = since <= 90;
@@ -197,7 +197,7 @@ namespace CapriDesktop
                 for (int each = 0; each < Asks.GetLength(0); each++)
                 {
                     bool got = false;
-                    try { got = Known(Asks[each, 0]); } catch (Exception) { }
+                    try { got = Known(Asks[each, 0]); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     (got ? rest : blank).Add(each);
                 }
                 List<int> from = blank.Count > 0 ? blank : rest;

@@ -146,7 +146,7 @@ namespace CapriDesktop
                     };
                     if (current()) requested(item.Phone.Device.Id, item.Message, current);
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
 

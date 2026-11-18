@@ -59,7 +59,7 @@ namespace CapriDesktop
                 }
                 Notes.Refresh(Kept, Text);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Called on her tick, like her other files: it only touches the disk when the file has changed.
@@ -103,7 +103,7 @@ namespace CapriDesktop
                 }
                 if (moved) Tell();
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // A colour set somewhere else, written in here. Her bubble's four were in sys.md as well and that
@@ -126,13 +126,13 @@ namespace CapriDesktop
                 Notes.Put(Kept, made);
                 lock (gate) { wasLong = -1; read = DateTime.MinValue; }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static void Tell()
         {
             try { if (Changed != null) Changed(); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static string Line(string name)

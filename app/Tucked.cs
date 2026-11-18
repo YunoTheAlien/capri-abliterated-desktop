@@ -25,7 +25,7 @@ namespace CapriDesktop
                 FileAttributes had = File.GetAttributes(path);
                 if ((had & FileAttributes.Hidden) != 0) File.SetAttributes(path, had & ~FileAttributes.Hidden);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Hide it again. Never fails loudly: a file that cannot be hidden is still a file she can read, and
@@ -47,7 +47,7 @@ namespace CapriDesktop
                     if ((folder.Attributes & FileAttributes.Hidden) == 0) folder.Attributes |= FileAttributes.Hidden;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Write to one of them whatever its attribute says, and leave it hidden afterwards.

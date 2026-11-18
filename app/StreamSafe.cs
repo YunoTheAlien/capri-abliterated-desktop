@@ -90,7 +90,7 @@ namespace CapriDesktop
                             using (Bitmap big = Draw(kind, 256))
                                 big.Save(file, ImageFormat.Png);
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
 
                 made[key] = drawn;
@@ -249,7 +249,7 @@ namespace CapriDesktop
                             using (Bitmap big = DrawWindow(which, 640, 440))
                                 big.Save(file, ImageFormat.Png);
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
 
                 made[key] = drawn;
@@ -388,7 +388,7 @@ namespace CapriDesktop
             lock (gate)
             {
                 foreach (KeyValuePair<string, Bitmap> each in made)
-                    try { if (each.Value != null) each.Value.Dispose(); } catch (Exception) { }
+                    try { if (each.Value != null) each.Value.Dispose(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 made.Clear();
             }
         }

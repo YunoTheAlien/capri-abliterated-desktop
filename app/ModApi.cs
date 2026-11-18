@@ -59,6 +59,13 @@ namespace CapriDesktop
         void Begin(Bitmap desktop, Rectangle screen, Rectangle her);
         void Draw(Graphics graphics, Rectangle screen, Rectangle her, double at);
     }
+
+    // An intro mod with more than one, named, so her test menu lists what the mod has rather than what the build
+    // knew of. Optional: an intro mod without it is listed by her own names.
+    public interface ICapriIntroNames
+    {
+        string[] Intros { get; }
+    }
 #endif
 
     public interface ICapriMod

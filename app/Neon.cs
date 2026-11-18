@@ -88,9 +88,9 @@ namespace CapriDesktop
             foreach (Control window in windows)
             {
                 try { Recolour(window, was, done); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 try { window.Invalidate(true); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
         private static int shade;

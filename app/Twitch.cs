@@ -571,13 +571,13 @@ namespace CapriDesktop
 
         private void Close()
         {
-            try { if (stream != null) stream.Dispose(); } catch (Exception) { }
-            try { if (client != null) client.Close(); } catch (Exception) { }
+            try { if (stream != null) stream.Dispose(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            try { if (client != null) client.Close(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             stream = null;
             client = null;
         }
 
-        private void Note(string line) { Action<string> told = noted; if (told != null) try { told(line); } catch (Exception) { } }
+        private void Note(string line) { Action<string> told = noted; if (told != null) try { told(line); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
 
         // Reconnects with a widening wait, because a dropped socket on a long stream is ordinary rather than a failure.
         // Twitch serves the same chat protocol two ways: IRC over TLS on 6697 and a WebSocket on 443. 6697 goes first because
@@ -703,7 +703,7 @@ namespace CapriDesktop
             Action<string, string> told = heard;
             if (told == null) return;
             try { told(spoke.Groups[1].Value, spoke.Groups[2].Value.TrimEnd('\r', '\n')); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
     }
 }

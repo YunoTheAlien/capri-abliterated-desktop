@@ -1076,7 +1076,7 @@ namespace CapriDesktop
                             marks.Add(new Target { Name = info.Name, Role = "taskbar", Value = "", Box = box });
                         }
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             });
             reader.IsBackground = true;
             reader.Start();
@@ -1250,7 +1250,7 @@ namespace CapriDesktop
                         else copy.Dispose();
                     }
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 finally { Interlocked.Exchange(ref copying, 0); }
             });
             copier.IsBackground = true;
@@ -1312,7 +1312,7 @@ namespace CapriDesktop
         private static Target Within(Func<Target> read)
         {
             Target found = null;
-            Thread reader = new Thread(delegate() { try { found = read(); } catch (Exception) { } });
+            Thread reader = new Thread(delegate() { try { found = read(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
             reader.IsBackground = true;
             reader.Start();
             return reader.Join(1500) ? found : null;
@@ -1793,7 +1793,7 @@ namespace CapriDesktop
             why = reason;
             interrupted = true;
             try { Halted(); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         internal static bool Interrupted { get { return interrupted; } }

@@ -342,7 +342,7 @@ namespace CapriDesktop
                             }
                     }
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             // A song whose cover hasn't come through yet is asked again on a later read.
             if (read == null) return null;
             lock (covers)
@@ -452,14 +452,14 @@ namespace CapriDesktop
                         if (sending.Wait(3000) && sending.Result) return true;
                     }
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
             // An app that won't take it from either session still hears the media keys, which go to the app Windows picked.
             byte key = what == "previous" ? (byte)0xB1 : what == "next" ? (byte)0xB0 : what == "play" || what == "pause" ? (byte)0xB3 : (byte)0;
             // Said once per press that got this far, because a button that does nothing with nothing in the log is the
             // hardest kind of fault to report: on a PC whose media keys go nowhere, this is the whole story.
             try { Brain.Log("player", -1, what + " was refused by " + (tries.Count == 0 ? "no session at all" : tries.Count + " session(s)") + " for " + (tune == null ? "nothing" : Tunes.AppName(tune.App)) + (key == 0 ? "; no media key for it" : "; falling back to the media key")); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             if (key == 0) return false;
             Hands.Press(key);
             return true;

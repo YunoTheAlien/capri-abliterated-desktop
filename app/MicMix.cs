@@ -443,7 +443,7 @@ namespace CapriDesktop
             IntPtr boosted = IntPtr.Zero;
             int task = 0;
             try { boosted = AvSetMmThreadCharacteristics("Pro Audio", ref task); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             try
             {
                 while (!stopping)
@@ -459,7 +459,7 @@ namespace CapriDesktop
             finally
             {
                 Close();
-                if (boosted != IntPtr.Zero) try { AvRevertMmThreadCharacteristics(boosted); } catch (Exception) { }
+                if (boosted != IntPtr.Zero) try { AvRevertMmThreadCharacteristics(boosted); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
 
@@ -662,7 +662,7 @@ namespace CapriDesktop
             micDevice = null;
             micRate = null;
             handles = null;
-            if (closing != null) try { closing.Dispose(); } catch (Exception) { }
+            if (closing != null) try { closing.Dispose(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private void CloseCable()
@@ -674,7 +674,7 @@ namespace CapriDesktop
             cableDevice = null;
             handles = null;
             lock (gate) { foreach (Lane lane in lanes) lane.Clear(); lanes.Clear(); }
-            if (closing != null) try { closing.Dispose(); } catch (Exception) { }
+            if (closing != null) try { closing.Dispose(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private void Close()
@@ -826,7 +826,7 @@ namespace CapriDesktop
                     next = notes.Dequeue();
                 }
                 try { Brain.Log("mic mix", -1, next); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
 
@@ -1293,7 +1293,7 @@ namespace CapriDesktop
 
         internal static void Release(object com)
         {
-            if (com != null && Marshal.IsComObject(com)) try { Marshal.ReleaseComObject(com); } catch (Exception) { }
+            if (com != null && Marshal.IsComObject(com)) try { Marshal.ReleaseComObject(com); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
     }
 
@@ -1363,7 +1363,7 @@ namespace CapriDesktop
 
         public void Dispose()
         {
-            try { if (client != null) client.Stop(); } catch (Exception) { }
+            try { if (client != null) client.Stop(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             Wasapi.Release(capture);
             Wasapi.Release(client);
             Wasapi.Release(device);
@@ -1444,7 +1444,7 @@ namespace CapriDesktop
 
         public void Dispose()
         {
-            try { if (client != null) client.Stop(); } catch (Exception) { }
+            try { if (client != null) client.Stop(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             Wasapi.Release(render);
             Wasapi.Release(client);
             Wasapi.Release(device);
@@ -1515,7 +1515,7 @@ namespace CapriDesktop
                         if (session == null || session.GetState(out state) != 0 || state != 1 || session.GetProcessId(out pid) != 0 || pid == 0) continue;
                         using (Process program = Process.GetProcessById(pid)) if (!names.Contains(program.ProcessName)) names.Add(program.ProcessName);
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     finally { Wasapi.Release(control); }
                 }
                 return names;

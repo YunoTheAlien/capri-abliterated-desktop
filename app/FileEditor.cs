@@ -546,7 +546,7 @@ namespace CapriDesktop
         {
             string problem = doc.Note.Save(doc.ForFile());
             if (problem != null) return problem;
-            if (Stocked != null) { try { Stocked(doc.Note.Path); } catch (Exception) { } }
+            if (Stocked != null) { try { Stocked(doc.Note.Path); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
             doc.Revert();
             ForgetDraft(doc);
             if (doc == docs[0] && Saved != null) Saved();

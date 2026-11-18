@@ -441,13 +441,13 @@ namespace CapriDesktop
                             }
                         }
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 });
                 worker.IsBackground = true;
                 worker.Start();
                 worker.Join(1900);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return 0;
         }
     }
@@ -527,7 +527,7 @@ namespace CapriDesktop
 
         private void Serve(TcpClient client)
         {
-            System.Threading.Timer deadline = new System.Threading.Timer(delegate { try { client.Close(); } catch (Exception) { } }, null, 1200, Timeout.Infinite);
+            System.Threading.Timer deadline = new System.Threading.Timer(delegate { try { client.Close(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }, null, 1200, Timeout.Infinite);
             try
             {
                 client.ReceiveTimeout = client.SendTimeout = 800;
@@ -578,7 +578,7 @@ namespace CapriDesktop
                     Reply(stream, 200);
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             finally { deadline.Dispose(); lock (gate) clients.Remove(client); client.Close(); }
         }
 
@@ -599,7 +599,7 @@ namespace CapriDesktop
             {
                 if (File.Exists(file) && HuskJson.Text(HuskJson.Read(File.ReadAllText(file)) as Dictionary<string, object>, "token") == Token) File.Delete(file);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
     }
 
@@ -1190,7 +1190,7 @@ export default {
                 string file = Path.Combine(folder, "husk-day.json");
                 if (File.Exists(file) && new FileInfo(file).Length < 65536) day = HuskJson.Read(File.ReadAllText(file)) as Dictionary<string, object> ?? HuskJson.Map();
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Whether the last Change rewrote a hooks file, like after an update moved her.
@@ -1267,7 +1267,7 @@ export default {
             string[] fresh = HuskHooks.TakeUnlinked();
             List<string> all = new List<string>();
             try { if (File.Exists(file) && new FileInfo(file).Length < 65536) all.AddRange(File.ReadAllLines(file)); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             all.RemoveAll(string.IsNullOrWhiteSpace);
             foreach (string path in fresh) if (!all.Contains(path)) all.Add(path);
             try
@@ -1275,7 +1275,7 @@ export default {
                 if (off) { if (File.Exists(file)) File.Delete(file); }
                 else if (fresh.Length > 0) { Directory.CreateDirectory(folder); File.WriteAllLines(file, all.ToArray()); }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return off ? all.ToArray() : fresh;
         }
 #endif
@@ -1348,8 +1348,8 @@ export default {
                 else File.Move(temp, file);
                 dirty = false;
             }
-            catch (Exception) { }
-            finally { try { if (File.Exists(temp)) File.Delete(temp); } catch (Exception) { } }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            finally { try { if (File.Exists(temp)) File.Delete(temp); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
         }
 
         private HuskAct Act(HuskSession session, string kind, string line, bool aloud)

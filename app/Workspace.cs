@@ -389,7 +389,7 @@ namespace CapriDesktop
         internal static string HomeFolder()
         {
             string profile = "";
-            try { profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile); } catch (Exception) { }
+            try { profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             if (string.IsNullOrEmpty(profile) || !Path.IsPathRooted(profile)) return Spare();
             return Path.Combine(profile, "Capri", "Workspace");
         }
@@ -1453,7 +1453,7 @@ namespace CapriDesktop
                 turn.Cancel.Set();
                 End(turn);
             }
-            new Thread(delegate() { try { RecordStop(turn); } catch (Exception) { } }) { IsBackground = true, Name = "Capri Workspace stop" }.Start();
+            new Thread(delegate() { try { RecordStop(turn); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }) { IsBackground = true, Name = "Capri Workspace stop" }.Start();
         }
 
         private void RecordStop(WorkspaceTurn turn)
@@ -1511,7 +1511,7 @@ namespace CapriDesktop
                 if (file.Exists && file.Length > 64 * 1024) file.Delete();
                 File.AppendAllText(log, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture) + " " + key + ": " + outcome + Environment.NewLine);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         internal bool Answer(WorkspaceChat chat, WorkspaceApproval ask, bool allow, bool always, string reason)
@@ -1817,7 +1817,7 @@ namespace CapriDesktop
                             byte[] bytes = Encoding.UTF8.GetBytes(answer);
                             WorkspaceHook.Write(pipe, bytes, 5000);
                         }
-                        catch (Exception) { }
+                        catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                         finally { lock (pipeGate) clients.Remove(pipe); pipe.Dispose(); }
                     }) { IsBackground = true, Name = "Capri Workspace approval" }.Start();
                 }
@@ -1992,7 +1992,7 @@ namespace CapriDesktop
                     if (!seen.Add(WorkspacePaths.Final(path))) { saved["done"] = true; continue; }
                     bool same = false;
                     try { same = WorkspacePaths.Matches(path, HuskJson.Get(saved, "end") as Dictionary<string, object>); }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     if (!same) changed.Add(path);
                     else Restore(file, row, saved, restored, removed);
                 }
@@ -2106,7 +2106,7 @@ namespace CapriDesktop
                         if (pending) WriteChat(chat, true);
                     }
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }) { IsBackground = true, Name = "Capri Workspace last saves" };
             last.Start();
             last.Join(3000);

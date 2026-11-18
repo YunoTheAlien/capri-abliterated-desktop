@@ -60,11 +60,11 @@ namespace CapriDesktop
                     foreach (CapriTrack track in shown)
                     {
                         byte[] cover = null;
-                        try { cover = Tunes.Cover((Tune)track.Source); } catch (Exception) { }
+                        try { cover = Tunes.Cover((Tune)track.Source); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                         if (cover != null) covers[track.Key] = cover;
                     }
                     List<AppSound> sounds = null;
-                    try { sounds = Mixer.Sounds(); } catch (Exception) { }
+                    try { sounds = Mixer.Sounds(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     if (sounds != null)
                         foreach (CapriTrack track in shown)
                         {
@@ -85,10 +85,10 @@ namespace CapriDesktop
                     if (spotify != null && !likedRead.Contains(spotify.Key))
                     {
                         likedKey = spotify.Key;
-                        try { liked = Tunes.Hearted(); } catch (Exception) { }
+                        try { liked = Tunes.Hearted(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     }
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 Post(delegate
                 {
                     modMusicBusy = false;
@@ -144,7 +144,7 @@ namespace CapriDesktop
             ThreadPool.QueueUserWorkItem(delegate
             {
                 bool took = false;
-                try { took = Tunes.Send(tune, what); } catch (Exception) { }
+                try { took = Tunes.Send(tune, what); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 Post(delegate
                 {
                     if (!took && (what == "like" || what == "unlike")) modLiked.Remove(key);
@@ -190,7 +190,7 @@ namespace CapriDesktop
                         if (string.Equals(sound.App, program, StringComparison.OrdinalIgnoreCase) && done.Add(sound.Id))
                             Mixer.Set(sound.Id, level.HasValue ? (float)Math.Max(0, Math.Min(1, level.Value)) : (float?)null, muted);
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             });
         }
 
@@ -385,7 +385,7 @@ namespace CapriDesktop
                 CapriTrack now = musicNow;
                 Tune tune = now == null ? null : now.Source as Tune;
                 if (tune == null) return false;
-                ThreadPool.QueueUserWorkItem(delegate { try { Tunes.Open(tune); } catch (Exception) { } });
+                ThreadPool.QueueUserWorkItem(delegate { try { Tunes.Open(tune); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
                 return true;
             }
         }

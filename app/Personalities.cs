@@ -58,11 +58,11 @@ namespace CapriDesktop
                 {
                     string theirs = null;
                     try { theirs = SenpaiFor(named); }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     if (!string.IsNullOrEmpty(theirs)) found.Add(theirs);
                 }
             try { found.AddRange(Dynamics.Shipped()); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return found;
         }
 
@@ -80,7 +80,7 @@ namespace CapriDesktop
                 Directory.Move(was, now);
                 Tucked.Away(now);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Every pack file she has, plain ones first. Used by the passes that tidy or check each file in turn.
@@ -93,7 +93,7 @@ namespace CapriDesktop
                 // Every file, not every .md: her senpai ones are numbered and have no type at all. Backups are
                 // left out, since a .bak is a copy of a pack rather than one of them.
                 try { foreach (string file in Directory.GetFiles(folder)) if (!file.EndsWith(".bak", StringComparison.OrdinalIgnoreCase)) found.Add(file); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
             return found;
         }
@@ -324,7 +324,7 @@ namespace CapriDesktop
                     aActive = named; aRead = about.LastWriteTimeUtc; aWas = about.Length;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Where she goes when one thing keeps happening. "petted over 20: Bratty" means twenty points of being
@@ -425,7 +425,7 @@ namespace CapriDesktop
                         found.Add(named);
                     }
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 // Stock and Dynamic stay at the top; the rest are offered gentlest first.
                 if (found.Count > 2)
                 {
@@ -477,7 +477,7 @@ namespace CapriDesktop
                     if (senpai != null && File.Exists(senpai)) return senpai;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return path;
         }
 
@@ -780,7 +780,7 @@ namespace CapriDesktop
                     if (rule.Into == Stock || (path != null && File.Exists(path))) return rule.Into;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             finally { Chosen = was; }
             return Main;
         }
@@ -990,7 +990,7 @@ namespace CapriDesktop
                     wasAdult = adult;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // "## When you throw her" opens a set; the plain lines under it are what she says. Anything quoted with "> " is
@@ -1098,7 +1098,7 @@ namespace CapriDesktop
                         while (kept.Count > 0 && kept[kept.Count - 1].Trim().Length == 0) kept.RemoveAt(kept.Count - 1);
                         File.WriteAllText(file, string.Join(Environment.NewLine, kept.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
             }
         }
@@ -1129,7 +1129,7 @@ namespace CapriDesktop
                     File.WriteAllText(file, had + Environment.NewLine + "uncensored only: yes" + Environment.NewLine, new UTF8Encoding(false));
                     lock (gate) adult.Remove(file);
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
 
@@ -1209,7 +1209,7 @@ namespace CapriDesktop
                 while (made.Count > 0 && made[made.Count - 1].Trim().Length == 0) made.RemoveAt(made.Count - 1);
                 File.WriteAllText(file, string.Join(Environment.NewLine, made.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // One of each section. The heading check in TopUp anchored with $, which a CRLF file never matches, so
@@ -1261,7 +1261,7 @@ namespace CapriDesktop
                 if (carry.Count > 0) { kept.Add(""); kept.AddRange(carry); }
                 File.WriteAllText(file, string.Join(Environment.NewLine, kept.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // A pack already on disk keeps what it was written with, so the censored copy of every one of them
@@ -1329,7 +1329,7 @@ namespace CapriDesktop
                     if (landed || !Brain.Adult)
                         Notes.Put(file, string.Join(Environment.NewLine, kept.ToArray()) + Environment.NewLine);
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
 
@@ -1339,7 +1339,7 @@ namespace CapriDesktop
             {
                 if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) continue;
                 try { foreach (string file in Packed(folder)) { OneOfEach(file); NothingTwice(file); } }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
 
@@ -1484,7 +1484,7 @@ namespace CapriDesktop
                     }
                     if (moved) File.WriteAllText(file, string.Join(Environment.NewLine, kept.ToArray()), new UTF8Encoding(false));
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
 
@@ -1535,7 +1535,7 @@ namespace CapriDesktop
                     for (int row = to; row < rows.Length; row++) made.Add(rows[row]);
                     File.WriteAllText(file, string.Join(Environment.NewLine, made.ToArray()), new UTF8Encoding(false));
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
 
@@ -1610,7 +1610,7 @@ namespace CapriDesktop
                 }
                 Lint.Sweep(found, "her packs", false);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Writes the built-in personalities once, so there is something to read and change rather than a blank folder.
@@ -1647,7 +1647,7 @@ namespace CapriDesktop
                     if (SenpaiFor != null)
                     {
                         try { senpaiText = SenpaiFor(named) ?? senpaiText; }
-                        catch (Exception) { }
+                        catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     }
                     Keep(PlainPathOf(named), plainText, named);
                     if (senpaiOn) Keep(SenpaiPathOf(named), senpaiText, named);
@@ -1667,7 +1667,7 @@ namespace CapriDesktop
                         asked++;
                         string theirs = null;
                         try { theirs = SenpaiFor(named); }
-                        catch (Exception) { }
+                        catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                         if (string.IsNullOrEmpty(theirs)) { blank++; continue; }
                         hadText++;
                         string plainHalf, senpaiHalf;
@@ -1689,7 +1689,7 @@ namespace CapriDesktop
                 NoVoiceSection();
                 LintPacks();
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // The second folder, off disk when the switch is off. Her packs and her moods each have one.
@@ -1729,7 +1729,7 @@ namespace CapriDesktop
                 Mended(file, text, named);
                 TopUp(file, text);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Packs that were written before the split, one file each in personalities\, are cut in two and moved into
@@ -1755,9 +1755,7 @@ namespace CapriDesktop
                     // everything still in it, until the switch goes on and the move can finish.
                     if (!Brain.Uncensored && !string.IsNullOrEmpty(senpaiText)) continue;
                     if (!string.IsNullOrEmpty(senpaiText) && !File.Exists(senpaiPath)) File.WriteAllText(senpaiPath, senpaiText, new UTF8Encoding(false));
-                    string kept = file + ".bak";
-                    if (File.Exists(kept)) File.Delete(kept);
-                    File.Move(file, kept);
+                    File.Move(file, SpareFiles.Name(file));
                     Brain.Log("packs", -1, named + " moved into " + PlainName + " and " + SenpaiName + ", the file it came from kept as a .bak.");
                 }
                 catch (Exception bad) { Notes.Failed("a move into her censored and uncensored folders in Personalities.cs", bad); }
@@ -1787,6 +1785,8 @@ namespace CapriDesktop
         internal static bool PackRenamed;
 
         internal static Action RenamedFor;
+        // From, to, and a line that only the misnamed file carries. Read by Codex.Mend.
+        internal static string[] RepairData;
 
         // What a saved choice became, when the pack behind it was renamed. Null when it was not one.
         internal static Func<string, string> RenamedToFor;
@@ -1802,7 +1802,7 @@ namespace CapriDesktop
         {
             if (RenamedFor == null) return;
             try { RenamedFor(); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // A personality file written by an older build is missing whatever sections came later, and Install only ever
@@ -1860,7 +1860,7 @@ namespace CapriDesktop
                 File.WriteAllText(file, done, new UTF8Encoding(false));
                 Brain.Log("packs", -1, named + ".md had lost its title and " + (stock.Count - 1 - used.Count) + " section(s), restored from the one she ships.");
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // A file split at its headings: the text above the first one, then each heading with everything under it.

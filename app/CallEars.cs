@@ -198,7 +198,7 @@ namespace CapriDesktop
                     {
                         string name = null;
                         try { name = Everyday(sound.Id); }
-                        catch (Exception) { }
+                        catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                         name = CleanName(exe, name);
                         lock (gate) { app.Name = name; app.Named = true; }
                     }
@@ -467,7 +467,7 @@ namespace CapriDesktop
             {
                 int pid = 0;
                 try { pid = Find(); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 if (!Live(mine)) break;
                 if (pid == 0) { Say(mine, CallApps.Current.NotOpen); Rest(mine, 500, stop); continue; }
                 CallApp app = CallApps.Current;
@@ -708,7 +708,7 @@ namespace CapriDesktop
             public void Dispose()
             {
                 try { if (client != null) client.Stop(); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 Wasapi.Release(capture);
                 Wasapi.Release(client);
                 capture = null;

@@ -83,7 +83,7 @@ namespace CapriDesktop
         // The window and its open menus over the light backdrop, saved as a PNG.
         [DllImport("dwmapi.dll")] private static extern int DwmFlush();
 
-        internal static void Flush() { try { DwmFlush(); } catch (Exception) { } }
+        internal static void Flush() { try { DwmFlush(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
 
         internal static bool CueMissing(WorkspaceWindow window) { using (Bitmap copy = Copy(window)) return window.CueMissing(copy); }
 
@@ -1902,7 +1902,7 @@ namespace CapriDesktop
             private static Dictionary<string, KeyValuePair<object, Microsoft.Win32.RegistryValueKind>> Read()
             {
                 Dictionary<string, KeyValuePair<object, Microsoft.Win32.RegistryValueKind>> values = new Dictionary<string, KeyValuePair<object, Microsoft.Win32.RegistryValueKind>>();
-                try { Walk(Microsoft.Win32.Registry.CurrentUser.OpenSubKey(Root), "", values); } catch (Exception) { }
+                try { Walk(Microsoft.Win32.Registry.CurrentUser.OpenSubKey(Root), "", values); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 return values;
             }
 

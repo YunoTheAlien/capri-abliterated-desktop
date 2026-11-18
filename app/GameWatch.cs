@@ -170,7 +170,7 @@ namespace CapriDesktop
                     }
                     catch (Exception error)
                     {
-                        try { frames.Close("error"); } catch (Exception) { }
+                        try { frames.Close("error"); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                         if (error.Message != failedWith) Brain.Log("game watch", -1, error.GetType().Name + " 0x" + error.HResult.ToString("X8"));
                         failedWith = error.Message;
                         watchedWindow = IntPtr.Zero;
@@ -180,10 +180,10 @@ namespace CapriDesktop
                         before = after = null;
                         live = false;
                         listening = 0;
-                        if (ears != null) { try { ears.Dispose(); } catch (Exception) { } ears = null; }
+                        if (ears != null) { try { ears.Dispose(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } ears = null; }
                         sense.Reset();
                         Thread.Sleep(1000);
-                        try { frames.Release(); } catch (Exception) { }
+                        try { frames.Release(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     }
                 }
             }

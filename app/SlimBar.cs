@@ -173,7 +173,7 @@ namespace CapriDesktop
             if (typing != null)
             {
                 if (typing.IsHandleCreated) SendMessage(typing.Handle, LineScroll, 0, want - Top);
-                if (Taken != null) { try { Taken(); } catch (Exception) { } }
+                if (Taken != null) { try { Taken(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
                 Invalidate();
                 return;
             }

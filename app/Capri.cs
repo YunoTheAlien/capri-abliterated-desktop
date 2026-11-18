@@ -42,6 +42,8 @@ namespace CapriDesktop
             if (args.Length > 0 && args[0] == "--hook") return HuskHook.Run(args.Length > 1 ? args[1] : "");
             if (args.Length > 0 && args[0] == "--workspace-hook") return WorkspaceHook.Run(args);
             if (args.Length == 4 && args[0] == "--release-input") return InputRelease.Watch(args[1], args[2], args[3]);
+            if (args.Length == 2 && args[0] == "--codex-write") { Companion.AttachLocal(); return Codex.Write(args[1]) > 0 ? 0 : 1; }
+            if (args.Length == 3 && args[0] == "--codex-check") return Companion.CodexCheck(args[1], args[2]);
             if (!Packaged.Is && CapriSetup.Program.Wanted(Application.ExecutablePath, args)) return CapriSetup.Program.Run(args);
             try { Native.SetProcessDpiAwarenessContext(new IntPtr(-4)); } catch (EntryPointNotFoundException) { Native.SetProcessDPIAware(); }
             Application.EnableVisualStyles();
@@ -226,7 +228,7 @@ namespace CapriDesktop
             fresh.Size = old.Size < 140 || old.Size > 1038 ? fresh.Size : old.Size;
             fresh.TextSize = old.TextSize;
             try { using (FileStream stream = File.Create(settings)) new DataContractJsonSerializer(typeof(Preferences)).WriteObject(stream, fresh); }
-            catch (Exception) { try { File.Delete(settings); } catch (Exception) { } }
+            catch (Exception) { try { File.Delete(settings); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
         }
 
         // A crash goes in errors.txt: what it was and where in her code, so Copy error details shows it.
@@ -248,7 +250,7 @@ namespace CapriDesktop
                 string at = frame.Trim();
                 if (at.Length == 0) continue;
                 Brain.Log("crash", -1, at);
-                if (++shown == 4) break;
+                if (++shown == 8) break;
             }
             // Out of memory and drawing failures can mean she ran out of Windows' drawing objects rather than memory, so they
             // also say what she holds.
@@ -353,20 +355,20 @@ namespace CapriDesktop
                             + ", found " + found.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + ", ran up to " + Seconds(found - oldStart) + " s. Couldn't check Windows' crash log: " + Short(error.Message, 180));
                         Interlocked.Exchange(ref notice, 1);
                     }
-                    finally { if (reported) Forget(lines); try { if (done != null) done(); } catch (Exception) { } }
+                    finally { if (reported) Forget(lines); try { if (done != null) done(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
                 });
             }
             catch (Exception error)
             {
                 Note("Couldn't read her last running marker: " + Short(error.Message, 180));
-                try { if (done != null) done(); } catch (Exception) { }
+                try { if (done != null) done(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
 
         private bool Note(string line)
         {
             try { return Brain.LogAt(log, "closed", -1, line); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return false;
         }
 
@@ -565,7 +567,7 @@ namespace CapriDesktop
                     use.Working = own.WorkingSet64;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return use;
         }
 
@@ -863,7 +865,7 @@ namespace CapriDesktop
         internal void Replace(long stuck)
         {
             Noted("a stuck Capri was ended when you opened her again. She was stuck for " + stuck / 1000 + " s.");
-            try { if (Replaced != null) Replaced(); } catch (Exception) { }
+            try { if (Replaced != null) Replaced(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             Ended(false);
         }
 
@@ -881,8 +883,8 @@ namespace CapriDesktop
                     paused = true;
                     trace = new StackTrace(ui, false);
                 }
-                catch (Exception) { }
-                finally { if (paused) { try { ui.Resume(); } catch (Exception) { } } }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                finally { if (paused) { try { ui.Resume(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } } }
 #pragma warning restore 618
             });
             reader.IsBackground = true;
@@ -919,7 +921,7 @@ namespace CapriDesktop
             {
                 // Over a game she runs below normal, and a copy started from her would start there too and stay there.
                 try { using (Process own = Process.GetCurrentProcess()) own.PriorityClass = ProcessPriorityClass.Normal; }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 try
                 {
                     System.Collections.Generic.List<string> passed = new System.Collections.Generic.List<string>();
@@ -1899,7 +1901,7 @@ namespace CapriDesktop
             Bitmap art = null;
             // A load that fails, out of memory say, leaves her drawn as she was, and the next ask tries again.
             try { art = Companion.LoadArt(Resource(wantLeft)); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             lock (gate)
             {
                 fetching = false;
@@ -2231,7 +2233,83 @@ namespace CapriDesktop
 
         // LOCAL ONLY JOINT: the other hook, for the senpai half of her packs. Declared and never implemented,
         // so with no local file the compiler removes the declaration and the call both.
-        partial void LocalSenpai();
+        static partial void LocalSenpai();
+
+        // The same attach, from the command line, for writing the codex without starting her.
+        internal static void AttachLocal() { LocalSenpai(); }
+
+        // Reads a codex and writes how much it held, to check a build against the file made for it.
+        internal static int CodexCheck(string pack, string report)
+        {
+            bool read = Codex.Load(pack);
+            int packs = Personalities.OrderFor == null ? 0 : (Personalities.OrderFor() ?? new string[0]).Length;
+            int moods = Dynamics.SenpaiNamesFor == null ? 0 : (Dynamics.SenpaiNamesFor() ?? new string[0]).Length;
+            try { File.WriteAllText(report, (read ? "read" : "not read") + "\npacks " + packs + "\nmoods " + moods + "\n"); }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            return read ? 0 : 1;
+        }
+
+        private bool fetchingCodex;
+
+        // Her stories sit beside her rather than inside her, and a setup run on its own does not bring them.
+        // Fetched from this version's release when missing, then laid into her file the usual way.
+        private void FetchLore()
+        {
+            string path = Lore.PackPath;
+            if (string.IsNullOrEmpty(path) || File.Exists(path) || string.IsNullOrEmpty(LoreSum.Sha)) return;
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                string why = ReleaseFile.Fetch(Lore.PackName, LoreSum.Sha, LoreSum.Size, path, LoreSum.Tag);
+                if (why != null) { Brain.Log("lore", -1, "Her stories were not fetched: " + why + "."); return; }
+                for (int waited = 0; !IsHandleCreated && !IsDisposed && waited < 120; waited++) Thread.Sleep(500);
+                Post(delegate
+                {
+                    int laid = Lore.Laid();
+                    if (laid > 0) Brain.Log("lore", -1, laid + " pieces fetched into " + Lore.FileName + ", which now has " + Lore.Count() + ".");
+                });
+            });
+        }
+
+        // The switch is on and nothing is attached: fetch the codex, then write what it holds.
+        private void FetchCodex()
+        {
+            if (fetchingCodex || Personalities.SenpaiFor != null || string.IsNullOrEmpty(Codex.Folder)) return;
+            fetchingCodex = true;
+            string folder = Codex.Folder;
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                string why = Codex.Fetch(folder);
+                if (why != null)
+                {
+                    Brain.Log("files", -1, "Her codex was not fetched: " + why + ".");
+                    fetchingCodex = false;
+                    return;
+                }
+                // On a start her window may not be up yet, and a hand-off before it is gets dropped.
+                for (int waited = 0; !IsHandleCreated && !IsDisposed && waited < 120; waited++) Thread.Sleep(500);
+                try
+                {
+                    Post(delegate
+                    {
+                        fetchingCodex = false;
+                        if (!Codex.Load(Codex.PathIn(folder)) || !Brain.Uncensored) return;
+                        try
+                        {
+                            Personalities.Install();
+                            Dynamics.Install();
+                            Interests.Write(false);
+                            Interests.TopUp();
+                            Sayings.TopUp();
+                            Touch.Write(false);
+                            Angles.Write(false);
+                            SysLines.TopUp();
+                        }
+                        catch (Exception bad) { Brain.Log("files", -1, "Her codex did not finish: " + bad.Message); }
+                    });
+                }
+                catch (Exception) { fetchingCodex = false; }
+            });
+        }
 
         // her artist's standing set: 60 frames at the 24 fps they're stamped with. Its float is taken out of the frames, so her
         // toes stay on the row every standing clip ends on and her face stays still in its cell, and her breathing floats her
@@ -2983,7 +3061,7 @@ namespace CapriDesktop
                     if (++quiet >= 3) return;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private string SmokeState()
@@ -3107,9 +3185,15 @@ namespace CapriDesktop
             // any of her files is named or written. It used to sit after her touch file had already been
             // built, so that file was written without its senpai half. Grep LOCAL ONLY JOINT for the rest.
             LocalSenpai();
+            // Nothing attached here means her codex, if one is beside her.
+            Codex.Folder = data;
+            Library.Home = data;
+            SpareFiles.Tidy(data, false);
+            SpareFiles.Tidy(Path.Combine(data, Personalities.SettingsName), true);
+            if (Personalities.SenpaiFor == null) Codex.Load(Codex.PathIn(data));
             // Her interface's colours, one entry at a time over whichever look is picked.
             CapriDesktop.Layout.Kept = Mine(data, CapriDesktop.Layout.FileName);
-            CapriDesktop.Layout.Changed = delegate { if (!quitting && !IsDisposed) { try { Post(delegate { Neon.Again(this); }); } catch (Exception) { } } };
+            CapriDesktop.Layout.Changed = delegate { if (!quitting && !IsDisposed) { try { Post(delegate { Neon.Again(this); }); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } } };
             // What she says for a hand in one place rather than another.
             Touch.Kept = Mine(data, Touch.FileName);
             // The pools she has, read off the files rather than waited for: a modder opening the list wants
@@ -3164,6 +3248,7 @@ namespace CapriDesktop
             {
                 int laid = Lore.Laid();
                 if (laid > 0) Brain.Log("lore", -1, laid + " pieces from the pack beside her exe went into " + Lore.FileName + ", which now has " + Lore.Count() + ".");
+                FetchLore();
             }
             Sayings.TopUp();
             Interests.Kept = Mine(data, Interests.FileName);
@@ -3197,7 +3282,7 @@ namespace CapriDesktop
             Brain.Broke = CrashNoticed;
             // Her mood can change while she is closing, and Post on a window going away throws. Her voice does
             // not matter at that point anyway.
-            Dynamics.MoodChanged = delegate { if (!quitting && !IsDisposed) { try { Post(ApplyVoiceProfile); } catch (Exception) { } } MoodWritten(); };
+            Dynamics.MoodChanged = delegate { if (!quitting && !IsDisposed) { try { Post(ApplyVoiceProfile); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } } MoodWritten(); };
             moodPath = Path.Combine(Path.Combine(data, Personalities.SettingsName), "mood.txt");
             // Her mood with its deadline, which mood.txt cannot carry: that one is a single word for anything
             // else on this PC that follows her.
@@ -3232,7 +3317,7 @@ namespace CapriDesktop
                 // And a file from before a timer existed gains it, since the line above only writes a new one.
                 else if (!smoke) TwitchRules.Carried(twitchPath);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             // <<< END PATCH: twitch.md
             Hands.Websites = new Websites(data);
             Brain.TranscriptPath = Path.Combine(data, "transcripts");
@@ -3301,6 +3386,7 @@ namespace CapriDesktop
             // writes what is missing and leaves what is there, so running it a second time costs nothing.
             if (Brain.Uncensored)
             {
+                FetchCodex();
                 try { Personalities.Install(); }
                 catch (Exception bad) { Brain.Log("packs", -1, "Her packs did not finish: " + bad.Message); }
                 try { Dynamics.Install(); }
@@ -3309,6 +3395,9 @@ namespace CapriDesktop
                 // as off whatever sys.md says and wrote their censored half only.
                 try { Sayings.TopUp(); }
                 catch (Exception bad) { Brain.Log("lines", -1, "Her lines did not finish: " + bad.Message); }
+                // touch.md and watching.md too: written once before the switch is known, so never topped up.
+                try { Touch.Write(false); Angles.Write(false); }
+                catch (Exception bad) { Brain.Log("lines", -1, "Her touch and look did not finish: " + bad.Message); }
                 try { SysLines.TopUp(); }
                 catch (Exception bad) { Brain.Log("sys", -1, "Her settings file did not finish: " + bad.Message); }
             }
@@ -3333,6 +3422,8 @@ namespace CapriDesktop
             // What she read and from where, once a start. Which folder she is reading is the whole of what
             // the switch does, and working it out meant counting files by hand.
             Counted();
+            // Sound files picked before her shelf existed, pulled onto it once, and the settings pointed at the copies.
+            Shelved();
             // A pack she is set to that no longer has a file. Her lists come from the folder, so a deleted one
             // is already out of the menus and the editor; this is the saved choice, which went on naming it.
             // Back to her own lines, written down so it does not come back, and said once in her log because
@@ -3340,7 +3431,7 @@ namespace CapriDesktop
             if (Gone(preferences.Personality))
             {
                 try { Brain.Log("personality", -1, "The personality she was set to has no file any more, so she is back to her own lines."); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 Personalities.Chosen = Personalities.Main = Personalities.Stock;
                 preferences.Personality = null;
                 SavePreferences();
@@ -3400,8 +3491,8 @@ namespace CapriDesktop
             LoadServer();
             Sfx.Level = Math.Max(0, Math.Min(100, preferences.Sounds));
             Sfx.Out = delegate(short[] sound) { Post(delegate { Effect(sound); }); };
-            Sfx.TypeOut = delegate(short[] sound) { if (IsDisposed) return; try { typist.Open(Sfx.Rate); typist.Play(sound); } catch (Exception) { } };
-            Sfx.Untyped = delegate { try { typist.Clear(); } catch (Exception) { } };
+            Sfx.TypeOut = delegate(short[] sound) { if (IsDisposed) return; try { typist.Open(Sfx.Rate); typist.Play(sound); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } };
+            Sfx.Untyped = delegate { try { typist.Clear(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } };
             WireChimes();
             preferences.WanderPace = Math.Max(0, Math.Min(3, preferences.WanderPace));
             preferences.PopPace = Math.Max(0, Math.Min(2, preferences.PopPace));
@@ -3513,10 +3604,10 @@ namespace CapriDesktop
             logItem = new ToolStripMenuItem("Her log", null, delegate { ShowLog(); });
             logItem.ToolTipText = "What she is writing down, as it happens: her lines and her faults";
             logItem.AccessibleName = "Her log: what she is writing down, as it happens";
-            // Her screensaver on purpose. Left alone it waits for the PC to be, which nobody can sit and watch,
-            // so from here it goes up now and stays up until the spacebar, which is also what ends it when it
-            // came up by itself.
-            ToolStripMenuItem saverItem = new ToolStripMenuItem("Screensaver", null, delegate { ShowSaverNow(); });
+            // Her screensaver on purpose, under Test. Left alone it waits for the PC to be idle, which nobody can sit
+            // and watch, so from here it goes up now and stays up until the spacebar, which is also what ends it when
+            // it came up by itself.
+            ToolStripMenuItem saverItem = new ToolStripMenuItem("Screensavers", null, delegate { ShowSaverNow(); });
             saverItem.ToolTipText = "Show it now. Spacebar ends it. sys.md sets its colour and when it comes up by itself.";
             saverItem.AccessibleName = "Screensaver: show it now";
             // Each look on the menu as well, so one can be seen without going and editing a file to try it.
@@ -3527,7 +3618,6 @@ namespace CapriDesktop
                 pick.AccessibleName = "Show her screensaver as " + one;
                 saverItem.DropDownItems.Add(pick);
             }
-            menu.Items.Add(saverItem);
             ToolStripMenuItem clearMemoryItem = new ToolStripMenuItem("Clear memory", null, delegate { ClearMemory(); });
             clearMemoryItem.ToolTipText = "Forget this conversation, her transcripts and her memories of you. me.md stays.";
             clearMemoryItem.AccessibleName = "Clear memory. " + clearMemoryItem.ToolTipText;
@@ -3550,6 +3640,13 @@ namespace CapriDesktop
             testItem.DropDownItems.Add(pipeTest);
             feetTest.ToolTipText = "Grow until her feet fill the view, then come back down";
             testItem.DropDownItems.Add(feetTest);
+            // Each intro on its own, played now. Trying one does not pick it for her next start. Filled from the mod each
+            // time it opens, so an intro the mod gains shows up without a new build.
+            ToolStripMenuItem introTests = new ToolStripMenuItem("Intros");
+            introTests.DropDownItems.Add(new ToolStripMenuItem("..."));
+            introTests.DropDownOpening += delegate { FillIntros(introTests); };
+            testItem.DropDownItems.Add(introTests);
+            testItem.DropDownItems.Add(saverItem);
             ToolStripMenuItem stopTests = new ToolStripMenuItem("Stop", null, delegate { TestStop(); });
             stopTests.ToolTipText = "Clear her clones, put the icons back and close the fake crash";
             stopTests.AccessibleName = "Stop. " + stopTests.ToolTipText;
@@ -3642,7 +3739,7 @@ namespace CapriDesktop
             playerMenu.BackColor = menu.BackColor;
             playerMenu.Font = menu.Font;
             playerMenu.ShowImageMargin = false;
-            playerOpenItem = new ToolStripMenuItem("Open the player", null, delegate { Tune tune = player.Tune; ThreadPool.QueueUserWorkItem(delegate { try { Tunes.Open(tune); } catch (Exception) { } }); });
+            playerOpenItem = new ToolStripMenuItem("Open the player", null, delegate { Tune tune = player.Tune; ThreadPool.QueueUserWorkItem(delegate { try { Tunes.Open(tune); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }); });
             playerMenu.Items.Add(playerOpenItem);
             playerMenu.Items.Add(new ToolStripMenuItem("Hide for now", null, delegate { playerClosed = true; HidePlayer(); }));
             playerMenu.Items.Add(new ToolStripMenuItem("Turn off mini player", null, delegate { TogglePlayer(); }));
@@ -3651,7 +3748,7 @@ namespace CapriDesktop
             player.Loud = Math.Max(0, Math.Min(100, preferences.PlayerVolume)) / 100.0;
             // And her own music with it. Only the slider was restored, so the face showed what they set and the
             // songs played at the stock level until the slider was touched, which is the part that was too loud.
-            try { FolderTunes.Loudness = player.Loud; } catch (Exception) { }
+            try { FolderTunes.Loudness = player.Loud; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             FolderTunes.Loudness = player.Loud;
             player.Moved += SavePlayerSpot;
             tray = new NotifyIcon();
@@ -3664,6 +3761,7 @@ namespace CapriDesktop
             tray.DoubleClick += delegate { RestoreAtCursor(); };
             tray.BalloonTipClicked += delegate { BalloonClicked(); };
             tray.Visible = !testing;
+            Mods.Stock(data);
             ModList = new Mods(data);
             GameNotes.Skills = ModList.SkillsFor;
             Hands.SkillNote = delegate { return ModList.SkillNote; };
@@ -3730,7 +3828,7 @@ namespace CapriDesktop
             Hands.Crash = CrashTool;
             Hands.Alert = AlertTool;
             // Whatever asks to edit one of her files gets her editor, on that file's tab.
-            Edit = delegate(string path) { try { OpenFiles(System.IO.Path.GetFileName(path)); } catch (Exception) { } };
+            Edit = delegate(string path) { try { OpenFiles(System.IO.Path.GetFileName(path)); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } };
             Hands.VoiceChat = VoiceChatTool;
             Hands.StopSpeech = SpeechTool;
             Hands.JobControl = JobTool;
@@ -3853,11 +3951,11 @@ namespace CapriDesktop
                 if (!testing && background) CheckTwitchLive(signalIdle);
                 if (!testing) CheckPrank(clock.Elapsed.TotalSeconds);
                 // Her own mood, when she is on Dynamic. Cheap: it only looks at a clock unless a mood has run out.
-                if (!testing) try { Dynamics.Turn(); } catch (Exception) { }
+                if (!testing) try { Dynamics.Turn(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 if (!testing) MoodMischief(clock.Elapsed.TotalSeconds);
                 if (!testing && Personalities.Attitude != switchedFor) { switchedFor = Personalities.Attitude; ApplySwitches(); }
                 if (!testing) CheckPlaylist(clock.Elapsed.TotalSeconds);
-                if (backdrop != null) { try { Native.SetWindowPos(backdrop.Handle, Handle, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010); } catch (Exception) { } }
+                if (backdrop != null) { try { Native.SetWindowPos(backdrop.Handle, Handle, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
                 if (!testing && background) CheckHoliday(DateTime.Now, signalIdle);
                 if (!testing && background) CheckNews(signalIdle);
                 if (!testing && background)
@@ -4087,7 +4185,7 @@ namespace CapriDesktop
                 Zones.Fresh();
                 // Which program they keep in front, so "open my calendar" opens theirs. Four seconds is far more
                 // often than it needs; Favourites only counts one use per spell in front.
-                try { Favourites.Seen(Computer.FrontProgram(), DateTime.UtcNow); } catch (Exception) { }
+                try { Favourites.Seen(Computer.FrontProgram(), DateTime.UtcNow); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
             FeetTick(now);
             FeelTick(now);
@@ -4485,7 +4583,7 @@ namespace CapriDesktop
                         Remark("news", "Lachy put out " + tag + " for the original Capri. You're on Yuno's build, so I left it alone"
                             + (preferences.UpstreamTold == 1 ? " rather than wipe everything that's been set up here." : "."), true, null, false, "> sys: ");
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 });
             });
         }
@@ -5436,7 +5534,7 @@ namespace CapriDesktop
                     glitch = Math.Max(glitch, has.Glitch);
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             Voice.Loudness = Math.Max(0, Math.Min(150, volume));
             VoiceFx.Pitch = Math.Max(-VoiceFx.MostPitch, Math.Min(VoiceFx.MostPitch, pitch));
             VoiceFx.Speed = Math.Max(VoiceFx.Slowest, Math.Min(VoiceFx.Fastest, speed));
@@ -5758,7 +5856,7 @@ namespace CapriDesktop
             // A senpai zone she is not forward enough for moves your hand instead, and never scores as a pat.
             string zoned = null;
             try { zoned = Touch.Line(petZone, Forward); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             string line = zoned ?? (patForgives ? Says("petted", "patted better", PatPeaceLines) : Says("petted", "petted", PetLines));
             patForgives = false;
             // Pat lines use the same voice as everything else she says: their ElevenLabs voice and model when they've set one.
@@ -5801,7 +5899,7 @@ namespace CapriDesktop
             // words; everyone else uses the shared ones.
             string[] from = wantsUp && (!wantsPats || random.Next(2) == 0) ? UppiesLines : PatsWantedLines;
             string[] hers = null;
-            try { hers = Personalities.Lines(Personalities.WantsHeading, null); } catch (Exception) { }
+            try { hers = Personalities.Lines(Personalities.WantsHeading, null); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             if (hers != null && hers.Length > 0 && random.Next(100) < 60) from = hers;
             return Sayings.Plainly(Sayings.OneOf(from) ?? from[random.Next(from.Length)], true);
         }
@@ -5835,7 +5933,7 @@ namespace CapriDesktop
                 if (IsDisposed || !IsHandleCreated || quitting) return;
                 BeginInvoke((MethodInvoker)delegate { SayBroken(); });
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private void SayBroken()
@@ -5854,7 +5952,7 @@ namespace CapriDesktop
                 if (InChat) Begin(said, line, TalkState.Talking, null);
                 else Answer(said, line, TalkState.Talking);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private double pipeAt = -1;
@@ -5912,7 +6010,7 @@ namespace CapriDesktop
         internal string FlirtLine()
         {
             int level = 0;
-            try { level = Personalities.SpecialInterest; } catch (Exception) { }
+            try { level = Personalities.SpecialInterest; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             if (level < 6) return null;
             double hours = Math.Max(0.6, 3.4 - (level - 6) * 0.7);
             if (!Sayings.Rested("sys:flirt", hours)) return null;
@@ -5922,7 +6020,7 @@ namespace CapriDesktop
                 if (Brain.Adult) said = Interests.For("flirting");
                 if (string.IsNullOrWhiteSpace(said)) said = Sayings.FlirtFirst();
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return string.IsNullOrWhiteSpace(said) ? null : Them.Fill(said);
         }
 
@@ -5955,7 +6053,7 @@ namespace CapriDesktop
                     {
                         if (yes) Favourites.Pick(named, program); else Favourites.NotThat(named, program);
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 });
                 return true;
             }
@@ -6028,7 +6126,7 @@ namespace CapriDesktop
             string zone = Zone(Cursor.Position);
             string slapped = null;
             try { slapped = zone == Touch.Hips ? Touch.Line(Touch.Slapped, Forward) : null; }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             string line = slapped ?? Says("slapped", "slapped", SlapLines);
             if (InChat) Begin(said, line, TalkState.Talking, null);
             else Answer(said, line, TalkState.Talking);
@@ -6448,7 +6546,7 @@ namespace CapriDesktop
                     if (Lore.Due() && Sayings.Rested("sys:lore", 3))
                     {
                         string told = null;
-                        try { told = Lore.Next(); } catch (Exception) { }
+                        try { told = Lore.Next(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                         if (!string.IsNullOrEmpty(told)) { SayOwn("check-in", told); return; }
                     }
                     string question, key;
@@ -6753,7 +6851,7 @@ namespace CapriDesktop
                     object[] marks = Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(AssemblyFileVersionAttribute), false);
                     if (marks.Length > 0) said = ((AssemblyFileVersionAttribute)marks[0]).Version;
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 if (string.IsNullOrEmpty(said)) said = Assembly.GetExecutingAssembly().GetName().Version.ToString(3);
                 return built = said;
             }
@@ -7602,7 +7700,7 @@ namespace CapriDesktop
             bool joining = tool == "use_computer" && args != null && CallSession.Joining(args.Task);
             if (joining)
             {
-                if (!testing && CallAppChoice == "Auto") { try { CallApps.Find(); } catch (Exception) { } }
+                if (!testing && CallAppChoice == "Auto") { try { CallApps.Find(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
                 args.Task += CallSession.JoinTask;
             }
             // With Use your mouse and keyboard for jobs off, her quick tools stay quick instead of taking the mouse.
@@ -8046,7 +8144,7 @@ namespace CapriDesktop
                 // The outro keeps her frame loop running, so the bubble is painted on the next frame.
                 if (!box.Visible) box.Show();
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private void StartHeartbeat()
@@ -8194,8 +8292,8 @@ namespace CapriDesktop
             // one was the conversation: a small model copies the voice of its own last replies far harder than it
             // follows a system line, so she stayed on the pack she had been told she was not, for ages.
             // Her notes, memories and files are untouched; this is only what she is holding in her head.
-            try { Brain.Unsee(); brain.Forget(); } catch (Exception) { }
-            if (want == Personalities.Dynamic) { try { Dynamics.Again(); } catch (Exception) { } }
+            try { Brain.Unsee(); brain.Forget(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            if (want == Personalities.Dynamic) { try { Dynamics.Again(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
             else Personalities.Attitude = "";
             ApplySwitches();
             // Her voice follows who she is, so it is recomputed here rather than only at startup.
@@ -8206,7 +8304,7 @@ namespace CapriDesktop
             petBagFor = -1;
             lastPet = -1;
             try { Said.Know(Personalities.All()); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             string told = want == Personalities.Stock ? "Back to my own."
                 : want == Personalities.Dynamic
                     ? "I'll pick my own moods now." + (Personalities.Attitude.Length == 0 ? "" : " Feeling " + Personalities.Attitude.ToLowerInvariant() + ".")
@@ -8228,7 +8326,7 @@ namespace CapriDesktop
                 string[] mine = Personalities.Lines(heading, null);
                 if (mine != null && mine.Length > 0) return mine[random.Next(mine.Length)];
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return null;
         }
 
@@ -8408,7 +8506,7 @@ namespace CapriDesktop
                 // chat, hushed, or over a full screen app.
                 Remark(heard, line, InChat || Hushed || FullScreen(), null, false, "> sys: ");
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Used only when neither her personality nor lines.md has anything, so she is never silent after being given something.
@@ -8470,7 +8568,7 @@ namespace CapriDesktop
                     + " (" + act + " at " + Personalities.Tally(act) + ").");
                 Remark("settings", now == Personalities.Main ? "...back to normal." : "Something's shifted.", true, null, false, "> sys: ");
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // What an act is worth right now: her personality's own weight, then softened or sharpened by how they said
@@ -8781,7 +8879,7 @@ namespace CapriDesktop
                     catch (UnauthorizedAccessException) { }
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return gone;
         }
 
@@ -8793,7 +8891,7 @@ namespace CapriDesktop
                 int gone = TidyLeftovers(home) + TidyLeftovers(Path.Combine(home ?? "", Personalities.SettingsName));
                 if (gone > 0) Brain.Log("files", -1, gone + " leftover " + (gone == 1 ? "file" : "files") + " from a Windows file swap removed from her folder.");
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private void SmokeMainframeColours(List<string> checks, string output)
@@ -9219,7 +9317,7 @@ namespace CapriDesktop
                         }
                     }
                     try { setup.Dispose(); }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
             }
             finally
@@ -9249,7 +9347,7 @@ namespace CapriDesktop
                 cableSetup = null;
             }
             try { setup.Dispose(); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             Post(delegate { mainframe.ShowVoiceInMic(); });
             ThreadPool.QueueUserWorkItem(delegate
             {
@@ -10038,7 +10136,7 @@ namespace CapriDesktop
                 ThreadPool.QueueUserWorkItem(delegate
                 {
                     bool on = false;
-                    try { on = MusicPlaying(); } catch (Exception) { }
+                    try { on = MusicPlaying(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     Post(delegate { musicBusy = false; musicOn = on; });
                 });
             }
@@ -10071,7 +10169,7 @@ namespace CapriDesktop
                     // A paused YouTube tab keeps its title, so the song has to be playing too.
                     if (song) song = MusicPlaying();
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 Post(delegate
                 {
                     homeBusy = false;
@@ -10198,7 +10296,7 @@ namespace CapriDesktop
                 ThreadPool.QueueUserWorkItem(delegate
                 {
                     Tune tune = null;
-                    try { tune = Tunes.Read(); } catch (Exception) { }
+                    try { tune = Tunes.Read(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     Post(delegate { tuneBusy = false; Tuned(tune, clock.Elapsed.TotalSeconds, asked); });
                 });
             }
@@ -10248,7 +10346,7 @@ namespace CapriDesktop
             ThreadPool.QueueUserWorkItem(delegate
             {
                 bool? has = null;
-                try { has = Tunes.Hearted(); } catch (Exception) { }
+                try { has = Tunes.Hearted(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 Post(delegate { heartBusy = false; if (has.HasValue) player.Hearted(key, has.Value, asked); });
             });
         }
@@ -10317,7 +10415,7 @@ namespace CapriDesktop
                 foreach (System.Diagnostics.Process running in System.Diagnostics.Process.GetProcessesByName(System.IO.Path.GetFileNameWithoutExtension(program)))
                     using (running) Mixer.Set(running.Id, (float)level, null);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private bool PlaylistShowing(Tune tune)
@@ -10346,7 +10444,7 @@ namespace CapriDesktop
                 // Her own player knows straight away, rather than waiting out the next read.
                 tuneAt = -10;
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private void PlayerCommand(string what)
@@ -10384,7 +10482,7 @@ namespace CapriDesktop
                         press = playerPresses.Dequeue();
                     }
                     bool sent = false;
-                    try { sent = Tunes.Send(press.Key, press.Value); } catch (Exception) { }
+                    try { sent = Tunes.Send(press.Key, press.Value); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     Post(delegate { player.Sent(press.Value, sent); tuneAt = -10; });
                 }
             });
@@ -11467,7 +11565,7 @@ namespace CapriDesktop
                     paused = Computer.Media(page.Title) && Computer.ExplorePaused(page, Tunes.Shared());
                     pageBounds = Computer.ExplorePage(page, cursorAt, paused);
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 Post(delegate
                 {
                     exploreBusy = false;
@@ -12387,7 +12485,7 @@ namespace CapriDesktop
                 if (listing != providerListing) return;
                 string[] found = null;
                 try { found = Brain.ServerModels(address, key); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 Post(delegate
                 {
                     if (listing != providerListing) return;
@@ -12447,7 +12545,7 @@ namespace CapriDesktop
                 if (look < 0 && listing != providerListing) return;
                 string[] found = null;
                 try { found = Brain.ServerModels(address, key); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 Post(delegate
                 {
                     if (OldBrainLook(look)) return;
@@ -12577,7 +12675,7 @@ namespace CapriDesktop
                     VoiceProfiles.Reread();
                     Post(delegate { if (!IsDisposed) ApplyVoiceProfile(); });
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             });
         }
 
@@ -12605,7 +12703,7 @@ namespace CapriDesktop
                     System.Threading.Thread.Sleep(wait);
                     StockOne(path);
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 finally { if (wait > 1000) lock (stockLock) stockDue.Remove(path); }
             });
         }
@@ -12634,7 +12732,7 @@ namespace CapriDesktop
                 if (Same(path, Interests.HersKept) && Brain.Uncensored) { CapriDesktop.Notes.Stock(path, delegate { return Interests.HersText; }); return; }
                 if (Same(path, Interests.YoursKept) && Brain.Uncensored) CapriDesktop.Notes.Stock(path, delegate { return Interests.YoursText; });
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static bool Same(string one, string two)
@@ -12718,10 +12816,12 @@ namespace CapriDesktop
                     return now;
                 }
                 if (File.Exists(was) && !File.Exists(now)) File.Move(was, now);
-                foreach (string spare in new[] { name + ".bak", name + ".backup" })
+                List<string> spares = SpareFiles.Of(was);
+                if (File.Exists(was + ".backup")) spares.Add(was + ".backup");
+                foreach (string from in spares)
                 {
-                    string from = Path.Combine(data, spare), to = Path.Combine(settings, spare);
-                    if (File.Exists(from) && !File.Exists(to)) File.Move(from, to);
+                    string to = Path.Combine(settings, Path.GetFileName(from));
+                    if (!File.Exists(to)) File.Move(from, to);
                 }
             }
             catch (IOException) { }
@@ -12757,7 +12857,7 @@ namespace CapriDesktop
             System.Threading.ThreadPool.QueueUserWorkItem(delegate
             {
                 try { StockNow(); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 finally { System.Threading.Interlocked.Exchange(ref stocking, 0); }
             });
         }
@@ -12791,7 +12891,7 @@ namespace CapriDesktop
                     CapriDesktop.Notes.Stock(file, delegate { return Dynamics.MoodHalf(where, named); });
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private LogSheet logSheet;
@@ -12888,11 +12988,15 @@ namespace CapriDesktop
             // places out of six and she still said nothing from it.
             if (preferences.Uncensored)
             {
+                FetchCodex();
                 Personalities.Install();
                 Dynamics.Install();
                 Interests.Write(false);
                 try { Sayings.TopUp(); }
                 catch (Exception bad) { Brain.Log("lines", -1, "Her lines did not finish: " + bad.Message); }
+                // touch.md and watching.md too: written once before the switch is known, so never topped up.
+                try { Touch.Write(false); Angles.Write(false); }
+                catch (Exception bad) { Brain.Log("lines", -1, "Her touch and look did not finish: " + bad.Message); }
                 try { SysLines.TopUp(); }
                 catch (Exception bad) { Brain.Log("sys", -1, "Her settings file did not finish: " + bad.Message); }
             }
@@ -12908,6 +13012,12 @@ namespace CapriDesktop
             Personalities.Away(Personalities.Senpais, "packs");
             Personalities.Away(Dynamics.Senpais, "moods");
             Interests.Gone();
+            try
+            {
+                string pack = Codex.PathIn(Codex.Folder);
+                if (pack != null && File.Exists(pack)) File.Delete(pack);
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             // Every line file, not the one that was noticed: lines.md was fixed alone twice over.
             foreach (string one in new[] { Sayings.Kept, Touch.Kept, Angles.Kept, Moments.Kept, ChessTalk.Kept, Commands.Kept })
                 LineFile.Sided(one);
@@ -13075,7 +13185,7 @@ namespace CapriDesktop
             int edge = Math.Max(24, Width / 6);
             backdrop.Bounds = new Rectangle(Left - edge, Top - edge, Width + edge * 2, Height + edge * 2);
             try { Native.SetWindowPos(backdrop.Handle, Handle, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private void StreamLabel()
@@ -13166,7 +13276,7 @@ namespace CapriDesktop
                     if (has != null) found.Add(one);
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return found;
         }
 
@@ -13254,7 +13364,7 @@ namespace CapriDesktop
                     Brain.Log("mood", -1, "Her mood turned on " + one + ".");
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private bool Switched(string named)
@@ -13308,7 +13418,7 @@ namespace CapriDesktop
                 string went = Prank(mischief[random.Next(mischief.Length)]);
                 Brain.Log("mood", -1, "Upset enough to act on it: " + went);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Folders and counts only, never names: her log is a file on a censored machine like any other.
@@ -13348,6 +13458,72 @@ namespace CapriDesktop
         {
             try { return string.IsNullOrEmpty(folder) ? "nowhere" : Path.GetFileName(folder.TrimEnd('\\', '/')); }
             catch (Exception) { return "nowhere"; }
+        }
+
+        // What older settings point at outside her folder: a voice clip a server reads, the screensaver's sound, and
+        // the clip her HD voice reads, which lives in the model's folder. Each is copied in; nothing is moved or deleted.
+        private void Shelved()
+        {
+            bool changed = false;
+            if (Library.Loose(preferences.ServerSpeaker)) { preferences.ServerSpeaker = Library.Keep(preferences.ServerSpeaker, Library.Voices); changed = true; }
+            if (Library.Loose(preferences.AsideSpeaker)) { preferences.AsideSpeaker = Library.Keep(preferences.AsideSpeaker, Library.Voices); changed = true; }
+            if (changed) SavePreferences();
+            SysLines.KeepSaverSound();
+            if (qwen != null) Library.KeepHdVoice(qwen.Folder);
+        }
+
+        private void FillIntros(ToolStripMenuItem into)
+        {
+            into.DropDownItems.Clear();
+            List<KeyValuePair<string, ICapriMod>> mods = ModList.IntroMods;
+            if (mods.Count == 0)
+            {
+                into.DropDownItems.Add(new ToolStripMenuItem("No intro mod is on: open Mods", null, delegate { mainframe.Restore(); mainframe.ShowMods(true); }));
+                return;
+            }
+            foreach (KeyValuePair<string, ICapriMod> entry in mods)
+            {
+                ICapriMod mod = entry.Value;
+                string title = entry.Key;
+                string[] names = null;
+                ICapriIntroNames listed = mod as ICapriIntroNames;
+                try { if (listed != null) names = listed.Intros; }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                if (names == null || names.Length == 0)
+                {
+                    // A mod that does not name its intros plays whichever of them it has picked.
+                    ToolStripMenuItem whole = new ToolStripMenuItem(title, null, delegate { PlayWhole(title, mod as ICapriIntro); });
+                    whole.ToolTipText = "Play " + title + " now, whichever of its intros it has picked";
+                    into.DropDownItems.Add(whole);
+                    continue;
+                }
+                foreach (string named in names)
+                {
+                    if (string.IsNullOrEmpty(named)) continue;
+                    string intro = named;
+                    ToolStripMenuItem one = new ToolStripMenuItem(intro, null, delegate { TryIntro(mod, intro); });
+                    one.ToolTipText = "Play " + intro + " now, from " + title + ", without picking it";
+                    into.DropDownItems.Add(one);
+                }
+            }
+        }
+
+        // One intro, now, from the test menu. The mod plays it once and keeps whatever was picked before.
+        private void TryIntro(ICapriMod mod, string named)
+        {
+            try { if (!mod.Heard("test " + named + " intro")) Remark("", "That mod didn't take the " + named + " intro.", true); }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+        }
+
+        // A mod that names no intros, played as it stands.
+        private void PlayWhole(string title, ICapriIntro intro)
+        {
+            if (intro == null || introScreen != null) return;
+            double seconds = 0;
+            try { seconds = intro.Seconds; }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            if (seconds <= 0) { Remark("", title + " has none switched on. Take the \">\" off one under Her start-up intro in sys.md.", true); return; }
+            IntroLikeStart(intro);
         }
 
         // Who she is, from her own menu. Rebuilt each time it opens so the live mood shows.
@@ -13823,7 +13999,7 @@ namespace CapriDesktop
                     twitchReadAt = written;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return twitchRules;
         }
 
@@ -16030,7 +16206,7 @@ namespace CapriDesktop
                 // A moment for the line to land, then close the way Quit does. Files are not hers to remove.
                 Post(delegate { System.Threading.Thread.Sleep(2600); Quit(); });
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private double distractedAt = double.NegativeInfinity;
@@ -16816,6 +16992,7 @@ namespace CapriDesktop
         // Their own voice: a clip they pick is read, checked and cut on a worker thread, then saved where her HD voice looks for it.
         internal void UseYourVoice(string path)
         {
+            path = Library.Keep(path, Library.Voices);
             mainframe.VoiceNote("Reading your clip...", false);
             ThreadPool.QueueUserWorkItem(delegate
             {
@@ -16832,6 +17009,7 @@ namespace CapriDesktop
             catch (IOException error) { problem = error.Message; }
             catch (UnauthorizedAccessException error) { problem = error.Message; }
             if (problem != null) { mainframe.VoiceNote(Voice.Short("Couldn't save your voice: " + problem), true); return; }
+            Library.KeepHdVoice(qwen.Folder);
             HearClip(YourLine);
         }
 
@@ -17027,7 +17205,7 @@ namespace CapriDesktop
                             else foreach (byte part in answer) { stream.WriteByte(part); Thread.Sleep(delay); }
                         }
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             });
             return "http://127.0.0.1:" + ((IPEndPoint)server.LocalEndpoint).Port;
         }
@@ -18612,7 +18790,7 @@ namespace CapriDesktop
                 if (worth > 0) Did("praised", worth);
                 else if (worth < 0) Did("degraded", worth);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         protected override void OnDragEnter(DragEventArgs e)
@@ -18817,7 +18995,7 @@ namespace CapriDesktop
             Func<string, byte[]> cueFree;
             brain.Cues = CuedVoice(PickVoice(quiet, out cueFree), cueFree);
             Cloud remote = brain.Remote;
-            if (!testing && (voice.Key == null || quiet || voiceBroke) && kokoro.Installed && !preferences.Quiet && !preferences.Silent) ThreadPool.QueueUserWorkItem(delegate { try { kokoro.Warm(); } catch (Exception) { } });
+            if (!testing && (voice.Key == null || quiet || voiceBroke) && kokoro.Installed && !preferences.Quiet && !preferences.Silent) ThreadPool.QueueUserWorkItem(delegate { try { kokoro.Warm(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
             if (!testing && preferences.HdVoice && (voice.Key == null || quiet || voiceBroke || preferences.Quiet) && !preferences.Silent && qwen.Installed && !qwen.Awake && clock.Elapsed.TotalSeconds >= hdRest && !HdStepsAside()) WakeHd();
             ThreadPool.QueueUserWorkItem(delegate
             {
@@ -18866,10 +19044,10 @@ namespace CapriDesktop
             // pending would file whatever they said next as the answer to it.
             if (!Probes.Answers(said)) { Probes.Answered(key); return; }
             string kept = null;
-            try { kept = Brain.NoteKey(key, said); } catch (Exception) { }
+            try { kept = Brain.NoteKey(key, said); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             // Their own word about the spell she asked about, so the same gap is never asked about twice and the
             // ones after it are read the way they said rather than guessed at.
-            if (string.Equals(key, "workHours", StringComparison.OrdinalIgnoreCase)) try { Away.Told(said); } catch (Exception) { }
+            if (string.Equals(key, "workHours", StringComparison.OrdinalIgnoreCase)) try { Away.Told(said); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             Probes.Answered(key);
             // Nothing said back is how a note that went in reads; anything else is a reason it did not.
             Brain.Log("notes", -1, kept != null && kept.Length == 0
@@ -19078,7 +19256,7 @@ namespace CapriDesktop
                         byte[] wav = custom.Speak(words);
                         if (wav != null && Voice.Seconds(wav) > 0) return wav;
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
                 byte[] windows = WindowsVoice.Speak(code, words);
                 if (windows != null) return windows;
@@ -19328,7 +19506,7 @@ namespace CapriDesktop
                     // and has to be put back together for the camera.
                     VirtualCamera.Frame(frame, new Rectangle(anchor, Size));
                     try { foreach (Overlay one in HerOverlays()) VirtualCamera.Layer(one.Image, one.Bounds); }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     VirtualCamera.Done();
                 }
                 if (bodyTiming) bodyShow += Stopwatch.GetTimestamp() - phase;
@@ -30270,7 +30448,7 @@ namespace CapriDesktop
             }
             catch (UnauthorizedAccessException) { checks.Add("LIMIT clip tidy check: temporary storage is not writable"); }
             catch (IOException) { checks.Add("LIMIT clip tidy check: temporary storage is unavailable"); }
-            finally { try { Directory.Delete(tidyFolder, true); } catch (Exception) { } }
+            finally { try { Directory.Delete(tidyFolder, true); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
             try
             {
                 using (ManualResetEvent savingStarted = new ManualResetEvent(false))
@@ -38978,7 +39156,7 @@ namespace CapriDesktop
                 ++brainLook;
                 foreach (ManualResetEvent release in gates) release.Set();
                 try { settle("A brain look was still running during cleanup."); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 ++providerListing;
                 ++cloudListing;
                 foreach (System.Net.Sockets.TcpListener server in servers) server.Stop();
@@ -47325,7 +47503,7 @@ namespace CapriDesktop
                                 answer["continue"] = true;
                                 WorkspaceHook.Write(extra, Encoding.UTF8.GetBytes(HuskJson.Write(answer) + "\n"), 1000);
                             }
-                            catch (Exception) { }
+                            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                         }) { IsBackground = true };
                         reply.Start();
                         Dictionary<string, object> answerOnly = WorkspaceHook.Exchange(extraPipe, approvals.Id, turn.Id, HuskJson.Map("tool_name", "Read", "tool_input", HuskJson.Map()), 2000);
@@ -49685,7 +49863,7 @@ namespace CapriDesktop
                                 SavePreferences();
                                 // What's playing on this PC right now, read only: nothing is pressed.
                                 Tune miniLive = null;
-                                Thread miniRead = new Thread(delegate() { try { miniLive = Tunes.Read(); } catch (Exception) { } });
+                                Thread miniRead = new Thread(delegate() { try { miniLive = Tunes.Read(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
                                 miniRead.IsBackground = true;
                                 miniRead.Start();
                                 if (!miniRead.Join(10000)) throw new Exception("Reading Windows' media session hung.");
@@ -52649,7 +52827,7 @@ namespace CapriDesktop
                                                 stream.Write(answer, 0, answer.Length);
                                             }
                                     }
-                                    catch (Exception) { }
+                                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                                 });
                                 Brain.Ollama = "http://127.0.0.1:" + ((IPEndPoint)fakeBrain.LocalEndpoint).Port;
                                 Brain handy = new Brain();
@@ -55967,7 +56145,7 @@ namespace CapriDesktop
                                                 stream.Write(refusal, 0, refusal.Length);
                                             }
                                         }
-                                        catch (Exception) { }
+                                        catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                                     });
                                     Brain.Nvidia = "http://127.0.0.1:" + ((IPEndPoint)textOnly.LocalEndpoint).Port;
                                     Cloud bolt = new Cloud("nvapi-test", "nvidia/nemotron-3.5-bolt-e4b");
@@ -57661,7 +57839,7 @@ namespace CapriDesktop
                                             stream.Write(fakeBodies[i], 0, fakeBodies[i].Length);
                                         }
                                 }
-                                catch (Exception) { }
+                                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                             });
                             string realHost = Voice.Host;
                             Voice.Host = "http://127.0.0.1:" + ((IPEndPoint)fake.LocalEndpoint).Port;
@@ -58058,7 +58236,7 @@ namespace CapriDesktop
                                             stream.Write(pack, 0, pack.Length);
                                         }
                                 }
-                                catch (Exception) { }
+                                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                             });
                             string packUrl = LocalVoice.PackUrl;
                             string packSha = LocalVoice.PackSha;
@@ -58387,7 +58565,7 @@ namespace CapriDesktop
                                             stream.Write(answer, 0, answer.Length);
                                         }
                                 }
-                                catch (Exception) { }
+                                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                             });
                             int hdPort = ((IPEndPoint)hdServer.LocalEndpoint).Port;
                             string hdRoot = Path.Combine(Path.GetDirectoryName(settingsPath), "hd-test");
@@ -58745,7 +58923,7 @@ namespace CapriDesktop
                                         finally { vsClient.Close(); }
                                     }
                                 }
-                                catch (Exception) { }
+                                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                             });
                             string vsUrl = "http://127.0.0.1:" + ((IPEndPoint)vsServer.LocalEndpoint).Port + "/v1", vsWhere = "127.0.0.1:" + ((IPEndPoint)vsServer.LocalEndpoint).Port;
                             string vsPaths = VoiceServer.Endpoint("http://localhost:8880/v1") + " " + VoiceServer.Endpoint("localhost:8880") + " " + VoiceServer.Endpoint("http://127.0.0.1:8091/v1/") + " " + VoiceServer.Endpoint("https://tts.example.net/v1/audio/speech") + " " + VoiceServer.Endpoint("  ");
@@ -59392,7 +59570,7 @@ namespace CapriDesktop
                                             stream.Write(earsReply, 0, earsReply.Length);
                                         }
                                 }
-                                catch (Exception) { }
+                                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                             });
                             string earsUrl = LocalEars.PackUrl, earsSha = LocalEars.PackSha, europeanUrl = LocalEars.EuropeanUrl, europeanSha = LocalEars.EuropeanSha;
                             long earsSize = LocalEars.PackSize, europeanSize = LocalEars.EuropeanSize;
@@ -60488,7 +60666,7 @@ namespace CapriDesktop
                                         stream.Write(wakeMade, 0, wakeMade.Length);
                                     }
                                 }
-                                catch (Exception) { }
+                                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                             });
                             string wakeUrlWas = WakeWord.PackUrl, wakeShaWas = WakeWord.PackSha;
                             long wakeSizeWas = WakeWord.PackSize;
@@ -60753,7 +60931,7 @@ namespace CapriDesktop
                                                 else if (text.IndexOf("client_tool_result", StringComparison.Ordinal) >= 0) lock (asked) asked.Add("tool " + text);
                                             }
                                         }
-                                        catch (Exception) { }
+                                        catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                                     }
                                 }
                                 catch (Exception error) { if (!agentStop.IsCancellationRequested) lock (asked) agentServerProblem = error; }
@@ -61524,7 +61702,7 @@ namespace CapriDesktop
                                 // Her mini player on the clean test desktop with her perched on it: the stand-in Spotify song with its heart
                                 // liked, and whatever Windows' media session has playing, if anything.
                                 Tune shotLive = null;
-                                Thread shotRead = new Thread(delegate() { try { shotLive = Tunes.Read(); } catch (Exception) { } });
+                                Thread shotRead = new Thread(delegate() { try { shotLive = Tunes.Read(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
                                 shotRead.IsBackground = true;
                                 shotRead.Start();
                                 shotRead.Join(10000);
@@ -62505,7 +62683,7 @@ namespace CapriDesktop
                         finally { switchClient.Close(); }
                     }
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             });
             int switchPort = ((IPEndPoint)switchServer.LocalEndpoint).Port;
             string switchA = "http://127.0.0.1:" + switchPort + "/a/v1", switchB = "http://127.0.0.1:" + switchPort + "/b/v1";

@@ -484,7 +484,7 @@ namespace CapriDesktop
                         CheckWave(waveInAddBuffer(device, pointer, size), "requeue");
                         next = (next + 1) % Buffers;
                         try { Receive(chunk); }
-                        catch (Exception) { }
+                        catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     }
                 }
             }
@@ -627,7 +627,7 @@ namespace CapriDesktop
             failureDetail = error is VoiceException ? ((VoiceException)error).Detail : error.GetType().Name + ": " + error.Message;
         }
 
-        private static void Release(object value) { try { if (value != null && Marshal.IsComObject(value)) Marshal.ReleaseComObject(value); } catch (Exception) { } }
+        private static void Release(object value) { try { if (value != null && Marshal.IsComObject(value)) Marshal.ReleaseComObject(value); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
 
         private void Run()
         {
@@ -689,7 +689,7 @@ namespace CapriDesktop
             finally
             {
                 alive = false;
-                if (started) try { client.Stop(); } catch (Exception) { }
+                if (started) try { client.Stop(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 if (native != IntPtr.Zero) Marshal.FreeCoTaskMem(native);
                 Release(capture); Release(client); Release(device); Release(devices);
             }
@@ -1821,7 +1821,7 @@ namespace CapriDesktop
         internal static void Clean(string into)
         {
             try { if (Directory.Exists(into)) Directory.Delete(into, true); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static void Read(Stream from, byte[] buffer, int count)
@@ -2802,9 +2802,9 @@ namespace CapriDesktop
 
         public void Dispose()
         {
-            try { client.Stop(); } catch (Exception) { }
-            try { Marshal.ReleaseComObject(capture); } catch (Exception) { }
-            try { Marshal.ReleaseComObject(client); } catch (Exception) { }
+            try { client.Stop(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            try { Marshal.ReleaseComObject(capture); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            try { Marshal.ReleaseComObject(client); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
     }
 
@@ -3065,7 +3065,7 @@ namespace CapriDesktop
                     lock (gate) if (playing == run) beat.Take(steady, bpm, clockAt - lastBeat - Step / 2 + Latency);
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             finally { if (tap != null) tap.Dispose(); }
         }
     }

@@ -47,7 +47,7 @@ namespace CapriDesktop
                 OcrEngine preferred = OcrEngine.TryCreateFromUserProfileLanguages();
                 if (preferred != null) return preferred;
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             try { return OcrEngine.TryCreateFromLanguage(new Language("en-US")); }
             catch (Exception) { return null; }
         });
@@ -130,11 +130,11 @@ namespace CapriDesktop
                         finally
                         {
                             try { heldImage.Dispose(); heldOperation.Close(); }
-                            catch (Exception) { }
+                            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                             finally { gate.Release(); }
                         }
                     }, TaskScheduler.Default);
-                    try { heldOperation.Cancel(); } catch (Exception) { }
+                    try { heldOperation.Cancel(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     return empty;
                 }
                 double angle = (reading.Result.TextAngle ?? 0) * Math.PI / 180;
@@ -168,7 +168,7 @@ namespace CapriDesktop
             finally
             {
                 try { if (image != null) image.Dispose(); if (operation != null) operation.Close(); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 finally { if (entered) gate.Release(); }
             }
         }

@@ -37,7 +37,7 @@ namespace CapriDesktop
                 Guid id = SessionId;
                 if (client.GetService(ref id, out session) >= 0 && session != null) Ducking(session, true);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             finally { Drop(session); }
         }
 
@@ -50,7 +50,7 @@ namespace CapriDesktop
                 session = Session(id, flow);
                 if (session != null) Ducking(session, true);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             finally { Drop(session); }
         }
 
@@ -151,11 +151,11 @@ namespace CapriDesktop
                                 if (meter != null) meter.GetPeakValue(out peak);
                                 each(new AppSound { App = name, Id = id, Level = level, Muted = muted, Playing = state == 1, Peak = peak }, volume);
                             }
-                            catch (Exception) { }
+                            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                             finally { Drop(control); }
                         }
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     finally { Drop(sounds); Drop(manager); Drop(speaker); }
                 }
                 return true;
@@ -164,7 +164,7 @@ namespace CapriDesktop
             finally
             {
                 Drop(speakers);
-                if (listed != IntPtr.Zero) { try { Marshal.Release(listed); } catch (Exception) { } }
+                if (listed != IntPtr.Zero) { try { Marshal.Release(listed); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
                 Drop(devices);
             }
         }
@@ -179,7 +179,7 @@ namespace CapriDesktop
         {
             if (value == null) return;
             try { Marshal.ReleaseComObject(value); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // IMMDeviceCollection.

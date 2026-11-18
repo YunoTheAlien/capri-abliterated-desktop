@@ -201,7 +201,7 @@ namespace CapriDesktop
                 box.SelectionStart = box.TextLength;
                 box.ScrollToCaret();
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             bar.Sync();
         }
 

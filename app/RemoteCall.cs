@@ -186,7 +186,7 @@ namespace CapriDesktop
                 return;
             }
             try { interrupted(device, re); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             if (listen) End(device, "ended");
         }
 
@@ -230,9 +230,9 @@ namespace CapriDesktop
             if (busy) { if (removed) RaiseChanged(); return; }
             bool voice = true, hearing = true;
             try { voice = VoiceOn(); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             try { hearing = !listen && EarsOn(); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             Send(device, StateMessage(true, voice, hearing, null));
             if (fresh || removed) RaiseChanged();
         }
@@ -328,7 +328,7 @@ namespace CapriDesktop
         private void Hear(string device, string id, short[] samples, long ended, Caller accepted)
         {
             try { HearLine(device, id, samples, ended, accepted); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private void HearLine(string device, string id, short[] samples, long ended, Caller accepted)
@@ -364,7 +364,7 @@ namespace CapriDesktop
                     }
                 }
                 try { said(device, id, words); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
 
@@ -417,7 +417,7 @@ namespace CapriDesktop
                     ThreadPool.QueueUserWorkItem(delegate
                     {
                         try { told(each.Key, "her first words went to the phone " + each.Key + " ms after its line ended: her ears took " + each.Value + " ms, her brain and voice the rest"); }
-                        catch (Exception) { }
+                        catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     });
                 }
         }
@@ -426,7 +426,7 @@ namespace CapriDesktop
         private void Flush(object unused)
         {
             try { Flushed(); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private void Flushed()
@@ -473,7 +473,7 @@ namespace CapriDesktop
                 if (sending != null)
                 {
                     try { sending(device, message); }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
                 link.SendLive(device, new[] { message }, null);
             }
@@ -674,7 +674,7 @@ namespace CapriDesktop
             Action changed = Changed;
             if (changed == null) return;
             try { changed(); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
     }
 }

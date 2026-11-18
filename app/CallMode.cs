@@ -1672,7 +1672,7 @@ namespace CapriDesktop
                         if (husk == null || !husk.Current(act) || !husk.Away(act)) return;
                         line = brain.HuskReply(who, act.Reply);
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     deliver(string.IsNullOrWhiteSpace(line) ? act.Line : who + ": " + line);
                 });
             }

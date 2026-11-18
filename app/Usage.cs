@@ -41,7 +41,7 @@ namespace CapriDesktop
             foreach (Process process in Process.GetProcesses())
             {
                 try { before[process.Id] = process.TotalProcessorTime; }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 finally { process.Dispose(); }
             }
             Stopwatch clock = Stopwatch.StartNew();
@@ -61,7 +61,7 @@ namespace CapriDesktop
                     app.Cpu += used / spent * 100;
                     app.Memory += memory;
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 finally { process.Dispose(); }
             }
             use.Apps.AddRange(apps.Values);
@@ -91,7 +91,7 @@ namespace CapriDesktop
                     if (drive.DriveType != DriveType.Fixed || !drive.IsReady) continue;
                     use.Drives.Add(drive.Name.TrimEnd('\\') + " " + Size(drive.AvailableFreeSpace) + " free of " + Size(drive.TotalSize));
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
             PowerStatus power = SystemInformation.PowerStatus;
             if ((power.BatteryChargeStatus & BatteryChargeStatus.NoSystemBattery) == 0 && power.BatteryChargeStatus != BatteryChargeStatus.Unknown)

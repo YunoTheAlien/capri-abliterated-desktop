@@ -259,7 +259,7 @@ namespace CapriDesktop
             ask.Append(pace == Chatty ? " You're in a chatty mood, so say something unless there's really nothing there." : " Only say something if something really happened; otherwise SKIP.");
             // The same steer her glances get, for the same reason: one fixed instruction gives one shape of line.
             string angle = null;
-            try { angle = Glances.Steer(); } catch (Exception) { }
+            try { angle = Glances.Steer(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             if (!string.IsNullOrEmpty(angle)) ask.Append(" This one only: ").Append(angle).Append('.');
             return ask + ")";
         }

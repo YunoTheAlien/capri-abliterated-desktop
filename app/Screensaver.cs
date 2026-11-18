@@ -944,7 +944,7 @@ namespace CapriDesktop
             {
                 playing = null;
                 try { Brain.Log("screensaver", -1, "Her screensaver could not play " + Path.GetFileName(path) + ": " + error.GetType().Name + ": " + error.Message); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
 
@@ -954,8 +954,8 @@ namespace CapriDesktop
             playing = null;
             loaded = null;
             if (stopping == null) return;
-            try { stopping.Stop(); } catch (Exception) { }
-            try { stopping.Dispose(); } catch (Exception) { }
+            try { stopping.Stop(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            try { stopping.Dispose(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Her volume, applied to the samples themselves. A file that is not plain 16 bit PCM is left exactly
@@ -1087,7 +1087,7 @@ namespace CapriDesktop
                     {
                         savers.Remove(held);
                         if (savers.Count == 0) SaverSound.Off();
-                        else foreach (Screensaver other in savers.ToArray()) { try { other.Close(); } catch (Exception) { } }
+                        else foreach (Screensaver other in savers.ToArray()) { try { other.Close(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
                     };
                 }
                 catch (Exception error)
@@ -1097,7 +1097,7 @@ namespace CapriDesktop
                     {
                         saverHeldLogged = true;
                         try { Brain.Log("screensaver", -1, "Her screensaver could not open: " + error.GetType().Name + ": " + error.Message); }
-                        catch (Exception) { }
+                        catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     }
                     return;
                 }
@@ -1146,7 +1146,7 @@ namespace CapriDesktop
             if (savers.Count == 0) return;
             Screensaver[] closing = savers.ToArray();
             savers.Clear();
-            foreach (Screensaver one in closing) { try { one.Close(); } catch (Exception) { } }
+            foreach (Screensaver one in closing) { try { one.Close(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
         }
     }
 }

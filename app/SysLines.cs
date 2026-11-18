@@ -138,7 +138,7 @@ namespace CapriDesktop
                 Notes.Put(Kept, had);
                 lock (writing) { read = DateTime.MinValue; wasLong = -1; }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Their list, split and tidied. Empty when they have not set any, which is the default.
@@ -260,6 +260,24 @@ namespace CapriDesktop
 
         // The .wav they pointed at, found whether they wrote a whole path or just a name beside her files.
         // Null when there is none, which is how it ships: nothing like this comes with her.
+        // A screensaver sound that sys.md points at outside her folder, copied into sounds and the line rewritten to the copy,
+        // so the file it names is one a backup of her folder carries.
+        internal static void KeepSaverSound()
+        {
+            try
+            {
+                string said = (Of(SaverSoundKey) ?? "").Trim().Trim('"');
+                if (!Library.Loose(said)) return;
+                string kept = Library.Keep(said, Library.Sounds);
+                if (string.Equals(kept, said, StringComparison.OrdinalIgnoreCase)) return;
+                string relative = Library.Sounds + "/" + Path.GetFileName(kept);
+                string text = File.ReadAllText(Kept);
+                string made = Regex.Replace(text, @"(?mi)^([ \t]*" + Regex.Escape(SaverSoundKey) + @"[ \t]*:[ \t]*)[^\r\n]*", "${1}" + relative.Replace("$", "$$"));
+                if (made != text) Notes.Put(Kept, made);
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+        }
+
         internal static string SaverSound
         {
             get
@@ -277,7 +295,7 @@ namespace CapriDesktop
                         if (File.Exists(full)) return full;
                     }
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 return null;
             }
         }
@@ -492,7 +510,7 @@ namespace CapriDesktop
                     wasLong = about.Length;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Adult mode is the last thing in the file and has to stay there. It is the one switch in here with a
@@ -634,7 +652,7 @@ namespace CapriDesktop
                 Notes.Put(Kept, string.Join(Environment.NewLine, made.ToArray()) + Environment.NewLine);
                 lock (writing) { read = DateTime.MinValue; wasLong = -1; }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // The two headings a name belongs under, with the note that goes with each. A file written before a
@@ -1019,7 +1037,7 @@ namespace CapriDesktop
                 read = DateTime.MinValue;
                 wasLong = -1;
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static void SenpaiLast()
@@ -1043,7 +1061,7 @@ namespace CapriDesktop
                 Notes.Put(Kept, made);
                 lock (writing) { read = DateTime.MinValue; wasLong = -1; }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static bool IsDealHead(string row)
@@ -1072,7 +1090,7 @@ namespace CapriDesktop
                 Notes.Put(Kept, made);
                 lock (writing) { read = DateTime.MinValue; wasLong = -1; }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // The terms block pulled out of the file: its heading and the note under it. What comes back is the rest,
@@ -1107,6 +1125,7 @@ namespace CapriDesktop
         internal static void TopUp()
         {
             if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
+            IntroTopUp();
             try
             {
                 Fresh();
@@ -1282,7 +1301,7 @@ namespace CapriDesktop
                 read = DateTime.MinValue;
                 wasLong = -1;
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static string Fitted(string body, List<string> adding)
@@ -1407,7 +1426,7 @@ namespace CapriDesktop
                 read = DateTime.MinValue;
                 wasLong = -1;
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         internal static void Write(bool over)
@@ -1420,14 +1439,14 @@ namespace CapriDesktop
                 if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder)) Directory.CreateDirectory(folder);
                 Notes.Put(Kept, Text);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Her start-up intro. The names sit under the key with a ">" in front, the way a interest does: take the
         // ">" off one to switch it on, and with more than one on she picks at random. Adult mode still goes
         // after this, because Adult mode is always the last thing in the file.
         internal const string IntroHeading = "Her start-up intro";
-        internal static readonly string[] IntroNames = { "shatter", "hijack", "wake" };
+        internal static readonly string[] IntroNames = { "shatter", "hijack", "wake", "door" };
 
         internal static string IntroBlock()
         {
@@ -1471,8 +1490,47 @@ namespace CapriDesktop
                     if (found != null && !on.Contains(found)) on.Add(found);
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return on.ToArray();
+        }
+
+        // A name added to the intro list later, for a sys.md that already has the section: put in under the last
+        // one, switched off, so it is there to take the ">" off.
+        private static void IntroTopUp()
+        {
+            try
+            {
+                string[] rows = File.ReadAllText(Kept).Replace("\r\n", "\n").Split('\n');
+                int start = -1, last = -1;
+                List<string> seen = new List<string>();
+                for (int at = 0; at < rows.Length; at++)
+                {
+                    string one = rows[at].Trim();
+                    if (one.StartsWith("#", StringComparison.Ordinal))
+                    {
+                        if (start >= 0) break;
+                        if (string.Equals(one.TrimStart('#').Trim(), IntroHeading, StringComparison.OrdinalIgnoreCase)) start = at;
+                        continue;
+                    }
+                    if (start < 0) continue;
+                    string bare = one.TrimStart('>').Trim();
+                    if (bare.StartsWith("intros:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        last = at;
+                        foreach (string part in bare.Substring(7).Split(',')) if (Known(part.Trim()) != null) seen.Add(Known(part.Trim()));
+                        continue;
+                    }
+                    if (Known(bare) != null) { seen.Add(Known(bare)); last = at; }
+                }
+                if (start < 0 || last < 0) return;
+                List<string> missing = new List<string>();
+                foreach (string one in IntroNames) if (!seen.Contains(one)) missing.Add("> " + one);
+                if (missing.Count == 0) return;
+                List<string> made = new List<string>(rows);
+                made.InsertRange(last + 1, missing);
+                Notes.Put(Kept, string.Join(Environment.NewLine, made.ToArray()));
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static string Known(string said)

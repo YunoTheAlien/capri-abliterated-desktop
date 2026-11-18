@@ -337,7 +337,7 @@ namespace CapriDesktop
                     batch.Check();
                     batch.Ok = true;
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 finally { System.Threading.Interlocked.Exchange(ref busy, 0); }
             });
             try
@@ -366,7 +366,7 @@ namespace CapriDesktop
                     if (value is int) picture = Math.Max(16, Math.Min(256, (int)value));
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             bool ok = Run(list, delegate(View view, Batch batch)
             {
                 Point origin = Origin(list);
@@ -935,7 +935,7 @@ namespace CapriDesktop
         {
             Bitmap picture = null;
             try { picture = Fetch(item.Id, size); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             if (picture == null) return false;
             lock (kept)
             {
@@ -1004,11 +1004,11 @@ namespace CapriDesktop
                     foreach (IconItem item in again) if (clock.ElapsedMilliseconds < LimitMilliseconds) One(item, size);
                     all = Has(items, size);
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 finally
                 {
                     System.Threading.Interlocked.Exchange(ref loading, 0);
-                    try { done(all); } catch (Exception) { }
+                    try { done(all); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
             });
             try
@@ -1734,7 +1734,7 @@ namespace CapriDesktop
                 Action<bool> fetched = delegate(bool ok)
                 {
                     try { BeginInvoke((MethodInvoker)delegate { RampageFetched(ticket, ok); }); }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 };
                 if (!IconPictures.Load(wanted, size, fetched)) { rampageWaiting = false; return -1; }
                 return 1;

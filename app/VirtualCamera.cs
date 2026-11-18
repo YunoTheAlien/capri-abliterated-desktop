@@ -87,7 +87,7 @@ namespace CapriDesktop
 
             public void Dispose()
             {
-                foreach (Bitmap one in Parts) try { if (one != null) one.Dispose(); } catch (Exception) { }
+                foreach (Bitmap one in Parts) try { if (one != null) one.Dispose(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 Parts.Clear();
                 Where.Clear();
             }
@@ -195,20 +195,20 @@ namespace CapriDesktop
                 running = false;
                 ending = pump;
                 // Tell the filter we have gone so it stops showing the last frame forever.
-                try { if (view != null) view.Write(OffState, StateStopping); } catch (Exception) { }
+                try { if (view != null) view.Write(OffState, StateStopping); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
-            try { if (ending != null) ending.Join(400); } catch (Exception) { }
+            try { if (ending != null) ending.Join(400); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             lock (gate) { Shut(); }
             Brain.Log("camera", -1, "Virtual camera off.");
         }
 
         private static unsafe void Shut()
         {
-            try { if (held && view != null) view.SafeMemoryMappedViewHandle.ReleasePointer(); } catch (Exception) { }
+            try { if (held && view != null) view.SafeMemoryMappedViewHandle.ReleasePointer(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             held = false;
             shared = null;
-            try { if (view != null) view.Dispose(); } catch (Exception) { }
-            try { if (map != null) map.Dispose(); } catch (Exception) { }
+            try { if (view != null) view.Dispose(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            try { if (map != null) map.Dispose(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             view = null;
             map = null;
             pump = null;
@@ -216,8 +216,8 @@ namespace CapriDesktop
             Shot had = latest, part = building;
             latest = null;
             building = null;
-            try { if (had != null) had.Dispose(); } catch (Exception) { }
-            try { if (part != null) part.Dispose(); } catch (Exception) { }
+            try { if (had != null) had.Dispose(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            try { if (part != null) part.Dispose(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         internal static void Behind(Color fill, bool clear)
@@ -309,7 +309,7 @@ namespace CapriDesktop
                         }
                         Push(canvas);
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
             }
         }
@@ -388,7 +388,7 @@ namespace CapriDesktop
                     *(uint*)(shared + OffState) = StateReady;
                     written = inc;
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
 

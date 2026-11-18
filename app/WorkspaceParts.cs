@@ -679,7 +679,7 @@ namespace CapriDesktop
                         dialog.SetFolder(folder);
                         Marshal.ReleaseComObject(folder);
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
                 int shown = dialog.Show(owner == null ? IntPtr.Zero : owner.Handle);
                 if (shown != 0) return new string[0];

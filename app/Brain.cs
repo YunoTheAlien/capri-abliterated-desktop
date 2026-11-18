@@ -5,6 +5,7 @@ using System.Net;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Xml;
 
@@ -904,35 +905,35 @@ namespace CapriDesktop
                 // and never shown a meter, so she cannot quote a score back at them.
                 if (OnAir) built += "\n" + SafetyAir;
                 try { string felt = Mood.Line; if (!string.IsNullOrEmpty(felt)) built += "\n" + felt + Mood.Obeys; }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 // The question she is waiting on, so her brain knows where the answer goes.
                 try { string probe = Probes.Line(); if (!string.IsNullOrEmpty(probe)) built += "\n" + probe; }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 // When they are usually about, so a late night means something to her rather than the clock alone.
                 try { string hours = Hours.Line(DateTime.Now); if (!string.IsNullOrEmpty(hours)) built += "\n" + hours; }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 // And the one spell that just ended, so coming back from a night or a shift is something she knows
                 // about rather than something she has to be told.
                 try { string rested = Away.Line(DateTime.Now); if (!string.IsNullOrEmpty(rested)) built += "\n" + rested; }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 // Over everyone, both modes: how hard she leans into a bit. Out of dynamic.md, as prose with no
                 // number in it, the way her mood and her forwardness are given to her.
                 try { string awful = CringeLine(); if (awful != null) built += "\n" + awful; }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 // Only with Uncensored on: how forward she is, and what she is into from her interests file. Both drove her
                 // written lines alone, so her brain knew neither and answered from its own defaults however the
                 // toggle and the level were set. The open safety text takes a rule away but never grants anything.
                 if (Adult)
                 {
                     try { string forward = Personalities.Forward; if (!string.IsNullOrEmpty(forward)) built += "\n" + forward; }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     try
                     {
                         string into = Interests.All("what she is into");
                         if (!string.IsNullOrEmpty(into))
                             built += "\nWhat you are into, in your own words when they ask: " + into + ". These are yours, so own them plainly rather than reading them back like a list.";
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     // Theirs, from Your_Kinks.md. Knowing it is the point; reciting it back is not.
                     try
                     {
@@ -940,7 +941,7 @@ namespace CapriDesktop
                         if (!string.IsNullOrEmpty(theirs))
                             built += "\nWhat they are into: " + theirs + ". You know this about them. Never read it back as a list and never raise it out of nowhere.";
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
                 return built;
             }
@@ -1281,11 +1282,11 @@ namespace CapriDesktop
             // Her personality speaks first when it has a hello of its own, so Welcome Home opens with one of
             // hers rather than the same line every character shares. Tokens are already filled in by Lines.
             string[] own = null;
-            try { if (SysLines.OwnComings) own = Personalities.Lines(Personalities.HelloHeading, null); } catch (Exception) { }
+            try { if (SysLines.OwnComings) own = Personalities.Lines(Personalities.HelloHeading, null); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             if (own != null && own.Length > 0)
             {
                 string pick = null;
-                try { pick = Sayings.OneOf(own); } catch (Exception) { }
+                try { pick = Sayings.OneOf(own); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 if (!string.IsNullOrEmpty(pick)) return pick;
                 lock (greetLuck) return own[greetLuck.Next(own.Length)];
             }
@@ -1615,17 +1616,17 @@ namespace CapriDesktop
                 string folder = TranscriptPath;
                 if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder))
                     foreach (string file in Directory.GetFiles(folder, "*.md"))
-                        try { File.Delete(file); } catch (Exception) { }
+                        try { File.Delete(file); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 string queue = QueuePath;
                 if (!string.IsNullOrEmpty(queue) && File.Exists(queue)) File.Delete(queue);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             try
             {
                 string notes = MemoriesPath;
                 if (!string.IsNullOrEmpty(notes) && File.Exists(notes)) File.WriteAllText(notes, MemoriesHead, new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         internal static string Seen()
@@ -1706,7 +1707,7 @@ namespace CapriDesktop
                 if (!string.IsNullOrEmpty(known) && known.Length > 2)
                     clean = Regex.Replace(clean, @"(?<![\p{L}])" + Regex.Escape(known) + @"(?![\p{L}])", "[name]", RegexOptions.IgnoreCase);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return clean;
         }
 
@@ -2652,7 +2653,7 @@ namespace CapriDesktop
                     line = said;
                     return name;
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
             return name;
         }
@@ -2684,7 +2685,7 @@ namespace CapriDesktop
                     string said = Clean(raw ?? "").Trim();
                     if (CallWords(said, 400)) return said;
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
             return "";
         }
@@ -5283,7 +5284,7 @@ namespace CapriDesktop
             // what it was, so a pack with no cringe line of its own behaves exactly as before.
             int much = 0;
             try { much = Dynamics.Cringe; } catch (Exception) { return null; }
-            try { much = Math.Max(0, Math.Min(100, much + Personalities.Cringe)); } catch (Exception) { }
+            try { much = Math.Max(0, Math.Min(100, much + Personalities.Cringe)); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             if (much <= 5) return null;
             if (much <= 25) return "You will occasionally commit to a joke slightly past where it was funny. Keep it rare.";
             if (much <= 50) return "You lean into a bit. Puns, a catchphrase you reuse, an impression nobody asked for. You know it is a lot and you do it anyway.";
@@ -5329,11 +5330,13 @@ namespace CapriDesktop
                 string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
                 if (!string.IsNullOrEmpty(home)) clean = clean.Replace(home, "%UserProfile%");
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             // Any other shape of the same path, and the bare account name where it stands alone.
             clean = Regex.Replace(clean, @"([A-Za-z]:\\Users\\|/home/|/Users/)[^\\/\s""'<>|]+", "$1%user%", RegexOptions.IgnoreCase);
             if (!string.IsNullOrEmpty(Account) && Account.Length > 2)
                 clean = Regex.Replace(clean, @"(?<![\p{L}\p{N}_])" + Regex.Escape(Account) + @"(?![\p{L}\p{N}_])", "%user%", RegexOptions.IgnoreCase);
+            // A voice clip on her shelf is somebody's voice, so its name does not go in a log either.
+            clean = Regex.Replace(clean, @"(assets[\\/]voice[\\/])[^\\/""'<>|\r\n]+", "$1(a clip)", RegexOptions.IgnoreCase);
             return clean;
         }
 
@@ -5344,6 +5347,32 @@ namespace CapriDesktop
         internal static void Log(string url, long took, string what)
         {
             LogAt(LogPath, url, took, what);
+        }
+
+        // An exception that was caught and let go, with where: the file, the line and the method, which the compiler
+        // writes in at the catch, so it reads the same with no symbols shipped beside her. Once a minute per place,
+        // so a catch inside a drawing loop cannot flood the log.
+        [ThreadStatic] private static bool inCaught;
+        private static readonly Dictionary<string, int> caughtAt = new Dictionary<string, int>();
+
+        internal static void Caught(Exception error, [CallerMemberName] string member = "", [CallerFilePath] string file = "", [CallerLineNumber] int line = 0)
+        {
+            if (error == null || inCaught) return;
+            inCaught = true;
+            try
+            {
+                string place = Path.GetFileName(file ?? "") + ":" + line + " " + member;
+                lock (caughtAt)
+                {
+                    int was;
+                    if (caughtAt.TryGetValue(place, out was) && unchecked(Environment.TickCount - was) < 60000) return;
+                    caughtAt[place] = Environment.TickCount;
+                }
+                while (error.InnerException != null) error = error.InnerException;
+                Log("caught", -1, place + " | " + error.GetType().Name + ": " + error.Message);
+            }
+            catch (Exception) { }
+            finally { inCaught = false; }
         }
 
         internal static bool LogAt(string path, string url, long took, string what)
@@ -5366,7 +5395,7 @@ namespace CapriDesktop
                     if (lines.Count > 200) lines.RemoveRange(0, lines.Count - 200);
                     File.WriteAllLines(path, lines.ToArray());
                 }
-                if (place == "crash") { try { Broke(); } catch (Exception) { } }
+                if (place == "crash") { try { Broke(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
                 return true;
             }
             catch (IOException) { }
@@ -5689,7 +5718,7 @@ namespace CapriDesktop
         private static string Angled(string line)
         {
             string angle = null;
-            try { angle = Steer(); } catch (Exception) { }
+            try { angle = Steer(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return string.IsNullOrEmpty(angle) ? line : line + "\n(This look only: " + angle + ". Still one short line, and the SAW and SAY labels stay exactly as described.)";
         }
 

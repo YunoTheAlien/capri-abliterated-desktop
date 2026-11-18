@@ -869,7 +869,7 @@ namespace CapriDesktop
                 {
                     string said = null;
                     try { said = Brain.Sparing(Brain.Clean(AskHead(Brain.Character + "\nYou're playing this little board game with them. React in one short line, under 14 words. Use the actual position and result; you're O, they're X. No labels, no invented moves.", next.Board, 100)), false, Brain.Nickname); }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     Post(delegate { miniHeadBusy = false; if (ticket == miniTicket && miniLine == next && !string.IsNullOrWhiteSpace(said) && said != "SKIP") next.Said = said; });
                 });
                 return;
@@ -904,7 +904,7 @@ namespace CapriDesktop
             ThreadPool.QueueUserWorkItem(delegate
             {
                 byte[] wav = null;
-                try { wav = speak(Voice.Spoken(line)); } catch (Exception) { }
+                try { wav = speak(Voice.Spoken(line)); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 Post(delegate { if (ticket == asking && boardTicket == miniTicket && reply == line && talkState != TalkState.Off) PlayReply(line, wav); });
             });
         }

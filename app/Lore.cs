@@ -286,7 +286,7 @@ namespace CapriDesktop
                     if (bits.Length >= 2 && bits[0] == "told" && bits[1].Length > 0) Told(bits[1]);
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Her place on disk. Settle is the way out: it writes whatever is pending, whenever she closes.
@@ -311,7 +311,7 @@ namespace CapriDesktop
                 if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder)) Directory.CreateDirectory(folder);
                 File.WriteAllText(Marked, made.ToString(), new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // For her checks: nothing told, nothing in progress, nothing read.

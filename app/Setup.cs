@@ -56,22 +56,9 @@ namespace CapriSetup
             try
             {
                 if (!File.Exists(path)) return null;
-                string spare = path + ".bak";
-                if (File.Exists(spare))
-                {
-                    int highest = 1;
-                    foreach (string found in Spares(path))
-                    {
-                        int number;
-                        string tail = Path.GetFileName(found).Substring(Path.GetFileName(path).Length + 4);
-                        if (tail.Length == 0) number = 1;
-                        else if (!int.TryParse(tail, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out number)) continue;
-                        if (number > highest) highest = number;
-                    }
-                    spare = path + ".bak" + (highest + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
-                }
+                string spare = CapriDesktop.SpareFiles.Name(path);
                 File.Copy(path, spare);
-                Prune(path);
+                CapriDesktop.SpareFiles.Prune(path, MostSpares);
                 return spare;
             }
             // A spare that cannot be written must not stop the update: they came here to get the new build.
@@ -83,37 +70,11 @@ namespace CapriSetup
 
         internal static string[] SparesForTest(string path) { return Spares(path).ToArray(); }
 
-        // Every spare of one program: name.bak and name.bak2 upwards, and nothing else in the folder.
-        private static List<string> Spares(string path)
-        {
-            List<string> found = new List<string>();
-            string folder = Path.GetDirectoryName(path), name = Path.GetFileName(path);
-            if (string.IsNullOrEmpty(folder) || string.IsNullOrEmpty(name) || !Directory.Exists(folder)) return found;
-            foreach (string one in Directory.GetFiles(folder, name + ".bak*"))
-                if (System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(one),
-                    "^" + System.Text.RegularExpressions.Regex.Escape(name) + @"\.bak[0-9]*$",
-                    System.Text.RegularExpressions.RegexOptions.IgnoreCase)) found.Add(one);
-            return found;
-        }
+        // Every spare of one program, timed or from before spares had a time.
+        private static List<string> Spares(string path) { return CapriDesktop.SpareFiles.Of(path); }
 
         // The oldest spares removed until MostSpares are left. Ordered by when each was written rather than by the
         // number in its name, so one put back or copied in by hand is not taken for the oldest.
-        private static void Prune(string path)
-        {
-            try
-            {
-                List<string> spares = Spares(path);
-                if (spares.Count <= MostSpares) return;
-                spares.Sort(delegate(string a, string b) { return File.GetLastWriteTimeUtc(b).CompareTo(File.GetLastWriteTimeUtc(a)); });
-                for (int at = MostSpares; at < spares.Count; at++)
-                {
-                    try { File.Delete(spares[at]); }
-                    catch (IOException) { }
-                    catch (UnauthorizedAccessException) { }
-                }
-            }
-            catch (Exception) { }
-        }
 
         private static readonly string[] Programs = { "Capri.exe", "Uninstall.exe", "Capri-Setup.exe", "Updater.exe" };
 
@@ -169,7 +130,7 @@ namespace CapriSetup
                     if (Gone(process, 20000)) continue;
                     // Elevated, or wedged. Either way she has to be quit by hand, and the message says which.
                     bool held = false;
-                    try { SetupFiles.FileOf(process, out held); } catch (Exception) { }
+                    try { SetupFiles.FileOf(process, out held); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     return held ? AdminCopy : "Capri wouldn't close, so the update was stopped rather than risk your settings. Quit her from her tray menu, then run the updater again.";
                 }
                 return null;
@@ -466,11 +427,12 @@ namespace CapriSetup
             foreach (string name in Theirs)
             {
                 string from = Path.Combine(home, name);
-                if (!File.Exists(from) && !File.Exists(from + ".bak")) continue;
-                foreach (string each in new[] { name, name + ".bak" })
+                List<string> theirs = CapriDesktop.SpareFiles.Of(from);
+                if (File.Exists(from)) theirs.Insert(0, from);
+                if (theirs.Count == 0) continue;
+                foreach (string one in theirs)
                 {
-                    string one = Path.Combine(home, each);
-                    if (!File.Exists(one)) continue;
+                    string each = Path.GetFileName(one);
                     try
                     {
                         Directory.CreateDirectory(into);
@@ -871,7 +833,7 @@ namespace CapriSetup
         private static void DeleteShortcut(string path, string destination)
         {
             try { if (File.Exists(path) && string.Equals(LinkTarget(path), Path.Combine(destination, "Capri.exe"), StringComparison.OrdinalIgnoreCase)) File.Delete(path); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
     }
 

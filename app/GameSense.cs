@@ -189,7 +189,7 @@ namespace CapriDesktop
                 foreach (Action<string, double> subscriber in noticed.GetInvocationList())
                 {
                     try { subscriber(kinds[tellKind], strength); }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
             }
         }

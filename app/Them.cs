@@ -216,7 +216,7 @@ namespace CapriDesktop
             get
             {
                 string[] fond = null;
-                try { fond = Theirs() ?? Personalities.PetNames(); } catch (Exception) { }
+                try { fond = Theirs() ?? Personalities.PetNames(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 lock (gate)
                 {
                     if (fond != null && fond.Length > 0 && dice.Next(3) > 0) return fond[dice.Next(fond.Length)];
@@ -232,7 +232,7 @@ namespace CapriDesktop
             get
             {
                 string[] fond = null;
-                try { fond = Theirs() ?? Personalities.PetNames(); } catch (Exception) { }
+                try { fond = Theirs() ?? Personalities.PetNames(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 lock (gate)
                 {
                     if (fond != null && fond.Length > 0) return fond[dice.Next(fond.Length)];
@@ -248,7 +248,7 @@ namespace CapriDesktop
             get
             {
                 bool senpai = false;
-                try { senpai = Brain.Uncensored; } catch (Exception) { }
+                try { senpai = Brain.Uncensored; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 if (!senpai) return "shins";
                 return bits;
             }
@@ -308,7 +308,7 @@ namespace CapriDesktop
                     wasLong = about.Length;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
     }
 }

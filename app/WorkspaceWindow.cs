@@ -1144,7 +1144,7 @@ namespace CapriDesktop
                     maximized = true.Equals(HuskJson.Get(row, "maximized"));
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             MinimumSize = new Size(Math.Min(Z(Narrowest), area.Width), Math.Min(Z(Shortest), area.Height));
             Size = new Size(Math.Min(Width, area.Width), Math.Min(Height, area.Height));
             Location = new Point(Math.Max(area.Left, Math.Min(Left, area.Right - Width)), Math.Max(area.Top, Math.Min(Top, area.Bottom - Height)));

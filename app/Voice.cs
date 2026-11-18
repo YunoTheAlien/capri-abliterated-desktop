@@ -770,7 +770,7 @@ namespace CapriDesktop
                     }
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return null;
         }
 
@@ -2581,10 +2581,10 @@ namespace CapriDesktop
                         byte[] wav = Run(voice.Key, Voice.Sayable(text));
                         if (wav != null && Voice.Seconds(wav) > 0) return VoiceFx.Styled(wav, text);
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return null;
         }
 
@@ -2596,14 +2596,14 @@ namespace CapriDesktop
                 foreach (Windows.Media.SpeechSynthesis.VoiceInformation voice in Windows.Media.SpeechSynthesis.SpeechSynthesizer.AllVoices)
                     voices.Add(new KeyValuePair<string, string>("winrt:" + voice.Id, voice.Language));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             try
             {
                 using (System.Speech.Synthesis.SpeechSynthesizer synth = new System.Speech.Synthesis.SpeechSynthesizer())
                     foreach (System.Speech.Synthesis.InstalledVoice voice in synth.GetInstalledVoices())
                         if (voice.Enabled) voices.Add(new KeyValuePair<string, string>("sapi:" + voice.VoiceInfo.Name, voice.VoiceInfo.Culture.Name));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return voices;
         }
 
@@ -3150,7 +3150,7 @@ namespace CapriDesktop
                         if (!unpacking.WaitForExit(600000))
                         {
                             try { unpacking.Kill(); unpacking.WaitForExit(5000); }
-                            catch (Exception) { }
+                            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                             throw new VoiceException("Windows took too long to unpack " + Path.GetFileName(archive) + ".");
                         }
                         if (unpacking.ExitCode != 0) throw new VoiceException("Windows couldn't unpack " + Path.GetFileName(archive) + ".");
@@ -3161,7 +3161,7 @@ namespace CapriDesktop
             {
                 // A failed unpack leaves nothing half-made behind.
                 try { Directory.Delete(staging, true); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 throw;
             }
             // Its archive holds one folder with the model in it.
@@ -4361,7 +4361,7 @@ namespace CapriDesktop
             {
                 byte[] decoded = null;
                 try { using (MemoryStream input = new MemoryStream(reply)) decoded = YourVoice.Decode(input); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 if (decoded != null) mono = YourVoice.Wav(decoded, out rate);
             }
             if (mono == null) throw new VoiceException("Capri couldn't read the sound " + (name == Theirs ? "your voice server" : name) + " sent (" + SoundFormat(reply) + ", " + reply.Length + " bytes). Windows couldn't decode it.");

@@ -172,7 +172,7 @@ namespace CapriDesktop
                             long heardAt;
                             bool read = false;
                             try { read = tap.Read(null, null, out heardAt, delegate(byte[] pcm, long at, int rate) { AddSound(pcm, at, rate, true); }); }
-                            catch (Exception) { }
+                            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                             if (!read) { tap.Dispose(); tap = null; }
                         }
                         if (tick >= nextAt)
@@ -212,7 +212,7 @@ namespace CapriDesktop
                     }
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             finally
             {
                 frames.Close("switched off");
@@ -855,7 +855,7 @@ namespace CapriDesktop
             catch (Exception error) { return new ClipResult { Problem = "Couldn't save that clip: " + Brain.Plainly("clips", error) }; }
             finally
             {
-                if (temporary != null) { try { File.Delete(temporary); } catch (Exception) { } }
+                if (temporary != null) { try { File.Delete(temporary); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
                 if (started) MFShutdown();
                 if (initialized) CoUninitialize();
             }

@@ -355,7 +355,7 @@ namespace CapriDesktop
                 if (!stopped)
                     foreach (RemoteDevice device in new List<RemoteDevice>(state.Devices))
                         try { RevokeOne(device, notes); }
-                        catch (Exception) { }
+                        catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 Stop();
                 stopped = true;
                 if (pairing != null) pairing.Forget();
@@ -1185,7 +1185,7 @@ namespace CapriDesktop
             foreach (KeyValuePair<string, RemoteJson.Map> message in heard)
             {
                 try { hook(message.Key, message.Value); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
 
@@ -1247,7 +1247,7 @@ namespace CapriDesktop
                     connected = true;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             if (!connected)
             {
                 w.Stop.Cancel();
@@ -1383,7 +1383,7 @@ namespace CapriDesktop
             w.Signal.Release();
             bool mine = false;
             try { mine = await w.Sending.WaitAsync(1000).ConfigureAwait(false); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             if (mine)
             {
                 WebSocketState now = w.Socket.State;
@@ -1394,7 +1394,7 @@ namespace CapriDesktop
                         using (CancellationTokenSource limit = new CancellationTokenSource(2000))
                             await w.Socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "", limit.Token).ConfigureAwait(false);
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
             }
             w.Stop.Cancel();
@@ -1873,7 +1873,7 @@ namespace CapriDesktop
                     decode = pictures.Dequeue();
                 }
                 try { decode(); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
 
@@ -1905,7 +1905,7 @@ namespace CapriDesktop
                     if (decoding != null) decoding(item.Id);
                     valid = item.Picture.Confirm();
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 lock (gate)
                 {
                     bool current = Current(item);
@@ -1962,13 +1962,13 @@ namespace CapriDesktop
                     {
                         if (pictured != null) { pictured(item.Device, item.Id, item.Text, item.Picture, SessionCurrent(item), delegate { FinishChat(item); }); return; }
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
                 else
                 {
                     Action<string, string, string> heard = Said;
                     try { if (heard != null) heard(item.Device, item.Id, item.Text); }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
             }
         }
@@ -2100,7 +2100,7 @@ namespace CapriDesktop
         private void Tick(object unused)
         {
             try { Ticked(); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private void Ticked()
@@ -2243,7 +2243,7 @@ namespace CapriDesktop
         {
             if (copy == null || save == null || Stopped) return;
             try { save(copy); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private void Raise(List<Note> notes, List<Heard> said)
@@ -2254,7 +2254,7 @@ namespace CapriDesktop
                 foreach (Note note in notes)
                 {
                     try { happened(note.What, note.About); }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
             if (said != null) foreach (Heard item in said) Deliver(item.Phone);
         }
@@ -2385,7 +2385,7 @@ namespace CapriDesktop
                 Action left = Interlocked.Exchange(ref Left, null);
                 if (left == null) return;
                 try { left(); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
 
             internal static Outgoing Control(string text) { return new Outgoing { Text = text }; }

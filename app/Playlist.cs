@@ -89,7 +89,7 @@ namespace CapriDesktop
         {
             string plain = (file ?? "").Trim().Trim('"').Replace('/', '\\');
             while (plain.EndsWith("\\", StringComparison.Ordinal)) plain = plain.Substring(0, plain.Length - 1);
-            try { plain = Path.GetFullPath(plain); } catch (Exception) { }
+            try { plain = Path.GetFullPath(plain); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return plain.ToLowerInvariant();
         }
 
@@ -108,7 +108,7 @@ namespace CapriDesktop
         {
             string want = (file ?? "").Trim().Trim('"');
             if (want.Length == 0) return false;
-            try { want = Path.GetFullPath(want); } catch (Exception) { }
+            try { want = Path.GetFullPath(want); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             lock (gate)
             {
                 bool held = false;
@@ -206,7 +206,7 @@ namespace CapriDesktop
                 // No byte order mark, ever: her own reader refuses one, and track names need the rest of UTF-8 intact.
                 File.WriteAllText(path, text.ToString(), new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static void Lines(StringBuilder text, string name, List<string> items, bool comma)
@@ -337,7 +337,7 @@ namespace CapriDesktop
         {
             if (!Ready()) return;
             try { loop.Invoke(what); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         internal static bool Start(string file)
@@ -347,7 +347,7 @@ namespace CapriDesktop
             failed = false;
             lock (gate) paused = false;
             double want = Loudness;
-            OnLoop(delegate { try { player.Volume = want; } catch (Exception) { } });
+            OnLoop(delegate { try { player.Volume = want; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
             bool opened = false;
             OnLoop(delegate
             {
@@ -410,7 +410,7 @@ namespace CapriDesktop
             OnLoop(delegate
             {
                 try { player.Stop(); player.Close(); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             });
             lock (gate) { playing = null; paused = false; }
             ended = false;
@@ -427,14 +427,14 @@ namespace CapriDesktop
             {
                 double want = value < 0 ? 0 : value > 1 ? 1 : value;
                 lock (gate) loud = want;
-                OnLoop(delegate { try { player.Volume = want; } catch (Exception) { } });
+                OnLoop(delegate { try { player.Volume = want; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
             }
         }
 
         private static bool paused;
 
-        internal static void Pause() { OnLoop(delegate { try { player.Pause(); lock (gate) paused = true; } catch (Exception) { } }); }
-        internal static void Resume() { OnLoop(delegate { try { player.Play(); lock (gate) paused = false; } catch (Exception) { } }); }
+        internal static void Pause() { OnLoop(delegate { try { player.Pause(); lock (gate) paused = true; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }); }
+        internal static void Resume() { OnLoop(delegate { try { player.Play(); lock (gate) paused = false; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }); }
 
         // Held, rather than stopped or finished. Mode keeps saying "playing" for a paused song on purpose: the next
         // song check reads it, and a paused song must not count as one that ended and move the playlist on.
@@ -453,4 +453,64 @@ namespace CapriDesktop
 
         internal static bool Busy { get { return Mode == "playing"; } }
     }
+
+    // A mod's sound that is not a WAV, by the playlist's route: its own STA thread with a dispatcher, since WinForms
+    // does not pump WPF's queue. One player per sound, kept until it ends so it is not collected mid-play.
+    internal static class ModTunes
+    {
+        private static readonly object gate = new object();
+        private static readonly System.Collections.Generic.List<System.Windows.Media.MediaPlayer> playing = new System.Collections.Generic.List<System.Windows.Media.MediaPlayer>();
+        private static System.Windows.Threading.Dispatcher loop;
+
+        private static bool Ready()
+        {
+            lock (gate)
+            {
+                if (loop != null) return true;
+                System.Threading.ManualResetEvent up = new System.Threading.ManualResetEvent(false);
+                System.Threading.Thread spinner = new System.Threading.Thread(delegate()
+                {
+                    try
+                    {
+                        loop = System.Windows.Threading.Dispatcher.CurrentDispatcher;
+                        up.Set();
+                        System.Windows.Threading.Dispatcher.Run();
+                    }
+                    catch (Exception) { up.Set(); }
+                });
+                spinner.IsBackground = true;
+                spinner.SetApartmentState(System.Threading.ApartmentState.STA);
+                spinner.Name = "Capri mod sounds";
+                spinner.Start();
+                up.WaitOne(5000);
+                return loop != null;
+            }
+        }
+
+        internal static bool Play(string file, double volume)
+        {
+            if (!Ready()) return false;
+            try
+            {
+                loop.BeginInvoke(new Action(delegate
+                {
+                    try
+                    {
+                        System.Windows.Media.MediaPlayer one = new System.Windows.Media.MediaPlayer();
+                        EventHandler done = delegate { try { one.Close(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } lock (gate) playing.Remove(one); };
+                        one.MediaEnded += done;
+                        one.MediaFailed += delegate { done(null, EventArgs.Empty); };
+                        lock (gate) playing.Add(one);
+                        one.Volume = volume;
+                        one.Open(new Uri(file));
+                        one.Play();
+                    }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                }));
+                return true;
+            }
+            catch (Exception) { return false; }
+        }
+    }
 }
+

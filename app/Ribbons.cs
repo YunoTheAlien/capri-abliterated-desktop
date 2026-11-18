@@ -476,7 +476,7 @@ namespace CapriDesktop
             Bitmap drawings = null;
             // Without the drawings, a skin's broken copy say, her ribbons still run in and she still shows.
             try { drawings = form.Strip; }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             double wait = ribbons.Go(FormMiddle(sat), drawings, Ribbons.FormInCell * preferences.Size / 384f, !facingLeft);
             veilUntil = now + wait + Ribbons.Handoff;
         }

@@ -19,7 +19,7 @@ namespace CapriDesktop
         internal static void Failed(string what, Exception bad)
         {
             try { Brain.Log("files", -1, what + " could not finish: " + bad.GetType().Name + ": " + bad.Message); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Replaces every "> " note in the file with the ones the build ships, section by section. Anything that is
@@ -37,7 +37,7 @@ namespace CapriDesktop
                 if (!about.Exists) return;
                 lock (stocked) stocked[path] = about.LastWriteTimeUtc.Ticks + ":" + about.Length;
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // What was last written into one of her files, by hash, kept beside them so an untouched file can be
@@ -95,7 +95,7 @@ namespace CapriDesktop
                 List<string> rows = new List<string>();
                 foreach (KeyValuePair<string, string> one in had) rows.Add(one.Key + "\t" + one.Value);
                 rows.Sort(StringComparer.OrdinalIgnoreCase);
-                File.WriteAllText(list, string.Join(Environment.NewLine, rows.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
+                Overwrite(list, string.Join(Environment.NewLine, rows.ToArray()) + Environment.NewLine);
             }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
@@ -131,67 +131,19 @@ namespace CapriDesktop
                 // Nothing of theirs in it, so nothing to keep. This is what stops her folder filling with
                 // copies of text nobody ever changed.
                 if (Untouched(path)) return null;
-                string spare = path + ".bak";
-                if (File.Exists(spare))
-                {
-                    int highest = 1;
-                    foreach (string found in Spares(path))
-                    {
-                        string tail = Path.GetFileName(found).Substring(Path.GetFileName(path).Length + 4);
-                        int number;
-                        if (tail.Length == 0) number = 1;
-                        else if (!int.TryParse(tail, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out number)) continue;
-                        if (number > highest) highest = number;
-                    }
-                    spare = path + ".bak" + (highest + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
-                }
+                string spare = SpareFiles.Name(path);
                 File.Copy(path, spare, true);
-                Prune(path);
+                SpareFiles.Prune(path, MostSpares);
                 return spare;
             }
             catch (IOException) { return null; }
             catch (UnauthorizedAccessException) { return null; }
         }
 
-        // Every spare of one file: name.bak, name.bak2 and so on, and nothing else that happens to start the same.
-        private static List<string> Spares(string path)
-        {
-            List<string> found = new List<string>();
-            try
-            {
-                string folder = Path.GetDirectoryName(path), name = Path.GetFileName(path);
-                if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) return found;
-                foreach (string one in Directory.GetFiles(folder, name + ".bak*"))
-                {
-                    string tail = Path.GetFileName(one).Substring(name.Length + 4);
-                    int number;
-                    if (tail.Length == 0 || int.TryParse(tail, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out number)) found.Add(one);
-                }
-            }
-            catch (IOException) { }
-            catch (UnauthorizedAccessException) { }
-            return found;
-        }
+        // Every spare of one file, timed or from before spares had a time.
+        private static List<string> Spares(string path) { return SpareFiles.Of(path); }
 
         internal static string[] SparesForTest(string path) { return Spares(path).ToArray(); }
-
-        // The oldest go until three are left, by write time.
-        private static void Prune(string path)
-        {
-            try
-            {
-                List<string> spares = Spares(path);
-                if (spares.Count <= MostSpares) return;
-                spares.Sort(delegate(string a, string b) { return File.GetLastWriteTimeUtc(b).CompareTo(File.GetLastWriteTimeUtc(a)); });
-                for (int at = MostSpares; at < spares.Count; at++)
-                {
-                    try { File.Delete(spares[at]); }
-                    catch (IOException) { }
-                    catch (UnauthorizedAccessException) { }
-                }
-            }
-            catch (Exception) { }
-        }
 
         // A way back to the file we ship, without anyone copying anything. Every one of her files carries a line
         // near the top; set it to 1 and the file is written fresh next time she reads it, with the line back at 0.
@@ -235,7 +187,7 @@ namespace CapriDesktop
                     // where work is thrown away rather than added to, so it is the one that needed a way back.
                     Spare(path);
                     string put = Marked(stock);
-                    File.WriteAllText(path, put, new UTF8Encoding(false));
+                    Overwrite(path, put);
                     // What she was just given, so the next check knows this file is untouched until they
                     // touch it.
                     Shipped(path, put);
@@ -243,7 +195,7 @@ namespace CapriDesktop
                     return true;
                 }
                 // No line yet, so one is added. Their file is untouched otherwise.
-                File.WriteAllText(path, Marked(had), new UTF8Encoding(false));
+                Overwrite(path, Marked(had));
                 Seen(path);
                 return false;
             }
@@ -343,14 +295,25 @@ namespace CapriDesktop
         // bytes over and over: her watcher sees a change, rereads, and the file's time says it was edited
         // when nobody touched it. Comparing the whole text is the only honest test, since a pass that only
         // normalises line ends is a real change and has to go through.
+        // Written whatever the file's attribute, and left as hidden or as visible as it was. Windows refuses to replace a
+        // hidden file outright, so a tucked-away file took no refresh at all, and said nothing until its catch did.
+        internal static void Overwrite(string path, string text)
+        {
+            FileAttributes was = File.Exists(path) ? File.GetAttributes(path) : FileAttributes.Normal;
+            bool hidden = (was & FileAttributes.Hidden) != 0;
+            if (hidden) File.SetAttributes(path, was & ~FileAttributes.Hidden);
+            try { File.WriteAllText(path, text, new UTF8Encoding(false)); }
+            finally { if (hidden) File.SetAttributes(path, was); }
+        }
+
         internal static void Put(string path, string text)
         {
             try
             {
                 if (File.Exists(path) && File.ReadAllText(path) == text) return;
             }
-            catch (Exception) { }
-            File.WriteAllText(path, text, new UTF8Encoding(false));
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            Overwrite(path, text);
         }
 
         internal static void Refresh(string path, string fresh)
@@ -403,9 +366,9 @@ namespace CapriDesktop
                 if (!changed) return;
                 string done = made.ToString();
                 if (done == string.Join(Environment.NewLine, had) + Environment.NewLine) return;
-                File.WriteAllText(path, done, new UTF8Encoding(false));
+                Overwrite(path, done);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Sections where a ">" line is data rather than a note, and has to survive a refresh.

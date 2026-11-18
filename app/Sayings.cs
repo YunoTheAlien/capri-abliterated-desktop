@@ -72,7 +72,7 @@ namespace CapriDesktop
             {
                 string who = "", mood = "";
                 try { who = Who() ?? ""; mood = Feeling() ?? ""; }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 string line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " | " + (who.Length == 0 ? "-" : who)
                     + " | " + (mood.Length == 0 ? "-" : mood) + " | " + Brain.Scrubbed(said).Replace("\r", " ").Replace("\n", " ");
                 // Half of it goes when it gets long, oldest first, so it cannot grow without end and what is left
@@ -87,7 +87,7 @@ namespace CapriDesktop
                 }
                 File.AppendAllText(logPath, line + Environment.NewLine, new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static void LoadSaid()
@@ -109,7 +109,7 @@ namespace CapriDesktop
                     saidAt[raw.Substring(tab + 1)] = when;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static void SaveSaid()
@@ -123,7 +123,7 @@ namespace CapriDesktop
                         made.Append(one.Value.Ticks).Append('\t').AppendLine(one.Key);
                 File.WriteAllText(heardPath, made.ToString(), new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static bool Lately(string said)
@@ -193,7 +193,7 @@ namespace CapriDesktop
         internal static void Settle()
         {
             try { sinceSave = 0; savedAt = DateTime.UtcNow; SaveSaid(); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Builds a line, trying again when it lands on something she has said lately.
@@ -349,7 +349,7 @@ namespace CapriDesktop
             // a cartoon threatening your shins, and the second half is useful: it tells you that you are digging
             // rather than only that she is cross.
             int cross = 0;
-            try { cross = Mood.Upset; } catch (Exception) { }
+            try { cross = Mood.Upset; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             bool furious = !liked && cross >= 15;
 
             if (furious && dice.Next(100) < 55)
@@ -368,7 +368,7 @@ namespace CapriDesktop
             // How often is hers to set: her personality's interest level, the global override if there is one, shifted
             // by her mood. 0 means it never comes up at all.
             int level = 0;
-            try { level = Personalities.SpecialInterest; } catch (Exception) { }
+            try { level = Personalities.SpecialInterest; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             // Never onto a line that already took a tail. An opener, a core, a tail and a promise is four
             // fragments in one breath, and it reads as a run-on however good each piece is on its own.
             if (weaveHers && !tailed && level > 0 && dice.Next(100) < level * 4)
@@ -393,7 +393,7 @@ namespace CapriDesktop
             // doubled at a seam, a word said twice across one. Lint checks the parts where they are written;
             // this checks what she is actually about to say.
             try { said = Grammar.Mend(said); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return said;
         }
 
@@ -588,7 +588,7 @@ namespace CapriDesktop
                 // Checked whenever the file changes, so an edit that will not join cleanly says so in errors.txt.
                 Lint.Sweep(pools, FileName);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // A lines.md written by an earlier build has only the pools that existed then, and Write only ever wrote the
@@ -659,7 +659,7 @@ namespace CapriDesktop
                 Notes.Put(Kept, string.Join(Environment.NewLine, made.ToArray()));
                 lock (gate) { read = DateTime.MinValue; wasLong = -1; }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // A setting she shipped whose value has changed since. Top up only ever adds what is missing, so
@@ -750,7 +750,7 @@ namespace CapriDesktop
                 }
                 if (moved) Notes.Put(Kept, string.Join(Environment.NewLine, rows));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         internal static void TopUp()
@@ -931,7 +931,7 @@ namespace CapriDesktop
                 if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder)) Directory.CreateDirectory(folder);
                 Notes.Put(Kept, Text);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // How many different lines the pools can currently make for one group. Used by her own checks and worth

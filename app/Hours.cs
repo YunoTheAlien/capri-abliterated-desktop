@@ -98,7 +98,7 @@ namespace CapriDesktop
                 Fresh();
                 bool here = true;
                 try { here = Here(); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 if (markedDay != DateTime.MinValue && now.Date > markedDay)
                 {
                     for (int each = 0; each < counts.Length; each++) counts[each] *= Fade;
@@ -205,7 +205,7 @@ namespace CapriDesktop
                     counts[hour] = count;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static void Write()
@@ -226,7 +226,7 @@ namespace CapriDesktop
                 if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder)) Directory.CreateDirectory(folder);
                 File.WriteAllText(Kept, made.ToString(), new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
     }
 }

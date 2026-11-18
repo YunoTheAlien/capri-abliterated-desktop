@@ -115,7 +115,7 @@ namespace CapriDesktop
             if (SenpaiVoice != null)
             {
                 try { VoiceProfile theirs = SenpaiVoice(named ?? ""); if (theirs != null) return theirs; }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
             return VoiceProfile.Stock;
         }
@@ -140,7 +140,7 @@ namespace CapriDesktop
                 made.Append("}").Append(Environment.NewLine);
                 File.WriteAllText(path, made.ToString(), new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             lock (gate) loaded[named] = profile;
         }
 
@@ -153,7 +153,7 @@ namespace CapriDesktop
         internal static void Forget(string named)
         {
             string path = PathOf(named);
-            try { if (path != null && File.Exists(path)) File.Delete(path); } catch (Exception) { }
+            try { if (path != null && File.Exists(path)) File.Delete(path); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             lock (gate) loaded.Remove(named ?? "");
         }
 

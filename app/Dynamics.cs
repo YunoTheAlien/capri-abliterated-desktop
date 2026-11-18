@@ -38,7 +38,7 @@ namespace CapriDesktop
             {
                 if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) continue;
                 try { foreach (string file in Directory.GetFiles(folder)) if (!file.EndsWith(".bak", StringComparison.OrdinalIgnoreCase)) found.Add(file); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
             return found;
         }
@@ -195,7 +195,7 @@ namespace CapriDesktop
                 MarkAdult(file, whole);
                 TopUpMood(file, text);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Moods written before the split, one file each in attitudes\, are cut in two and moved into
@@ -217,9 +217,7 @@ namespace CapriDesktop
                         if (!string.IsNullOrEmpty(plainText) && !File.Exists(plainPath)) File.WriteAllText(plainPath, plainText, new UTF8Encoding(false));
                         if (!Brain.Uncensored && !string.IsNullOrEmpty(senpaiText)) continue;
                         if (!string.IsNullOrEmpty(senpaiText) && !File.Exists(senpaiPath)) File.WriteAllText(senpaiPath, senpaiText, new UTF8Encoding(false));
-                        string kept = file + ".bak";
-                        if (File.Exists(kept)) File.Delete(kept);
-                        File.Move(file, kept);
+                        File.Move(file, SpareFiles.Name(file));
                         Brain.Log("moods", -1, named + " moved into " + Personalities.PlainName + " and " + Personalities.SenpaiName + ", the file it came from kept as a .bak.");
                     }
                     catch (Exception bad) { Notes.Failed("a move into her censored and uncensored folders in Dynamics.cs", bad); }
@@ -260,7 +258,7 @@ namespace CapriDesktop
                     if (senpai != null && File.Exists(senpai)) return senpai;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return path;
         }
 
@@ -317,7 +315,7 @@ namespace CapriDesktop
 
             Personalities.Attitude = next;
             Remember();
-            if (MoodChanged != null) { try { MoodChanged(); } catch (Exception) { } }
+            if (MoodChanged != null) { try { MoodChanged(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
             if (!string.Equals(next, was, StringComparison.OrdinalIgnoreCase))
                 Brain.Log("mood", -1, "Dynamic: she is " + (next.Length == 0 ? "herself" : next.ToLowerInvariant())
                     + " for the next " + hours.ToString("0.#") + "h, over " + Under + ".");
@@ -350,7 +348,7 @@ namespace CapriDesktop
                     + (Personalities.Attitude ?? "") + Environment.NewLine
                     + (Held ? "held" : "rolled") + Environment.NewLine, new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Her mood from last time, while it still has time left on it. Anything unreadable, expired or naming a
@@ -375,7 +373,7 @@ namespace CapriDesktop
                 Personalities.Attitude = mood;
                 Held = rows.Length > 2 && rows[2].Trim().Equals("held", StringComparison.OrdinalIgnoreCase);
                 lock (gate) until = ends;
-                if (MoodChanged != null) { try { MoodChanged(); } catch (Exception) { } }
+                if (MoodChanged != null) { try { MoodChanged(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
                 Brain.Log("mood", -1, "Back as " + (mood.Length == 0 ? "herself" : mood.ToLowerInvariant()) + (Held ? ", set by hand" : "")
                     + ", with " + (ends - DateTime.UtcNow).TotalHours.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "h left on it.");
             }
@@ -437,7 +435,7 @@ namespace CapriDesktop
                 Held = wasHeld;
                 lock (gate) until = wasUntil;
                 try { if (Directory.Exists(folder)) Directory.Delete(folder, true); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
 
@@ -449,7 +447,7 @@ namespace CapriDesktop
         {
             Held = true;
             Personalities.Attitude = mood ?? "";
-            if (MoodChanged != null) { try { MoodChanged(); } catch (Exception) { } }
+            if (MoodChanged != null) { try { MoodChanged(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
             double least = Least, most = Most;
             if (most < least) { double swap = least; least = most; most = swap; }
             double hours = least + new Random().NextDouble() * Math.Max(0.0, most - least);
@@ -564,7 +562,7 @@ namespace CapriDesktop
                     wasLong = about.Length;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Sets the personality she sways around, writing it back into dynamic.md so the file stays the truth.
@@ -581,7 +579,7 @@ namespace CapriDesktop
                 Notes.Put(Kept, now);
                 lock (gate) { under = named; read = DateTime.MinValue; wasLong = -1; }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // One mood's stock text, for putting a file back the way it shipped.
@@ -592,7 +590,7 @@ namespace CapriDesktop
             if (SenpaiMoodFor != null)
             {
                 try { return SenpaiMoodFor(named); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
             return null;
         }
@@ -662,7 +660,7 @@ namespace CapriDesktop
                         tuning = both;
                     }
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
             for (int at = 0; at < tuning.GetLength(0); at++)
             {
@@ -824,7 +822,7 @@ namespace CapriDesktop
                 if (had.Length > 0 && !had.EndsWith("\n")) had += Environment.NewLine;
                 File.WriteAllText(file, had + Environment.NewLine + "uncensored only: yes" + Environment.NewLine, new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static bool Marked(string text)
@@ -865,7 +863,7 @@ namespace CapriDesktop
                     if (SenpaiPartFor != null)
                     {
                         try { string part = SenpaiPartFor(named); if (!string.IsNullOrEmpty(part)) whole = whole.TrimEnd() + Environment.NewLine + Environment.NewLine + part; }
-                        catch (Exception) { }
+                        catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     }
                     Personalities.Split(whole, out plainText, out senpaiText);
                     Keep(PlainPathOf(named), plainText, whole);
@@ -890,7 +888,7 @@ namespace CapriDesktop
             catch (Exception bad)
             {
                 try { Brain.Log("moods", -1, "Her moods could not be installed: " + bad.GetType().Name + ": " + bad.Message); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
             // After the files exist, since this changes what is in them rather than putting them there, and
             // outside the catch above, because a number that has since changed must still be fixed in a file
@@ -899,7 +897,7 @@ namespace CapriDesktop
             catch (Exception bad)
             {
                 try { Brain.Log("moods", -1, "Her mood numbers could not be brought up to date: " + bad.GetType().Name + ": " + bad.Message); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
 
@@ -1371,6 +1369,14 @@ namespace CapriDesktop
         // masochist still ends up liking being thrown because her own +3 is still underneath.
         // Every mood the build ships, for the sweep that looks for the senpai half of one in a censored
         // install. Her packs expose theirs the same way.
+        // The names this build carries, for the pack writer. Names only, no text.
+        internal static string[] ShippedNames()
+        {
+            string[] found = new string[Moods.GetLength(0)];
+            for (int mood = 0; mood < Moods.GetLength(0); mood++) found[mood] = Moods[mood, 0];
+            return found;
+        }
+
         internal static List<string> Shipped()
         {
             List<string> found = new List<string>();
@@ -1387,7 +1393,7 @@ namespace CapriDesktop
                 {
                     string part = null;
                     try { part = SenpaiPartFor(Moods[mood, 0]); }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     if (!string.IsNullOrEmpty(part)) found.Add(part);
                 }
             return found;

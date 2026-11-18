@@ -178,7 +178,7 @@ namespace CapriDesktop
             // Written down beats counted and beats picked: typing an app's name into a file of hers is the
             // most deliberate thing anybody can do about it, and it was being ignored entirely.
             string wrote = null;
-            try { wrote = Written(kind); } catch (Exception) { }
+            try { wrote = Written(kind); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             if (!string.IsNullOrEmpty(wrote)) return wrote;
             string told = Picked(kind);
             if (told != null) return told;
@@ -231,7 +231,7 @@ namespace CapriDesktop
             string name = (program ?? "").Trim();
             if (name.Length == 0) return "";
             try { name = Path.GetFileNameWithoutExtension(name); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return (name ?? "").Trim();
         }
 
@@ -284,7 +284,7 @@ namespace CapriDesktop
                     }
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static void Write()
@@ -302,7 +302,7 @@ namespace CapriDesktop
                     made.Append(one.Key).Append('\t').Append(one.Value.ToString("0.##", CultureInfo.InvariantCulture)).Append(Environment.NewLine);
                 File.WriteAllText(Kept, made.ToString(), new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         internal static void Save() { lock (gate) { if (read) Write(); } }

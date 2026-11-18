@@ -87,7 +87,7 @@ namespace CapriDesktop
             remoteEarsWarm = calling;
             LocalEars own = OwnCallEars();
             if (testing) return;
-            if (calling) { if (own != null) ThreadPool.QueueUserWorkItem(delegate { try { own.Warm(); } catch (Exception) { } }); }
+            if (calling) { if (own != null) ThreadPool.QueueUserWorkItem(delegate { try { own.Warm(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }); }
             else if (!chatting) EarsModel(false);
         }
 
@@ -96,14 +96,14 @@ namespace CapriDesktop
             RemoteCall call = remoteCall;
             // Her voice's own thread: nothing here may stop her talking.
             try { if (call != null && call.Any) call.Voice(samples, rate); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private void RemoteVoiceHushed()
         {
             RemoteCall call = remoteCall;
             try { if (call != null) call.Hush(); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private void RemoteLiveChanged() { Post(RemoteBadgeShow); }
@@ -582,7 +582,7 @@ namespace CapriDesktop
                 foreach (RemoteMonitor monitor in RemoteDesktop.List()) if (monitor.Bounds.Contains(middle)) found = monitor.Id;
                 remoteLooking = found;
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private sealed class RemoteDesktop : RemoteScreenSource
@@ -817,7 +817,7 @@ namespace CapriDesktop
             base.OnHandleCreated(e);
             // WDA_EXCLUDEFROMCAPTURE (Windows 10 2004 on): not in the phone's frames, nor his stream. Older Windows shows it.
             try { SetWindowDisplayAffinity(Handle, 0x11); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         internal void Put(string lead, string who, Rectangle area)

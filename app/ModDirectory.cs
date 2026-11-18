@@ -144,7 +144,7 @@ namespace CapriDesktop
         {
             List<ModListing> found = Parse(Get(Api + "trees/HEAD?recursive=1", LargestList));
             try { ReadIndex(found, Get(IndexPage, LargestIndex)); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return found;
         }
 

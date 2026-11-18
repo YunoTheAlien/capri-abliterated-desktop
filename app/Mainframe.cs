@@ -2834,7 +2834,7 @@ namespace CapriDesktop
                         return panel == 0 ? 1f : Math.Max(1f, across / (float)panel);
                     }
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 return 1f;
             }
         }
@@ -3049,7 +3049,7 @@ namespace CapriDesktop
             int fold = arrangedFold = Fold;
             hearingFold = hearingActions.Length == 0 ? HearingFixRow : 0;
             bool ownBuilds = false;
-            try { ownBuilds = Brain.Uncensored; } catch (Exception) { }
+            try { ownBuilds = Brain.Uncensored; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             if (abliterated != null) abliterated.Visible = ownBuilds;
             abliteratedFold = ownBuilds ? 0 : AbliteratedRow;
             int locked = abliteratedFold;
@@ -3065,7 +3065,7 @@ namespace CapriDesktop
             if (senpaiNote != null)
             {
                 bool senpai = false;
-                try { senpai = Brain.Uncensored; } catch (Exception) { }
+                try { senpai = Brain.Uncensored; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 // Only ever shown when it is on. Saying OFF tells someone the mode exists, which is the opposite of
                 // burying the switch: a panel that advertises it is no better than a menu item.
                 senpaiNote.Visible = senpai;
@@ -6459,7 +6459,7 @@ namespace CapriDesktop
                             if (named.Length > 0) Connect();
                         });
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 });
             }
 
@@ -6468,7 +6468,7 @@ namespace CapriDesktop
             {
                 string set = null;
                 try { set = Environment.GetEnvironmentVariable("OLLAMA_HOST"); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 set = (set ?? "").Trim();
                 if (set.Length == 0) return "http://127.0.0.1:11434";
                 if (set.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || set.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
@@ -6492,10 +6492,10 @@ namespace CapriDesktop
                             string full = System.IO.Path.Combine(dir, "ollama.exe");
                             if (System.IO.File.Exists(full)) return full;
                         }
-                        catch (Exception) { }
+                        catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     }
                 }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
 
                 string[] guesses =
                 {
@@ -6504,7 +6504,7 @@ namespace CapriDesktop
                     System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), @"Ollama\ollama.exe")
                 };
                 foreach (string guess in guesses)
-                    try { if (System.IO.File.Exists(guess)) return guess; } catch (Exception) { }
+                    try { if (System.IO.File.Exists(guess)) return guess; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 return null;
             }
 
@@ -7004,6 +7004,7 @@ namespace CapriDesktop
             // A new private Fish Audio voice from the clip; its ID goes in the Voice box.
             internal void MakeVoice(string clip)
             {
+                clip = Library.Keep(clip, Library.Voices);
                 Say("Making your Fish Audio voice...", false);
                 owner.capri.MakeFishVoice(url.Box.Text, key.Box.Text, clip, delegate(string id, string problem)
                 {
@@ -7046,6 +7047,7 @@ namespace CapriDesktop
 
             internal void TakeClip(string clip)
             {
+                clip = Library.Keep(clip, Library.Voices);
                 speaker.Box.Text = clip;
                 Say("Pocket TTS models copy this clip's voice. Press Test to hear it.", false);
             }

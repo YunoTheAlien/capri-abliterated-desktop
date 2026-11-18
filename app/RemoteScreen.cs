@@ -325,7 +325,7 @@ namespace CapriDesktop
                 }
             }
             // Anything thrown on this thread would end her: the watches stop instead, and the next watch.start starts over.
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             finally
             {
                 lock (gate) if (worker == Thread.CurrentThread) worker = null;
@@ -338,7 +338,7 @@ namespace CapriDesktop
             watch.Capture = null;
             if (capture == null) return;
             try { capture.Dispose(); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // One watch's turn: its monitor list, Auto's pick, then a frame if the screen changed and the phone is keeping up.
@@ -609,7 +609,7 @@ namespace CapriDesktop
             Action changed = Changed;
             if (changed == null) return;
             try { changed(); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private long Now() { return clock.ElapsedMilliseconds; }

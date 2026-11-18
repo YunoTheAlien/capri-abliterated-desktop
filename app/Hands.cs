@@ -421,7 +421,7 @@ namespace CapriDesktop
             Action<object, string, string> changed = HeldChanged;
             if (changed == null || id == null) return;
             try { changed(id, state, words); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
         // Calls their yes let through, each once.
         private static readonly List<string> cleared = new List<string>();
@@ -2034,7 +2034,7 @@ namespace CapriDesktop
                 }
                 // Her opening it is one use of it on this PC and nothing more. If it counted toward the default,
                 // her first guess would vote for itself and she would never learn she had the wrong one.
-                if (tool == "open_app") { try { Favourites.SheOpened(args.Name); } catch (Exception) { } return OpenApp(args.Name, args.Current); }
+                if (tool == "open_app") { try { Favourites.SheOpened(args.Name); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } return OpenApp(args.Name, args.Current); }
 #if CROSS
                 if (tool == "open_website" && NativeWebsite != null)
                 {
@@ -2078,7 +2078,7 @@ namespace CapriDesktop
                         if (Showing(into)) Opened(into);
                         else if (Installed(into)) { OpenApp(into); System.Threading.Thread.Sleep(1200); Opened(into); }
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     // The name has done its job; leaving it set would read as an app to open to anything downstream.
                     args.Name = null;
                 }
@@ -4358,7 +4358,7 @@ namespace CapriDesktop
                 OpenWindow open = OpenedWindow(Windows(), want);
                 if (open != null) return BrowserName(open.Program) ?? AppTitle(open) ?? want;
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             if (Showing(want)) return want;
             if (Installed(want)) return want;
             // Spoken plus signs: "notepad plus plus" is notepad++, which no catalog lists under those words.
@@ -4943,7 +4943,7 @@ namespace CapriDesktop
                 if (want == "minecraft" && Apps().Exists(MinecraftLauncher)) return true;
 #endif
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return false;
         }
 
@@ -4964,7 +4964,7 @@ namespace CapriDesktop
                 foreach (OpenWindow window in Windows())
                     if (Math.Max(Score(Plain(window.Program), want), Score(Plain(window.Title), want)) > 0) return true;
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return false;
         }
 
@@ -5023,7 +5023,7 @@ namespace CapriDesktop
                     }
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return null;
         }
 
@@ -5035,11 +5035,11 @@ namespace CapriDesktop
             // own pick wins, then the one they keep in front; naming an actual app still goes straight through,
             // which is how someone opens the other browser without changing what their browser is.
             string kind = null;
-            try { kind = Favourites.KindOf(wanted); } catch (Exception) { }
+            try { kind = Favourites.KindOf(wanted); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             if (kind != null)
             {
                 string theirs = null;
-                try { theirs = Favourites.Best(kind); } catch (Exception) { }
+                try { theirs = Favourites.Best(kind); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 if (!string.IsNullOrEmpty(theirs) && Match(Apps(), theirs).Count > 0) wanted = theirs;
                 else if (string.Equals(kind, "browser", StringComparison.OrdinalIgnoreCase)) return OpenBrowserKind(current);
             }
@@ -5481,7 +5481,7 @@ namespace CapriDesktop
                         }
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return found;
         }
 
@@ -5504,7 +5504,7 @@ namespace CapriDesktop
                 foreach (InstalledApp saved in Apps())
                     if (Regex.IsMatch(saved.Id, @"^(?:[A-Za-z]:|\\)[^""<>|]*$") && Computer.GamePath(saved.Id)) paths.Add(Path.GetDirectoryName(saved.Id));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return paths;
         }
 #endif
@@ -5686,7 +5686,7 @@ namespace CapriDesktop
                     if (id.Contains("chrome")) return "Chrome";
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return null;
         }
         // <<< END PATCH: the browser's own search engine

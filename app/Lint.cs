@@ -120,7 +120,7 @@ namespace CapriDesktop
                 if (faults.Count > 12) said.Append("\n  and ").Append(faults.Count - 12).Append(" more");
                 Brain.Log("lines", -1, said.ToString());
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
     }
 }

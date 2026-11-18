@@ -63,7 +63,7 @@ namespace CapriDesktop
         // True while they are at the PC now.
         internal static bool Here
         {
-            get { long idle = 0; try { idle = Idle(); } catch (Exception) { } return idle < AwayMinutes * 60000; }
+            get { long idle = 0; try { idle = Idle(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } return idle < AwayMinutes * 60000; }
         }
 
         // Called on her tick. Cheap: it looks at one number, and only writes a file when something changed.
@@ -257,7 +257,7 @@ namespace CapriDesktop
                 }
                 while (spells.Count > Keeps) spells.RemoveAt(0);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static void Write(DateTime now)
@@ -281,7 +281,7 @@ namespace CapriDesktop
                 if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder)) Directory.CreateDirectory(folder);
                 File.WriteAllText(Kept, made.ToString(), new UTF8Encoding(false));
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // For her checks: everything back to how it starts, with no file behind it.

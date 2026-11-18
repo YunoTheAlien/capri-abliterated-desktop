@@ -21,8 +21,8 @@ namespace CapriDesktop
     {
         internal const string CodeExtension = ".capri-code";
         // A quarter of a megabyte of source was about six thousand lines, which a real mod can pass. Raised
-        // now that source nobody can read is refused outright: the cap was doing two jobs and only one of
-        // them was its own.
+        // now that source nobody can read is said outright rather than guessed from its size: the cap was
+        // doing two jobs and only one of them was its own.
         private const int LargestCode = 1024 * 1024;
         private const string ApprovedFile = "approved.txt";
         private static readonly Regex HeaderLine = new Regex(@"^//\s*([a-z-]+)\s*:\s*(.*?)\s*$");
@@ -170,8 +170,8 @@ namespace CapriDesktop
 
         // Whether the source is something a person can actually read. A mod whose behaviour is minified,
         // packed onto one line or carried in a long run of base64 is not disclosed by naming what it
-        // reaches for: the point of reading it is lost either way. Refused rather than reported, for the
-        // same reason as unpacking and loading together.
+        // reaches for: the point of reading it is lost either way. Said rather than refused, so the person
+        // deciding knows it and decides.
         internal static string Unreadable(string text)
         {
             if (string.IsNullOrEmpty(text)) return null;
@@ -242,16 +242,49 @@ namespace CapriDesktop
         partial void Unload(ICapriMod mod);
 
 #if !CROSS
+        // The intro she starts with: one at random from every intro mod with something switched on. Null when none
+        // has, so she arrives the ordinary way rather than waiting on an intro of no length. It used to be the first
+        // intro mod found, so a second one never ran at all.
         internal ICapriIntro Intro
         {
             get
             {
+                List<ICapriIntro> on = new List<ICapriIntro>();
                 foreach (ICapriMod mod in running.Values)
                 {
                     ICapriIntro intro = mod as ICapriIntro;
-                    if (intro != null) return intro;
+                    if (intro == null) continue;
+                    double seconds = 0;
+                    try { seconds = intro.Seconds; }
+                    catch (Exception caughtOne) { Brain.Caught(caughtOne); }
+                    if (seconds > 0) on.Add(intro);
                 }
-                return null;
+                return on.Count == 0 ? null : on[introPick.Next(on.Count)];
+            }
+        }
+
+        private readonly Random introPick = new Random();
+
+        // One mod's own intro, for a mod that asks to play itself.
+        internal ICapriIntro IntroOf(string id)
+        {
+            ICapriMod mod;
+            return running.TryGetValue(id ?? "", out mod) ? mod as ICapriIntro : null;
+        }
+
+        // Every running intro mod by its name, for her test menu.
+        internal List<KeyValuePair<string, ICapriMod>> IntroMods
+        {
+            get
+            {
+                List<KeyValuePair<string, ICapriMod>> found = new List<KeyValuePair<string, ICapriMod>>();
+                foreach (KeyValuePair<string, ICapriMod> entry in running)
+                {
+                    if (!(entry.Value is ICapriIntro)) continue;
+                    Mod listed = All.Find(delegate(Mod one) { return one.File.Id == entry.Key; });
+                    found.Add(new KeyValuePair<string, ICapriMod>(listed != null && !string.IsNullOrEmpty(listed.File.Name) ? listed.File.Name : entry.Key, entry.Value));
+                }
+                return found;
             }
         }
 #endif
@@ -467,6 +500,98 @@ namespace CapriDesktop
         }
 
 #if !CROSS
+        // The door: carried in her exe, and played once on the first start that has it, whatever the intro setting says.
+        internal const string DoorId = "door-intro";
+        private const string CarriedPrefix = "Capri.Mod.", StockedFile = "stocked.txt";
+
+        // The mods she carries, laid into the mods folder and approved, since she vouches for them. Once per version: one
+        // somebody deleted stays deleted until a newer one ships, and a newer one they wrote themselves is left alone.
+        internal static void Stock(string data)
+        {
+            string folder = Path.Combine(data, "mods");
+            try
+            {
+                Assembly own = typeof(Mods).Assembly;
+                foreach (string name in own.GetManifestResourceNames())
+                {
+                    if (!name.StartsWith(CarriedPrefix, StringComparison.Ordinal)) continue;
+                    byte[] bytes;
+                    using (Stream from = own.GetManifestResourceStream(name))
+                    using (MemoryStream copy = new MemoryStream())
+                    {
+                        from.CopyTo(copy);
+                        bytes = copy.ToArray();
+                    }
+                    ModFile carried = ReadCode(Words(bytes));
+                    Dictionary<string, string> stocked = Pairs(Path.Combine(folder, StockedFile));
+                    string was;
+                    if (stocked.TryGetValue(carried.Id, out was) && !Newer(carried.Version, was)) continue;
+                    string home = Path.Combine(folder, carried.Id + CodeExtension);
+                    bool lay = true;
+                    if (File.Exists(home))
+                    {
+                        try { lay = Newer(carried.Version, ReadCode(Words(File.ReadAllBytes(home))).Version); }
+                        catch (ModException) { lay = true; }
+                    }
+                    Directory.CreateDirectory(folder);
+                    if (lay)
+                    {
+                        File.WriteAllBytes(home, bytes);
+                        Dictionary<string, string> approved = Pairs(Path.Combine(folder, ApprovedFile));
+                        approved[carried.Id] = HashOf(bytes);
+                        WritePairs(Path.Combine(folder, ApprovedFile), approved);
+                        Brain.Log("mods", -1, "Laid in " + carried.Id + " " + carried.Version + ", approved.");
+                    }
+                    stocked[carried.Id] = carried.Version;
+                    WritePairs(Path.Combine(folder, StockedFile), stocked);
+                }
+            }
+            catch (Exception caughtOne) { Brain.Caught(caughtOne); }
+        }
+
+        private static Dictionary<string, string> Pairs(string file)
+        {
+            Dictionary<string, string> pairs = new Dictionary<string, string>();
+            if (File.Exists(file))
+                foreach (string line in File.ReadAllLines(file))
+                {
+                    string[] parts = line.Split(' ');
+                    if (parts.Length == 2) pairs[parts[0]] = parts[1];
+                }
+            return pairs;
+        }
+
+        private static void WritePairs(string file, Dictionary<string, string> pairs)
+        {
+            List<string> lines = new List<string>();
+            foreach (KeyValuePair<string, string> entry in pairs) lines.Add(entry.Key + " " + entry.Value);
+            File.WriteAllLines(file, lines);
+        }
+
+        private static bool Newer(string version, string than)
+        {
+            System.Version a, b;
+            if (!System.Version.TryParse(version ?? "", out a)) return false;
+            if (!System.Version.TryParse(than ?? "", out b)) return true;
+            return a > b;
+        }
+
+        // The door is on and has never played here.
+        internal bool DoorFirst
+        {
+            get
+            {
+                if (!All.Exists(mod => mod.Code && mod.On && mod.File.Id == DoorId)) return false;
+                try { return !File.Exists(Path.Combine(folder, DoorId + "-data", "shown")); }
+                catch (Exception caughtOne) { Brain.Caught(caughtOne); return false; }
+            }
+        }
+
+        // The door when this start is its first, else the usual pick.
+        internal ICapriIntro StartIntro { get { return DoorFirst ? IntroOf(DoorId) : Intro; } }
+#endif
+
+#if !CROSS
         private static ICapriMod Compile(string text)
         {
             CompilerResults built;
@@ -608,10 +733,22 @@ namespace CapriDesktop
 
         private bool HoldForIntro(Action arrival, bool spawn)
         {
-            if (testing || instant || !preferences.Motion || preferences.NoIntro || hidden || !ModList.WantsIntro || FullScreenDisplay) return false;
+            if (testing || instant || !preferences.Motion || preferences.NoIntro && !ModList.DoorFirst || hidden || !ModList.WantsIntro || FullScreenDisplay) return false;
             if (spawn) SpawnInMiddle();
             WaitForIntro(arrival, IntroWait);
             return true;
+        }
+
+        // An intro played after start, the way a start plays it: she is out of sight in the middle of the screen she is on,
+        // and arrives when it ends. Played over her where she stood, the door opened with her already in front of it.
+        internal void IntroLikeStart(ICapriIntro intro)
+        {
+            if (intro == null || introScreen != null) return;
+            SpawnInMiddle();
+            veilUntil = clock.Elapsed.TotalSeconds + LongestIntro + 5;
+            Play(idle);
+            RenderFrame();
+            RunIntro(intro, delegate { veilUntil = 0; drawnClip = null; });
         }
 
         private void WaitForIntro(Action arrival, double patience)
@@ -630,7 +767,7 @@ namespace CapriDesktop
             wait.Tick += delegate
             {
                 if (IsDisposed) { wait.Dispose(); return; }
-                ICapriIntro intro = ModList.Intro;
+                ICapriIntro intro = ModList.StartIntro;
                 bool out_ = clock.Elapsed.TotalSeconds >= gaveUpAt;
                 if (intro == null && !ModList.CodeSettled && !out_) return;
                 wait.Dispose();
@@ -790,7 +927,7 @@ namespace CapriDesktop
             string real = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "..", "..", "mods", "startup-intros" + Mods.CodeExtension));
             if (!File.Exists(real)) { checks.Add("LIMIT mod intros: the Startup Intros file isn't beside this build, so its frames weren't drawn"); return; }
             Mod mod = ModList.Import(real, delegate { return true; });
-            ICapriIntro intros = ModList.Intro;
+            ICapriIntro intros = mod == null ? null : ModList.IntroOf(mod.File.Id);
             if (mod == null || intros == null || !ModList.WantsIntro) throw new Exception("Startup Intros did not start as an intro.");
             Size size = new Size(1920, 1080);
             Rectangle spot = new Rectangle(860, 420, 200, 300);

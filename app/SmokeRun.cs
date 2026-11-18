@@ -90,7 +90,7 @@ namespace CapriDesktop
                 foreach (string one in Directory.GetFiles(from, "*", SearchOption.AllDirectories))
                     File.Copy(one, Path.Combine(room, one.Substring(from.Length).TrimStart(Path.DirectorySeparatorChar)), true);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
         private static string ownAsync;
         // The last time she showed or moved one of her own windows in a way Windows carries out later on its thread, and from where.

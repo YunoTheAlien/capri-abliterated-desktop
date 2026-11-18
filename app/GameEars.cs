@@ -109,15 +109,15 @@ namespace CapriDesktop
                     if (stop.WaitOne(Math.Max(1, (int)Math.Ceiling(1000.0 / 30 - elapsed * 1000)))) break;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             finally
             {
                 Clear(sessions);
-                if (initialized) { try { CoUninitialize(); } catch (Exception) { } }
+                if (initialized) { try { CoUninitialize(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
                 Interlocked.Exchange(ref level, 0);
                 lock (gate)
                 {
-                    try { stop.Dispose(); } catch (Exception) { }
+                    try { stop.Dispose(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     stop = null;
                     worker = null;
                 }
@@ -145,7 +145,7 @@ namespace CapriDesktop
             foreach (Action<double> handler in loud.GetInvocationList())
             {
                 try { handler(value); }
-                catch (Exception) { }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
 
@@ -192,11 +192,11 @@ namespace CapriDesktop
                                 found.Add(new Session { Owner = control, Meter = meter });
                                 control = null;
                             }
-                            catch (Exception) { }
+                            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                             finally { Drop(control); }
                         }
                     }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     finally { Drop(entries); Drop(manager); Drop(endpoint); }
                 }
                 Clear(sessions);
@@ -208,7 +208,7 @@ namespace CapriDesktop
             {
                 Clear(found);
                 Drop(collection);
-                if (collectionPointer != IntPtr.Zero) { try { Marshal.Release(collectionPointer); } catch (Exception) { } }
+                if (collectionPointer != IntPtr.Zero) { try { Marshal.Release(collectionPointer); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
                 Drop(devices);
             }
         }
@@ -254,7 +254,7 @@ namespace CapriDesktop
         {
             if (value == null) return;
             try { Marshal.ReleaseComObject(value); }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private sealed class Session

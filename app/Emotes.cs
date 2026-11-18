@@ -176,7 +176,7 @@ namespace CapriDesktop
                     {
                         Bitmap made = null;
                         try { made = Decode(pictures[which]); }
-                        catch (Exception) { }
+                        catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                         lock (gate)
                         {
                             pending.Remove(which);

@@ -1011,8 +1011,8 @@ namespace CapriDesktop
             {
                 capri.Post(delegate
                 {
-                    ICapriIntro intro = capri.ModList.Intro;
-                    if (intro != null && capri.introScreen == null) capri.RunIntro(intro, null);
+                    ICapriIntro intro = capri.ModList.IntroOf(id) ?? capri.ModList.Intro;
+                    if (intro != null && capri.introScreen == null) capri.IntroLikeStart(intro);
                 });
             }
 
@@ -1635,13 +1635,16 @@ namespace CapriDesktop
 
             bool ICapriSounds.Play(string file) { return ((ICapriSounds)this).Play(file, 1); }
 
-            // A WAV file, from the mod's folder when the path isn't a whole one, at her own sound volume times this one.
+            // A sound file, from the mod's folder when the path isn't a whole one, at her own sound volume times this
+            // one. A WAV goes through her own mixer; anything else Windows plays goes through ModTunes.
             bool ICapriSounds.Play(string file, double volume)
             {
                 if (string.IsNullOrWhiteSpace(file) || over) return false;
                 string path;
                 try { path = Path.IsPathRooted(file) ? file : Path.Combine(Folder, file); }
                 catch (ArgumentException) { return false; }
+                if (!path.EndsWith(".wav", StringComparison.OrdinalIgnoreCase))
+                    return File.Exists(path) && Sfx.Level > 0 && ModTunes.Play(path, Math.Max(0, Math.Min(1, volume)) * Sfx.Level / 100.0);
                 short[] samples = ModSound.ReadWave(path, volume);
                 if (samples == null) return false;
                 capri.OnWindow(delegate

@@ -97,13 +97,13 @@ namespace CapriDesktop
                 Font found;
                 // Another thread may have made the same one while this was being built. Theirs is the one
                 // everybody else already has, so this one goes rather than replacing it.
-                if (held.TryGetValue(key, out found)) { try { made.Dispose(); } catch (Exception) { } return found; }
+                if (held.TryGetValue(key, out found)) { try { made.Dispose(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } return found; }
                 held[key] = made;
                 if (held.Count > Many && !warned)
                 {
                     warned = true;
                     try { Brain.Log("fonts", -1, "She is holding " + held.Count + " fonts, which is more sizes than her windows should ever ask for."); }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
                 return made;
             }

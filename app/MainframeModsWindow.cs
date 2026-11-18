@@ -624,7 +624,7 @@ namespace CapriDesktop
                 {
                     Dictionary<string, ModStats> read = null;
                     try { read = ModDirectory.Stats(); }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     Back(delegate
                     {
                         if (mine != ticket || read == null) return;
@@ -643,7 +643,7 @@ namespace CapriDesktop
                 {
                     Image picture = null;
                     try { picture = ModDirectory.Picture(ModDirectory.Preview(listing, ModDirectory.PreviewFolder)); }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     if (picture == null) return;
                     Back(delegate { pictures[sha] = picture; Fill(); });
                 });
@@ -748,7 +748,7 @@ namespace CapriDesktop
                 Run(delegate
                 {
                     try { ModDirectory.CountDownload(listing.Folder); }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 });
             }
 
@@ -861,7 +861,7 @@ namespace CapriDesktop
                 {
                     List<string> lines = null;
                     try { lines = ModDirectory.Readme(listing); }
-                    catch (Exception) { }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     Back(delegate { ShowLines(lines); });
                 });
             }

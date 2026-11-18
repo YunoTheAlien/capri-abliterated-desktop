@@ -91,7 +91,7 @@ namespace CapriDesktop
                     if (kind != null && !links.Contains(kind)) links.Add(kind);
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return links;
         }
     }

@@ -141,7 +141,7 @@ namespace CapriDesktop
                     found.Add(named);
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return found.ToArray();
         }
 
@@ -174,7 +174,7 @@ namespace CapriDesktop
                     read = DateTime.Now;
                 }
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         internal static Dictionary<string, string[]> PoolsForTest(string body) { return Read(body); }
@@ -249,7 +249,7 @@ namespace CapriDesktop
                 }
                 Notes.Refresh(Kept, Text);
             }
-            catch (Exception) { }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private string ToppedUp(string had)

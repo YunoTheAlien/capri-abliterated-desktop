@@ -106,7 +106,7 @@ namespace CapriDesktop
                 }
             }
             catch (Exception) { return true; }
-            finally { if (face != IntPtr.Zero) { try { DeleteObject(face); } catch (Exception) { } } }
+            finally { if (face != IntPtr.Zero) { try { DeleteObject(face); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } } }
         }
 
         // The same size and style in a face that has the letter. Her own font back again when nothing else
