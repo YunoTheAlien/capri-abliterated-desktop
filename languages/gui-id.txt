@@ -1,0 +1,206 @@
+# Her menus and labels in Indonesian: the English, a tab, then the translation.
+Open Capri Mainframe	Buka Capri Mainframe
+Her folder	Foldernya
+Play	Putar
+Music	Musik
+Chess	Catur
+Connect four	Empat berderet
+Tic-tac-toe	Tik-tak-to
+Rock, paper, scissors	Batu, gunting, kertas
+Hide Capri	Sembunyikan Capri
+Hologram	Hologram
+Normal	Normal
+Small	Kecil
+Medium	Sedang
+Large	Besar
+Huge	Sangat besar
+Giant	Raksasa
+Move	Pindah
+Wander around	Berkeliaran di sekitar
+Dance to music	Menari mengikuti musik
+Dance	Menari
+Ride cursor	Tunggangi kursor
+Sit on windows	Duduk di jendela
+Sit here	Duduk di sini
+Hang here	Diam di sini
+Lie down	Berbaring
+Go to sleep	Pergi tidur
+Bring to this screen	Bawa ke layar ini
+Go to the next screen	Ke layar berikutnya
+Black	Hitam
+White	Putih
+Test	Tes
+Stop	Berhenti
+Help	Bantuan
+Commands	Perintah
+Help page	Halaman bantuan
+Join the Discord	Gabung Discord
+Copy error details	Salin detail galat
+Check for updates	Periksa pembaruan
+Quit Capri	Keluar dari Capri
+MAINFRAME	MAINFRAME
+Settings	Pengaturan
+Mods	Mod
+BRAIN	OTAK
+Provider	Penyedia
+Using your server with no key	Memakai servermu tanpa kunci
+Refresh	Segarkan
+Set up her brain	Atur otaknya
+Have Ollama? Open it, then press Refresh.	Punya Ollama? Buka, lalu tekan Segarkan.
+Pick one. Only one brain runs at a time.	Pilih satu. Hanya satu otak yang berjalan dalam satu waktu.
+MEDIUM INTELLIGENCE	INTELLIGENCE SEDANG
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Mati
+Free key	Kunci gratis
+Connect	Hubungkan
+Free keys can be rate limited and slow.	Kunci gratis bisa dibatasi dan lambat.
+That's a paid key: it goes under MAX INTELLIGENCE.	Itu kunci berbayar: masuk ke MAX INTELLIGENCE.
+Move to MAX	Pindah ke MAX
+VOICE	SUARA
+Ctrl + Alt + V to talk	Ctrl + Alt + V untuk bicara
+PREBUILT LOCAL	LOKAL BAWAAN
+CUSTOM LOCAL	LOKAL KUSTOM
+CLOUD VOICE	SUARA CLOUD
+Set up	Atur
+Setup guide	Panduan pengaturan
+Fish Audio	Fish Audio
+Default model	Model default
+Pick a voice model	Pilih model suara
+Get free voice	Dapatkan suara gratis
+Mic: default	Mik: default
+Her speaker: Default	Speakernya: Default
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N membisukan mik
+CAPRI	CAPRI
+Support	Dukungan
+Remote	Jarak jauh
+Bring here	Bawa ke sini
+Advanced Settings	Pengaturan Lanjutan
+YOU	KAMU
+Your personality	Kepribadianmu
+Language	Bahasa
+English	Inggris
+What should she call you?	Dia harus memanggilmu apa?
+Save	Simpan
+Volume	Volume
+Pitch	Pitch
+Speed	Kecepatan
+Robot	Robot
+Glitch	Glitch
+Sounds	Suara
+Typing sound	Suara mengetik
+Listen for Capri	Dengarkan Capri
+Hearing	Pendengaran
+Auto	Otomatis
+Free voice in games	Suara gratis di game
+Call mode (beta)	Mode panggilan (beta)
+Her voice in your mic	Suaranya di mikmu
+Get VB-CABLE	Dapatkan VB-CABLE
+How to	Cara
+Her voice in your mic: loudness	Suaranya di mikmu: volume
+MOVES	GERAKAN
+Pop-in times	Waktu muncul
+Mini player	Mini player
+Wander	Berkeliaran
+Sleep	Tidur
+Pop-ins	Kemunculan
+Glitch in at startup	Glitch saat startup
+KEYS	TOMBOL
+Talk: Ctrl + Alt + V	Bicara: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Bisukan mik: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Ketik: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Sembunyikan/tampilkan: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Diam: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Mode Game: Ctrl + Alt + G
+Confirm	Konfirmasi
+Cancel	Batal
+Size	Ukuran
+Check in on me	Cek keadaanku
+Edit check-in lines	Edit baris cek-masuk
+Always on top	Selalu di atas
+Mainframe size	Ukuran Mainframe
+Mainframe colours	Warna Mainframe
+Head pats	Usap kepala
+Pat stroke	Usapan kepala
+Chaos when upset	Kacau saat kesal
+Legacy stand	Dudukan lama
+Jealous of other AIs	Cemburu pada AI lain
+Teases when another AI comes to the front.	Mengejek saat AI lain muncul di depan.
+Close other AIs for me	Tutup AI lain untukku
+Asks before closing only the apps you choose.	Hanya bertanya sebelum menutup aplikasi yang kamu pilih.
+Apps she may close	Aplikasi yang boleh ia tutup
+Choose apps	Pilih aplikasi
+WATCH	TONTON
+Watch my screen	Tonton layarku
+Screens	Layar
+All screens	Semua layar
+Remember what she sees	Ingat apa yang dia lihat
+Every	Setiap
+Watch-along memory	Memori menonton bersama
+Code/Husk Mode	Mode Kode/Husk
+Thinking	Berpikir
+Default	Default
+Extra request JSON	JSON permintaan tambahan
+Add	Tambah
+Verbosity	Verbositas
+Replies	Balasan
+Memory	Memori
+Memory size	Ukuran memori
+Max reply	Balasan maks
+Bubble	Gelembung
+Follow-up messages	Pesan lanjutan
+Use	Pakai
+A model in Ollama, on your local server or on your key.	Sebuah model di Ollama, di server lokalmu atau dengan kunci milikmu.
+HABITS	KEBIASAAN
+Open her memories	Buka kenangannya
+Start with Windows	Mulai bersama Windows
+Show on Discord	Tampilkan di Discord
+Use her cursor	Pakai kursornya
+Remember our chats	Ingat obrolan kita
+Power saver	Penghemat daya
+Music app	Aplikasi musik
+Perch	Tempat bertengger
+Keep PC awake for jobs	Jaga PC tetap bangun untuk tugas
+Hide in full screen	Sembunyikan saat layar penuh
+Mini player over full screen	Mini player di atas layar penuh
+Explore while I'm away	Jelajahi saat aku pergi
+Explore after	Jelajahi setelah
+GAMES	GAME
+Controls	Kontrol
+Comments	Komentar
+Live reactions	Reaksi langsung
+Game sounds	Suara game
+Gaming Mode	Mode Game
+She reacts to your game until you close it.	Dia bereaksi terhadap game-mu sampai kamu menutupnya.
+Works best on MAX INTELLIGENCE.	Paling baik dengan MAX INTELLIGENCE.
+Fast hands in games	Tangan cepat di game
+Mute her	Bisukan dia
+CLIPS	KLIP
+Clip my games	Rekam game saya
+Save big moments	Simpan momen besar
+Save folder	Folder simpan
+Choose folder	Pilih folder
+Open clips folder	Buka folder klip
+Default length	Panjang default
+Frame rate	Frame rate
+Resolution	Resolusi
+Video bitrate	Bitrate video
+Weather	Cuaca
+Code mods can reach your whole PC. Only trusted ones.	Mod kode bisa menjangkau seluruh PC-mu. Hanya yang terpercaya.
+Import mod	Impor mod
+Browse mods	Jelajahi mod
+Mods folder	Folder mod
+INSTALLED	TERPASANG
+Update mods	Perbarui mod
+No mods match.	Tidak ada mod yang cocok.
+On	Nyala
+Remove	Hapus
+Publish	Terbitkan
+Options	Opsi
+Back	Kembali
+Next	Berikutnya
+COLORS	WARNA
+Reset colors	Reset warna
+Running on this PC	Berjalan di PC ini
+NORMAL	NORMAL
+OFF	MATI
+Local server address	Alamat server lokal

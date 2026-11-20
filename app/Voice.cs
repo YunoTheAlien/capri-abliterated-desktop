@@ -17,6 +17,86 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
+    // Fingerprints of her sealed keys: a one-way SHA-256 of each key, filed against the sealed copy it was made with.
+    // Her log is scrubbed of keys by comparing fingerprints, so nothing has to be decrypted to keep a key out of it; a
+    // key is opened only when it is used. A key sealed before fingerprints existed is opened once to make its own, and
+    // never again for this. The file holds no key and nothing a key can be worked back from.
+    internal static class KeyPrints
+    {
+        internal static string Kept;
+        private const int Most = 300;
+        private static readonly object gate = new object();
+        private static Dictionary<string, string> prints;
+
+        internal static string Print(string key)
+        {
+            if (string.IsNullOrEmpty(key) || key.Trim().Length == 0) return null;
+            using (SHA256 sha = SHA256.Create())
+            {
+                byte[] made = sha.ComputeHash(Encoding.UTF8.GetBytes(key.Trim()));
+                StringBuilder hex = new StringBuilder(made.Length * 2);
+                foreach (byte one in made) hex.Append(one.ToString("x2"));
+                return hex.ToString();
+            }
+        }
+
+        // Filed under a fingerprint of the sealed copy rather than the copy itself, so the file is small and says nothing.
+        private static string Id(string sealedKey) { return Print("sealed|" + sealedKey); }
+
+        internal static void Note(string sealedKey, string key)
+        {
+            string print = Print(key);
+            if (string.IsNullOrEmpty(sealedKey) || print == null) return;
+            lock (gate) { Load(); prints[Id(sealedKey)] = print; Save(); }
+        }
+
+        // The fingerprint for a sealed key, opening it only when none was filed: the once for a key sealed before these.
+        internal static string Of(string sealedKey, Func<string, string> open)
+        {
+            if (string.IsNullOrEmpty(sealedKey)) return null;
+            string id = Id(sealedKey), got;
+            lock (gate) { Load(); if (prints.TryGetValue(id, out got)) return got; }
+            string key = null;
+            try { key = open(sealedKey); } catch (Exception) { }
+            string print = Print(key);
+            key = null;
+            if (print == null) return null;
+            lock (gate) { prints[id] = print; Save(); }
+            return print;
+        }
+
+        private static void Load()
+        {
+            if (prints != null) return;
+            prints = new Dictionary<string, string>(StringComparer.Ordinal);
+            try
+            {
+                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
+                foreach (string row in File.ReadAllLines(Kept))
+                {
+                    string[] parts = row.Split('\t');
+                    if (parts.Length == 2 && parts[0].Length == 64 && parts[1].Length == 64) prints[parts[0]] = parts[1];
+                }
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+
+        private static void Save()
+        {
+            if (string.IsNullOrEmpty(Kept)) return;
+            try
+            {
+                List<string> rows = new List<string>();
+                foreach (KeyValuePair<string, string> one in prints) rows.Add(one.Key + "\t" + one.Value);
+                if (rows.Count > Most) rows.RemoveRange(0, rows.Count - Most);
+                File.WriteAllLines(Kept, rows.ToArray());
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+    }
+
     [DataContract]
     internal sealed class VoiceEntry
     {
@@ -129,7 +209,12 @@ namespace CapriDesktop
 
         internal static string Unprotect(string saved) { return null; }
 #else
-        internal static string Protect(string key) { return Convert.ToBase64String(ProtectedData.Protect(Encoding.UTF8.GetBytes(key), Entropy, DataProtectionScope.CurrentUser)); }
+        internal static string Protect(string key)
+        {
+            string sealedKey = Convert.ToBase64String(ProtectedData.Protect(Encoding.UTF8.GetBytes(key), Entropy, DataProtectionScope.CurrentUser));
+            KeyPrints.Note(sealedKey, key);
+            return sealedKey;
+        }
 
         internal static string Unprotect(string saved)
         {
@@ -673,7 +758,7 @@ namespace CapriDesktop
     }
 
     // Bonk is her thud when she's thrown into an edge of her screen or the taskbar.
-    internal enum Cue { Arrive, Leave, Hop, Click, Bonk, Slap, Pipe }
+    internal enum Cue { Arrive, Leave, Hop, Click, Bonk, Snap, Pipe }
 
     internal static class Sfx
     {
@@ -794,7 +879,7 @@ namespace CapriDesktop
                 case Cue.Hop: return Sweep(0.16, 520, 1240, 0.008, level);
                 case Cue.Bonk: return Sweep(0.13, 420, 120, 0.002, level * 4 / 5);
                 // Shorter and brighter than a bonk, and gone almost at once: a crack, not a thud.
-                case Cue.Slap: return Sweep(0.07, 2300, 320, 0.0008, level);
+                case Cue.Snap: return Sweep(0.07, 2300, 320, 0.0008, level);
                 case Cue.Pipe: return Pipe(level);
                 default: return Sweep(0.05, 1600, 1350, 0.003, level * 3 / 4);
             }
@@ -2446,6 +2531,16 @@ namespace CapriDesktop
             return code == "cmn" ? "zh" : code == "nb" || code == "nn" ? "no" : code == "tl" ? "fil" : code;
         }
 
+        // A language written in the Latin alphabet, like French or German, rather than one with its own script.
+        internal static bool LatinScript(string language)
+        {
+            string code = Code(language);
+            if (code.Length == 0) return false;
+            for (int i = 0; i < Scripts.GetLength(0); i++)
+                if ((" " + Scripts[i, 0] + " ").Contains(" " + code + " ")) return false;
+            return true;
+        }
+
         internal static bool Reads(string text, string language)
         {
             string alphabet = Latin;
@@ -2641,6 +2736,84 @@ namespace CapriDesktop
         }
     }
 
+    // Her free voice in French, Spanish, Italian, Portuguese and Hindi: the language data her voice pack lacks, one
+    // archive fetched once per PC, each language's dictionary checked on its own.
+    internal static class VoiceTongues
+    {
+        internal static string Url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/espeak-ng-data.tar.bz2";
+        internal static string Sha = "4135ccf82e1f40613491c0874d4945ae9e9c7840933d8e25a6f9e003d9ebf533";
+        internal static long Size = 7252012;
+        internal const string Label = "her voice's languages";
+        private static readonly string[,] Spoken =
+        {
+            { "fr", "fr", "e399ab924c4d10beef1fc310b30ea56e4ddfd8b4b64b8ed978e9c65394d49b2d" },
+            { "es", "es", "3fa93e251eab80838a2d6207ee58c9c847270a65fe3fae98850e0185b5a2186c" },
+            { "it", "it", "111f968359c9ebe36b107a2565ba9f258bab337d3cbe37e44871980a8f21ce6b" },
+            { "pt", "pt-br", "7e8398f15fa4a21db39a213381f28ec0d302b22663c644e865abb61a09c1b004" },
+            { "hi", "hi", "5a68c9532624e57ac845b26ce1e2e5034c4f6353bede46ecbe57e583ec8effd6" }
+        };
+
+        private static int Row(string code)
+        {
+            for (int i = 0; i < Spoken.GetLength(0); i++) if (Spoken[i, 0] == code) return i;
+            return -1;
+        }
+
+        internal static bool Knows(string code) { return Row(code) >= 0; }
+
+        internal static string Lang(string code) { int row = Row(code); return row < 0 ? null : Spoken[row, 1]; }
+
+        private static string Dict(string folder, string code) { return Path.Combine(Path.Combine(folder, "espeak-ng-data"), code + "_dict"); }
+
+        internal static bool Ready(string folder, string code)
+        {
+            if (!Knows(code)) return false;
+            FileInfo file = new FileInfo(Dict(folder, code));
+            return file.Exists && file.Length > 0;
+        }
+
+        internal static bool Missing(string folder)
+        {
+            for (int i = 0; i < Spoken.GetLength(0); i++) if (!Ready(folder, Spoken[i, 0])) return true;
+            return false;
+        }
+
+        internal static void Fetch(string folder, Action<string, long, long> progress, Func<bool> stopped)
+        {
+            if (!Missing(folder)) return;
+            string archive = folder + ".tongues.tar.bz2", staging = folder + ".tongues";
+            Engine.Fetch(Url, archive, Size, Sha, Label, progress, stopped);
+            try
+            {
+                TarReader.Clean(staging);
+                using (FileStream packed = new FileStream(archive, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20))
+                using (Stream plain = Bunzip.Open(packed))
+                {
+                    TarReader.Unpack(plain, staging, true);
+                    plain.CopyTo(Stream.Null);
+                }
+                for (int i = 0; i < Spoken.GetLength(0); i++)
+                {
+                    string code = Spoken[i, 0], from = Dict(staging, code), into = Dict(folder, code);
+                    if (Ready(folder, code)) continue;
+                    if (!File.Exists(from) || !string.Equals(Engine.Hash(from), Spoken[i, 2], StringComparison.OrdinalIgnoreCase)) throw new IOException(Engine.Unmatched(Label));
+                    Directory.CreateDirectory(Path.GetDirectoryName(into));
+                    string part = into + ".part";
+                    File.Copy(from, part, true);
+                    if (File.Exists(into)) File.Delete(into);
+                    File.Move(part, into);
+                }
+            }
+            finally
+            {
+                TarReader.Clean(staging);
+                try { File.Delete(archive); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+            }
+        }
+    }
+
     internal sealed class FreeStyle
     {
         internal readonly string Name;
@@ -2676,7 +2849,7 @@ namespace CapriDesktop
         private readonly string folder;
         private readonly object gate = new object();
         private IntPtr tts;
-        private bool british;
+        private string lang;
         internal volatile FreeStyle Style = Styles[0];
         internal volatile bool Cancel;
 
@@ -2742,19 +2915,27 @@ namespace CapriDesktop
         internal void Warm()
         {
             FreeStyle style = Style;
-            lock (gate) Open(style.British);
+            string code = Brain.LanguageCode(Brain.Language);
+            lock (gate) Open(style.British, Speaks(code) ? code : null);
         }
 
-        internal byte[] Speak(string text)
+        internal bool Speaks(string code) { return VoiceTongues.Ready(folder, code); }
+
+        internal void AddTongues(Action<string, long, long> progress, Func<bool> stopped) { VoiceTongues.Fetch(folder, progress, stopped); }
+
+        internal byte[] Speak(string text) { return Speak(text, null); }
+
+        internal byte[] Speak(string text, string code)
         {
-            if (!VoiceLanguage.Reads(text, "en")) throw new VoiceException(VoiceLanguage.Missing(VoiceLanguage.Tongue(text, Brain.Language), Brain.Language));
+            if (code != null && !Speaks(code)) throw new VoiceException("Her free voice doesn't have that language yet.");
+            if (!VoiceLanguage.Reads(text, code ?? "en")) throw new VoiceException(VoiceLanguage.Missing(VoiceLanguage.Tongue(text, Brain.Language), Brain.Language));
             FreeStyle style = Style;
             int pitch = VoiceFx.Pitch, speed = VoiceFx.Speed, robot = VoiceFx.Robot, glitch = VoiceFx.Glitch, rate;
             VoiceFx.Layering layers = VoiceFx.Layers;
             short[] pcm;
             lock (gate)
             {
-                Open(style.British);
+                Open(style.British, code);
                 IntPtr words = Utf8(text);
                 IntPtr audio = IntPtr.Zero;
                 try
@@ -2777,9 +2958,10 @@ namespace CapriDesktop
             return Voice.Wave(VoiceFx.Kokoro(pcm, rate, pitch, robot, glitch, VoiceFx.Seed(text), layers), rate);
         }
 
-        private void Open(bool gb)
+        private void Open(bool gb, string code)
         {
-            if (tts != IntPtr.Zero && british == gb) return;
+            string wanted = code == null ? (gb ? "en" : "en-us") : VoiceTongues.Lang(code);
+            if (tts != IntPtr.Zero && lang == wanted) return;
             if (IntPtr.Size != 8) throw new VoiceException("Her free voice needs 64-bit Windows.");
             if (!Installed) throw new VoiceException("Set up her free voice in Capri Mainframe.");
             Load(folder);
@@ -2795,8 +2977,9 @@ namespace CapriDesktop
                 config.Model.Kokoro.Voices = keep(Path.Combine(folder, "voices.bin"));
                 config.Model.Kokoro.Tokens = keep(Path.Combine(folder, "tokens.txt"));
                 config.Model.Kokoro.Data = keep(Path.Combine(folder, "espeak-ng-data"));
-                config.Model.Kokoro.Lexicon = keep(Path.Combine(folder, gb ? "lexicon-gb-en.txt" : "lexicon-us-en.txt"));
-                config.Model.Kokoro.Lang = keep(gb ? "en" : "en-us");
+                // Her English lexicon is English only; another language reads from its own dictionary.
+                config.Model.Kokoro.Lexicon = code == null ? keep(Path.Combine(folder, gb ? "lexicon-gb-en.txt" : "lexicon-us-en.txt")) : IntPtr.Zero;
+                config.Model.Kokoro.Lang = keep(wanted);
                 config.MaxSentences = 1;
                 // sherpa-onnx ends the process on a file it can't read, with no exception to catch. The marker only exists while it opens,
                 // so finding one means that's how she went down last time: it goes in errors.txt and she skips her free voice this once.
@@ -2814,7 +2997,7 @@ namespace CapriDesktop
             catch (IOException error) { throw new VoiceException(Told(error)); }
             finally { foreach (IntPtr pointer in held) Marshal.FreeHGlobal(pointer); }
             if (tts == IntPtr.Zero) throw new VoiceException("Her free voice wouldn't start.");
-            british = gb;
+            lang = wanted;
         }
 
         // sherpa-onnx takes a folder with a letter like ś for no folder at all and then ends the whole process, with nothing in

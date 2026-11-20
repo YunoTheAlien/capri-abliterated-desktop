@@ -1,0 +1,206 @@
+# Her menus and labels in Malayalam: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe തുറക്കുക
+Her folder	അവളുടെ ഫോൾഡർ
+Play	പ്ലേ
+Music	സംഗീതം
+Chess	ചെസ്സ്
+Connect four	Connect Four
+Tic-tac-toe	ടിക്-ടാക്-ടോ
+Rock, paper, scissors	കല്ല്, കടലാസ്, കത്രിക
+Hide Capri	Capri മറയ്ക്കുക
+Hologram	ഹോളോഗ്രാം
+Normal	സാധാരണം
+Small	ചെറുത്
+Medium	ഇടത്തരം
+Large	വലുത്
+Huge	വലിയ
+Giant	ഭീമാകാരം
+Move	നീക്കുക
+Wander around	ചുറ്റും അലയുക
+Dance to music	സംഗീതത്തിന് നൃത്തം ചെയ്യുക
+Dance	നൃത്തം
+Ride cursor	കഴ്സർ റൈഡ്
+Sit on windows	ജനലുകളിൽ ഇരിക്കുക
+Sit here	ഇവിടെ ഇരിക്കുക
+Hang here	ഇവിടെ തങ്ങുക
+Lie down	കിടക്കുക
+Go to sleep	ഉറങ്ങാൻ പോകുക
+Bring to this screen	ഈ സ്ക്രീനിലേക്ക് കൊണ്ടുവരിക
+Go to the next screen	അടുത്ത സ്ക്രീനിലേക്ക് പോകുക
+Black	കറുപ്പ്
+White	വെള്ള
+Test	ടെസ്റ്റ്
+Stop	നിർത്തുക
+Help	സഹായം
+Commands	കമാൻഡുകൾ
+Help page	സഹായ പേജ്
+Join the Discord	Discord-ൽ ചേരുക
+Copy error details	പിശക് വിശദാംശങ്ങൾ പകർത്തുക
+Check for updates	അപ്ഡേറ്റുകൾ പരിശോധിക്കുക
+Quit Capri	Capri-യിൽ നിന്ന് പുറത്തുകടക്കുക
+MAINFRAME	MAINFRAME
+Settings	ക്രമീകരണങ്ങൾ
+Mods	മോഡുകൾ
+BRAIN	തലച്ചോർ
+Provider	ദാതാവ്
+Using your server with no key	കീ ഇല്ലാതെ നിങ്ങളുടെ സർവർ ഉപയോഗിക്കുന്നു
+Refresh	Refresh
+Set up her brain	അവളുടെ തലച്ചോർ സജ്ജീകരിക്കുക
+Have Ollama? Open it, then press Refresh.	Ollama ഉണ്ടോ? അത് തുറന്ന് Refresh അമർത്തുക.
+Pick one. Only one brain runs at a time.	ഒന്ന് തിരഞ്ഞെടുക്കുക. ഒരേസമയം ഒരു തലച്ചോർ മാത്രമേ പ്രവർത്തിക്കൂ.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	ഓഫ്
+Free key	സൗജന്യ കീ
+Connect	കണക്റ്റ് ചെയ്യുക
+Free keys can be rate limited and slow.	സൗജന്യ കീകൾക്ക് നിരക്ക് പരിധി ഉണ്ടാകാം, അവ മന്ദഗതിയിലുമാകാം.
+That's a paid key: it goes under MAX INTELLIGENCE.	അത് ഒരു പണം നൽകിയ കീ ആണ്: അത് MAX INTELLIGENCE-ന് കീഴിൽ പോകുന്നു.
+Move to MAX	MAX-ലേക്ക് നീക്കുക
+VOICE	ശബ്ദം
+Ctrl + Alt + V to talk	സംസാരിക്കാൻ Ctrl + Alt + V
+PREBUILT LOCAL	മുൻകൂട്ടി നിർമ്മിച്ച ലോക്കൽ
+CUSTOM LOCAL	കസ്റ്റം ലോക്കൽ
+CLOUD VOICE	ക്ലൗഡ് ശബ്ദം
+Set up	സജ്ജീകരിക്കുക
+Setup guide	സജ്ജീകരണ ഗൈഡ്
+Fish Audio	Fish Audio
+Default model	ഡിഫോൾട്ട് മോഡൽ
+Pick a voice model	ഒരു ശബ്ദ മോഡൽ തിരഞ്ഞെടുക്കുക
+Get free voice	സൗജന്യ ശബ്ദം നേടുക
+Mic: default	മൈക്ക്: ഡിഫോൾട്ട്
+Her speaker: Default	അവളുടെ സ്പീക്കർ: ഡിഫോൾട്ട്
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N മൈക്ക് മ്യൂട്ട് ചെയ്യുന്നു
+CAPRI	CAPRI
+Support	പിന്തുണ
+Remote	റിമോട്ട്
+Bring here	ഇവിടേക്ക് കൊണ്ടുവരിക
+Advanced Settings	വിപുല ക്രമീകരണങ്ങൾ
+YOU	നീ
+Your personality	നിങ്ങളുടെ വ്യക്തിത്വം
+Language	ഭാഷ
+English	ഇംഗ്ലീഷ്
+What should she call you?	അവൾ നിങ്ങളെ എന്ത് വിളിക്കണം?
+Save	സേവ് ചെയ്യുക
+Volume	വോളിയം
+Pitch	പിച്ച്
+Speed	വേഗത
+Robot	റോബോട്ട്
+Glitch	Glitch
+Sounds	ശബ്ദങ്ങൾ
+Typing sound	ടൈപ്പിംഗ് ശബ്ദം
+Listen for Capri	Capri-യെ കേൾക്കുക
+Hearing	കേൾവി
+Auto	ഓട്ടോ
+Free voice in games	ഗെയിമുകളിൽ സൗജന്യ ശബ്ദം
+Call mode (beta)	കോൾ മോഡ് (ബീറ്റ)
+Her voice in your mic	നിങ്ങളുടെ മൈക്കിൽ അവളുടെ ശബ്ദം
+Get VB-CABLE	VB-CABLE നേടുക
+How to	എങ്ങനെ
+Her voice in your mic: loudness	നിങ്ങളുടെ മൈക്കിൽ അവളുടെ ശബ്ദം: ഉച്ചത്വം
+MOVES	നീക്കങ്ങൾ
+Pop-in times	പോപ്പ്-ഇൻ സമയങ്ങൾ
+Mini player	മിനി പ്ലെയർ
+Wander	അലയുക
+Sleep	ഉറക്കം
+Pop-ins	പോപ്പ്-ഇൻസ്
+Glitch in at startup	ആരംഭത്തിൽ Glitch
+KEYS	കീകൾ
+Talk: Ctrl + Alt + V	സംസാരിക്കുക: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	മൈക്ക് മ്യൂട്ട്: Ctrl + Alt + N
+Type: Ctrl + Alt + T	ടൈപ്പ്: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	മറയ്ക്കുക/കാണിക്കുക: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	ശാന്തം: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	ഗെയിമിംഗ് മോഡ്: Ctrl + Alt + G
+Confirm	സ്ഥിരീകരിക്കുക
+Cancel	റദ്ദാക്കുക
+Size	വലുപ്പം
+Check in on me	എന്നെ അന്വേഷിക്കുക
+Edit check-in lines	ചെക്ക്-ഇൻ വരികൾ എഡിറ്റ് ചെയ്യുക
+Always on top	എപ്പോഴും മുകളിൽ
+Mainframe size	Mainframe വലുപ്പം
+Mainframe colours	Mainframe നിറങ്ങൾ
+Head pats	തല തലോടൽ
+Pat stroke	തലോടൽ സ്ട്രോക്ക്
+Chaos when upset	ദേഷ്യം വരുമ്പോൾ കുഴപ്പം
+Legacy stand	പഴയ സ്റ്റാൻഡ്
+Jealous of other AIs	മറ്റ് AI-കളോട് അസൂയ
+Teases when another AI comes to the front.	മറ്റൊരു AI മുന്നിൽ വരുമ്പോൾ കളിയാക്കുന്നു.
+Close other AIs for me	എനിക്കായി മറ്റ് AI-കൾ അടയ്ക്കുക
+Asks before closing only the apps you choose.	നിങ്ങൾ തിരഞ്ഞെടുത്ത ആപ്പുകൾ മാത്രം അടയ്ക്കുന്നതിന് മുമ്പ് ചോദിക്കും.
+Apps she may close	അവൾക്ക് അടയ്ക്കാവുന്ന ആപ്പുകൾ
+Choose apps	ആപ്പുകൾ തിരഞ്ഞെടുക്കുക
+WATCH	WATCH
+Watch my screen	എന്റെ സ്ക്രീൻ കാണുക
+Screens	സ്ക്രീനുകൾ
+All screens	എല്ലാ സ്ക്രീനുകളും
+Remember what she sees	അവൾ കാണുന്നത് ഓർമ്മിക്കുക
+Every	ഓരോ
+Watch-along memory	ഒരുമിച്ചു കാണുന്ന ഓർമ്മ
+Code/Husk Mode	Code/Husk മോഡ്
+Thinking	ചിന്തിക്കുന്നു
+Default	ഡിഫോൾട്ട്
+Extra request JSON	അധിക അഭ്യർത്ഥന JSON
+Add	ചേർക്കുക
+Verbosity	വാചാലത
+Replies	മറുപടികൾ
+Memory	മെമ്മറി
+Memory size	മെമ്മറി വലുപ്പം
+Max reply	പരമാവധി മറുപടി
+Bubble	ബബിൾ
+Follow-up messages	തുടർ സന്ദേശങ്ങൾ
+Use	ഉപയോഗിക്കുക
+A model in Ollama, on your local server or on your key.	Ollama-യിലെ ഒരു മോഡൽ, നിങ്ങളുടെ ലോക്കൽ സർവറിലോ നിങ്ങളുടെ കീയിലോ.
+HABITS	ശീലങ്ങൾ
+Open her memories	അവളുടെ ഓർമ്മകൾ തുറക്കുക
+Start with Windows	Windows-നൊപ്പം ആരംഭിക്കുക
+Show on Discord	Discord-ൽ കാണിക്കുക
+Use her cursor	അവളുടെ കഴ്സർ ഉപയോഗിക്കുക
+Remember our chats	ഞങ്ങളുടെ ചാറ്റുകൾ ഓർമ്മിക്കുക
+Power saver	പവർ സേവർ
+Music app	സംഗീത ആപ്പ്
+Perch	പെർച്ച്
+Keep PC awake for jobs	ജോലികൾക്കായി PC ഉണർന്നിരിക്കട്ടെ
+Hide in full screen	ഫുൾ സ്ക്രീനിൽ മറയ്ക്കുക
+Mini player over full screen	ഫുൾ സ്ക്രീനിന് മുകളിൽ മിനി പ്ലെയർ
+Explore while I'm away	ഞാൻ ഇല്ലാത്തപ്പോൾ പര്യവേക്ഷണം ചെയ്യുക
+Explore after	പിന്നീട് പര്യവേക്ഷണം ചെയ്യുക
+GAMES	ഗെയിമുകൾ
+Controls	നിയന്ത്രണങ്ങൾ
+Comments	കമന്റുകൾ
+Live reactions	ലൈവ് പ്രതികരണങ്ങൾ
+Game sounds	ഗെയിം ശബ്ദങ്ങൾ
+Gaming Mode	ഗെയിമിംഗ് മോഡ്
+She reacts to your game until you close it.	നിങ്ങൾ അത് അടയ്ക്കുന്നതുവരെ അവൾ നിങ്ങളുടെ ഗെയിമിനോട് പ്രതികരിക്കുന്നു.
+Works best on MAX INTELLIGENCE.	MAX INTELLIGENCE-ൽ ഏറ്റവും നന്നായി പ്രവർത്തിക്കുന്നു.
+Fast hands in games	ഗെയിമുകളിൽ വേഗമേറിയ കൈകൾ
+Mute her	അവളെ മ്യൂട്ട് ചെയ്യുക
+CLIPS	ക്ലിപ്പുകൾ
+Clip my games	എന്റെ ഗെയിമുകൾ ക്ലിപ്പ് ചെയ്യുക
+Save big moments	വലിയ നിമിഷങ്ങൾ സേവ് ചെയ്യുക
+Save folder	സേവ് ഫോൾഡർ
+Choose folder	ഫോൾഡർ തിരഞ്ഞെടുക്കുക
+Open clips folder	ക്ലിപ്പുകൾ ഫോൾഡർ തുറക്കുക
+Default length	ഡിഫോൾട്ട് ദൈർഘ്യം
+Frame rate	ഫ്രെയിം റേറ്റ്
+Resolution	റെസല്യൂഷൻ
+Video bitrate	വീഡിയോ ബിറ്റ്റേറ്റ്
+Weather	കാലാവസ്ഥ
+Code mods can reach your whole PC. Only trusted ones.	കോഡ് മോഡുകൾക്ക് നിങ്ങളുടെ മുഴുവൻ PC-യിലും എത്താം. വിശ്വസനീയമായവ മാത്രം.
+Import mod	മോഡ് ഇറക്കുമതി ചെയ്യുക
+Browse mods	മോഡുകൾ ബ്രൗസ് ചെയ്യുക
+Mods folder	മോഡ്സ് ഫോൾഡർ
+INSTALLED	ഇൻസ്റ്റാൾ ചെയ്തത്
+Update mods	മോഡുകൾ അപ്ഡേറ്റ് ചെയ്യുക
+No mods match.	മോഡുകളൊന്നും പൊരുത്തപ്പെടുന്നില്ല.
+On	ഓൺ
+Remove	നീക്കം ചെയ്യുക
+Publish	പ്രസിദ്ധീകരിക്കുക
+Options	ഓപ്ഷനുകൾ
+Back	തിരികെ
+Next	അടുത്തത്
+COLORS	നിറങ്ങൾ
+Reset colors	നിറങ്ങൾ പുനഃസജ്ജമാക്കുക
+Running on this PC	ഈ PC-യിൽ പ്രവർത്തിക്കുന്നു
+NORMAL	സാധാരണം
+OFF	ഓഫ്
+Local server address	ലോക്കൽ സർവർ വിലാസം

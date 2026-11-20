@@ -1,0 +1,26 @@
+# Words Portuguese (Portugal) always uses for these terms: the English, a tab, then the word. The GUI maker hands
+# them to her brain with every batch. Blank means not decided yet. Edit any of them; it is the one place to fix a term.
+Refresh	Atualizar
+Settings	Configurações
+Provider	Provedor
+Saved providers	
+Local servers	
+Fallback brain	Cérebro de fallback
+Voice	
+Mic	
+Mods	Mods
+Music	Música
+Chess	Xadrez
+Connect four	Quatro em linha
+Tic-tac-toe	Jogo do galo
+Rock, paper, scissors	Pedra, papel, tesoura
+Quiet	
+Check in on me	Ver se estou bem
+Watch my screen	Ver minha tela
+Personality	Personalidade
+Mood	
+Hide Capri	Ocultar Capri
+Open	
+Close	
+Off	Desligado
+On	Ligado

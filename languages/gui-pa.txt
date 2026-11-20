@@ -1,0 +1,206 @@
+# Her menus and labels in Punjabi: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe ਖੋਲ੍ਹੋ
+Her folder	ਉਸਦਾ ਫੋਲਡਰ
+Play	ਚਲਾਓ
+Music	ਸੰਗੀਤ
+Chess	ਸ਼ਤਰੰਜ
+Connect four	ਚਾਰ ਕਤਾਰ
+Tic-tac-toe	Tic-tac-toe
+Rock, paper, scissors	ਪੱਥਰ, ਕਾਗਜ਼, ਕੈਂਚੀ
+Hide Capri	Capri ਲੁਕਾਓ
+Hologram	ਹੋਲੋਗ੍ਰਾਮ
+Normal	ਆਮ
+Small	ਛੋਟਾ
+Medium	ਮੱਧਮ
+Large	ਵੱਡੀ
+Huge	ਬਹੁਤ ਵੱਡਾ
+Giant	ਵਿਸ਼ਾਲ
+Move	ਲਿਜਾਓ
+Wander around	ਆਲੇ-ਦੁਆਲੇ ਘੁੰਮੋ
+Dance to music	ਸੰਗੀਤ 'ਤੇ ਨੱਚੋ
+Dance	ਨੱਚੋ
+Ride cursor	ਕਰਸਰ 'ਤੇ ਸਵਾਰੀ
+Sit on windows	ਖਿੜਕੀਆਂ 'ਤੇ ਬੈਠੋ
+Sit here	ਇੱਥੇ ਬੈਠੋ
+Hang here	ਇੱਥੇ ਰਹੋ
+Lie down	ਲੇਟ ਜਾਓ
+Go to sleep	ਸੌਣ ਜਾਓ
+Bring to this screen	ਇਸ ਸਕ੍ਰੀਨ 'ਤੇ ਲਿਆਓ
+Go to the next screen	ਅਗਲੀ ਸਕ੍ਰੀਨ 'ਤੇ ਜਾਓ
+Black	ਕਾਲਾ
+White	ਚਿੱਟਾ
+Test	ਟੈਸਟ
+Stop	ਰੋਕੋ
+Help	ਮਦਦ
+Commands	ਕਮਾਂਡਾਂ
+Help page	ਮਦਦ ਪੰਨਾ
+Join the Discord	Discord ਨਾਲ ਜੁੜੋ
+Copy error details	ਗਲਤੀ ਦਾ ਵੇਰਵਾ ਕਾਪੀ ਕਰੋ
+Check for updates	ਅਪਡੇਟਾਂ ਲਈ ਜਾਂਚ ਕਰੋ
+Quit Capri	Capri ਛੱਡੋ
+MAINFRAME	MAINFRAME
+Settings	Settings
+Mods	Mods
+BRAIN	ਦਿਮਾਗ
+Provider	ਪ੍ਰਦਾਤਾ
+Using your server with no key	ਬਿਨਾਂ ਕੁੰਜੀ ਤੁਹਾਡਾ ਸਰਵਰ ਵਰਤ ਰਹੀ ਹਾਂ
+Refresh	Refresh
+Set up her brain	ਉਸਦਾ ਦਿਮਾਗ ਸੈੱਟ ਕਰੋ
+Have Ollama? Open it, then press Refresh.	ਕੀ ਤੁਹਾਡੇ ਕੋਲ Ollama ਹੈ? ਇਸਨੂੰ ਖੋਲ੍ਹੋ, ਫਿਰ Refresh ਦਬਾਓ।
+Pick one. Only one brain runs at a time.	ਇੱਕ ਚੁਣੋ। ਇੱਕ ਸਮੇਂ ਸਿਰਫ਼ ਇੱਕ ਦਿਮਾਗ ਚੱਲਦਾ ਹੈ।
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Off
+Free key	ਮੁਫ਼ਤ ਕੁੰਜੀ
+Connect	ਜੋੜੋ
+Free keys can be rate limited and slow.	ਮੁਫ਼ਤ ਕੁੰਜੀਆਂ 'ਤੇ ਦਰ ਸੀਮਾ ਅਤੇ ਹੌਲੀ ਹੋ ਸਕਦੀ ਹੈ।
+That's a paid key: it goes under MAX INTELLIGENCE.	ਇਹ ਇੱਕ ਅਦਾਇਗੀ ਕੁੰਜੀ ਹੈ: ਇਹ MAX INTELLIGENCE ਹੇਠਾਂ ਜਾਂਦੀ ਹੈ।
+Move to MAX	MAX 'ਤੇ ਲਿਜਾਓ
+VOICE	VOICE
+Ctrl + Alt + V to talk	ਗੱਲ ਕਰਨ ਲਈ Ctrl + Alt + V
+PREBUILT LOCAL	PREBUILT LOCAL
+CUSTOM LOCAL	ਕਸਟਮ ਲੋਕਲ
+CLOUD VOICE	CLOUD ਆਵਾਜ਼
+Set up	ਸੈੱਟਅੱਪ
+Setup guide	ਸੈੱਟਅੱਪ ਗਾਈਡ
+Fish Audio	Fish Audio
+Default model	ਡਿਫਾਲਟ ਮਾਡਲ
+Pick a voice model	ਆਵਾਜ਼ ਮਾਡਲ ਚੁਣੋ
+Get free voice	ਮੁਫ਼ਤ ਆਵਾਜ਼ ਲਵੋ
+Mic: default	ਮਾਈਕ: ਡਿਫਾਲਟ
+Her speaker: Default	ਉਸਦਾ ਸਪੀਕਰ: ਡਿਫਾਲਟ
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N ਮਾਈਕ ਮਿਊਟ ਕਰਦਾ ਹੈ
+CAPRI	CAPRI
+Support	ਸਹਾਇਤਾ
+Remote	Remote
+Bring here	ਇੱਥੇ ਲਿਆਓ
+Advanced Settings	ਐਡਵਾਂਸਡ ਸੈਟਿੰਗਾਂ
+YOU	ਤੁਸੀਂ
+Your personality	ਤੁਹਾਡੀ ਸ਼ਖ਼ਸੀਅਤ
+Language	ਭਾਸ਼ਾ
+English	ਅੰਗਰੇਜ਼ੀ
+What should she call you?	ਉਸਨੂੰ ਤੁਹਾਨੂੰ ਕੀ ਕਹਿਣਾ ਚਾਹੀਦਾ ਹੈ?
+Save	ਸੰਭਾਲੋ
+Volume	Volume
+Pitch	ਪਿੱਚ
+Speed	ਸਪੀਡ
+Robot	Robot
+Glitch	Glitch
+Sounds	ਆਵਾਜ਼ਾਂ
+Typing sound	ਟਾਈਪਿੰਗ ਦੀ ਆਵਾਜ਼
+Listen for Capri	Capri ਨੂੰ ਸੁਣੋ
+Hearing	ਸੁਣਨਾ
+Auto	ਆਟੋ
+Free voice in games	ਖੇਡਾਂ ਵਿੱਚ ਮੁਫ਼ਤ ਆਵਾਜ਼
+Call mode (beta)	ਕਾਲ ਮੋਡ (beta)
+Her voice in your mic	ਤੁਹਾਡੇ ਮਾਈਕ ਵਿੱਚ ਉਸਦੀ ਆਵਾਜ਼
+Get VB-CABLE	VB-CABLE ਲਵੋ
+How to	ਕਿਵੇਂ
+Her voice in your mic: loudness	ਤੁਹਾਡੇ ਮਾਈਕ ਵਿੱਚ ਉਸਦੀ ਆਵਾਜ਼: ਲਾਊਡਨੈੱਸ
+MOVES	MOVES
+Pop-in times	Pop-in ਸਮੇਂ
+Mini player	Mini player
+Wander	Wander
+Sleep	ਸੌਂ ਜਾਓ
+Pop-ins	Pop-ins
+Glitch in at startup	ਸ਼ੁਰੂ ਹੋਣ 'ਤੇ Glitch
+KEYS	ਕੁੰਜੀਆਂ
+Talk: Ctrl + Alt + V	Talk: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Mute mic: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Type: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	ਲੁਕਾਓ/ਦਿਖਾਓ: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Quiet: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Gaming Mode: Ctrl + Alt + G
+Confirm	ਪੱਕਾ ਕਰੋ
+Cancel	ਰੱਦ ਕਰੋ
+Size	ਆਕਾਰ
+Check in on me	ਮੇਰੀ ਹਾਲ ਚਾਲ ਪੁੱਛੋ
+Edit check-in lines	ਚੈੱਕ-ਇਨ ਲਾਈਨਾਂ ਸੰਪਾਦਿਤ ਕਰੋ
+Always on top	ਹਮੇਸ਼ਾ ਸਭ ਤੋਂ ਉੱਪਰ
+Mainframe size	Mainframe ਆਕਾਰ
+Mainframe colours	Mainframe ਰੰਗ
+Head pats	ਸਿਰ 'ਤੇ ਥਪਕੀ
+Pat stroke	ਸਿਰ ਪਲੋਸਣਾ
+Chaos when upset	ਗੁੱਸੇ ਹੋਣ 'ਤੇ ਹਫੜਾ-ਦਫੜੀ
+Legacy stand	Legacy stand
+Jealous of other AIs	ਹੋਰ AI ਤੋਂ ਈਰਖਾ
+Teases when another AI comes to the front.	ਜਦੋਂ ਕੋਈ ਹੋਰ AI ਅੱਗੇ ਆਉਂਦਾ ਹੈ ਤਾਂ ਛੇੜਦੀ ਹੈ।
+Close other AIs for me	ਮੇਰੇ ਲਈ ਹੋਰ AI ਬੰਦ ਕਰੋ
+Asks before closing only the apps you choose.	ਸਿਰਫ਼ ਚੁਣੀਆਂ ਐਪਾਂ ਬੰਦ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਪੁੱਛਦੀ ਹੈ।
+Apps she may close	ਐਪਾਂ ਜੋ ਉਹ ਬੰਦ ਕਰ ਸਕਦੀ ਹੈ
+Choose apps	ਐਪਾਂ ਚੁਣੋ
+WATCH	WATCH
+Watch my screen	ਮੇਰੀ ਸਕ੍ਰੀਨ ਦੇਖੋ
+Screens	ਸਕ੍ਰੀਨਾਂ
+All screens	ਸਾਰੀਆਂ ਸਕ੍ਰੀਨਾਂ
+Remember what she sees	ਜੋ ਉਹ ਦੇਖਦੀ ਹੈ ਉਹ ਯਾਦ ਰੱਖੋ
+Every	ਹਰ
+Watch-along memory	Watch-along memory
+Code/Husk Mode	Code/Husk ਮੋਡ
+Thinking	ਸੋਚ ਰਹੀ ਹਾਂ
+Default	ਡਿਫਾਲਟ
+Extra request JSON	Extra request JSON
+Add	ਸ਼ਾਮਲ ਕਰੋ
+Verbosity	Verbosity
+Replies	Replies
+Memory	ਯਾਦਦਾਸ਼ਤ
+Memory size	ਯਾਦਦਾਸ਼ਤ ਦਾ ਆਕਾਰ
+Max reply	ਵੱਧ ਤੋਂ ਵੱਧ ਜਵਾਬ
+Bubble	ਬੱਬਲ
+Follow-up messages	ਫ਼ਾਲੋ-ਅੱਪ ਸੁਨੇਹੇ
+Use	ਵਰਤੋ
+A model in Ollama, on your local server or on your key.	Ollama ਵਿੱਚ ਇੱਕ ਮਾਡਲ, ਤੁਹਾਡੇ ਲੋਕਲ ਸਰਵਰ 'ਤੇ ਜਾਂ ਤੁਹਾਡੀ ਕੁੰਜੀ ਨਾਲ।
+HABITS	ਆਦਤਾਂ
+Open her memories	ਉਸਦੀਆਂ ਯਾਦਾਂ ਖੋਲ੍ਹੋ
+Start with Windows	Windows ਨਾਲ ਸ਼ੁਰੂ ਕਰੋ
+Show on Discord	Discord 'ਤੇ ਦਿਖਾਓ
+Use her cursor	ਉਸਦਾ cursor ਵਰਤੋ
+Remember our chats	ਸਾਡੀਆਂ ਗੱਲਾਂ ਯਾਦ ਰੱਖੋ
+Power saver	ਪਾਵਰ ਸੇਵਰ
+Music app	Music app
+Perch	ਪਰਚ
+Keep PC awake for jobs	ਕੰਮਾਂ ਲਈ PC ਜਾਗਦਾ ਰੱਖੋ
+Hide in full screen	ਫੁੱਲ ਸਕ੍ਰੀਨ ਵਿੱਚ ਲੁਕਾਓ
+Mini player over full screen	Mini player ਫੁੱਲ ਸਕ੍ਰੀਨ 'ਤੇ
+Explore while I'm away	ਜਦੋਂ ਮੈਂ ਦੂਰ ਹਾਂ ਤਾਂ ਖੋਜੋ
+Explore after	ਬਾਅਦ ਵਿੱਚ ਖੋਜੋ
+GAMES	ਖੇਡਾਂ
+Controls	ਕੰਟਰੋਲ
+Comments	ਟਿੱਪਣੀਆਂ
+Live reactions	ਲਾਈਵ ਪ੍ਰਤੀਕਿਰਿਆਵਾਂ
+Game sounds	ਖੇਡ ਆਵਾਜ਼ਾਂ
+Gaming Mode	Gaming Mode
+She reacts to your game until you close it.	ਤੁਹਾਡੇ ਗੇਮ ਬੰਦ ਕਰਨ ਤੱਕ ਉਹ ਤੁਹਾਡੀ ਖੇਡ 'ਤੇ ਪ੍ਰਤੀਕਿਰਿਆ ਦਿੰਦੀ ਹੈ।
+Works best on MAX INTELLIGENCE.	MAX INTELLIGENCE 'ਤੇ ਸਭ ਤੋਂ ਵਧੀਆ ਚੱਲਦਾ ਹੈ।
+Fast hands in games	ਖੇਡਾਂ ਵਿੱਚ ਤੇਜ਼ ਹੱਥ
+Mute her	ਉਸਨੂੰ ਮਿਊਟ ਕਰੋ
+CLIPS	ਕਲਿੱਪ
+Clip my games	ਮੇਰੀਆਂ ਖੇਡਾਂ ਦੀ ਕਲਿੱਪ ਬਣਾਓ
+Save big moments	ਵੱਡੇ ਪਲ ਸੰਭਾਲੋ
+Save folder	ਸੰਭਾਲਣ ਵਾਲਾ ਫੋਲਡਰ
+Choose folder	ਫੋਲਡਰ ਚੁਣੋ
+Open clips folder	clips ਫੋਲਡਰ ਖੋਲ੍ਹੋ
+Default length	ਡਿਫਾਲਟ ਲੰਬਾਈ
+Frame rate	ਫ੍ਰੇਮ ਰੇਟ
+Resolution	Resolution
+Video bitrate	Video bitrate
+Weather	ਮੌਸਮ
+Code mods can reach your whole PC. Only trusted ones.	ਕੋਡ mods ਤੁਹਾਡੇ ਪੂਰੇ PC ਤੱਕ ਪਹੁੰਚ ਸਕਦੇ ਹਨ। ਸਿਰਫ਼ ਭਰੋਸੇਮੰਦ।
+Import mod	Mod ਇੰਪੋਰਟ ਕਰੋ
+Browse mods	Mods ਬ੍ਰਾਊਜ਼ ਕਰੋ
+Mods folder	Mods ਫੋਲਡਰ
+INSTALLED	INSTALLED
+Update mods	Mods ਅਪਡੇਟ ਕਰੋ
+No mods match.	ਕੋਈ mod ਮੇਲ ਨਹੀਂ ਖਾਂਦਾ।
+On	On
+Remove	ਹਟਾਓ
+Publish	ਪ੍ਰਕਾਸ਼ਿਤ ਕਰੋ
+Options	ਵਿਕਲਪ
+Back	ਪਿੱਛੇ
+Next	ਅਗਲਾ
+COLORS	ਰੰਗ
+Reset colors	ਰੰਗ ਰੀਸੈੱਟ ਕਰੋ
+Running on this PC	ਇਸ PC 'ਤੇ ਚੱਲ ਰਿਹਾ ਹੈ
+NORMAL	ਆਮ
+OFF	OFF
+Local server address	ਲੋਕਲ ਸਰਵਰ ਪਤਾ

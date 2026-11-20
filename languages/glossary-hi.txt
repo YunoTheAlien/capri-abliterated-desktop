@@ -1,0 +1,26 @@
+# Words Hindi always uses for these terms: the English, a tab, then the word. The GUI maker hands
+# them to her brain with every batch. Blank means not decided yet. Edit any of them; it is the one place to fix a term.
+Refresh	रीफ़्रेश
+Settings	सेटिंग्स
+Provider	प्रदाता
+Saved providers	
+Local servers	
+Fallback brain	फॉलबैक मस्तिष्क
+Voice	
+Mic	
+Mods	मॉड
+Music	संगीत
+Chess	शतरंज
+Connect four	कनेक्ट फोर
+Tic-tac-toe	टिक-टैक-टो
+Rock, paper, scissors	रॉक, पेपर, सिज़र्स
+Quiet	
+Check in on me	मेरे बारे में जाँच करें
+Watch my screen	मेरी स्क्रीन देखें
+Personality	व्यक्तित्व
+Mood	
+Hide Capri	Capri छिपाएँ
+Open	
+Close	
+Off	बंद
+On	चालू

@@ -27,6 +27,7 @@ namespace CapriDesktop
                 LayoutScale(96, 100);
                 SizeMainframe(100);
                 int covered = 0;
+                List<string> missing = new List<string>();
                 foreach (bool advanced in new[] { false, true })
                 {
                     if (capri.AdvancedSettings != advanced) capri.ToggleAdvancedSettings();
@@ -38,7 +39,13 @@ namespace CapriDesktop
                             bool setting = control is Key || control is Toggle || control is Slider || control is Rung || control is Entry;
                             if (!setting) continue;
                             SettingHint row;
-                            if (!hints.TryGetValue(control, out row)) throw new Exception("Mainframe tip missing: " + (control.AccessibleName ?? control.Text));
+                            // Every gap is gathered first, so one run names them all.
+                            if (!hints.TryGetValue(control, out row))
+                            {
+                                string gap = control.AccessibleName ?? control.Text;
+                                if (!missing.Contains(gap)) missing.Add(gap);
+                                continue;
+                            }
                             if (row.Topic.Facts.Trim().Length < 25 || SelfKnow.Setting(row.Topic.File, row.Topic.Label) != row.Topic)
                                 throw new Exception("Mainframe tip has no real SelfKnow topic: " + row.Title);
                             CheckHintText(row);
@@ -48,6 +55,7 @@ namespace CapriDesktop
                         }
                     }
                 }
+                if (missing.Count > 0) throw new Exception("Mainframe tips missing (" + missing.Count + "): " + string.Join(" | ", missing.ToArray()));
                 checks.Add("PASS Mainframe tips: every switch, slider, picker, entry and button on the main page and in Simple and Advanced Settings has real SelfKnow text, including hidden variants and input children (" + covered + " shown controls checked)");
 
                 int oldVolume = volume.Value;

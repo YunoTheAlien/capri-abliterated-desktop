@@ -1,0 +1,206 @@
+# Her menus and labels in Filipino: the English, a tab, then the translation.
+Open Capri Mainframe	Buksan ang Capri Mainframe
+Her folder	Folder niya
+Play	Play
+Music	Music
+Chess	Chess
+Connect four	Connect four
+Tic-tac-toe	Tic-tac-toe
+Rock, paper, scissors	Rock, paper, scissors
+Hide Capri	Itago si Capri
+Hologram	Hologram
+Normal	Normal
+Small	Small
+Medium	Medium
+Large	Large
+Huge	Napakalaki
+Giant	Napakalaki
+Move	Move
+Wander around	Gumala
+Dance to music	Sumayaw sa musika
+Dance	Sayaw
+Ride cursor	Ride cursor
+Sit on windows	Maupo sa mga bintana
+Sit here	Maupo dito
+Hang here	Dito lang tumambay
+Lie down	Humiga
+Go to sleep	Matulog na
+Bring to this screen	Dalhin sa screen na ito
+Go to the next screen	Pumunta sa susunod na screen
+Black	Itim
+White	White
+Test	Test
+Stop	Stop
+Help	Help
+Commands	Commands
+Help page	Help page
+Join the Discord	Sumali sa Discord
+Copy error details	Kopyahin ang error details
+Check for updates	Tingnan ang mga update
+Quit Capri	Isara si Capri
+MAINFRAME	MAINFRAME
+Settings	Settings
+Mods	Mods
+BRAIN	BRAIN
+Provider	Provider
+Using your server with no key	Ginagamit ang server mo nang walang key
+Refresh	Refresh
+Set up her brain	Itakda ang brain niya
+Have Ollama? Open it, then press Refresh.	May Ollama ka ba? Buksan ito, saka pindutin ang Refresh.
+Pick one. Only one brain runs at a time.	Pumili ng isa. Isa lang ang brain na tumatakbo sa isang pagkakataon.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Off
+Free key	Libreng key
+Connect	Connect
+Free keys can be rate limited and slow.	Maaaring limitado at mabagal ang mga libreng key.
+That's a paid key: it goes under MAX INTELLIGENCE.	Bayad na key iyon: mapupunta ito sa MAX INTELLIGENCE.
+Move to MAX	Ilipat sa MAX
+VOICE	VOICE
+Ctrl + Alt + V to talk	Ctrl + Alt + V para magsalita
+PREBUILT LOCAL	PREBUILT LOCAL
+CUSTOM LOCAL	CUSTOM LOCAL
+CLOUD VOICE	CLOUD VOICE
+Set up	Itakda
+Setup guide	Setup guide
+Fish Audio	Fish Audio
+Default model	Default model
+Pick a voice model	Pumili ng voice model
+Get free voice	Kunin ang libreng boses
+Mic: default	Mic: default
+Her speaker: Default	Speaker niya: Default
+Ctrl + Alt + N mutes mic	Pinapatay ng Ctrl + Alt + N ang mic
+CAPRI	CAPRI
+Support	Support
+Remote	Remote
+Bring here	Dalhin dito
+Advanced Settings	Advanced Settings
+YOU	IKAW
+Your personality	Personalidad mo
+Language	Language
+English	English
+What should she call you?	Ano ang itatawag niya sa iyo?
+Save	Save
+Volume	Volume
+Pitch	Pitch
+Speed	Speed
+Robot	Robot
+Glitch	Glitch
+Sounds	Sounds
+Typing sound	Typing sound
+Listen for Capri	Makinig kay Capri
+Hearing	Hearing
+Auto	Auto
+Free voice in games	Libreng boses sa mga laro
+Call mode (beta)	Call mode (beta)
+Her voice in your mic	Boses niya sa mic mo
+Get VB-CABLE	Kunin ang VB-CABLE
+How to	Paano
+Her voice in your mic: loudness	Boses niya sa mic mo: loudness
+MOVES	MOVES
+Pop-in times	Oras ng pop-in
+Mini player	Mini player
+Wander	Wander
+Sleep	Sleep
+Pop-ins	Pop-ins
+Glitch in at startup	Glitch sa startup
+KEYS	KEYS
+Talk: Ctrl + Alt + V	Talk: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Mute mic: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Type: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Hide/show: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Quiet: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Gaming Mode: Ctrl + Alt + G
+Confirm	Confirm
+Cancel	Kanselahin
+Size	Size
+Check in on me	Kumustahin mo ako
+Edit check-in lines	I-edit ang check-in lines
+Always on top	Palaging nasa ibabaw
+Mainframe size	Mainframe size
+Mainframe colours	Mainframe colours
+Head pats	Head pats
+Pat stroke	Haplos sa ibabaw
+Chaos when upset	Chaos kapag naiinis
+Legacy stand	Legacy stand
+Jealous of other AIs	Nagseselos sa ibang AI
+Teases when another AI comes to the front.	Inaasar kapag may ibang AI na pumasok sa harapan.
+Close other AIs for me	Isara ang ibang AI para sa akin
+Asks before closing only the apps you choose.	Nagtatanong bago isara ang mga app na pipiliin mo lang.
+Apps she may close	Mga app na maaari niyang isara
+Choose apps	Pumili ng apps
+WATCH	WATCH
+Watch my screen	Panoorin ang screen ko
+Screens	Screens
+All screens	Lahat ng screen
+Remember what she sees	Alalahanin ang nakikita niya
+Every	Bawat
+Watch-along memory	Memory ng panonood nang magkasama
+Code/Husk Mode	Code/Husk Mode
+Thinking	Nag-iisip
+Default	Default
+Extra request JSON	Extra request JSON
+Add	Idagdag
+Verbosity	Verbosity
+Replies	Replies
+Memory	Memory
+Memory size	Memory size
+Max reply	Max reply
+Bubble	Bubble
+Follow-up messages	Follow-up messages
+Use	Gamitin
+A model in Ollama, on your local server or on your key.	Isang model sa Ollama, sa local server mo o gamit ang key mo.
+HABITS	HABITS
+Open her memories	Buksan ang mga alaala niya
+Start with Windows	Magsimula kasabay ng Windows
+Show on Discord	Ipakita sa Discord
+Use her cursor	Gamitin ang cursor niya
+Remember our chats	Alalahanin ang mga chat natin
+Power saver	Power saver
+Music app	Music app
+Perch	Perch
+Keep PC awake for jobs	Panatilihing gising ang PC para sa mga jobs
+Hide in full screen	Itago sa full screen
+Mini player over full screen	Mini player sa ibabaw ng full screen
+Explore while I'm away	Mag-explore habang wala ako
+Explore after	Mag-explore pagkatapos
+GAMES	GAMES
+Controls	Controls
+Comments	Comments
+Live reactions	Live reactions
+Game sounds	Game sounds
+Gaming Mode	Gaming Mode
+She reacts to your game until you close it.	Tumutugon siya sa laro mo hanggang isara mo ito.
+Works best on MAX INTELLIGENCE.	Pinakamahusay sa MAX INTELLIGENCE.
+Fast hands in games	Mabilis na kamay sa mga laro
+Mute her	I-mute siya
+CLIPS	CLIPS
+Clip my games	I-clip ang mga laro ko
+Save big moments	I-save ang malalaking sandali
+Save folder	Save folder
+Choose folder	Pumili ng folder
+Open clips folder	Buksan ang clips folder
+Default length	Default na haba
+Frame rate	Frame rate
+Resolution	Resolution
+Video bitrate	Video bitrate
+Weather	Weather
+Code mods can reach your whole PC. Only trusted ones.	Maaaring abutin ng code mods ang buong PC mo. Mga pinagkakatiwalaan lang.
+Import mod	Import mod
+Browse mods	Mag-browse ng mods
+Mods folder	Mods folder
+INSTALLED	INSTALLED
+Update mods	I-update ang mods
+No mods match.	Walang mods na tumutugma.
+On	On
+Remove	Alisin
+Publish	Publish
+Options	Options
+Back	Bumalik
+Next	Next
+COLORS	COLORS
+Reset colors	I-reset ang mga kulay
+Running on this PC	Tumatakbo sa PC na ito
+NORMAL	NORMAL
+OFF	OFF
+Local server address	Local server address

@@ -41,6 +41,8 @@ namespace CapriDesktop
                     Desk desk = new X11Desk();
                     if (Environment.GetEnvironmentVariable("WAYLAND_DISPLAY") == null) return desk;
                     if (Program.Smoke == null && KWinBridge.Start()) return new KWinDesk { HeldAt = desk.Pointer };
+                    // GNOME: her own window helper. Until GNOME has it loaded this sees no windows, like the bare desk.
+                    if (Program.Smoke == null && GnomeBridge.Wanted) { GnomeBridge.Start(); return new GnomeDesk { HeldAt = desk.Pointer }; }
                     return new BareDesk { HeldAt = desk.Pointer };
                 }
             }

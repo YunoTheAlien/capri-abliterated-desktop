@@ -1,0 +1,206 @@
+# Her menus and labels in Norwegian: the English, a tab, then the translation.
+Open Capri Mainframe	Åpne Capri Mainframe
+Her folder	Hennes mappe
+Play	Spill av
+Music	Musikk
+Chess	Sjakk
+Connect four	Fire på rad
+Tic-tac-toe	Tre på rad
+Rock, paper, scissors	Stein, saks, papir
+Hide Capri	Skjul Capri
+Hologram	Hologram
+Normal	Normal
+Small	Liten
+Medium	Medium
+Large	Stor
+Huge	Enorm
+Giant	Gigantisk
+Move	Flytt
+Wander around	Vandre rundt
+Dance to music	Dans til musikk
+Dance	Dans
+Ride cursor	Ri markøren
+Sit on windows	Sitt på vinduer
+Sit here	Sett deg her
+Hang here	Heng her
+Lie down	Legg deg ned
+Go to sleep	Gå og legg deg
+Bring to this screen	Hent til denne skjermen
+Go to the next screen	Gå til neste skjerm
+Black	Svart
+White	Hvit
+Test	Test
+Stop	Stopp
+Help	Hjelp
+Commands	Kommandoer
+Help page	Hjelpeside
+Join the Discord	Bli med i Discord
+Copy error details	Kopier feildetaljer
+Check for updates	Se etter oppdateringer
+Quit Capri	Avslutt Capri
+MAINFRAME	MAINFRAME
+Settings	Innstillinger
+Mods	Mods
+BRAIN	HJERNE
+Provider	Leverandør
+Using your server with no key	Bruker serveren din uten nøkkel
+Refresh	Oppdater
+Set up her brain	Sett opp hennes hjerne
+Have Ollama? Open it, then press Refresh.	Har du Ollama? Åpne det, og trykk Oppdater.
+Pick one. Only one brain runs at a time.	Velg én. Bare én hjerne kjører om gangen.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Av
+Free key	Gratis nøkkel
+Connect	Koble til
+Free keys can be rate limited and slow.	Gratis nøkler kan være begrenset og trege.
+That's a paid key: it goes under MAX INTELLIGENCE.	Det er en betalt nøkkel: den havner under MAX INTELLIGENCE.
+Move to MAX	Flytt til MAX
+VOICE	STEMME
+Ctrl + Alt + V to talk	Ctrl + Alt + V for å snakke
+PREBUILT LOCAL	FERDIG LOKAL
+CUSTOM LOCAL	EGEN LOKAL
+CLOUD VOICE	SKYSTEMME
+Set up	Sett opp
+Setup guide	Oppsettguide
+Fish Audio	Fish Audio
+Default model	Standardmodell
+Pick a voice model	Velg en stemmemodell
+Get free voice	Hent gratis stemme
+Mic: default	Mikrofon: standard
+Her speaker: Default	Hennes høyttaler: Standard
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N demper mikrofonen
+CAPRI	CAPRI
+Support	Støtte
+Remote	Fjern
+Bring here	Hent hit
+Advanced Settings	Avanserte innstillinger
+YOU	DEG
+Your personality	Din personlighet
+Language	Språk
+English	Engelsk
+What should she call you?	Hva skal hun kalle deg?
+Save	Lagre
+Volume	Volum
+Pitch	Tonehøyde
+Speed	Hastighet
+Robot	Robot
+Glitch	Glitch
+Sounds	Lyder
+Typing sound	Skrivelyd
+Listen for Capri	Lytt etter Capri
+Hearing	Hørsel
+Auto	Auto
+Free voice in games	Gratis stemme i spill
+Call mode (beta)	Anropsmodus (beta)
+Her voice in your mic	Hennes stemme i mikrofonen din
+Get VB-CABLE	Hent VB-CABLE
+How to	Hvordan
+Her voice in your mic: loudness	Hennes stemme i mikrofonen din: lydstyrke
+MOVES	BEVEGELSER
+Pop-in times	Innstikkstider
+Mini player	Minispiller
+Wander	Vandre
+Sleep	Sov
+Pop-ins	Innstikk
+Glitch in at startup	Glitch ved oppstart
+KEYS	NØKLER
+Talk: Ctrl + Alt + V	Snakk: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Demp mikrofon: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Skriv: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Skjul/vis: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Stille: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Spillmodus: Ctrl + Alt + G
+Confirm	Bekreft
+Cancel	Avbryt
+Size	Størrelse
+Check in on me	Sjekk inn hos meg
+Edit check-in lines	Rediger innsjekkingslinjer
+Always on top	Alltid øverst
+Mainframe size	Mainframe-størrelse
+Mainframe colours	Mainframe-farger
+Head pats	Klapp på hodet
+Pat stroke	Klappestrøk
+Chaos when upset	Kaos når hun er sur
+Legacy stand	Gammelt stativ
+Jealous of other AIs	Sjalu på andre KI-er
+Teases when another AI comes to the front.	Erter når en annen KI kommer foran.
+Close other AIs for me	Lukk andre KI-er for meg
+Asks before closing only the apps you choose.	Spør før den lukker bare appene du velger.
+Apps she may close	Apper hun kan lukke
+Choose apps	Velg apper
+WATCH	SE
+Watch my screen	Se på skjermen min
+Screens	Skjermer
+All screens	Alle skjermer
+Remember what she sees	Husk hva hun ser
+Every	Hver
+Watch-along memory	Felles titteminne
+Code/Husk Mode	Kode/Husk-modus
+Thinking	Tenker
+Default	Standard
+Extra request JSON	Ekstra forespørsel-JSON
+Add	Legg til
+Verbosity	Ordrikhet
+Replies	Svar
+Memory	Minne
+Memory size	Minnestørrelse
+Max reply	Maks svar
+Bubble	Boble
+Follow-up messages	Oppfølgingsmeldinger
+Use	Bruk
+A model in Ollama, on your local server or on your key.	En modell i Ollama, på din lokale server eller med din nøkkel.
+HABITS	VANER
+Open her memories	Åpne hennes minner
+Start with Windows	Start med Windows
+Show on Discord	Vis på Discord
+Use her cursor	Bruk hennes markør
+Remember our chats	Husk samtalene våre
+Power saver	Strømsparing
+Music app	Musikkapp
+Perch	Sittested
+Keep PC awake for jobs	Hold PC-en våken for jobber
+Hide in full screen	Skjul i fullskjerm
+Mini player over full screen	Minispiller over fullskjerm
+Explore while I'm away	Utforsk mens jeg er borte
+Explore after	Utforsk etter
+GAMES	SPILL
+Controls	Kontroller
+Comments	Kommentarer
+Live reactions	Direktereaksjoner
+Game sounds	Spilllyder
+Gaming Mode	Spillmodus
+She reacts to your game until you close it.	Hun reagerer på spillet ditt til du lukker det.
+Works best on MAX INTELLIGENCE.	Fungerer best med MAX INTELLIGENCE.
+Fast hands in games	Raske hender i spill
+Mute her	Demp henne
+CLIPS	KLIPP
+Clip my games	Klipp spillene mine
+Save big moments	Lagre store øyeblikk
+Save folder	Lagringsmappe
+Choose folder	Velg mappe
+Open clips folder	Åpne klippmappen
+Default length	Standard lengde
+Frame rate	Bildefrekvens
+Resolution	Oppløsning
+Video bitrate	Videobitrate
+Weather	Vær
+Code mods can reach your whole PC. Only trusted ones.	Kodemods kan nå hele PC-en din. Bare pålitelige.
+Import mod	Importer mod
+Browse mods	Bla gjennom mods
+Mods folder	Mods-mappe
+INSTALLED	INSTALLERT
+Update mods	Oppdater mods
+No mods match.	Ingen mods samsvarer.
+On	På
+Remove	Fjern
+Publish	Publiser
+Options	Alternativer
+Back	Tilbake
+Next	Neste
+COLORS	FARGER
+Reset colors	Tilbakestill farger
+Running on this PC	Kjører på denne PC-en
+NORMAL	NORMAL
+OFF	AV
+Local server address	Lokal serveradresse

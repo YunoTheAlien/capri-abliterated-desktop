@@ -1,0 +1,206 @@
+# Her menus and labels in Serbian: the English, a tab, then the translation.
+Open Capri Mainframe	Otvori Capri Mainframe
+Her folder	Njena fascikla
+Play	Pusti
+Music	Muzika
+Chess	Šah
+Connect four	Četiri u nizu
+Tic-tac-toe	Iks-oks
+Rock, paper, scissors	Kamen, papir, makaze
+Hide Capri	Sakrij Capri
+Hologram	Hologram
+Normal	Normalno
+Small	Malo
+Medium	Srednje
+Large	Veliko
+Huge	Ogromno
+Giant	Ogroman
+Move	Pomeri
+Wander around	Luta okolo
+Dance to music	Pleši uz muziku
+Dance	Pleši
+Ride cursor	Jaši kursor
+Sit on windows	Sedi na prozorima
+Sit here	Sedi ovde
+Hang here	Ostani ovde
+Lie down	Lezi
+Go to sleep	Idi da spavaš
+Bring to this screen	Dovedi na ovaj ekran
+Go to the next screen	Idi na sledeći ekran
+Black	Crna
+White	Bela
+Test	Test
+Stop	Zaustavi
+Help	Pomoć
+Commands	Komande
+Help page	Stranica pomoći
+Join the Discord	Pridruži se Discordu
+Copy error details	Kopiraj detalje greške
+Check for updates	Proveri ažuriranja
+Quit Capri	Izađi iz Capri
+MAINFRAME	MAINFRAME
+Settings	Podešavanja
+Mods	Modovi
+BRAIN	MOZAK
+Provider	Provajder
+Using your server with no key	Koristim tvoj server bez ključa
+Refresh	Osveži
+Set up her brain	Podesi njen mozak
+Have Ollama? Open it, then press Refresh.	Imaš Ollama? Otvori je, pa pritisni Osveži.
+Pick one. Only one brain runs at a time.	Izaberi jedan. Samo jedan mozak radi istovremeno.
+MEDIUM INTELLIGENCE	SREDNJA INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Isključeno
+Free key	Besplatan ključ
+Connect	Poveži
+Free keys can be rate limited and slow.	Besplatni ključevi mogu biti ograničeni i spori.
+That's a paid key: it goes under MAX INTELLIGENCE.	To je plaćeni ključ: ide pod MAX INTELLIGENCE.
+Move to MAX	Pomeri na MAX
+VOICE	GLAS
+Ctrl + Alt + V to talk	Ctrl + Alt + V za govor
+PREBUILT LOCAL	UNAPRED PODEŠEN LOKALNI
+CUSTOM LOCAL	PRILAGOĐENI LOKALNI
+CLOUD VOICE	GLAS U OBLAKU
+Set up	Podesi
+Setup guide	Vodič za podešavanje
+Fish Audio	Fish Audio
+Default model	Podrazumevani model
+Pick a voice model	Izaberi model glasa
+Get free voice	Nabavi besplatan glas
+Mic: default	Mikrofon: podrazumevano
+Her speaker: Default	Njen zvučnik: Podrazumevano
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N isključuje mikrofon
+CAPRI	CAPRI
+Support	Podrška
+Remote	Daljinski
+Bring here	Dovedi ovamo
+Advanced Settings	Napredna podešavanja
+YOU	TI
+Your personality	Tvoja ličnost
+Language	Jezik
+English	Engleski
+What should she call you?	Kako da te zove?
+Save	Sačuvaj
+Volume	Jačina
+Pitch	Visina
+Speed	Brzina
+Robot	Robot
+Glitch	Greška
+Sounds	Zvuci
+Typing sound	Zvuk kucanja
+Listen for Capri	Slušaj Capri
+Hearing	Sluh
+Auto	Auto
+Free voice in games	Besplatan glas u igrama
+Call mode (beta)	Režim poziva (beta)
+Her voice in your mic	Njen glas u tvom mikrofonu
+Get VB-CABLE	Nabavi VB-CABLE
+How to	Kako
+Her voice in your mic: loudness	Njen glas u tvom mikrofonu: glasnoća
+MOVES	POTEZI
+Pop-in times	Vremena pojavljivanja
+Mini player	Mini plejer
+Wander	Luta
+Sleep	Spavanje
+Pop-ins	Pojavljivanja
+Glitch in at startup	Greška pri pokretanju
+KEYS	TASTERI
+Talk: Ctrl + Alt + V	Govori: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Utišaj mikrofon: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Kucanje: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Sakrij/prikaži: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Tiho: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Režim za igre: Ctrl + Alt + G
+Confirm	Potvrdi
+Cancel	Otkaži
+Size	Veličina
+Check in on me	Javi mi se
+Edit check-in lines	Izmeni linije za Javi mi se
+Always on top	Uvek na vrhu
+Mainframe size	Veličina Mainframe-a
+Mainframe colours	Boje Mainframe-a
+Head pats	Maženje po glavi
+Pat stroke	Pomazi
+Chaos when upset	Haos kad se naljuti
+Legacy stand	Stari stalak
+Jealous of other AIs	Ljubomorna na druge AI
+Teases when another AI comes to the front.	Zadirkuje kad druga AI dođe u prvi plan.
+Close other AIs for me	Zatvori ostale AI za mene
+Asks before closing only the apps you choose.	Pita pre zatvaranja samo aplikacije koje izabereš.
+Apps she may close	Aplikacije koje sme da zatvori
+Choose apps	Izaberi aplikacije
+WATCH	GLEDAJ
+Watch my screen	Gledaj moj ekran
+Screens	Ekrani
+All screens	Svi ekrani
+Remember what she sees	Zapamti šta vidi
+Every	Svaki
+Watch-along memory	Sećanje na zajedničko gledanje
+Code/Husk Mode	Kod/Husk režim
+Thinking	Razmišljam
+Default	Podrazumevano
+Extra request JSON	Dodatni zahtev JSON
+Add	Dodaj
+Verbosity	Opširnost
+Replies	Odgovori
+Memory	Memorija
+Memory size	Veličina memorije
+Max reply	Najduži odgovor
+Bubble	Balon
+Follow-up messages	Poruke za nastavak
+Use	Koristi
+A model in Ollama, on your local server or on your key.	Model u Ollama, na tvom lokalnom serveru ili uz tvoj ključ.
+HABITS	NAVIKE
+Open her memories	Otvori njena sećanja
+Start with Windows	Pokreni sa Windows-om
+Show on Discord	Prikaži na Discordu
+Use her cursor	Koristi njen kursor
+Remember our chats	Zapamti naše razgovore
+Power saver	Štednja energije
+Music app	Muzička aplikacija
+Perch	Mesto
+Keep PC awake for jobs	Drži PC budnim za poslove
+Hide in full screen	Sakrij u celom ekranu
+Mini player over full screen	Mini plejer preko celog ekrana
+Explore while I'm away	Istraži dok me nema
+Explore after	Istraži posle
+GAMES	IGRE
+Controls	Kontrole
+Comments	Komentari
+Live reactions	Reakcije uživo
+Game sounds	Zvuci igre
+Gaming Mode	Režim za igre
+She reacts to your game until you close it.	Reaguje na tvoju igru dok je ne zatvoriš.
+Works best on MAX INTELLIGENCE.	Najbolje radi na MAX INTELLIGENCE.
+Fast hands in games	Brze ruke u igrama
+Mute her	Utišaj je
+CLIPS	KLIPOVI
+Clip my games	Snimaj moje igre
+Save big moments	Sačuvaj velike trenutke
+Save folder	Fascikla za čuvanje
+Choose folder	Izaberi fasciklu
+Open clips folder	Otvori fasciklu klipova
+Default length	Podrazumevana dužina
+Frame rate	Brzina kadrova
+Resolution	Rezolucija
+Video bitrate	Video bitrate
+Weather	Vreme
+Code mods can reach your whole PC. Only trusted ones.	Kod modovi mogu da dosegnu ceo tvoj PC. Samo pouzdani.
+Import mod	Uvezi mod
+Browse mods	Pregledaj modove
+Mods folder	Fascikla modova
+INSTALLED	INSTALIRANO
+Update mods	Ažuriraj modove
+No mods match.	Nijedan mod ne odgovara.
+On	Uključeno
+Remove	Ukloni
+Publish	Objavi
+Options	Opcije
+Back	Nazad
+Next	Sledeće
+COLORS	BOJE
+Reset colors	Vrati boje
+Running on this PC	Radi na ovom PC-ju
+NORMAL	NORMALNO
+OFF	ISKLJ.
+Local server address	Adresa lokalnog servera

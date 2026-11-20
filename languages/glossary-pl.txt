@@ -1,0 +1,26 @@
+# Words Polish always uses for these terms: the English, a tab, then the word. The GUI maker hands
+# them to her brain with every batch. Blank means not decided yet. Edit any of them; it is the one place to fix a term.
+Refresh	Odśwież
+Settings	Ustawienia
+Provider	Dostawca
+Saved providers	
+Local servers	Lokalne serwery
+Fallback brain	Tarczowa awaryjna
+Voice	
+Mic	
+Mods	Moduły
+Music	Muzyka
+Chess	Szachy
+Connect four	Cztery w rzędzie
+Tic-tac-toe	Kółko i Krzyżyk
+Rock, paper, scissors	Kamyk, papier, nożyce
+Quiet	
+Check in on me	Sprawdź mnie
+Watch my screen	Obserwuj mój ekran
+Personality	Osobowość
+Mood	
+Hide Capri	Ukryj Capri
+Open	
+Close	
+Off	Wyłączone
+On	Włącz

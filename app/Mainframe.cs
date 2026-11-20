@@ -73,6 +73,9 @@ namespace CapriDesktop
         private static readonly string[] PopNames = { "Rarely", "Sometimes", "Often" };
         private static readonly string[] SaverNames = { "Off", "In games", "Always" };
         private static readonly string[] BubbleNames = { "Quick", "Normal", "Long" };
+        private static readonly string[] ListenWindowNames = { "5 s", "10 s", "15 s", "20 s", "30 s", "45 s", "1 min" };
+        private Slider listenWindow;
+        private Readout listenWindowName;
         private static readonly string[] SoundNames = { "Off", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" };
         private static readonly string[] WanderNames = { "Off", "Rarely", "Sometimes", "Often", "Restless" };
         private static readonly string[] Lengths = { "Short", "Medium", "Long" };
@@ -80,6 +83,8 @@ namespace CapriDesktop
         private static readonly string[] MemoryNames = { "Auto", "4K", "8K", "16K", "32K", "64K" };
         private static readonly string[] ReplyNames = { "Auto", "256", "2K", "8K" };
         private const int VoiceHeight = 392;
+        // Resources sits in its own row under BRAIN, and VOICE and everything after it sit that row lower.
+        private const int ResourcesAt = 181, ResourcesRow = 32;
         // While her free voice or ears download, a row with the brain setup's dotted bar opens here and pushes the rest down.
         private const int InstallAt = 535;
         private const int InstallRow = 40;
@@ -326,19 +331,24 @@ namespace CapriDesktop
         // Settings opens simple: the rows most people never need are hidden and the gaps closed, and Advanced Settings brings
         // them back. These are stretches of each column as built, by Top.
         // Simple Settings keeps Her voice in your mic's rows, between Free voice in games and MOVES.
-        private static readonly int[][] FoldedLeft = { new[] { 232, 316 }, new[] { 366, 394 }, new[] { 616, 1086 }, new[] { 1225, 1277 }, new[] { 1277, 1305 } };
+        private static readonly int[][] FoldedLeft = { new[] { 232, 338 }, new[] { 366, 394 }, new[] { 616, 1086 }, new[] { 1225, 1277 }, new[] { 1277, 1305 } };
         // Power saver's and Music app's rows stay in Simple Settings, so the right column's last band starts two rows lower, at Perch.
         // SOUNDS, under HABITS, stays in Simple Settings too, so that band ends above it.
-        private static readonly int[][] FoldedRight = { new[] { 138, 362 }, new[] { 390, 418 }, new[] { 876, 1370 }, new[] { 1622, 1810 } };
+        // The four rows under Local servers (Local fallback, Fallback brain, Brains in use, Local priority) fold with it,
+        // and so does the Fallback list row above them, so everything under them sits Row * 5 lower than when these bands
+        // were measured.
+        private static readonly int[][] FoldedRight = { new[] { 138, 362 }, new[] { 390, 418 }, new[] { 876, 1370 + Row * 5 }, new[] { 1622 + Row * 5, 1810 + Row * 5 } };
         private readonly Dictionary<Control, int> built = new Dictionary<Control, int>();
         private bool simple;
         private Key advancedKey;
-        private int PageNow { get { return simple ? SimpleTall : Math.Max(PageTall, pageTall); } }
+        private int PageNow { get { return simple ? Math.Max(SimpleTall, simpleTall) : Math.Max(PageTall, pageTall); } }
         // How far the page actually runs, measured off what was built. It was a number by hand, so a row added past
         // the old bottom could not be scrolled to at all. Never shorter than the number it replaces.
         private int pageTall;
-        // The same for Simple Settings, with its hidden rows taken out.
+        // The same for Simple Settings, with its hidden rows taken out. Measured too, once the page is built: a hand
+        // number let Weather and Doomscroll guard run off the bottom of Simple the day they were added.
         private const int SimpleTall = 1198;
+        private int simpleTall;
         private int wheel;
         // A wheel turn glides the page to where it's headed over a few frames, instead of jumping a row at a time (Lachy, 3 Nov).
         private const double GlideMs = 140;
@@ -417,7 +427,11 @@ namespace CapriDesktop
         private readonly Slider replyLength;
         private readonly Readout replyLengthName;
         private readonly Entry custom;
-        private readonly Entry localAddress;
+        private readonly Key localServers;
+        private Toggle localFallback;
+        private Key fallbackBrain;
+        private ContextMenuStrip fallbackMenu;
+        private Key cloudLight, localLight, localPriority, cloudPriority, fallbackRefresh;
         private readonly Label customNote;
         private readonly Slider perchFps;
         private readonly Readout perchFpsName;
@@ -480,7 +494,7 @@ namespace CapriDesktop
             provider.AccessibleName = "OpenAI-compatible provider address and key";
             brainNote = Caption("", 28, 101, Font, Faint);
             modelMenu = Dropdown();
-            models = Make("", 28, 134, 244, 28, delegate { modelMenu.Show(models, new Point(0, models.Height)); });
+            models = Make("", 28, 134, 244, 28, delegate { ShowTimed(modelMenu, models, "BRAIN model"); });
             models.Chevron = true;
             models.AccessibleName = "Brain model";
             refresh = Make("Refresh", 280, 134, 76, 28, delegate { capri.FindBrain(); });
@@ -639,6 +653,7 @@ namespace CapriDesktop
             micMenu.Closed += delegate { micsWaiting = false; };
             mics = Lower(Make("Mic: default", 28, 382, 244, 28, delegate { ShowMics(); }));
             mics.Chevron = true;
+            mics.Ellipsis = true;
             mics.AccessibleName = "Microphone";
             micTest = Lower(Make("Test", 280, 382, 76, 28, delegate { capri.TestMic(); }));
             micTest.AccessibleName = "Test microphone input";
@@ -664,7 +679,13 @@ namespace CapriDesktop
             muteShortcut.Cursor = Cursors.Hand;
             muteShortcut.Click += delegate { ShowSettings(true); PickKeys(1); };
             Deactivate += delegate { CancelKeys(); };
+            // One line, like the hearing line above it: a note that wrapped grew down into CAPRI, which does not move to make
+            // room. A longer one ends in "..." and the whole of it shows on hover.
             voiceNote = Lower(Caption("", 28, InstallAt, Font, Faint));
+            voiceNote.AutoSize = false;
+            voiceNote.AutoEllipsis = true;
+            voiceNote.Size = new Size(328, 20);
+            ((Note)voiceNote).Hovers = true;
             voiceNote.Click += delegate { if (speechFix) capri.OpenSpeechSettings(); };
             installNote = Caption("", 28, InstallAt + 2, Font, White);
             installNote.Visible = false;
@@ -696,21 +717,21 @@ namespace CapriDesktop
             Key quit = Lower(Make("Quit Capri", 256, 250 + v, 100, 28, delegate { capri.Quit(); }));
             quit.Accent = Hot;
             // The full width of the row above it, from Check for updates to Quit Capri.
-            // Only with the switch on, and gone rather than greyed out when it is off: its own label says what
-            // it opens, and a censored install should not be told what it is missing. The rows under it move up
-            // by its height, so the space it leaves reads as nothing at all.
+            // Only with the switch on, and gone rather than greyed out when it is off. The rows under it move up
+            // by its height.
             abliterated = Lower(Make("Abliterated updates", 28, AbliteratedAt + v, 328, 28, delegate { capri.OpenAbliterated(); }));
-            abliterated.AccessibleName = "Abliterated updates: opens the folder her own builds are kept in";
-            // Says plainly whether adult mode is on. The switch itself is in sys.md and deliberately not here, so
-            // without this there is nothing anywhere telling them which way it is set.
+            abliterated.AccessibleName = "Abliterated updates: opens the releases page where her own builds are published";
+            // Says plainly whether the switch is on. The switch itself is in sys.md.
             updateNote = Lower(Caption("", 28, 320 + v, small, Faint));
-            // Last of everything, and hidden unless adult mode is on, so when it is off the space it would have
+            // Last of everything, and hidden unless the switch is on, so when it is off the space it would have
             // taken reads as padding at the bottom rather than a hole in the middle of the panel.
             senpaiNote = Lower(Caption("", 28, 344 + v, small, Faint));
             senpaiNote.AutoSize = false;
             senpaiNote.Bounds = new Rectangle(28, 344 + v, 328, 16);
             senpaiNote.TextAlign = ContentAlignment.MiddleCenter;
             senpaiNote.Visible = false;
+            // Resources under BRAIN: one key that pops the panel out, with the CPU and RAM line beside it.
+            MakeResourcesKey(ResourcesAt);
             for (int i = header; i < Controls.Count; i++) mainLeft.Add(new KeyValuePair<Control, int>(Controls[i], Controls[i].Left));
             int first = Controls.Count;
             // Settings: a setting to a row, its name on the left in red and its value in a box on the right, as on Cyberpunk
@@ -724,7 +745,7 @@ namespace CapriDesktop
             notesKey = Make("MD editor", 184, 55, 96, 20, delegate { EditNotes(false); });
             notesKey.AccessibleName = "Open her notes: edit me.md here, or her note in your Obsidian vault";
             filesKey = Make("Her folder", 286, 55, 70, 20, delegate { capri.OpenHerFolder(); });
-            filesKey.AccessibleName = "File editor: edit personality.md and me.md in one panel";
+            filesKey.AccessibleName = "Her folder: opens the folder in Explorer where every file she has lives";
             // Their personality.md (back in 0.8.0): the key says whose personality she's using, and its menu edits or resets it.
             personalityMenu = Dropdown();
             personalityKey = Make("Her personality", 72, 55, 106, 20, delegate { ShowPersonalityMenu(); });
@@ -791,7 +812,12 @@ namespace CapriDesktop
             typing.HintFont = small;
             typing.AccessibleName = "Typing sound. A soft typing sound while her text replies type out";
             listenCapri = Switch("Listen for Capri", 0, 288, delegate { if (!syncing) capri.ToggleListenCapri(); });
-            Caption("Say her name anywhere to chat", 28, 316, small, Faint);
+            listenCapri.Hint = "Say her name anywhere";
+            listenCapri.HintFont = small;
+            // How long a chat keeps going without her name, from 5 seconds to a minute.
+            listenWindow = Setting("Listen window", ListenWindowNames, 0, 313, "Listen window: how long she keeps hearing you without her name once a chat is going");
+            listenWindowName = new Readout(listenWindow);
+            listenWindow.Changed += delegate { if (syncing) return; listenWindowName.Text = ListenWindowNames[listenWindow.Value]; capri.SetListenWindow(Companion.ListenWindows[listenWindow.Value]); };
             listenCapri.AccessibleName = "Listen for Capri. Keep the mic open; say her name anywhere in your sentence, then just talk until you go quiet. Stop and push to talk still work";
             Caption("Hearing", 28, 342, Type(9.5f), Rose).AccessibleName = "Hearing";
             hearingMenu = Dropdown();
@@ -833,11 +859,14 @@ namespace CapriDesktop
             mixInputMenu.Closed += delegate { mixInputsWaiting = false; };
             mixInput = Make("Input: default", 28, MixAt + 76, 328, 22, delegate { ShowMixInputs(mixInput); }, "Her voice in your mic");
             mixInput.Chevron = true;
+            // Device names are theirs and any length, so a long one is cut with an ellipsis rather than overflowing.
+            mixInput.Ellipsis = true;
             mixInput.AccessibleName = "Her mix's input: the mic that goes in with her voice";
             mixOutputMenu = Dropdown();
             mixOutputMenu.Closed += delegate { mixOutputsWaiting = false; };
             mixOutput = Make("Output: none", 28, MixAt + 104, 244, 22, delegate { ShowMixOutputs(mixOutput); }, "Her voice in your mic");
             mixOutput.Chevron = true;
+            mixOutput.Ellipsis = true;
             mixOutput.AccessibleName = "Her mix's output: the virtual mic it plays into, which you pick as your mic in your call app";
             mixHow = Make("How to", 280, MixAt + 104, 76, 22, delegate { OpenMix(); }, "Her voice in your mic");
             mixHow.AccessibleName = "How to set up her voice in your mic for your call app";
@@ -1027,8 +1056,8 @@ namespace CapriDesktop
             huskVerbosity = Switch("Verbosity", c, 354, delegate { if (!syncing) capri.ToggleHuskVerbosity(); });
             huskVerbosity.AccessibleName = "Verbosity. On shows each tool the coding assistant runs. Off keeps only starts, finishes, questions and crashes";
             int afterVerbosity = Controls.Count;
-            stayOnModel = Switch("Stay on my model", c, 354, delegate { if (!syncing) capri.ToggleStayOnModel(); });
-            stayOnModel.AccessibleName = "Stay on my model. When an NVIDIA model gets stuck she says so instead of switching to another one";
+            stayOnModel = Switch("Cloud model lock", c, 354, delegate { if (!syncing) capri.ToggleStayOnModel(); });
+            stayOnModel.AccessibleName = "Cloud model lock. When an NVIDIA model gets stuck she says so instead of switching to another one";
             replies = Setting("Replies", Lengths, c, 382, "Reply length");
             repliesName = new Readout(replies);
             replies.Changed += delegate { if (syncing) return; repliesName.Text = Lengths[replies.Value]; capri.SetWordiness(replies.Value); };
@@ -1056,12 +1085,43 @@ namespace CapriDesktop
             customNote.AutoSize = false;
             customNote.AutoEllipsis = true;
             customNote.Size = new Size(328, 28);
-            Caption("Local server address", 28 + c, 586, Font, Rose);
-            localAddress = Input(28 + c, 615, 244, 22);
-            localAddress.Cue = "http://127.0.0.1:1234";
-            localAddress.Box.AccessibleName = "Local server address";
-            localAddress.Box.KeyDown += delegate(object sender, KeyEventArgs e) { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; UseLocalAddress(); } };
-            Make("Save", 280 + c, 615, 76, 22, delegate { UseLocalAddress(); }, "Local server address");
+            // Local servers live in the one address book, beside every other provider: LM Studio and the rest at their
+            // usual addresses, each with a name and a port they can change.
+            Caption("Local servers", 28 + c, 586, Font, Rose);
+            localServers = Make("Saved providers", 28 + c, 615, 328, 22, delegate { OpenProvider(); }, "Local servers");
+            localServers.Chevron = true;
+            localServers.AccessibleName = "Local servers: opens the address book of brain providers, with LM Studio, Ollama, Jan, KoboldCpp and llama.cpp at their usual addresses";
+            // Local fallback: the cloud stays first, and this says whether a local brain answers when it does not.
+            // Which one is the dropdown under it, filled from what Refresh can find; with none, it offers to set
+            // her own up as the backup.
+            localFallback = Switch("Local fallback", c, 646, delegate { if (!syncing) capri.ToggleLocalFallback(); });
+            localFallback.AccessibleName = "Local fallback. When the cloud brain doesn't answer, a local brain on this PC answers instead";
+            // The list the dropdown under it shows is a library, made while she finds her brain at start and kept. Only this
+            // looks again, so the wait of asking what is on this PC comes when they ask for it and never on opening a list.
+            Named("Fallback list", c, 674);
+            fallbackRefresh = Make("Refresh", ValueAt + c, 677, ValueWide, 22, delegate { RefreshFallback(); }, "Fallback list");
+            fallbackRefresh.AccessibleName = "Fallback list: look again for the brains on this PC";
+            Named("Fallback brain", c, 702);
+            fallbackMenu = Dropdown();
+            fallbackMenu.AccessibleName = "Fallback brain choices";
+            fallbackMenu.Opening += delegate { FillFallback(); };
+            fallbackBrain = Make("None", ValueAt + c, 705, ValueWide, 22, delegate { ShowTimed(fallbackMenu, fallbackBrain, "Fallback brain"); }, "Fallback brain");
+            fallbackBrain.Chevron = true;
+            fallbackBrain.AccessibleName = "Fallback brain";
+            // Which brains are in use right now, lit when they are, and which of the two goes first. The order only
+            // means something with both, so it stays dimmed until there is a cloud brain and a local fallback.
+            Named("Brains in use", c, 730);
+            cloudLight = Make("No cloud", ValueAt + c, 733, (ValueWide - 6) / 2, 22, delegate { }, "Brains in use");
+            localLight = Make("No local", ValueAt + c + (ValueWide + 6) / 2, 733, (ValueWide - 6) / 2, 22, delegate { }, "Brains in use");
+            foreach (Key light in new[] { cloudLight, localLight }) { light.Cursor = Cursors.Default; light.TabStop = false; light.Accent = Cyan; light.Lamp = true; }
+            Named("Local priority", c, 758);
+            // Two keys, the way the lights above sit: Secondary keeps the cloud first, Primary puts this PC first.
+            cloudPriority = Make("Secondary", ValueAt + c, 761, (ValueWide - 6) / 2, 22, delegate { if (!cloudPriority.Dimmed) capri.SetLocalFirst(false); }, "Local priority");
+            cloudPriority.AccessibleName = "Local priority: Secondary. The cloud first, this PC if it fails";
+            localPriority = Make("Primary", ValueAt + c + (ValueWide + 6) / 2, 761, (ValueWide - 6) / 2, 22, delegate { if (!localPriority.Dimmed) capri.SetLocalFirst(true); }, "Local priority");
+            localPriority.AccessibleName = "Local priority: Primary. This PC first, the cloud if it fails";
+            foreach (Key choice in new[] { cloudPriority, localPriority }) choice.StateValue = true;
+            int afterFallback = Controls.Count;
             Section("HABITS >", c, 656);
             Make("Obsidian vault", 104 + c, 653, 112, 20, delegate { ShowMemoryVault(); }).AccessibleName = "Obsidian vault: keep her notes in your Obsidian vault";
             memoriesKey = Make("Open her memories", 220 + c, 653, 136, 20, delegate { EditNotes(true); });
@@ -1160,7 +1220,12 @@ namespace CapriDesktop
             Label clipHint = Caption("FPS can drop under load or for longer clips.\nFolder changes apply to future clips.", 28, 1466, small, Faint);
             clipHint.AutoSize = false;
             clipHint.Bounds = new Rectangle(28, 1466, 328, 36);
+            BuildWeather(1514);
+            BuildDoomscroll(1642);
             int gamesTo = Controls.Count;
+            // Local fallback, Fallback list, Fallback brain, Brains in use and Local priority take five rows under Local servers.
+            for (int belowFallback = afterFallback; belowFallback < Controls.Count; belowFallback++)
+                if (Controls[belowFallback].Left >= c) Controls[belowFallback].Top += Row * 5;
             for (int talkSettingAt = afterWatchMemory; talkSettingAt < Controls.Count; talkSettingAt++)
                 Controls[talkSettingAt].Top += (talkSettingAt >= afterFollowUps ? 56 : 28) + (Controls[talkSettingAt].Left >= c ? Row : 0);
             for (int huskRow = afterHusk; huskRow < Controls.Count; huskRow++)
@@ -1187,6 +1252,8 @@ namespace CapriDesktop
                 pageLeft.Add(new KeyValuePair<Control, int>(control, control.Left));
                 built[control] = control.Top;
                 if (control.Top + control.Height + 24 > pageTall) pageTall = control.Top + control.Height + 24;
+                int simpleTop = SimpleTop(control.Top, control.Left >= Column);
+                if (simpleTop >= 0 && simpleTop + control.Height + 24 > simpleTall) simpleTall = simpleTop + control.Height + 24;
                 Scrolls(control);
                 control.Left += Far;
                 Reachable(control, false);
@@ -1444,11 +1511,19 @@ namespace CapriDesktop
         {
             careMenu.Items.Clear();
             int[] choices = kind == CareKind.Late ? new[] { 21, 22, 23, 0, 1, 2, 3, 4, 5 } : kind == CareKind.Meal ? new[] { 180, 240, 300, 360, 480 } : new[] { 15, 25, 30, 45, 60, 90, 120, 180, 240 };
+            // Her sleep nudge starts on Auto: the bedtime she learns from when they actually go to bed.
+            if (kind == CareKind.Late)
+            {
+                ToolStripMenuItem auto = new ToolStripMenuItem("Auto: when you usually go to bed (" + CareTimeName(kind, capri.BedtimeNow) + " now)");
+                auto.Checked = capri.BedtimeAuto;
+                auto.Click += delegate { capri.SetBedtimeAuto(); };
+                careMenu.Items.Add(auto);
+            }
             foreach (int careChoice in choices)
             {
                 int careValue = careChoice;
                 ToolStripMenuItem careItem = new ToolStripMenuItem(CareTimeName(kind, careValue));
-                careItem.Checked = capri.CareTime(kind) == careValue;
+                careItem.Checked = capri.CareTime(kind) == careValue && !(kind == CareKind.Late && capri.BedtimeAuto);
                 careItem.Click += delegate { capri.SetCareTime(kind, careValue); };
                 careMenu.Items.Add(careItem);
             }
@@ -1471,15 +1546,24 @@ namespace CapriDesktop
 
         internal void TypeCustomModel(string name) { custom.Box.Text = name; UseCustom(); }
 
-        private void UseLocalAddress()
+        // What the address book lists: their saved entries, then Ollama while it runs and any local server her last look
+        // found that they have not saved.
+        internal int ProvidersShown()
         {
-            customNote.Text = capri.SetLocalAddress(localAddress.Box.Text);
-            localAddress.Box.Text = capri.LocalAddress;
+            List<Companion.BookEntry> saved = capri.ProviderBook();
+            int count = saved.Count;
+            if (capri.OllamaRunning && lastInstalled != null && lastInstalled.Length > 0 && !saved.Exists(one => one.Name == "Ollama")) count++;
+            foreach (Cloud server in capri.FoundServers)
+                if (!saved.Exists(one => Brain.ServerAddress(one.Address) == Brain.ServerAddress(server.Host + "/v1"))) count++;
+            return count;
         }
 
-        internal void TypeLocalAddress(string address) { localAddress.Box.Text = address; UseLocalAddress(); }
+        internal string[] OllamaModelsShown { get { return lastInstalled; } }
 
-        internal string LocalAddressShown { get { return localAddress.Box.Text; } }
+        // For her checks: the saved local address, which the address book's local entries now sit beside.
+        internal void TypeLocalAddress(string address) { customNote.Text = capri.SetLocalAddress(address); }
+
+        internal string LocalAddressShown { get { return capri.LocalAddress; } }
 
         // Whether her settings page shows its advanced settings, and whether her language menu has a language ticked, for her
         // settings tool's check.
@@ -1508,7 +1592,7 @@ namespace CapriDesktop
         private ToolStripMenuItem LanguageItem(int row)
         {
             string picked = Brain.Languages[row, 1];
-            ToolStripMenuItem item = Choice(LanguageName(row), false, delegate { capri.SetLanguage(picked); Sync(); });
+            ToolStripMenuItem item = Choice(LanguageName(row), false, delegate { capri.SetLanguage(picked); capri.ShowFreeVoices(); Sync(); });
             item.Tag = picked;
             return item;
         }
@@ -1536,7 +1620,7 @@ namespace CapriDesktop
             languageMenu.Font = Font;
             if (languageFont != null) { languageFont.Dispose(); languageFont = null; }
             languageMenu.Items.Add(LanguageItem(0));
-            languageCurrent = Choice("", true, delegate { capri.SetLanguage((string)languageCurrent.Tag); Sync(); });
+            languageCurrent = Choice("", true, delegate { capri.SetLanguage((string)languageCurrent.Tag); capri.ShowFreeVoices(); Sync(); });
             languageMenu.Items.Add(languageCurrent);
             languageMenu.Items.Add(new ToolStripSeparator());
             List<int> rows = new List<int>();
@@ -1846,11 +1930,18 @@ namespace CapriDesktop
         // Her voice in your mic's setup steps, over the Mainframe like VOICE LAYERS.
         private void OpenMix()
         {
-            if (mixSheet != null && !mixSheet.IsDisposed && mixSheet.Zoom != zoom) mixSheet.Close();
-            if (mixSheet == null || mixSheet.IsDisposed) mixSheet = new MixSheet(this, zoom);
+            System.Diagnostics.Stopwatch took = System.Diagnostics.Stopwatch.StartNew();
+            MakeMix();
             mixSheet.Sync();
             if (!mixSheet.Visible) mixSheet.Show(this);
             mixSheet.Activate();
+            Timed(took, "mic mix");
+        }
+
+        private void MakeMix()
+        {
+            if (mixSheet != null && !mixSheet.IsDisposed && mixSheet.Zoom != zoom) { mixSheet.Dispose(); mixSheet = null; }
+            if (mixSheet == null || mixSheet.IsDisposed) mixSheet = Kept(new MixSheet(this, zoom));
         }
 
         // Her voice in your mic's setup window as they'd see it, for the smoke test: what it says, what's crowded, and a picture.
@@ -1987,8 +2078,8 @@ namespace CapriDesktop
             Place();
             foreach (KeyValuePair<Control, int> entry in mainLeft) Reachable(entry.Key, !on);
             foreach (KeyValuePair<Control, int> entry in pageLeft) Reachable(entry.Key, on && !Folded(entry.Key));
-            Reachable(modsKey, !on);
-            if (Hidden(ActiveControl) || on && ActiveControl == modsKey) more.Focus();
+            Reachable(modsKey, true);
+            if (Hidden(ActiveControl)) more.Focus();
             if (on) Sync();
             wheel = 0;
             CloseGaps();
@@ -2008,8 +2099,8 @@ namespace CapriDesktop
             foreach (KeyValuePair<Control, int> entry in pageLeft) entry.Key.Left = Scaled(entry.Value) + (paged && !Folded(entry.Key) ? 0 : Far);
             foreach (KeyValuePair<Control, int> entry in modLeft) entry.Key.Left = Scaled(entry.Value) + (modded ? 0 : Far);
             int edge = paged ? Column : 0;
-            // Settings' own Advanced Settings key takes Mods' place by Back, so Mods waits off the page there.
-            modsKey.Left = Scaled(234) + (paged ? Far : 0);
+            // On Settings, Mods sits right of Advanced Settings rather than in its place by Back.
+            modsKey.Left = Scaled(paged ? 382 : 234);
             minimize.Left = Scaled(300 + edge);
             close.Left = Scaled(330 + edge);
         }
@@ -2021,6 +2112,18 @@ namespace CapriDesktop
             foreach (int[] band in pageLeft.Exists(entry => entry.Key == control && entry.Value >= Column) ? FoldedRight : FoldedLeft)
                 if (top >= band[0] && top < band[1]) return true;
             return false;
+        }
+
+        // Where a row built at this top sits in Simple Settings, or -1 when Simple hides it.
+        private static int SimpleTop(int top, bool right)
+        {
+            int gone = 0;
+            foreach (int[] band in right ? FoldedRight : FoldedLeft)
+            {
+                if (top >= band[0] && top < band[1]) return -1;
+                if (top >= band[1]) gone += band[1] - band[0];
+            }
+            return top - gone;
         }
 
         // Moves what's left up over the rows Settings hides while it's simple, or back where it was built.
@@ -2337,6 +2440,36 @@ namespace CapriDesktop
             Rezoom(Wanted());
             ShowFrameSize();
             Arrange(expanded);
+            // Her dropdowns' windows are made now, while nothing is waiting on them, so the first click on one does not
+            // pay for making it: that first open was most of a dropdown's lag.
+            BeginInvoke((MethodInvoker)delegate { capri.AfterIntro(WarmDropdowns); });
+            // Her mods folder, watched from now, so a mod dropped into it is taken in.
+            BeginInvoke((MethodInvoker)WatchMods);
+        }
+
+        private void WarmDropdowns()
+        {
+            if (IsDisposed) return;
+            try
+            {
+                FillFallback();
+                MakeProvider();
+                Ready(providerSheet);
+                // The windows they open most, made one after another on later turns so none holds her up.
+                BeginInvoke((MethodInvoker)delegate { if (IsDisposed) return; try { MakeThinking(); Ready(thinkingSheet); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
+                BeginInvoke((MethodInvoker)delegate { if (IsDisposed) return; try { MakeSecurity(); Ready(guard); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
+                BeginInvoke((MethodInvoker)delegate { if (IsDisposed) return; try { MakeExtras(); Ready(extras); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
+                BeginInvoke((MethodInvoker)delegate { if (IsDisposed) return; try { MakeServer(); Ready(sheet); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
+                BeginInvoke((MethodInvoker)delegate { if (IsDisposed) return; try { MakeLayers(); Ready(layered); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
+                BeginInvoke((MethodInvoker)delegate { if (IsDisposed) return; try { MakeMix(); Ready(mixSheet); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
+                foreach (ContextMenuStrip strip in Dropdowns)
+                {
+                    if (strip.IsDisposed) continue;
+                    IntPtr made = strip.Handle;
+                    strip.PerformLayout();
+                }
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Auto's size on the screen she's on, kept for Settings to show.
@@ -2466,6 +2599,8 @@ namespace CapriDesktop
                 FitMixInput();
                 Place();
                 Arrange(expanded);
+                // Her version caption is fitted to its gap; a layout hands it a fresh font, so it is fitted again.
+                if (build != null) build.Font = Narrowed(build.Text, build.Width - 2, build.Font);
                 foreach (Control control in Controls) control.PerformLayout();
                 Shape();
                 DescribeHints();
@@ -3049,32 +3184,36 @@ namespace CapriDesktop
             int fold = arrangedFold = Fold;
             hearingFold = hearingActions.Length == 0 ? HearingFixRow : 0;
             bool ownBuilds = false;
-            try { ownBuilds = Brain.Uncensored; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            try { ownBuilds = Brain.SenpaiOn; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             if (abliterated != null) abliterated.Visible = ownBuilds;
             abliteratedFold = ownBuilds ? 0 : AbliteratedRow;
             int locked = abliteratedFold;
-            foreach (KeyValuePair<Control, int> entry in lower) entry.Key.Top = Scaled(entry.Value + shift + (entry.Value >= InstallAt ? below : 0) - (entry.Value > KeyAt ? fold : 0) - (entry.Value > HearingFixAt ? hearingFold : 0) - (entry.Value > AbliteratedAt ? locked : 0));
-            installNote.Top = Scaled(InstallAt + 2 + shift - fold - hearingFold);
+            foreach (KeyValuePair<Control, int> entry in lower) entry.Key.Top = Scaled(entry.Value + shift + (entry.Value >= ResourcesAt && entry.Key != resourcesKey && entry.Key != resourcesLine ? ResourcesRow : 0) + (entry.Value >= InstallAt ? below : 0) - (entry.Value > KeyAt ? fold : 0) - (entry.Value > HearingFixAt ? hearingFold : 0) - (entry.Value > AbliteratedAt + VoiceHeight ? locked : 0));
+            installNote.Top = Scaled(InstallAt + 2 + shift + ResourcesRow - fold - hearingFold);
             installNote.Visible = below > 0;
             foreach (Label step in steps) step.Visible = setupShown;
             setup.Visible = setupShown;
             refresh.Top = Scaled(setupShown ? 226 : 134);
+            // The Ollama hint belongs to the setup block, under Set up and Refresh. It was the one control here
+            // never placed, so with the block folded it stayed where the block had put it and lay across MAX
+            // INTELLIGENCE, which the OFF row pushes down into that spot. Folded, there is no setup to hint at.
+            hint.Top = Scaled(264);
+            if (!setupShown) hint.Visible = false;
             brainNote.MaximumSize = new Size(Scaled(328), 0);
-            voiceNote.MaximumSize = new Size(Scaled(328), 0);
             updateNote.MaximumSize = new Size(Scaled(328), 0);
             if (senpaiNote != null)
             {
                 bool senpai = false;
-                try { senpai = Brain.Uncensored; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                try { senpai = Brain.SenpaiOn; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 // Only ever shown when it is on. Saying OFF tells someone the mode exists, which is the opposite of
                 // burying the switch: a panel that advertises it is no better than a menu item.
                 senpaiNote.Visible = senpai;
-                senpaiNote.Text = senpai ? "UNCENSORED ON  ·  sys.md" : "";
+                senpaiNote.Text = senpai ? "INTERESTS ON  ·  sys.md" : "";
                 senpaiNote.ForeColor = Hot;
             }
             if (keysNote != null) keysNote.MaximumSize = new Size(Scaled(328), 0);
             if (paged) pageView = Fit();
-            ClientSize = new Size(Scaled(paged ? Wide + Column : Wide), Scaled(paged ? pageView : Tall + shift + below - fold - hearingFold - abliteratedFold));
+            ClientSize = new Size(Scaled(paged ? Wide + Column : Wide), Scaled(paged ? pageView : Tall + shift + ResourcesRow + below - fold - hearingFold - abliteratedFold));
             ScrollPage(ShownScroll);
             bool scrolls = paged && pageView < PageNow;
             topRim.Visible = bottomRim.Visible = scrolls;
@@ -3187,6 +3326,32 @@ namespace CapriDesktop
             watchMemory.Value = Math.Max(0, Array.IndexOf(WatchLines, capri.WatchMemoryLines));
             watchMemoryName.Text = WatchLineNames[watchMemory.Value];
             stayOnModel.Checked = capri.StayOnModel;
+            if (listenWindow != null)
+            {
+                listenWindow.Value = Math.Max(0, Array.IndexOf(Companion.ListenWindows, capri.ListenWindow));
+                listenWindowName.Text = ListenWindowNames[listenWindow.Value];
+                listenWindow.Enabled = capri.ListenCapriOn;
+            }
+            if (localFallback != null) localFallback.Checked = capri.LocalFallback;
+            capri.NoteLocalBrain();
+            if (fallbackBrain != null) fallbackBrain.Text = capri.FallbackBrainName;
+            ShowFallbackRefresh();
+            if (localPriority != null)
+            {
+                bool cloudOn = capri.CloudInUse, localOn = capri.LocalInUse;
+                cloudLight.Text = cloudOn ? "Cloud" : "No cloud";
+                cloudLight.Picked = cloudOn;
+                cloudLight.Dimmed = !cloudOn;
+                cloudLight.Status = cloudLight.Text;
+                localLight.Text = localOn ? "Local" : "No local";
+                localLight.Picked = localOn;
+                localLight.Dimmed = !localOn;
+                localLight.Status = localLight.Text;
+                bool both = cloudOn && capri.FallbackOn;
+                cloudPriority.Pick(!capri.LocalFirst);
+                localPriority.Pick(capri.LocalFirst);
+                cloudPriority.Dimmed = localPriority.Dimmed = !both;
+            }
             huskVerbosity.Checked = capri.HuskVerbosity;
             remembering.Checked = capri.Remembers;
             keepAwake.Checked = capri.KeepAwake;
@@ -3200,7 +3365,7 @@ namespace CapriDesktop
                 CareKind careSetting = (CareKind)careSync;
                 careToggles[careSync].Checked = capri.CareOn(careSetting);
                 careToggles[careSync].Dimmed = !capri.CheckIns;
-                careTimes[careSync].Text = CareTimeName(careSetting, capri.CareTime(careSetting));
+                careTimes[careSync].Text = careSetting == CareKind.Late && capri.BedtimeAuto ? "Auto " + CareTimeName(careSetting, capri.BedtimeNow) : CareTimeName(careSetting, capri.CareTime(careSetting));
                 careTimes[careSync].Dimmed = !capri.CheckIns;
                 careTimes[careSync].AccessibleName = "Check in on me: " + Care.Names[careSync] + (careSetting == CareKind.Late ? " after " : " every ") + careTimes[careSync].Text;
             }
@@ -3277,7 +3442,7 @@ namespace CapriDesktop
             memorySizeName.Text = MemoryNames[memorySize.Value];
             replyLength.Value = capri.ReplyLength;
             replyLengthName.Text = ReplyNames[replyLength.Value];
-            if (!localAddress.Box.Focused) localAddress.Box.Text = capri.LocalAddress;
+            localServers.Text = "Saved providers (" + ProvidersShown() + ")";
             perchFps.Value = Math.Max(0, Array.IndexOf(Companion.PerchRates, capri.PerchFps));
             ShowPerch();
             powerSaver.Value = Math.Max(0, Math.Min(SaverNames.Length - 1, capri.PowerSaver));
@@ -3285,6 +3450,8 @@ namespace CapriDesktop
             musicApp.Value = Math.Max(0, Math.Min(Hands.MusicSteps().Length - 1, capri.MusicApp));
             musicAppName.Text = Hands.MusicSteps()[musicApp.Value];
             SyncSounds();
+            SyncWeather();
+            SyncDoomscroll();
             syncing = false;
         }
 
@@ -3644,7 +3811,7 @@ namespace CapriDesktop
             Size proposed = (flags & (TextFormatFlags.WordBreak | TextFormatFlags.EndEllipsis)) != 0 ? new Size(Math.Max(1, area.Width), int.MaxValue) : Size.Empty;
             Size measured = TextRenderer.MeasureText(graphics, words, font, proposed, flags);
             if ((flags & TextFormatFlags.EndEllipsis) != 0) measured.Width = Math.Min(measured.Width, area.Width);
-            if (measured.Width > area.Width || measured.Height > area.Height) return name + " needs " + measured.Width + "x" + measured.Height + " in " + area.Width + "x" + area.Height;
+            if (measured.Width > area.Width || measured.Height > area.Height) return name + " (\"" + (words.Length > 40 ? words.Substring(0, 40) + "..." : words) + "\") needs " + measured.Width + "x" + measured.Height + " in " + area.Width + "x" + area.Height;
             int x = area.X, y = area.Y;
             if ((flags & TextFormatFlags.Right) != 0) x += area.Width - measured.Width;
             else if ((flags & TextFormatFlags.HorizontalCenter) != 0) x += (area.Width - measured.Width) / 2;
@@ -3805,6 +3972,8 @@ namespace CapriDesktop
 
         internal string[] BrainChoices { get { List<string> choices = new List<string>(); foreach (ToolStripItem item in modelMenu.Items) choices.Add(item.Text); return choices.ToArray(); } }
 
+        internal static string WindowsTongueChoice { get { return "Windows voice for " + Brain.Language + " (robotic)"; } }
+
         internal void ShowProvider(string address, bool keyed, string model, string[] found)
         {
             brainName.Text = "My provider" + (model == null ? "" : " · " + model);
@@ -3827,13 +3996,21 @@ namespace CapriDesktop
             Arrange(false);
         }
 
+        // Made once and kept: closing it hides it, so each open only refills it. A new zoom makes it again at that size.
         internal void OpenProvider()
         {
-            if (providerSheet != null && !providerSheet.IsDisposed && providerSheet.Zoom != zoom) providerSheet.Close();
-            if (providerSheet == null || providerSheet.IsDisposed) providerSheet = new ProviderSheet(this, zoom);
+            System.Diagnostics.Stopwatch took = System.Diagnostics.Stopwatch.StartNew();
+            MakeProvider();
             providerSheet.Fill();
             if (!providerSheet.Visible) providerSheet.Show(this);
             else providerSheet.Activate();
+            if (took.ElapsedMilliseconds > 150) Brain.Log("mainframe", took.ElapsedMilliseconds, "The Brain provider window took " + took.ElapsedMilliseconds + " ms to open.");
+        }
+
+        private void MakeProvider()
+        {
+            if (providerSheet != null && !providerSheet.IsDisposed && providerSheet.Zoom != zoom) { providerSheet.Dispose(); providerSheet = null; }
+            if (providerSheet == null || providerSheet.IsDisposed) providerSheet = new ProviderSheet(this, zoom);
         }
 
         internal void ProviderProblem(string text)
@@ -3854,7 +4031,7 @@ namespace CapriDesktop
 
         internal void PressProvider(string button) { providerSheet.Press(button); }
 
-        internal void CloseProvider() { if (providerSheet != null && !providerSheet.IsDisposed) providerSheet.Close(); }
+        internal void CloseProvider() { if (providerSheet != null && !providerSheet.IsDisposed) providerSheet.Hide(); }
 
         internal string ProviderAt(float zoom)
         {
@@ -3913,6 +4090,119 @@ namespace CapriDesktop
         internal void PickBrain(int index) { ((ToolStripMenuItem)modelMenu.Items[index]).PerformClick(); }
 
         // Thinking is always about the brain she's on, so a new brain or model refills its row and greys what that model can't take.
+        // The local brains she can fall back to, found the way Refresh finds them. With none, the one row sets her
+        // own brain up to be the backup.
+        // A dropdown shown under its key. An empty one still opens, saying so, rather than a click doing nothing; and the
+        // time from click to open goes in her log when it is slow, split into filling and drawing, so a lag can be
+        // told apart from a lookup.
+        private void ShowTimed(ContextMenuStrip menu, Control under, string named)
+        {
+            System.Diagnostics.Stopwatch took = System.Diagnostics.Stopwatch.StartNew();
+            long filled = -1;
+            System.ComponentModel.CancelEventHandler opening = null;
+            opening = delegate { filled = took.ElapsedMilliseconds; };
+            EventHandler opened = null;
+            opened = delegate
+            {
+                menu.Opened -= opened;
+                long shown = took.ElapsedMilliseconds;
+                if (shown > 150) Brain.Log("mainframe", shown, "The " + named + " list took " + shown + " ms to open, " + (filled < 0 ? "?" : filled.ToString()) + " ms of it before filling, " + menu.Items.Count + " rows.");
+            };
+            menu.Opening += opening;
+            menu.Opened += opened;
+            try
+            {
+                if (menu.Items.Count == 0 && menu != fallbackMenu)
+                {
+                    ToolStripMenuItem none = new ToolStripMenuItem("Nothing listed yet. Press Refresh.");
+                    none.Enabled = false;
+                    menu.Items.Add(none);
+                }
+                menu.Show(under, new Point(0, under.Height));
+            }
+            finally { menu.Opening -= opening; }
+        }
+
+        // The list comes from her library, so it opens at once with nothing looked up. Opened while Refresh is still
+        // looking, it shows a spinning row and fills in when the look is done.
+        // What the rows were last made from: the library and the pick. The same again keeps the rows it has, so a list
+        // that has not changed is not built again on every open.
+        private string fallbackRowsFrom;
+
+        private void FillFallback()
+        {
+            if (capri.FallbackLooking)
+            {
+                fallbackRowsFrom = null;
+                fallbackMenu.Items.Clear();
+                fallbackMenu.Items.Add(new Spinning("Looking for brains on this PC"));
+                return;
+            }
+            string[] library = capri.FallbackLibrary;
+            string from = string.Join("\n", library) + "|" + capri.FallbackBrain;
+            if (from == fallbackRowsFrom && fallbackMenu.Items.Count > 0) return;
+            fallbackRowsFrom = from;
+            fallbackMenu.SuspendLayout();
+            try
+            {
+                fallbackMenu.Items.Clear();
+                FillFallbackRows(library);
+            }
+            finally { fallbackMenu.ResumeLayout(); }
+        }
+
+        private void RefreshFallback()
+        {
+            if (capri.FallbackLooking) return;
+            capri.RefreshFallbackLibrary();
+            ShowFallbackRefresh();
+        }
+
+        // Called when a look ends: the key says what it found, and an open list takes the new rows.
+        internal void FallbackLooked()
+        {
+            ShowFallbackRefresh();
+            fallbackRowsFrom = null;
+            if (fallbackMenu.Visible) ShowFallback(capri.FallbackLibrary);
+        }
+
+        private void ShowFallbackRefresh()
+        {
+            if (fallbackRefresh == null) return;
+            int found = capri.FallbackLibrary.Length;
+            fallbackRefresh.Text = capri.FallbackLooking ? "Looking..." : found == 0 ? "Refresh" : "Refresh · " + found + " found";
+            fallbackRefresh.Invalidate();
+        }
+
+        private void ShowFallback(string[] found)
+        {
+            fallbackMenu.SuspendLayout();
+            List<ToolStripItem> gone = new List<ToolStripItem>();
+            foreach (ToolStripItem was in fallbackMenu.Items) gone.Add(was);
+            foreach (ToolStripItem was in gone) { fallbackMenu.Items.Remove(was); was.Dispose(); }
+            try { FillFallbackRows(found); }
+            finally { fallbackMenu.ResumeLayout(); fallbackMenu.PerformLayout(); }
+        }
+
+        // All the rows in one go: added one at a time, the menu is laid out again and its corners cut again after each.
+        private void FillFallbackRows(string[] found)
+        {
+            string picked = capri.FallbackBrain;
+            if (found.Length == 0)
+            {
+                fallbackMenu.Items.Add(Choice("Install a local backup", false, delegate { capri.SetUpBrain(); }));
+                return;
+            }
+            List<ToolStripItem> rows = new List<ToolStripItem>();
+            rows.Add(Choice("None", string.IsNullOrEmpty(picked), delegate { capri.SetFallbackBrain(null); }));
+            foreach (string one in found)
+            {
+                string brain = one;
+                rows.Add(Choice(Companion.FallbackLabel(brain), brain == picked, delegate { capri.SetFallbackBrain(brain); }));
+            }
+            fallbackMenu.Items.AddRange(rows.ToArray());
+        }
+
         private void FillThinking()
         {
             int level = capri.ThinkingLevel;
@@ -3935,11 +4225,18 @@ namespace CapriDesktop
 
         internal void OpenThinkingExtra()
         {
-            if (thinkingSheet != null && !thinkingSheet.IsDisposed && thinkingSheet.Zoom != zoom) thinkingSheet.Close();
-            if (thinkingSheet == null || thinkingSheet.IsDisposed) thinkingSheet = new ThinkingSheet(this, zoom);
+            System.Diagnostics.Stopwatch took = System.Diagnostics.Stopwatch.StartNew();
+            MakeThinking();
             thinkingSheet.Fill();
             if (!thinkingSheet.Visible) thinkingSheet.Show(this);
             else thinkingSheet.Activate();
+            Timed(took, "Thinking");
+        }
+
+        private void MakeThinking()
+        {
+            if (thinkingSheet != null && !thinkingSheet.IsDisposed && thinkingSheet.Zoom != zoom) { thinkingSheet.Dispose(); thinkingSheet = null; }
+            if (thinkingSheet == null || thinkingSheet.IsDisposed) thinkingSheet = Kept(new ThinkingSheet(this, zoom));
         }
 
         internal string ThinkingShown { get { return thinkingLevel.Text; } }
@@ -4390,6 +4687,11 @@ namespace CapriDesktop
                 string name = style.Name;
                 freeMenu.Items.Add(Choice(name, name == chosen, delegate { capri.ChooseVoiceStyle(name); }));
             }
+            // A Latin-script language her free voice has no dictionary for reads in her English voice, unless they want the
+            // Windows voice for it, which says it properly but sounds robotic.
+            string tongue = Brain.LanguageCode(Brain.Language);
+            if (tongue != "en" && VoiceLanguage.LatinScript(tongue) && !VoiceTongues.Knows(tongue))
+                freeMenu.Items.Add(Choice(WindowsTongueChoice, capri.WindowsTongue, delegate { capri.ToggleWindowsTongue(); }));
             freeMenu.Items.Add(new ToolStripSeparator());
             // Capri ships no voice clip, so HD copies only a clip they pick: before there is one, HD asks for it.
             if (!yours && !kept)
@@ -4474,41 +4776,111 @@ namespace CapriDesktop
         // over the Mainframe with only that row's choices.
         private void OpenServer(bool cloud, string api)
         {
-            if (sheet != null && !sheet.IsDisposed && !sheet.Visible && sheet.Zoom != zoom) sheet.Close();
-            if (sheet == null || sheet.IsDisposed) sheet = new ServerSheet(this, zoom);
+            System.Diagnostics.Stopwatch took = System.Diagnostics.Stopwatch.StartNew();
+            MakeServer();
             sheet.Fill(cloud, api);
             if (!sheet.Visible) sheet.Show(this);
             sheet.Activate();
+            Timed(took, "voice server");
+        }
+
+        private void MakeServer()
+        {
+            if (sheet != null && !sheet.IsDisposed && !sheet.Visible && sheet.Zoom != zoom) { sheet.Dispose(); sheet = null; }
+            if (sheet == null || sheet.IsDisposed) sheet = Kept(new ServerSheet(this, zoom));
         }
 
         // Her SECURITY window, over the Mainframe like their voice server's panel.
         private void OpenSecurity()
         {
-            if (guard != null && !guard.IsDisposed && guard.Zoom != zoom) guard.Close();
-            if (guard == null || guard.IsDisposed) guard = new SecuritySheet(this, zoom);
+            System.Diagnostics.Stopwatch took = System.Diagnostics.Stopwatch.StartNew();
+            MakeSecurity();
             guard.Sync();
             if (!guard.Visible) guard.Show(this);
             guard.Activate();
+            Timed(took, "SECURITY");
+        }
+
+        private void MakeSecurity()
+        {
+            if (guard != null && !guard.IsDisposed && guard.Zoom != zoom) { guard.Dispose(); guard = null; }
+            if (guard == null || guard.IsDisposed) guard = Kept(new SecuritySheet(this, zoom));
         }
 
         // Her EXTRAS window, over the Mainframe like SECURITY. Only a new install's first launch opens it.
         internal void ShowExtras()
         {
-            if (extras != null && !extras.IsDisposed && extras.Zoom != zoom) extras.Close();
-            if (extras == null || extras.IsDisposed) extras = new ExtrasSheet(this, zoom);
+            System.Diagnostics.Stopwatch took = System.Diagnostics.Stopwatch.StartNew();
+            MakeExtras();
             extras.Sync();
             if (!extras.Visible) extras.Show(this);
             extras.Activate();
+            Timed(took, "EXTRAS");
+        }
+
+        private void MakeExtras()
+        {
+            if (extras != null && !extras.IsDisposed && extras.Zoom != zoom) { extras.Dispose(); extras = null; }
+            if (extras == null || extras.IsDisposed) extras = Kept(new ExtrasSheet(this, zoom));
+        }
+
+        // A window made once and kept in its slot: closed by them it hides, and its next open refills it rather than
+        // building it again. Closed because she is quitting, or by its owner going, it goes for real.
+        private T Kept<T>(T sheet) where T : Form
+        {
+            sheet.FormClosing += delegate(object sender, FormClosingEventArgs e)
+            {
+                if (e.CloseReason != CloseReason.UserClosing || Quitting || IsDisposed) return;
+                e.Cancel = true;
+                sheet.Hide();
+            };
+            return sheet;
+        }
+
+        // A mod starting or stopping, or anything else that changes what her windows show: the kept ones that are open
+        // refill now, and the hidden ones refill when they next open.
+        internal void RefreshKept()
+        {
+            try
+            {
+                if (thinkingSheet != null && !thinkingSheet.IsDisposed && thinkingSheet.Visible) thinkingSheet.Fill();
+                if (guard != null && !guard.IsDisposed && guard.Visible) guard.Sync();
+                if (extras != null && !extras.IsDisposed && extras.Visible) extras.Sync();
+                if (providerSheet != null && !providerSheet.IsDisposed && providerSheet.Visible) providerSheet.Fill();
+                if (layered != null && !layered.IsDisposed && layered.Visible) layered.Sync();
+                if (mixSheet != null && !mixSheet.IsDisposed && mixSheet.Visible) mixSheet.Sync();
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+        }
+
+        // Made now, while nothing waits on it: its window and layout, not shown.
+        private static void Ready(Form sheet)
+        {
+            if (sheet == null || sheet.IsDisposed) return;
+            IntPtr made = sheet.Handle;
+            sheet.PerformLayout();
+        }
+
+        private static void Timed(System.Diagnostics.Stopwatch took, string named)
+        {
+            if (took.ElapsedMilliseconds > 150) Brain.Log("mainframe", took.ElapsedMilliseconds, "The " + named + " window took " + took.ElapsedMilliseconds + " ms to open.");
         }
 
         // Her VOICE LAYERS window, over the Mainframe like SECURITY.
         private void OpenLayers()
         {
-            if (layered != null && !layered.IsDisposed && layered.Zoom != zoom) layered.Close();
-            if (layered == null || layered.IsDisposed) layered = new LayersSheet(this, zoom);
+            System.Diagnostics.Stopwatch took = System.Diagnostics.Stopwatch.StartNew();
+            MakeLayers();
             layered.Sync();
             if (!layered.Visible) layered.Show(this);
             layered.Activate();
+            Timed(took, "VOICE LAYERS");
+        }
+
+        private void MakeLayers()
+        {
+            if (layered != null && !layered.IsDisposed && layered.Zoom != zoom) { layered.Dispose(); layered = null; }
+            if (layered == null || layered.IsDisposed) layered = Kept(new LayersSheet(this, zoom));
         }
 
         private void ShowLayers()
@@ -5252,6 +5624,14 @@ namespace CapriDesktop
             strip.Disposed += delegate { own.Dispose(); };
             strip.ShowImageMargin = false;
             strip.ShowCheckMargin = true;
+            // How long it takes to show, named in her log when slow, so any dropdown's lag can be found.
+            System.Diagnostics.Stopwatch took = null;
+            strip.Opening += delegate { took = System.Diagnostics.Stopwatch.StartNew(); };
+            strip.Opened += delegate
+            {
+                if (took != null && took.ElapsedMilliseconds > 150) Brain.Log("mainframe", took.ElapsedMilliseconds, "The " + (strip.AccessibleName ?? "Mainframe") + " dropdown took " + took.ElapsedMilliseconds + " ms to show, " + strip.Items.Count + " rows.");
+                took = null;
+            };
             dropdowns.RemoveAll(delegate(ContextMenuStrip old) { return old.IsDisposed || (old.OwnerItem != null && old.OwnerItem.IsDisposed); });
             dropdowns.Add(strip);
             return strip;
@@ -5486,6 +5866,8 @@ namespace CapriDesktop
             internal bool Dimmed { get { return dimmed; } set { dimmed = value; Invalidate(); } }
             internal bool Loud;
             internal bool Picked;
+            // A light rather than a button: lit at half strength, like a dashboard lamp, so it never reads as a choice made.
+            internal bool Lamp;
             internal bool StateValue;
             // What a screen reader hears as its value, like Remote on, 1 phone, so its description can stay its tip.
             private string status;
@@ -5570,6 +5952,7 @@ namespace CapriDesktop
                 bool lit = hot || (Focused && ShowFocusCues);
                 Color face, rim, ink;
                 if (!Enabled || Dimmed) { face = Field; rim = Neon.Tone(52, 22, 32); ink = Neon.Tone(112, 94, 104); }
+                else if (Picked && Lamp) { face = Toward(Field, Cyan, 0.5f); rim = face; ink = White; }
                 else if (Picked) { face = hot ? Neon.Tone(160, 248, 251) : Cyan; rim = face; ink = OnInk; }
                 else if (Accent == Cyan) { face = down ? Neon.Tone(18, 62, 67) : hot ? Neon.Tone(13, 45, 49) : Deep; rim = lit ? Cyan : Loud ? DeepEdge : Neon.Tone(28, 84, 92); ink = Cyan; }
                 else if (Accent == Hot) { face = down ? Neon.Tone(72, 18, 30) : hot ? Neon.Tone(54, 16, 28) : Neon.Tone(34, 12, 22); rim = lit ? Neon.Tone(255, 124, 122) : Hot; ink = Neon.Tone(255, 166, 162); }
@@ -5583,10 +5966,12 @@ namespace CapriDesktop
                 if (Chevron) Drop(graphics, Width - 19 * s, y, s, Enabled && !Dimmed ? Cyan : ink, hot);
                 Rectangle area = Chevron ? new Rectangle((int)(10 * s), 0, Width - (int)(32 * s), Height) : ClientRectangle;
                 TextFormatFlags flags = TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis | (Chevron ? TextFormatFlags.Left : TextFormatFlags.HorizontalCenter);
+                // In the language picked for her, read as it is drawn, so every key follows it without being told.
+                string shown = Gui.T(Text);
                 if (Heart && Enabled)
                 {
                     // The heart and the text are centred together, 5 px apart.
-                    int wide = TextRenderer.MeasureText(graphics, Text, Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width;
+                    int wide = TextRenderer.MeasureText(graphics, shown, Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width;
                     float left = (Width - (17 * s + wide)) / 2;
                     DrawHeart(graphics, left + 6 * s, y, s * Swell);
                     area = new Rectangle((int)(left + 17 * s), 0, Width - (int)(left + 17 * s), Height);
@@ -5594,13 +5979,23 @@ namespace CapriDesktop
                 }
                 else if (Phone)
                 {
-                    int wide = TextRenderer.MeasureText(graphics, Text, Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width;
+                    int wide = TextRenderer.MeasureText(graphics, shown, Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width;
                     float left = (Width - (PhoneRoom * s + wide)) / 2;
                     DrawPhone(graphics, left + 4 * s, y, s, ink, face);
                     area = new Rectangle((int)(left + PhoneRoom * s), 0, Width - (int)(left + PhoneRoom * s), Height);
                     flags = (flags & ~TextFormatFlags.HorizontalCenter) | TextFormatFlags.Left;
                 }
-                TextRenderer.DrawText(graphics, Text, Font, area, ink, flags);
+                // A translation longer than the English shrinks to fit the key, down to seven tenths of its size,
+                // rather than every language needing its own layout. The English is drawn as it always was.
+                Font font = Font;
+                Font fitted = null;
+                if (!ReferenceEquals(shown, Text) && shown != Text && area.Width > 0)
+                {
+                    int need = TextRenderer.MeasureText(graphics, shown, font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width;
+                    if (need > area.Width) font = fitted = new Font(font.FontFamily, Math.Max(font.Size * 0.7f, font.Size * area.Width / need), font.Style, font.Unit);
+                }
+                TextRenderer.DrawText(graphics, shown, font, area, ink, flags);
+                if (fitted != null) fitted.Dispose();
                 if (Meter >= 0) using (Brush meter = new SolidBrush(Cyan)) graphics.FillRectangle(meter, 3 * s, Height - 4 * s, (float)((Width - 6 * s) * Math.Max(0, Math.Min(1, Meter))), 2 * s);
                 if (Marked) FocusMark(graphics, new RectangleF(0, 0, Width, Height), s, 0, 5 * s, 0);
             }
@@ -6272,13 +6667,49 @@ namespace CapriDesktop
             }
         }
 
+        // A row that says she is looking, with a small circle turning beside it, for a list still being filled.
+        private sealed class Spinning : ToolStripMenuItem
+        {
+            private readonly Timer turn = new Timer();
+            private int angle;
+
+            internal Spinning(string text) : base(text + "        ")
+            {
+                Enabled = false;
+                turn.Interval = 60;
+                turn.Tick += delegate { angle = (angle + 30) % 360; Invalidate(); };
+                turn.Start();
+            }
+
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                base.OnPaint(e);
+                int side = Math.Max(8, Height - 10);
+                Rectangle ring = new Rectangle(Width - side - 10, (Height - side) / 2, side, side);
+                SmoothingMode was = e.Graphics.SmoothingMode;
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using (Pen faint = new Pen(Faint, 2)) e.Graphics.DrawEllipse(faint, ring);
+                using (Pen lit = new Pen(Cyan, 2)) e.Graphics.DrawArc(lit, ring, angle, 100);
+                e.Graphics.SmoothingMode = was;
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing) { turn.Stop(); turn.Dispose(); }
+                base.Dispose(disposing);
+            }
+        }
+
         private sealed class ProviderSheet : Form, LookWindow
         {
             private readonly Mainframe owner;
+            private readonly Entry named;
             private readonly Entry address;
             private readonly Entry key;
             private readonly Key saved;
             private readonly Key ollama;
+            private readonly Key book;
+            private readonly ContextMenuStrip bookMenu;
             private readonly Label note;
             internal readonly float Zoom;
 
@@ -6297,8 +6728,9 @@ namespace CapriDesktop
                 BackColor = Ground;
                 ForeColor = White;
                 DoubleBuffered = true;
-                // A row taller than it was, for the Ollama button. Crowded() fails on any overlap, so it gets its own line.
-                ClientSize = new Size(Wide, 392);
+                // A row taller than it was, for the Ollama button, and another for the name. Crowded() fails on any overlap,
+                // so each gets its own line.
+                ClientSize = new Size(Wide, 484);
                 Heading(this, "BRAIN PROVIDER >", new Point(24, 15), Display(14f), Rose, 0);
                 Key close = Make("", 330, 20, 26, delegate { Close(); });
                 close.Height = 22;
@@ -6306,37 +6738,153 @@ namespace CapriDesktop
                 close.AccessibleName = "Close";
                 CancelButton = close;
                 Caption("OpenAI-compatible server or provider.", 52, 20, Faint);
-                Caption("Address", 80, 18, Rose);
-                address = Input(100, "http://localhost:1234/v1", "Provider base URL");
-                Caption("Key", 136, 18, Rose);
-                key = Input(156, "Optional. Blank means no key.", "Provider API key, optional");
+                // Her address book: every provider that has connected, so switching is a pick, not typing it all again.
+                bookMenu = new ContextMenuStrip();
+                bookMenu.Renderer = owner.fallbackMenu.Renderer;
+                bookMenu.BackColor = owner.fallbackMenu.BackColor;
+                bookMenu.ForeColor = owner.fallbackMenu.ForeColor;
+                bookMenu.Font = owner.fallbackMenu.Font;
+                bookMenu.ShowImageMargin = false;
+                bookMenu.Opening += delegate { FillBook(); };
+                book = Make("Saved providers", 28, 80, 328, delegate { bookMenu.Show(book, new Point(0, book.Height)); });
+                book.Chevron = true;
+                book.AccessibleName = "Saved providers: pick one to connect to it, or an app's usual address to start from";
+                // A name of their own, so three keys for one provider are three entries they can tell apart.
+                Caption("Name", 116, 18, Rose);
+                named = Input(136, "Optional, like LM Studio or Claude work", "Provider name, optional");
+                Caption("Address", 172, 18, Rose);
+                address = Input(192, "http://localhost:1234/v1", "Provider base URL");
+                Caption("Key", 228, 18, Rose);
+                key = Input(248, "Optional. Blank means no key.", "Provider API key, optional");
                 key.Box.UseSystemPasswordChar = true;
                 address.Box.TextChanged += delegate { key.Box.Clear(); Kept(); };
                 key.Box.TextChanged += delegate { Kept(); };
-                Caption("Keys go only to this address.\nThey stay encrypted on this computer.", 196, 36, Faint);
-                Key connect = Make("Connect", 28, 240, 104, delegate { Connect(); });
+                Caption("Keys go only to this address.\nThey stay encrypted on this computer.", 288, 36, Faint);
+                Key connect = Make("Connect", 28, 332, 104, delegate { Connect(); });
                 connect.Accent = Cyan;
                 connect.Loud = true;
-                saved = Make("Use saved", 140, 240, 104, delegate { key.Box.Clear(); owner.capri.UseSavedProvider(); });
-                Key forget = Make("Forget", 252, 240, 104, delegate { key.Box.Clear(); address.Box.Clear(); owner.capri.ForgetProvider(); });
+                saved = Make("Use saved", 140, 332, 104, delegate { key.Box.Clear(); owner.capri.UseSavedProvider(); });
+                Key forget = Make("Forget", 252, 332, 104, delegate { key.Box.Clear(); address.Box.Clear(); named.Box.Clear(); owner.capri.ForgetProvider(); });
                 forget.Accent = Hot;
-                ollama = Make("Use Ollama on this PC", 28, 276, 328, delegate { UseOllama(); });
+                // A light, like Brains in use: lit while Ollama runs on this PC. Ollama itself is in the list above,
+                // picked like any provider, and she starts it on Refresh when it is installed and not running.
+                ollama = Make("Ollama", 28, 368, 328, delegate { });
                 ollama.Accent = Cyan;
-                ollama.AccessibleName = "Find Ollama on this computer and connect to it";
-                note = Caption("", 316, 60, Faint);
+                ollama.Lamp = true;
+                ollama.Cursor = Cursors.Default;
+                ollama.TabStop = false;
+                ollama.AccessibleName = "Ollama on this PC: lit while it is running";
+                note = Caption("", 408, 60, Faint);
                 AcceptButton = connect;
                 key.Box.KeyDown += delegate(object sender, KeyEventArgs e) { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; Connect(); } };
                 FormClosed += delegate { key.Box.Clear(); };
+                // Closed by them, it is hidden and kept for the next open, its key box emptied as it goes.
+                FormClosing += delegate(object sender, FormClosingEventArgs e)
+                {
+                    key.Box.Clear();
+                    if (e.CloseReason != CloseReason.UserClosing || owner.Quitting || owner.IsDisposed) return;
+                    e.Cancel = true;
+                    Hide();
+                };
                 // Like the other sheets since #78: her Mainframe size first, then the screen it's on, and again on a move to
                 // a screen with different scaling. OnLoad still places it under the Mainframe's top edge.
                 if (zoom != 1f) { Grow(this, zoom); Scale(new SizeF(zoom, zoom)); }
                 owner.Fit(this);
             }
 
+            // The book, the one in use ticked. Picking one connects it with the model it last used.
+            private void FillBook()
+            {
+                System.Diagnostics.Stopwatch took = System.Diagnostics.Stopwatch.StartNew();
+                try { FillBookNow(); }
+                finally { if (took.ElapsedMilliseconds > 150) Brain.Log("mainframe", took.ElapsedMilliseconds, "The saved providers list was slow to fill."); }
+            }
+
+            private void FillBookNow()
+            {
+                bookMenu.Items.Clear();
+                List<Companion.BookEntry> entries = owner.capri.ProviderBook();
+                if (entries.Count == 0)
+                {
+                    ToolStripMenuItem none = new ToolStripMenuItem("None saved yet: connect one and it is kept here");
+                    none.Enabled = false;
+                    bookMenu.Items.Add(none);
+                }
+                string current = owner.capri.ProviderAddress, currentName = owner.capri.ProviderName;
+                foreach (Companion.BookEntry entry in entries)
+                {
+                    string at = entry.Address;
+                    Companion.BookEntry picked = entry;
+                    ToolStripMenuItem item = new ToolStripMenuItem(entry.Name + (entry.Model == null ? "" : " · " + entry.Model) + (!entry.HasKey ? "" : " · key"), null, delegate { key.Box.Clear(); address.Box.Text = at; named.Box.Text = picked.Named ?? ""; owner.capri.UseBooked(at, picked.Named); });
+                    item.Checked = at == current && (picked.Named ?? "") == (currentName ?? "");
+                    bookMenu.Items.Add(item);
+                }
+                AddRunning(entries);
+                AddUsual(entries);
+            }
+
+            // What is running on this PC right now and not saved: Ollama with its models, and any local server her last
+            // look found. Ollama connects the way its own button does; a server fills the boxes and connects.
+            private void AddRunning(List<Companion.BookEntry> entries)
+            {
+                List<ToolStripItem> rows = new List<ToolStripItem>();
+                string[] models = owner.OllamaModelsShown;
+                if (owner.capri.OllamaRunning && models != null && models.Length > 0 && !entries.Exists(one => one.Name == "Ollama"))
+                    rows.Add(new ToolStripMenuItem("Ollama · running · " + models.Length + " model" + (models.Length == 1 ? "" : "s"), null, delegate { UseOllama(); }));
+                foreach (Cloud server in owner.capri.FoundServers)
+                {
+                    Cloud found = server;
+                    string at = Brain.ServerAddress(found.Host + "/v1");
+                    if (at == null || entries.Exists(one => Brain.ServerAddress(one.Address) == at)) continue;
+                    rows.Add(new ToolStripMenuItem(found.Name + " · running · " + found.Model, null, delegate
+                    {
+                        key.Box.Clear();
+                        named.Box.Text = found.Name;
+                        address.Box.Text = at;
+                        Connect();
+                    }));
+                }
+                if (rows.Count == 0) return;
+                bookMenu.Items.Add(new ToolStripSeparator());
+                bookMenu.Items.Add(Title("RUNNING NOW"));
+                foreach (ToolStripItem row in rows) bookMenu.Items.Add(row);
+            }
+
+            // A dim title over a part of the list, not something to pick.
+            private static ToolStripMenuItem Title(string text)
+            {
+                ToolStripMenuItem title = new ToolStripMenuItem(text);
+                title.Enabled = false;
+                return title;
+            }
+
+            // The apps people run a brain in, at their usual addresses, under the book: picking one fills the boxes rather
+            // than connecting, so a port they moved can be changed before Connect.
+            private void AddUsual(List<Companion.BookEntry> entries)
+            {
+                bool first = true;
+                foreach (Companion.BookEntry usual in Companion.UsualProviders)
+                {
+                    if (entries.Exists(one => one.Name == usual.Name)) continue;
+                    if (first) { bookMenu.Items.Add(new ToolStripSeparator()); bookMenu.Items.Add(Title("OTHER LOCAL APPS · usual addresses")); first = false; }
+                    Companion.BookEntry chosen = usual;
+                    bookMenu.Items.Add(new ToolStripMenuItem(usual.Name + " · " + usual.Address, null, delegate
+                    {
+                        key.Box.Clear();
+                        named.Box.Text = chosen.Name;
+                        address.Box.Text = chosen.Address;
+                        Say("Its usual address. Change the port if you moved it, then Connect.");
+                    }));
+                }
+            }
+
             internal void Fill()
             {
+                book.Text = "Saved providers (" + owner.ProvidersShown() + ")";
                 address.Box.Text = owner.capri.ProviderAddress;
+                named.Box.Text = owner.capri.ProviderName ?? "";
                 key.Box.Clear();
+                Light();
                 Say(owner.capri.ProviderKeySaved ? "Address and key saved. Use saved to reconnect." : "Blank key means no key.");
             }
 
@@ -6375,31 +6923,31 @@ namespace CapriDesktop
             {
                 string url = address.Box.Text, secret = key.Box.Text;
                 key.Box.Clear();
+                owner.capri.BookingName = named.Box.Text;
                 owner.capri.UseProvider(url, secret);
             }
 
             // Ollama in one button. Its port is fixed at 11434 unless OLLAMA_HOST says otherwise, so where it lives can
             // be worked out rather than typed. /api/tags both proves something is answering and says which models are
             // installed, so a blank model list is told apart from Ollama not running at all.
-            // Set once she has looked and found nothing installed: the button says Get Ollama until it is pressed.
-            private bool getOllama;
+            // The light: running with its model count, installed and not running, or not on this PC.
+            private void Light()
+            {
+                string[] models = owner.OllamaModelsShown;
+                bool running = owner.capri.OllamaRunning && models != null;
+                bool installed = running || OllamaExe() != null;
+                ollama.Text = running ? "Ollama detected · " + models.Length + " model" + (models.Length == 1 ? "" : "s")
+                    : installed ? "Ollama installed, not running" : "No Ollama on this PC";
+                ollama.Picked = running;
+                ollama.Dimmed = !running;
+                ollama.Status = ollama.Text;
+                ollama.Invalidate();
+            }
 
             private void UseOllama()
             {
-                if (getOllama)
-                {
-                    getOllama = false;
-                    ollama.Text = "Use Ollama on this PC";
-                    ollama.Invalidate();
-                    note.Text = "Install Ollama, then press this again.";
-                    owner.capri.OpenOllamaPage();
-                    return;
-                }
                 string where = OllamaHome();
-                ollama.Enabled = false;
-                ollama.Text = "Starting Ollama...";
-                ollama.Invalidate();
-                note.Text = "";
+                note.Text = "Starting Ollama...";
                 System.Threading.ThreadPool.QueueUserWorkItem(delegate
                 {
                     string models = null, trouble = null;
@@ -6429,9 +6977,7 @@ namespace CapriDesktop
                     {
                         BeginInvoke((MethodInvoker)delegate
                         {
-                            ollama.Enabled = true;
-                            ollama.Text = "Use Ollama on this PC";
-                            ollama.Invalidate();
+                            Light();
                             if (models == null)
                             {
                                 // Telling someone to start a program they have not got is the kind of dead end that
@@ -6439,18 +6985,15 @@ namespace CapriDesktop
                                 // time with nothing calling it.
                                 if (!installed)
                                 {
-                                    getOllama = true;
-                                    ollama.Text = "Get Ollama";
-                                    ollama.Invalidate();
-                                    note.Text = "Ollama isn't on this PC. This opens its download page.\nInstall it, then press this again.";
+                                    note.Text = "Ollama isn't on this PC. Get it from ollama.com,\nthen press Refresh under BRAIN.";
                                     return;
                                 }
                                 note.Text = "Nothing answered at " + where + ".\nStart Ollama, then press this again."
                                     + (trouble == null ? "" : "\n" + trouble);
                                 return;
                             }
-                            getOllama = false;
                             address.Box.Text = where + "/v1";
+                            this.named.Box.Text = "Ollama";
                             key.Box.Clear();
                             note.Text = named.Length == 0
                                 ? "Ollama is running at " + where + " but has no models yet.\nRun: ollama pull qwen2.5:7b"
@@ -6477,52 +7020,9 @@ namespace CapriDesktop
                 return "http://" + set.TrimEnd('/');
             }
 
-            // Where ollama.exe is. PATH first, then the usual install folders.
-            private static string OllamaExe()
-            {
-                try
-                {
-                    string path = Environment.GetEnvironmentVariable("PATH") ?? "";
-                    foreach (string piece in path.Split(';'))
-                    {
-                        string dir = piece.Trim().Trim('"');
-                        if (dir.Length == 0) continue;
-                        try
-                        {
-                            string full = System.IO.Path.Combine(dir, "ollama.exe");
-                            if (System.IO.File.Exists(full)) return full;
-                        }
-                        catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-                    }
-                }
-                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            private static string OllamaExe() { return CapriDesktop.Brain.OllamaExe(); }
 
-                string[] guesses =
-                {
-                    System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Programs\Ollama\ollama.exe"),
-                    System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"Ollama\ollama.exe"),
-                    System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), @"Ollama\ollama.exe")
-                };
-                foreach (string guess in guesses)
-                    try { if (System.IO.File.Exists(guess)) return guess; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-                return null;
-            }
-
-            // Starts it quietly. Its own window would be a console box in their face, and it keeps running after her.
-            private static bool Serve(string exe)
-            {
-                try
-                {
-                    System.Diagnostics.ProcessStartInfo how = new System.Diagnostics.ProcessStartInfo(exe, "serve");
-                    how.UseShellExecute = false;
-                    how.CreateNoWindow = true;
-                    how.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-                    how.WorkingDirectory = System.IO.Path.GetDirectoryName(exe) ?? "";
-                    System.Diagnostics.Process started = System.Diagnostics.Process.Start(how);
-                    return started != null;
-                }
-                catch (Exception) { return false; }
-            }
+            private static bool Serve(string exe) { return CapriDesktop.Brain.ServeOllama(exe); }
 
             private static string Asked(string url)
             {

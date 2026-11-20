@@ -1,0 +1,206 @@
+# Her menus and labels in Urdu: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe کھولیں
+Her folder	اس کا فولڈر
+Play	چلائیں
+Music	موسیقی
+Chess	شطرنج
+Connect four	کنیکٹ فور
+Tic-tac-toe	ٹک ٹیک ٹو
+Rock, paper, scissors	پتھر، کاغذ، قینچی
+Hide Capri	Capri چھپائیں
+Hologram	ہولوگرام
+Normal	عام
+Small	چھوٹا
+Medium	درمیانہ
+Large	بڑا
+Huge	بہت بڑا
+Giant	دیوہیکل
+Move	منتقل کریں
+Wander around	ادھر ادھر گھومیں
+Dance to music	موسیقی پر ناچو
+Dance	ناچو
+Ride cursor	کرسر پر سوار ہو
+Sit on windows	کھڑکیوں پر بیٹھو
+Sit here	یہاں بیٹھو
+Hang here	یہاں رکو
+Lie down	لیٹ جاؤ
+Go to sleep	سونے جاؤ
+Bring to this screen	اس اسکرین پر لاؤ
+Go to the next screen	اگلی اسکرین پر جاؤ
+Black	سیاہ
+White	سفید
+Test	ٹیسٹ
+Stop	روکیں
+Help	مدد
+Commands	کمانڈز
+Help page	مدد کا صفحہ
+Join the Discord	Discord میں شامل ہوں
+Copy error details	خرابی کی تفصیلات کاپی کریں
+Check for updates	اپ ڈیٹس چیک کریں
+Quit Capri	Capri بند کریں
+MAINFRAME	MAINFRAME
+Settings	سیٹنگز
+Mods	موڈز
+BRAIN	دماغ
+Provider	فراہم کنندہ
+Using your server with no key	بغیر کلید کے اپنا سرور استعمال کر رہے ہیں
+Refresh	تازہ کریں
+Set up her brain	اس کا دماغ سیٹ اپ کریں
+Have Ollama? Open it, then press Refresh.	Ollama ہے؟ اسے کھولیں، پھر تازہ کریں دبائیں۔
+Pick one. Only one brain runs at a time.	ایک چنیں۔ ایک وقت میں صرف ایک دماغ چلتا ہے۔
+MEDIUM INTELLIGENCE	درمیانی ذہانت
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	آف
+Free key	مفت کلید
+Connect	جوڑیں
+Free keys can be rate limited and slow.	مفت کلیدوں پر ریٹ لمٹ ہو سکتی ہے اور وہ سست ہو سکتی ہیں۔
+That's a paid key: it goes under MAX INTELLIGENCE.	یہ ادائیگی والی کلید ہے: یہ MAX INTELLIGENCE کے تحت جاتی ہے۔
+Move to MAX	MAX پر منتقل کریں
+VOICE	آواز
+Ctrl + Alt + V to talk	بولنے کے لیے Ctrl + Alt + V
+PREBUILT LOCAL	پہلے سے بنا لوکل
+CUSTOM LOCAL	حسب ضرورت لوکل
+CLOUD VOICE	کلاؤڈ وائس
+Set up	سیٹ اپ
+Setup guide	سیٹ اپ گائیڈ
+Fish Audio	Fish Audio
+Default model	ڈیفالٹ ماڈل
+Pick a voice model	وائس ماڈل چنیں
+Get free voice	مفت آواز حاصل کریں
+Mic: default	مائک: ڈیفالٹ
+Her speaker: Default	اس کا اسپیکر: ڈیفالٹ
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N مائیک کو میوٹ کرتا ہے
+CAPRI	CAPRI
+Support	سپورٹ
+Remote	Remote
+Bring here	یہاں لاؤ
+Advanced Settings	ایڈوانس سیٹنگز
+YOU	آپ
+Your personality	آپ کی شخصیت
+Language	زبان
+English	انگریزی
+What should she call you?	وہ آپ کو کیا کہہ کر پکارے؟
+Save	محفوظ کریں
+Volume	حجم
+Pitch	پچ
+Speed	رفتار
+Robot	روبوٹ
+Glitch	گلچ
+Sounds	آوازیں
+Typing sound	ٹائپنگ کی آواز
+Listen for Capri	Capri کو سنو
+Hearing	سماعت
+Auto	خودکار
+Free voice in games	گیمز میں مفت آواز
+Call mode (beta)	کال موڈ (بیٹا)
+Her voice in your mic	آپ کے مائک میں اس کی آواز
+Get VB-CABLE	VB-CABLE حاصل کریں
+How to	کیسے
+Her voice in your mic: loudness	آپ کے مائک میں اس کی آواز: حجم
+MOVES	حرکات
+Pop-in times	پاپ ان اوقات
+Mini player	مِنی پلیئر
+Wander	گھومیں
+Sleep	سونا
+Pop-ins	پاپ ان
+Glitch in at startup	شروع پر گلچ
+KEYS	کلیدیں
+Talk: Ctrl + Alt + V	بولیں: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	مائک میوٹ: Ctrl + Alt + N
+Type: Ctrl + Alt + T	ٹائپ: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	چھپائیں/دکھائیں: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	خاموش: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Gaming Mode: Ctrl + Alt + G
+Confirm	تصدیق کریں
+Cancel	منسوخ
+Size	سائز
+Check in on me	میرا حال پوچھو
+Edit check-in lines	میرا حال پوچھو کی لائنیں ترمیم کریں
+Always on top	ہمیشہ سب سے اوپر
+Mainframe size	Mainframe سائز
+Mainframe colours	Mainframe کے رنگ
+Head pats	سر پر تھپکی
+Pat stroke	سر پر تھپکی
+Chaos when upset	غصے میں افراتفری
+Legacy stand	پرانا اسٹینڈ
+Jealous of other AIs	دوسرے AIs سے حسد
+Teases when another AI comes to the front.	جب کوئی اور AI آگے آتا ہے تو وہ چھیڑتی ہے۔
+Close other AIs for me	میرے لیے دوسرے AIs بند کرو
+Asks before closing only the apps you choose.	صرف وہی ایپس بند کرنے سے پہلے پوچھتا ہے جو آپ منتخب کریں۔
+Apps she may close	ایپس جنہیں وہ بند کر سکتی ہے
+Choose apps	ایپس منتخب کریں
+WATCH	دیکھیں
+Watch my screen	میری اسکرین دیکھو
+Screens	اسکرینز
+All screens	تمام اسکرینیں
+Remember what she sees	وہ جو وہ دیکھتی ہے یاد رکھو
+Every	ہر
+Watch-along memory	ساتھ دیکھنے کی یادداشت
+Code/Husk Mode	Code/Husk موڈ
+Thinking	سوچ رہی ہوں
+Default	ڈیفالٹ
+Extra request JSON	اضافی درخواست JSON
+Add	شامل کریں
+Verbosity	تفصیل
+Replies	جوابات
+Memory	میموری
+Memory size	میموری سائز
+Max reply	زیادہ سے زیادہ جواب
+Bubble	بلبلہ
+Follow-up messages	فالو اپ پیغامات
+Use	استعمال کریں
+A model in Ollama, on your local server or on your key.	Ollama میں ایک ماڈل، آپ کے لوکل سرور پر یا آپ کی کلید پر۔
+HABITS	عادات
+Open her memories	اس کی یادیں کھولیں
+Start with Windows	Windows کے ساتھ شروع کریں
+Show on Discord	Discord پر دکھائیں
+Use her cursor	اس کا کرسر استعمال کریں
+Remember our chats	ہماری چیٹس یاد رکھو
+Power saver	پاور سیور
+Music app	میوزک ایپ
+Perch	پرچ
+Keep PC awake for jobs	کاموں کے لیے PC جاگتا رکھیں
+Hide in full screen	فل اسکرین میں چھپائیں
+Mini player over full screen	فل اسکرین کے اوپر مِنی پلیئر
+Explore while I'm away	جب میں دور ہوں دریافت کرو
+Explore after	بعد میں دریافت کرو
+GAMES	گیمز
+Controls	کنٹرولز
+Comments	تبصرے
+Live reactions	لائیو ردِعمل
+Game sounds	گیم آوازیں
+Gaming Mode	Gaming Mode
+She reacts to your game until you close it.	وہ آپ کے گیم پر ردِعمل دیتی ہے جب تک آپ اسے بند نہ کریں۔
+Works best on MAX INTELLIGENCE.	MAX INTELLIGENCE پر سب سے بہتر کام کرتا ہے۔
+Fast hands in games	گیمز میں تیز ہاتھ
+Mute her	اسے میوٹ کریں
+CLIPS	کلپس
+Clip my games	میرے گیمز ریکارڈ کرو
+Save big moments	بڑے لمحات محفوظ کریں
+Save folder	محفوظ فولڈر
+Choose folder	فولڈر منتخب کریں
+Open clips folder	کلپس فولڈر کھولیں
+Default length	ڈیفالٹ لمبائی
+Frame rate	فریم ریٹ
+Resolution	ریزولوشن
+Video bitrate	ویڈیو بٹ ریٹ
+Weather	موسم
+Code mods can reach your whole PC. Only trusted ones.	کوڈ موڈز آپ کے پورے PC تک پہنچ سکتے ہیں۔ صرف قابلِ اعتماد۔
+Import mod	موڈ درآمد کریں
+Browse mods	موڈز براؤز کریں
+Mods folder	موڈز فولڈر
+INSTALLED	انسٹال شدہ
+Update mods	موڈز اپ ڈیٹ کریں
+No mods match.	کوئی موڈ مطابقت نہیں رکھتا۔
+On	آن
+Remove	ہٹائیں
+Publish	شائع کریں
+Options	اختیارات
+Back	واپس
+Next	اگلا
+COLORS	رنگ
+Reset colors	رنگ ری سیٹ کریں
+Running on this PC	اس PC پر چل رہا ہے
+NORMAL	عام
+OFF	آف
+Local server address	لوکل سرور کا پتہ

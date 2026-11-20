@@ -5,7 +5,7 @@ namespace CapriDesktop
 {
     // Her senpai files, marked hidden on disk.
     //
-    // They are already absent from a censored install: nothing adult is written until the switch in sys.md is
+    // They are already absent from a censored install: nothing senpai is written until the switch in sys.md is
     // turned on. Once it is on they exist, and somebody looking through her folder finds them. Hidden does not
     // stop anyone who wants to look, and it is not meant to: most people never turn hidden files on, so this
     // is the difference between finding them by accident and going to find them.

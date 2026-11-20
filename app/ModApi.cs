@@ -66,6 +66,13 @@ namespace CapriDesktop
     {
         string[] Intros { get; }
     }
+
+    // An intro mod that can stop early, when they press Esc: it closes its own windows and timers. Optional; an intro
+    // without it still ends, with her sound for it cut.
+    public interface ICapriIntroStops
+    {
+        void StopIntro();
+    }
 #endif
 
     public interface ICapriMod
@@ -461,12 +468,64 @@ namespace CapriDesktop
 
         // What her box says before a code mod runs, the same on every platform: what it asks for, that it runs with full access to
         // the PC, and its fingerprint.
+        // What its code reaches for, read off the source, in the question itself and not only in her mods list.
+        // Each site it contacts is a line, with every whole address it names folded under that site.
+        private const int MostPlaces = 12;
+
+        private static string Reached(ModFile mod)
+        {
+            string[] reaches = mod.Reaches ?? new string[0], places = mod.Places ?? new string[0];
+            if (reaches.Length == 0) return "";
+            System.Text.StringBuilder said = new System.Text.StringBuilder("Read from its code, it:");
+            foreach (string one in reaches)
+            {
+                if (!one.StartsWith(Contacts, StringComparison.Ordinal)) { said.Append("\n- ").Append(one); continue; }
+                List<string> sites = new List<string>();
+                foreach (string place in places) { string site = Site(place); if (site.Length > 0 && !sites.Contains(site)) sites.Add(site); }
+                int shown = 0;
+                foreach (string site in sites)
+                {
+                    said.Append("\n- contacts ").Append(site);
+                    foreach (string place in places)
+                    {
+                        if (Site(place) != site) continue;
+                        if (shown++ < MostPlaces) said.Append("\n      ").Append(place);
+                    }
+                }
+                if (shown > MostPlaces) said.Append("\n      and ").Append(shown - MostPlaces).Append(" more addresses");
+            }
+            return said.Append("\n\n").ToString();
+        }
+
+        // The second question, for code that cannot be read. When it is only laid out badly, a readable copy is
+        // saved and named so it can be read first. When it carries packed data, nothing can open it, and that
+        // is said instead.
+        internal static string Unclear(ModFile mod)
+        {
+            string name = mod.Name ?? mod.Id ?? "This mod";
+            string why = mod.Unreadable ?? "it can't be read";
+            if (mod.Tidy == null)
+                return name + "'s code can't be read as it is: " + why + ". It can also start programs, call Windows directly or call code by its name, which is how packed data gets run, so what Capri listed about it may not be what it really does.\n\n"
+                    + "Mods sometimes carry a picture or a sound this way, but packed data can hide anything. If you didn't expect it from this mod, don't run it.\n\nRun it anyway?";
+            string copy = null;
+            try
+            {
+                copy = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "capri-mod-" + System.Text.RegularExpressions.Regex.Replace(mod.Id ?? "mod", "[^A-Za-z0-9-]", "") + "-readable.cs");
+                System.IO.File.WriteAllText(copy, mod.Tidy);
+            }
+            catch (Exception caughtOne) { Brain.Caught(caughtOne); copy = null; }
+            return name + "'s code can't be read as it is: " + why + ". What Capri listed about it, and what you'd see opening the file, may not be what it really does.\n\n"
+                + (copy == null ? "" : "She laid it back out so it can be read, and saved that copy here:\n" + copy + "\n\nRead that before saying yes. ")
+                + "Generated code can look like this too, so it isn't proof of anything. If you didn't expect it from this mod, don't run it.\n\nRun it anyway?";
+        }
+
         internal static string Consent(ModFile mod, string hash)
         {
             string asks = "";
             foreach (string permission in mod.Permissions ?? new string[0]) asks += "\n- " + PermissionMeaning(permission);
             return mod.Name + (string.IsNullOrEmpty(mod.Version) ? "" : " v" + mod.Version) + (string.IsNullOrEmpty(mod.Author) ? "" : ", which says it's by " + mod.Author) + ", is a code mod.\n\n"
                 + (asks.Length == 0 ? "It asks for none of Capri's permissions.\n\n" : "Through Capri, it asks to:" + asks + "\n\n")
+                + Reached(mod)
                 + "Code mods run as part of Capri with full access to your PC: your files, your accounts and the API keys she has saved. Nothing limits what it can do, and Capri doesn't check whether it's safe.\n\n"
                 + "Only run it if you wrote it, or you've read it and trust who did.\n\nFile fingerprint (SHA-256):\n" + hash + "\n\nRun this code?";
         }

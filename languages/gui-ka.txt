@@ -1,0 +1,206 @@
+# Her menus and labels in Georgian: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe-ის გახსნა
+Her folder	მისი საქაღალდე
+Play	დაკვრა
+Music	მუსიკა
+Chess	ჭადრაკი
+Connect four	ოთხი ერთ რიგში
+Tic-tac-toe	ჯვრები-ნოლები
+Rock, paper, scissors	ქვა, ქაღალდი, მაკრატელი
+Hide Capri	Capri-ს დამალვა
+Hologram	ჰოლოგრამა
+Normal	ჩვეულებრივი
+Small	პატარა
+Medium	საშუალო
+Large	დიდი
+Huge	უზარმაზარი
+Giant	გიგანტური
+Move	გადატანა
+Wander around	დაძრწის ირგვლივ
+Dance to music	იცეკვე მუსიკაზე
+Dance	იცეკვე
+Ride cursor	კურსორზე ჯდომა
+Sit on windows	დაჯექი ფანჯრებზე
+Sit here	აქ დაჯექი
+Hang here	აქ დარჩი
+Lie down	დაწექი
+Go to sleep	დაძინება
+Bring to this screen	მოიყვანე ამ ეკრანზე
+Go to the next screen	შემდეგ ეკრანზე გადასვლა
+Black	შავი
+White	თეთრი
+Test	ტესტი
+Stop	გაჩერება
+Help	დახმარება
+Commands	ბრძანებები
+Help page	დახმარების გვერდი
+Join the Discord	შემოუერთდი Discord-ს
+Copy error details	შეცდომის დეტალების კოპირება
+Check for updates	განახლებების შემოწმება
+Quit Capri	Capri-ს გასვლა
+MAINFRAME	MAINFRAME
+Settings	პარამეტრები
+Mods	მოდები
+BRAIN	ტვინი
+Provider	პროვაიდერი
+Using your server with no key	შენი სერვერის გამოყენება გასაღების გარეშე
+Refresh	განახლება
+Set up her brain	მისი ტვინის დაყენება
+Have Ollama? Open it, then press Refresh.	Ollama გაქვს? გახსენი, შემდეგ დააჭირე განახლებას.
+Pick one. Only one brain runs at a time.	აირჩიე ერთი. ერთდროულად მხოლოდ ერთი ტვინი მუშაობს.
+MEDIUM INTELLIGENCE	საშუალო ინტელექტი
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	გამორთვა
+Free key	უფასო გასაღები
+Connect	დაკავშირება
+Free keys can be rate limited and slow.	უფასო გასაღებებს შეიძლება ჰქონდეს სიხშირის შეზღუდვა და იყოს ნელი.
+That's a paid key: it goes under MAX INTELLIGENCE.	ეს ფასიანი გასაღებია: MAX INTELLIGENCE-ის ქვეშ მოხვდება.
+Move to MAX	გადატანა MAX-ზე
+VOICE	ხმა
+Ctrl + Alt + V to talk	Ctrl + Alt + V სალაპარაკოდ
+PREBUILT LOCAL	წინასწარ აგებული ლოკალური
+CUSTOM LOCAL	მორგებული ლოკალური
+CLOUD VOICE	ღრუბლის ხმა
+Set up	დაყენება
+Setup guide	დაყენების სახელმძღვანელო
+Fish Audio	Fish Audio
+Default model	ნაგულისხმევი მოდელი
+Pick a voice model	აირჩიე ხმის მოდელი
+Get free voice	უფასო ხმის მიღება
+Mic: default	მიკროფონი: ნაგულისხმევი
+Her speaker: Default	მისი დინამიკი: ნაგულისხმევი
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N მიკროფონს რთავს
+CAPRI	CAPRI
+Support	მხარდაჭერა
+Remote	Remote
+Bring here	მოიყვანე აქ
+Advanced Settings	გაფართოებული პარამეტრები
+YOU	შენ
+Your personality	შენი პერსონალობა
+Language	ენა
+English	ინგლისური
+What should she call you?	როგორ დამიძახებს?
+Save	შენახვა
+Volume	ხმაური
+Pitch	სიმაღლე
+Speed	სიჩქარე
+Robot	რობოტი
+Glitch	Glitch
+Sounds	ხმები
+Typing sound	აკრეფის ხმა
+Listen for Capri	მოუსმინე Capri-ს
+Hearing	სმენა
+Auto	ავტო
+Free voice in games	უფასო ხმა თამაშებში
+Call mode (beta)	ზარის რეჟიმი (beta)
+Her voice in your mic	მისი ხმა შენს მიკროფონში
+Get VB-CABLE	VB-CABLE-ის მიღება
+How to	როგორ
+Her voice in your mic: loudness	მისი ხმა შენს მიკროფონში: ხმაური
+MOVES	მოძრაობები
+Pop-in times	გამოჩენის დროები
+Mini player	მინი პლეერი
+Wander	დაძრწის
+Sleep	ძილი
+Pop-ins	გამოჩენები
+Glitch in at startup	Glitch გაშვებისას
+KEYS	კლავიშები
+Talk: Ctrl + Alt + V	საუბარი: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	მიკროფონის გაჩუმება: Ctrl + Alt + N
+Type: Ctrl + Alt + T	ჩაწერა: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	დამალვა/ჩვენება: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	ჩუმი: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	გეიმინგ რეჟიმი: Ctrl + Alt + G
+Confirm	დადასტურება
+Cancel	გაუქმება
+Size	ზომა
+Check in on me	შემომიარე
+Edit check-in lines	შემოსვლის ხაზების რედაქტირება
+Always on top	ყოველთვის ზემოთ
+Mainframe size	Mainframe-ის ზომა
+Mainframe colours	Mainframe-ის ფერები
+Head pats	თავზე ხელის გადასმები
+Pat stroke	ხელის გადასმა
+Chaos when upset	ქაოსი, როცა ბრაზდება
+Legacy stand	ძველი სადგამი
+Jealous of other AIs	შურს სხვა AI-ების
+Teases when another AI comes to the front.	ეკიდება, როცა სხვა AI წინა პლანზე გადმოდის.
+Close other AIs for me	დახურე სხვა AI-ები ჩემთვის
+Asks before closing only the apps you choose.	დახურვამდე ჰკითხავს მხოლოდ შენს მიერ არჩეულ აპებს.
+Apps she may close	აპები, რომლებიც შეიძლება დახურა
+Choose apps	აპების არჩევა
+WATCH	ყურება
+Watch my screen	ჩემს ეკრანს უყურე
+Screens	ეკრანები
+All screens	ყველა ეკრანი
+Remember what she sees	დაიმახსოვრე, რას ხედავს
+Every	ყოველი
+Watch-along memory	ერთად ყურების მეხსიერება
+Code/Husk Mode	Code/Husk რეჟიმი
+Thinking	ვფიქრობ
+Default	ნაგულისხმევი
+Extra request JSON	დამატებითი მოთხოვნა JSON
+Add	დამატება
+Verbosity	მეტყველების სიმრავლე
+Replies	პასუხები
+Memory	მეხსიერება
+Memory size	მეხსიერების ზომა
+Max reply	მაქსიმალური პასუხი
+Bubble	ბუშტი
+Follow-up messages	შემდგომი შეტყობინებები
+Use	გამოყენება
+A model in Ollama, on your local server or on your key.	მოდელი Ollama-ში, შენს ლოკალურ სერვერზე ან შენს გასაღებით.
+HABITS	ჩვევები
+Open her memories	მისი მოგონებების გახსნა
+Start with Windows	Windows-თან ერთად გაშვება
+Show on Discord	Discord-ზე ჩვენება
+Use her cursor	მისი კურსორის გამოყენება
+Remember our chats	დაიმახსოვრე ჩვენი ჩათები
+Power saver	ენერგიის დაზოგვა
+Music app	მუსიკის აპი
+Perch	სადგამი
+Keep PC awake for jobs	კომპიუტერი გამოფხიზლებული დატოვე სამუშაოებისთვის
+Hide in full screen	დამალე მთელ ეკრანზე
+Mini player over full screen	მინი პლეერი მთელ ეკრანზე
+Explore while I'm away	შესწავლა, სანამ არ ვარ
+Explore after	შემდეგ შესწავლა
+GAMES	თამაშები
+Controls	მართვა
+Comments	კომენტარები
+Live reactions	ცოცხალი რეაქციები
+Game sounds	თამაშის ხმები
+Gaming Mode	გეიმინგ რეჟიმი
+She reacts to your game until you close it.	ის შენს თამაშზე რეაგირებს, სანამ არ დახურავ.
+Works best on MAX INTELLIGENCE.	საუკეთესოდ მუშაობს MAX INTELLIGENCE-ზე.
+Fast hands in games	სწრაფი ხელები თამაშებში
+Mute her	მისი გაჩუმება
+CLIPS	კლიპები
+Clip my games	ჩაწერე ჩემი თამაშები
+Save big moments	მნიშვნელოვანი მომენტების შენახვა
+Save folder	შენახვის საქაღალდე
+Choose folder	საქაღალდის არჩევა
+Open clips folder	კლიპების საქაღალდის გახსნა
+Default length	ნაგულისხმევი სიგრძე
+Frame rate	კადრების სიჩქარე
+Resolution	გარჩევადობა
+Video bitrate	ვიდეოს ბიტრეიტი
+Weather	ამინდი
+Code mods can reach your whole PC. Only trusted ones.	კოდის მოდებს შეუძლიათ მთელ კომპიუტერამდე მისვლა. მხოლოდ სანდო.
+Import mod	მოდის შემოტანა
+Browse mods	მოდების დათვალიერება
+Mods folder	მოდების საქაღალდე
+INSTALLED	დაყენებული
+Update mods	მოდების განახლება
+No mods match.	არცერთი მოდი არ ემთხვევა.
+On	ჩართვა
+Remove	წაშლა
+Publish	გამოქვეყნება
+Options	ვარიანტები
+Back	უკან
+Next	შემდეგი
+COLORS	ფერები
+Reset colors	ფერების გადატვირთვა
+Running on this PC	მუშაობს ამ კომპიუტერზე
+NORMAL	ჩვეულებრივი
+OFF	გამორთული
+Local server address	ადგილობრივი სერვერის მისამართი

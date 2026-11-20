@@ -1,0 +1,206 @@
+# Her menus and labels in Mongolian: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe нээх
+Her folder	Түүний хавтас
+Play	Тоглуулах
+Music	Хөгжим
+Chess	Шатар
+Connect four	Дөрвөн мөр
+Tic-tac-toe	Тик-так-тоу
+Rock, paper, scissors	Чулуу, даавуу, ханцуй
+Hide Capri	Capri-г нуух
+Hologram	Голограм
+Normal	Хэвийн
+Small	Жижиг
+Medium	Дунд
+Large	Том
+Huge	Асар том
+Giant	Аварга
+Move	Зөөх
+Wander around	Тойрон тэнүүчлэх
+Dance to music	Хөгжимд бүжиглэх
+Dance	Бүжиглэх
+Ride cursor	Курсороор унах
+Sit on windows	Цонхон дээр суу
+Sit here	Энд суу
+Hang here	Энд унжих
+Lie down	Хэвтэх
+Go to sleep	Унтахаар яв
+Bring to this screen	Энэ дэлгэц рүү авчир
+Go to the next screen	Дараагийн дэлгэц рүү шилжих
+Black	Хар
+White	Цагаан
+Test	Туршилт
+Stop	Зогсоох
+Help	Тусламж
+Commands	Командууд
+Help page	Тусламжийн хуудас
+Join the Discord	Discord-д нэгдэх
+Copy error details	Алдааны дэлгэрэнгүйг хуулах
+Check for updates	Шинэчлэлт шалгах
+Quit Capri	Capri-г гарах
+MAINFRAME	MAINFRAME
+Settings	Тохиргоо
+Mods	Модууд
+BRAIN	ТАРХИ
+Provider	Үйлчилгээ үзүүлэгч
+Using your server with no key	Таны серверийг түлхүүргүйгээр ашиглаж байна
+Refresh	Шинэчлэх
+Set up her brain	Түүний тархийг тохируулах
+Have Ollama? Open it, then press Refresh.	Ollama байна уу? Нээгээд, Шинэчлэх дарна уу.
+Pick one. Only one brain runs at a time.	Нэгийг сонго. Нэг дор зөвхөн нэг тархи ажиллана.
+MEDIUM INTELLIGENCE	ДУНД ОЮУН УХААН
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Унтраах
+Free key	Үнэгүй түлхүүр
+Connect	Холбох
+Free keys can be rate limited and slow.	Үнэгүй түлхүүрүүд хязгаартай, удаан байж болно.
+That's a paid key: it goes under MAX INTELLIGENCE.	Энэ төлбөртэй түлхүүр: MAX INTELLIGENCE доор орно.
+Move to MAX	MAX руу зөөх
+VOICE	ДУУ
+Ctrl + Alt + V to talk	Ярихын тулд Ctrl + Alt + V
+PREBUILT LOCAL	БЭЛЭН ЛОКАЛ
+CUSTOM LOCAL	ӨӨРИЙН ЛОКАЛ
+CLOUD VOICE	ҮҮЛЭН ДУУ
+Set up	Тохируулах
+Setup guide	Тохируулгын заавар
+Fish Audio	Fish Audio
+Default model	Үндсэн загвар
+Pick a voice model	Дууны загвар сонго
+Get free voice	Үнэгүй дуу авах
+Mic: default	Микрофон: үндсэн
+Her speaker: Default	Түүний чанга яригч: Үндсэн
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N микрофоныг дуугүй болгоно
+CAPRI	CAPRI
+Support	Дэмжлэг
+Remote	Зай хяналт
+Bring here	Энд авчир
+Advanced Settings	Нарийвчилсан тохиргоо
+YOU	ТА
+Your personality	Таны зан чанар
+Language	Хэл
+English	Англи
+What should she call you?	Тэр таныг яаж дуудах ёстой вэ?
+Save	Хадгалах
+Volume	Дуу
+Pitch	Өндөр
+Speed	Хурд
+Robot	Робот
+Glitch	Алдаа
+Sounds	Дуунууд
+Typing sound	Бичих дуу
+Listen for Capri	Capri-г сонсох
+Hearing	Сонсгол
+Auto	Автомат
+Free voice in games	Тоглоомд үнэгүй дуу
+Call mode (beta)	Дуудлагын горим (бета)
+Her voice in your mic	Түүний дуу таны микрофонд
+Get VB-CABLE	VB-CABLE авах
+How to	Яаж
+Her voice in your mic: loudness	Түүний дуу таны микрофонд: чанга байдал
+MOVES	ХӨДӨЛГӨӨН
+Pop-in times	Орж ирэх хугацаа
+Mini player	Жижиг тоглуулагч
+Wander	Тэнүүчлэх
+Sleep	Унтах
+Pop-ins	Орж ирэлтүүд
+Glitch in at startup	Эхлэхэд алдаа
+KEYS	ТҮЛХҮҮРҮҮД
+Talk: Ctrl + Alt + V	Ярих: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Микрофоныг дуугүй болгох: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Бичих: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Нуух/харуулах: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Чимээгүй: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Тоглоомын горим: Ctrl + Alt + G
+Confirm	Баталгаажуулах
+Cancel	Цуцлах
+Size	Хэмжээ
+Check in on me	Намайг шалгах
+Edit check-in lines	Шалгах мөрүүдийг засах
+Always on top	Үргэлж дээд талд
+Mainframe size	Mainframe-ийн хэмжээ
+Mainframe colours	Mainframe-ийн өнгө
+Head pats	Толгой илбэх
+Pat stroke	Илбэлт
+Chaos when upset	Уурласан үед хаос
+Legacy stand	Хуучин тавцан
+Jealous of other AIs	Бусад AI-д атаархах
+Teases when another AI comes to the front.	Өөр AI урд гарч ирэхэд шоолдог.
+Close other AIs for me	Миний төлөө бусад AI-г хаах
+Asks before closing only the apps you choose.	Зөвхөн таны сонгосон апп-уудыг хаахаас өмнө асууна.
+Apps she may close	Хаж болох апп-ууд
+Choose apps	Апп сонгох
+WATCH	ХАРАХ
+Watch my screen	Миний дэлгэцийг харах
+Screens	Дэлгэцүүд
+All screens	Бүх дэлгэц
+Remember what she sees	Тэр юу харснаа санах
+Every	Бүр
+Watch-along memory	Хамтдаа үзсэн дурсамж
+Code/Husk Mode	Код/Husk горим
+Thinking	Бодож байна
+Default	Үндсэн
+Extra request JSON	Нэмэлт хүсэлтийн JSON
+Add	Нэмэх
+Verbosity	Дэлгэрэнгүй байдал
+Replies	Хариултууд
+Memory	Санах ой
+Memory size	Санах ойн хэмжээ
+Max reply	Хамгийн их хариулт
+Bubble	Бөмбөлөг
+Follow-up messages	Дараагийн мессежүүд
+Use	Ашиглах
+A model in Ollama, on your local server or on your key.	Ollama дахь загвар, таны локал сервер дээр эсвэл таны түлхүүрээр.
+HABITS	ЗАН ТААЛАЛ
+Open her memories	Түүний дурсамжийг нээх
+Start with Windows	Windows-ээр эхлүүлэх
+Show on Discord	Discord дээр харуулах
+Use her cursor	Түүний курсорыг ашиглах
+Remember our chats	Бидний чатуудыг санах
+Power saver	Эрчим хүч хэмнэгч
+Music app	Хөгжмийн апп
+Perch	Суудал
+Keep PC awake for jobs	Ажилд зориулж компьютерийг сэрүүн байлгах
+Hide in full screen	Бүтэн дэлгэцэд нуух
+Mini player over full screen	Жижиг тоглуулагч бүтэн дэлгэцийн дээр
+Explore while I'm away	Би хол байхад судлах
+Explore after	Дараа нь судлах
+GAMES	ТОГЛООМ
+Controls	Удирдлага
+Comments	Сэтгэгдлүүд
+Live reactions	Шууд хариу үйлдэл
+Game sounds	Тоглоомын дуу
+Gaming Mode	Тоглоомын горим
+She reacts to your game until you close it.	Таны тоглоомыг хаах хүртэл тэр хариу үйлдэл үзүүлнэ.
+Works best on MAX INTELLIGENCE.	MAX INTELLIGENCE дээр хамгийн сайн ажиллана.
+Fast hands in games	Тоглоомд хурдан гар
+Mute her	Түүнийг дуугүй болгох
+CLIPS	КЛИПҮҮД
+Clip my games	Миний тоглоомыг клипээр бичих
+Save big moments	Том мөчүүдийг хадгалах
+Save folder	Хадгалах хавтас
+Choose folder	Хавтас сонгох
+Open clips folder	Клипийн хавтас нээх
+Default length	Үндсэн урт
+Frame rate	Фреймийн хурд
+Resolution	Нарийвчлал
+Video bitrate	Видеоны битрейт
+Weather	Цаг агаар
+Code mods can reach your whole PC. Only trusted ones.	Кодын модууд таны бүх компьютерт хүрч чадна. Зөвхөн найдвартай нь.
+Import mod	Мод импорт хийх
+Browse mods	Модуудыг үзэх
+Mods folder	Модын хавтас
+INSTALLED	СУУЛГАСАН
+Update mods	Модуудыг шинэчлэх
+No mods match.	Таарах модууд байхгүй.
+On	Асаах
+Remove	Устгах
+Publish	Нийтлэх
+Options	Сонголтууд
+Back	Буцах
+Next	Дараах
+COLORS	ӨНГӨ
+Reset colors	Өнгийг шинэчлэх
+Running on this PC	Энэ компьютер дээр ажиллаж байна
+NORMAL	ХЭВИЙН
+OFF	УНТРААСАН
+Local server address	Локал серверийн хаяг

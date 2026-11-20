@@ -8,7 +8,12 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <DefineConstants>$(DefineConstants);CROSS</DefineConstants>
     <NoWarn>$(NoWarn);CS0649;CS0169;CS0414;CA1416;SYSLIB0014</NoWarn>
-    <Version>0.9.0</Version>
+    <!-- Her version is the fork's, read from app/AssemblyInfo.cs, which the Windows build and the GitHub export stamp.
+         A hardcoded number here is what made a Linux build of the published source call itself 0.9.0 and offer every
+         release as an update. 0.9.0 is only the fallback when that file can't be read. -->
+    <CapriVersion Condition="Exists('$(MSBuildThisFileDirectory)../app/AssemblyInfo.cs')">$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../app/AssemblyInfo.cs')), 'AssemblyFileVersion\("(\d+\.\d+\.\d+)"\)').Groups[1].Value)</CapriVersion>
+    <Version Condition="'$(CapriVersion)' != ''">$(CapriVersion)</Version>
+    <Version Condition="'$(Version)' == '' Or '$(Version)' == '1.0.0'">0.9.0</Version>
     <Product>Capri</Product>
     <ApplicationIcon>../assets/chip.ico</ApplicationIcon>
     <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
@@ -51,9 +56,45 @@
     <Compile Include="../app/SoundsLike.cs" Link="Shared/SoundsLike.cs" />
     <Compile Include="../app/Voice.cs" Link="Shared/Voice.cs" />
     <Compile Include="../app/VoicePack.cs" Link="Shared/VoicePack.cs" />
+    <!-- This fork's own character files: plain C#, used by the shared Brain and Hands. -->
+    <Compile Include="../app/Sayings.cs" Link="Shared/Sayings.cs" />
+    <Compile Include="../app/Personalities.cs" Link="Shared/Personalities.cs" />
+    <Compile Include="../app/Legacy.cs" Link="Shared/Legacy.cs" />
+    <Compile Include="../app/Extended.cs" Link="Shared/Extended.cs" />
+    <Compile Include="../app/Codex.cs" Link="Shared/Codex.cs" />
+    <Compile Include="../app/CodexSum.cs" Link="Shared/CodexSum.cs" />
+    <Compile Include="../app/Weather.cs" Link="Shared/Weather.cs" />
+    <Compile Include="../app/Doomscroll.cs" Link="Shared/Doomscroll.cs" />
+    <Compile Include="../app/RemoteCrypto.cs" Link="Shared/RemoteCrypto.cs" />
+    <Compile Include="../app/VoiceProfiles.cs" Link="Shared/VoiceProfiles.cs" />
+    <Compile Include="../app/Dynamics.cs" Link="Shared/Dynamics.cs" />
+    <Compile Include="../app/Mood.cs" Link="Shared/Mood.cs" />
+    <Compile Include="../app/Them.cs" Link="Shared/Them.cs" />
+    <Compile Include="../app/Tucked.cs" Link="Shared/Tucked.cs" />
+    <Compile Include="../app/Slots.cs" Link="Shared/Slots.cs" />
+    <Compile Include="../app/Grammar.cs" Link="Shared/Grammar.cs" />
+    <Compile Include="../app/Away.cs" Link="Shared/Away.cs" />
+    <Compile Include="../app/LineFile.cs" Link="Shared/LineFile.cs" />
+    <Compile Include="../app/Moments.cs" Link="Shared/Moments.cs" />
+    <Compile Include="../app/Angles.cs" Link="Shared/Angles.cs" />
+    <Compile Include="../app/Lore.cs" Link="Shared/Lore.cs" />
+    <Compile Include="../app/Touch.cs" Link="Shared/Touch.cs" />
+    <Compile Include="../app/Zones.cs" Link="Shared/Zones.cs" />
+    <Compile Include="../app/Interests.cs" Link="Shared/Interests.cs" />
+    <Compile Include="../app/Library.cs" Link="Shared/Library.cs" />
+    <Compile Include="../app/Layout.cs" Link="Shared/Layout.cs" />
+    <Compile Include="../app/Neon.cs" Link="Shared/Neon.cs" />
+    <Compile Include="../app/SysLines.cs" Link="Shared/SysLines.cs" />
+    <Compile Include="../app/Probes.cs" Link="Shared/Probes.cs" />
+    <Compile Include="../app/Hours.cs" Link="Shared/Hours.cs" />
+    <Compile Include="../app/Favourites.cs" Link="Shared/Favourites.cs" />
+    <Compile Include="../app/Notes.cs" Link="Shared/Notes.cs" />
+    <Compile Include="../app/Lint.cs" Link="Shared/Lint.cs" />
     <EmbeddedResource Include="../assets/sprites/*.png" LogicalName="Capri.Sprite.%(Filename)%(Extension)" />
     <EmbeddedResource Include="../assets/voice/*.wav" LogicalName="Capri.Voice.%(Filename)%(Extension)" />
     <EmbeddedResource Include="../assets/chip.png" LogicalName="Capri.Chip.png" />
+    <!-- Her GNOME window helper, written into the user's extensions folder on GNOME Wayland (cross/Gnome.cs). -->
+    <EmbeddedResource Include="gnome/capri-windows.js" LogicalName="Capri.Gnome.capri-windows.js" />
     <EmbeddedResource Include="../assets/cursor.png" LogicalName="Capri.Cursor.png" />
     <AvaloniaResource Include="../assets/fonts/CapriMainframe-Bold.ttf" Link="Assets/CapriMainframe-Bold.ttf" />
     <AvaloniaResource Include="../assets/fonts/ShareTechMono-Regular.ttf" Link="Assets/ShareTechMono-Regular.ttf" />

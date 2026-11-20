@@ -146,6 +146,7 @@ namespace CapriDesktop
             Explain(showHide, "Hide Capri", "Mainframe.cs", null, "Hide / Show Capri");
             Explain(perch, "Ride cursor", "Mainframe.cs", null, "Ride cursor / Hop off");
             Explain(notesKey, "MD editor");
+            Explain(filesKey, "MD editor", "Mainframe.cs", null, "Her folder");
             Explain(memoriesKey, "Remember our chats", "Mainframe.cs", null, "Her memories");
             Explain(popTimes, "Pop-ins", "Mainframe.cs", null, "Pop-in times");
             Explain(gameNotes, "game_notes", "Hands.cs", null, "Game controls");
@@ -165,7 +166,16 @@ namespace CapriDesktop
             Explain(quietKeys, "Quiet: Ctrl + Alt + P", "Mainframe.cs", null, "Quiet key");
             Explain(frameKeys, "Mainframe: Ctrl + Alt + M", "Mainframe.cs", null, "Mainframe key");
             Explain(custom, "Custom model name", "Mainframe.cs", null, "Custom model name");
-            Explain(localAddress, "Local server address", "Mainframe.cs", FindHintLabel("Local server address"), "Local server address");
+            Explain(localServers, "Local servers", "Mainframe.cs", FindHintLabel("Local servers"), "Local servers");
+            Explain(resourcesKey, "Resources", "MainframeSystem.cs", null, "Resources");
+            Explain(abliterated, "Abliterated updates");
+            Explain(localFallback, "Local fallback", "Mainframe.cs", null, "Local fallback");
+            Explain(fallbackRefresh, "Fallback list", "Mainframe.cs", FindHintLabel("Fallback list"), "Fallback list");
+            Explain(fallbackBrain, "Fallback brain", "Mainframe.cs", FindHintLabel("Fallback brain"), "Fallback brain");
+            Explain(cloudLight, "Brains in use", "Mainframe.cs", FindHintLabel("Brains in use"), "Brains in use");
+            Explain(localLight, "Brains in use", "Mainframe.cs", null, "Brains in use");
+            Explain(cloudPriority, "Local priority", "Mainframe.cs", FindHintLabel("Local priority"), "Local priority");
+            Explain(localPriority, "Local priority", "Mainframe.cs", null, "Local priority");
             Explain(security, "SECURITY >", "Mainframe.cs", null, "Security");
             Explain(checkIns, "Check in on me");
             Explain(jealousAIs, "Jealous of other AIs");

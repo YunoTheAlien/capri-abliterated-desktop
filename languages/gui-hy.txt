@@ -1,0 +1,206 @@
+# Her menus and labels in Armenian: the English, a tab, then the translation.
+Open Capri Mainframe	Բացել Capri Mainframe-ը
+Her folder	Նրա թղթապանակը
+Play	Նվագարկել
+Music	Երաժշտություն
+Chess	Շախմատ
+Connect four	Չորս շարքով
+Tic-tac-toe	Խաչ ու զրո
+Rock, paper, scissors	Քար, թուղթ, մկրատ
+Hide Capri	Թաքցնել Capri
+Hologram	Հոլոգրամ
+Normal	Նորմալ
+Small	Փոքր
+Medium	Միջին
+Large	Մեծ
+Huge	Հսկայական
+Giant	Հսկա
+Move	Տեղափոխել
+Wander around	Թափառել շուրջը
+Dance to music	Պարել երաժշտությանը
+Dance	Պարել
+Ride cursor	Կուրսորի վերելք
+Sit on windows	Նստիր պատուհանների վրա
+Sit here	Նստիր այստեղ
+Hang here	Մնալ այստեղ
+Lie down	Պառկել
+Go to sleep	Գնալ քնելու
+Bring to this screen	Բերել այս էկրանին
+Go to the next screen	Անցնել հաջորդ էկրան
+Black	Սև
+White	Սպիտակ
+Test	Փորձարկել
+Stop	Կանգնեցնել
+Help	Օգնություն
+Commands	Հրամաններ
+Help page	Օգնության էջ
+Join the Discord	Միանալ Discord-ին
+Copy error details	Պատճենել սխալի մանրամասները
+Check for updates	Ստուգել թարմացումները
+Quit Capri	Փակել Capri-ն
+MAINFRAME	MAINFRAME
+Settings	Կարգավորումներ
+Mods	Մոդեր
+BRAIN	ՈՒՂԵՂ
+Provider	Մատակարար
+Using your server with no key	Օգտագործում եք ձեր սերվերը առանց բանալու
+Refresh	Թարմացնել
+Set up her brain	Կարգավորել նրա ուղեղը
+Have Ollama? Open it, then press Refresh.	Ունե՞ք Ollama։ Բացեք այն և սեղմեք Թարմացնել։
+Pick one. Only one brain runs at a time.	Ընտրեք մեկը։ Միաժամանակ աշխատում է միայն մեկ ուղեղ։
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Անջատված
+Free key	Անվճար բանալի
+Connect	Միացնել
+Free keys can be rate limited and slow.	Անվճար բանալիները կարող են սահմանափակված և դանդաղ լինել։
+That's a paid key: it goes under MAX INTELLIGENCE.	Դա վճարովի բանալի է՝ այն գնում է MAX INTELLIGENCE։
+Move to MAX	Տեղափոխել MAX-ին
+VOICE	ՁԱՅՆ
+Ctrl + Alt + V to talk	Ctrl + Alt + V՝ խոսելու համար
+PREBUILT LOCAL	ՆԱԽԱԿԱՌՈՒՑՎԱԾ ՏԵՂԱԿԱՆ
+CUSTOM LOCAL	ՀԱՄԱՐՏՎԱԾ ՏԵՂԱԿԱՆ
+CLOUD VOICE	ԱՄՊԱՅԻՆ ՁԱՅՆ
+Set up	Կարգավորել
+Setup guide	Տեղադրման ուղեցույց
+Fish Audio	Fish Audio
+Default model	Լռելյայն մոդել
+Pick a voice model	Ընտրեք ձայնի մոդել
+Get free voice	Ստանալ անվճար ձայն
+Mic: default	Խոսափող՝ լռելյայն
+Her speaker: Default	Նրա բարձրախոսը՝ Լռելյայն
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N-ը անջատում է խոսափողը
+CAPRI	CAPRI
+Support	Աջակցություն
+Remote	Հեռավար
+Bring here	Բերել այստեղ
+Advanced Settings	Ընդլայնված կարգավորումներ
+YOU	ԴՈՒ
+Your personality	Ձեր անհատականությունը
+Language	Լեզու
+English	Անգլերեն
+What should she call you?	Ինչպե՞ս պետք է ձեզ կանչի։
+Save	Պահել
+Volume	Ծավալ
+Pitch	Տոնայնություն
+Speed	Արագություն
+Robot	Ռոբոտ
+Glitch	Glitch
+Sounds	Ձայներ
+Typing sound	Մուտքագրման ձայն
+Listen for Capri	Լսել Capri-ին
+Hearing	Լսողություն
+Auto	Ավտո
+Free voice in games	Անվճար ձայն խաղերում
+Call mode (beta)	Զանգի ռեժիմ (բետա)
+Her voice in your mic	Նրա ձայնը ձեր խոսափողում
+Get VB-CABLE	Ստանալ VB-CABLE
+How to	Ինչպես
+Her voice in your mic: loudness	Նրա ձայնը ձեր խոսափողում՝ ծավալ
+MOVES	ՇԱՐԺՈՒՄՆԵՐ
+Pop-in times	Ներկայանալու ժամանակները
+Mini player	Մինի նվագարկիչ
+Wander	Թափառել
+Sleep	Քնել
+Pop-ins	Ներկայանալիներ
+Glitch in at startup	Glitch մեկնարկի ժամանակ
+KEYS	ԲԱՆԱԼԻՆԵՐ
+Talk: Ctrl + Alt + V	Խոսել՝ Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Անջատել խոսափողը՝ Ctrl + Alt + N
+Type: Ctrl + Alt + T	Մուտքագրել՝ Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Թաքցնել/ցույց տալ՝ Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Լուռ՝ Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Խաղային ռեժիմ՝ Ctrl + Alt + G
+Confirm	Հաստատել
+Cancel	Չեղարկել
+Size	Չափ
+Check in on me	Հետաքրքրվել ինձ
+Edit check-in lines	Խմբագրել ողջույնի տողերը
+Always on top	Միշտ վերևում
+Mainframe size	Mainframe չափ
+Mainframe colours	Mainframe գույներ
+Head pats	Գլխին շոյանքներ
+Pat stroke	Շոյանք
+Chaos when upset	Քաոս, երբ նեղվում է
+Legacy stand	Հին կանգնակ
+Jealous of other AIs	Նախանձում է այլ AI-ներին
+Teases when another AI comes to the front.	Ծաղրում է, երբ մեկ այլ AI գալիս է առաջին պլան։
+Close other AIs for me	Փակել այլ AI-ները իմ փոխարեն
+Asks before closing only the apps you choose.	Փակելուց առաջ հարցնում է միայն ձեր ընտրած հավելվածների մասին։
+Apps she may close	Հավելվածներ, որոնք կարող է փակել
+Choose apps	Ընտրել հավելվածներ
+WATCH	ԴԻՏԵԼ
+Watch my screen	Դիտել իմ էկրանը
+Screens	Էկրաններ
+All screens	Բոլոր էկրանները
+Remember what she sees	Հիշել, ինչ նա տեսնում է
+Every	Յուրաքանչյուր
+Watch-along memory	Միասին դիտելու հիշողություն
+Code/Husk Mode	Code/Husk ռեժիմ
+Thinking	Մտածում եմ
+Default	Լռելյայն
+Extra request JSON	Լրացուցիչ հարցման JSON
+Add	Ավելացնել
+Verbosity	Բառախոսություն
+Replies	Պատասխաններ
+Memory	Հիշողություն
+Memory size	Հիշողության չափ
+Max reply	Առավելագույն պատասխան
+Bubble	Փուչիկ
+Follow-up messages	Հետագա հաղորդագրություններ
+Use	Օգտագործել
+A model in Ollama, on your local server or on your key.	Մոդել Ollama-ում, ձեր տեղական սերվերի վրա կամ ձեր բանալիով։
+HABITS	ՍՈՎՈՐՈՒԹՅՈՒՆՆԵՐ
+Open her memories	Բացել նրա հիշողությունները
+Start with Windows	Մեկնարկել Windows-ի հետ
+Show on Discord	Ցույց տալ Discord-ում
+Use her cursor	Օգտագործել նրա կուրսորը
+Remember our chats	Հիշել մեր զրույցները
+Power saver	Էներգախնայող
+Music app	Երաժշտական հավելված
+Perch	Նստարան
+Keep PC awake for jobs	Պահել PC-ն արթուն աշխատանքների համար
+Hide in full screen	Թաքցնել լիաէկրան ռեժիմում
+Mini player over full screen	Մինի նվագարկիչ լիաէկրան ռեժիմում
+Explore while I'm away	Ուսումնասիրել, երբ բացակայում եմ
+Explore after	Ուսումնասիրել հետո
+GAMES	ԽԱՂԵՐ
+Controls	Կառավարում
+Comments	Մեկնաբանություններ
+Live reactions	Ակնթարթային արձագանքներ
+Game sounds	Խաղի ձայներ
+Gaming Mode	Խաղային ռեժիմ
+She reacts to your game until you close it.	Նա արձագանքում է ձեր խաղին, մինչև փակեք այն։
+Works best on MAX INTELLIGENCE.	Լավագույնս աշխատում է MAX INTELLIGENCE-ով։
+Fast hands in games	Արագ ձեռքեր խաղերում
+Mute her	Անջատել նրան
+CLIPS	ՏԵՍԱՀԱՏՎԱԾՆԵՐ
+Clip my games	Ձայնագրել իմ խաղերը
+Save big moments	Պահել մեծ պահերը
+Save folder	Պահելու թղթապանակ
+Choose folder	Ընտրել թղթապանակ
+Open clips folder	Բացել տեսահատվածների թղթապանակը
+Default length	Լռելյայն երկարություն
+Frame rate	Կադրերի արագություն
+Resolution	Լուծաչափ
+Video bitrate	Վիդեոյի բիթրեյթ
+Weather	Եղանակ
+Code mods can reach your whole PC. Only trusted ones.	Կոդային մոդերը կարող են հասնել ձեր ամբողջ PC-ին։ Միայն վստահելիները։
+Import mod	Ներմուծել մոդ
+Browse mods	Դիտել մոդերը
+Mods folder	Մոդերի թղթապանակ
+INSTALLED	ՏԵՂԱԴՐՎԱԾ
+Update mods	Թարմացնել մոդերը
+No mods match.	Ոչ մի մոդ չի համապատասխանում։
+On	Միացված
+Remove	Հեռացնել
+Publish	Հրապարակել
+Options	Ընտրանքներ
+Back	Հետ
+Next	Հաջորդը
+COLORS	ԳՈՒՅՆԵՐ
+Reset colors	Վերականգնել գույները
+Running on this PC	Աշխատում է այս PC-ում
+NORMAL	ՆՈՐՄԱԼ
+OFF	ԱՆՋԱՏՎԱԾ Է
+Local server address	Տեղական սերվերի հասցե

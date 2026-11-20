@@ -1,0 +1,206 @@
+# Her menus and labels in Icelandic: the English, a tab, then the translation.
+Open Capri Mainframe	Opna Capri Mainframe
+Her folder	Mappan hennar
+Play	Spila
+Music	Tónlist
+Chess	Skák
+Connect four	Fjórir í röð
+Tic-tac-toe	Krossa-bolti
+Rock, paper, scissors	Steinn, skæri, blað
+Hide Capri	Fela Capri
+Hologram	Hólógram
+Normal	Venjulegt
+Small	Lítið
+Medium	Miðlungs
+Large	Stórt
+Huge	Gríðarstór
+Giant	Risastór
+Move	Færa
+Wander around	Reika um
+Dance to music	Dansa við tónlist
+Dance	Dansa
+Ride cursor	Ríða bendlinum
+Sit on windows	Settu þig á glugga
+Sit here	Settu þig hér
+Hang here	Vertu hér
+Lie down	Leggstu
+Go to sleep	Fara að sofa
+Bring to this screen	Koma á þennan skjá
+Go to the next screen	Fara á næsta skjá
+Black	Svart
+White	Hvítt
+Test	Prófa
+Stop	Stöðva
+Help	Hjálp
+Commands	Skipanir
+Help page	Hjálparsíða
+Join the Discord	Taktu þátt í Discord
+Copy error details	Afrita villuupplýsingar
+Check for updates	Athuga uppfærslur
+Quit Capri	Hætta Capri
+MAINFRAME	MAINFRAME
+Settings	Stillingar
+Mods	Mod
+BRAIN	HEILI
+Provider	Veitandi
+Using your server with no key	Nota þjóninn þinn án lykils
+Refresh	Endurhlaða
+Set up her brain	Setja upp heilann hennar
+Have Ollama? Open it, then press Refresh.	Ertu með Ollama? Opnaðu það og ýttu á Endurhlaða.
+Pick one. Only one brain runs at a time.	Veldu eitt. Aðeins einn heili keyrir í einu.
+MEDIUM INTELLIGENCE	MIÐLUNGS INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Slökkt
+Free key	Frír lykill
+Connect	Tengja
+Free keys can be rate limited and slow.	Frír lyklar geta verið takmarkaðir og hægir.
+That's a paid key: it goes under MAX INTELLIGENCE.	Þetta er greiddur lykill: hann fer undir MAX INTELLIGENCE.
+Move to MAX	Færa á MAX
+VOICE	RÖDD
+Ctrl + Alt + V to talk	Ctrl + Alt + V til að tala
+PREBUILT LOCAL	FORSMÍÐAÐ STAÐBUNDIÐ
+CUSTOM LOCAL	SÉRSNIÐIN STAÐBUNDIN
+CLOUD VOICE	SKÝJARÖDD
+Set up	Setja upp
+Setup guide	Uppsetningarleiðbeiningar
+Fish Audio	Fish Audio
+Default model	Sjálfgefið líkan
+Pick a voice model	Veldu raddlíkan
+Get free voice	Fá frjálsa rödd
+Mic: default	Hljóðnemi: sjálfgefið
+Her speaker: Default	Hátalarinn hennar: Sjálfgefið
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N þaggar hljóðnema
+CAPRI	CAPRI
+Support	Stuðningur
+Remote	Fjarstýring
+Bring here	Koma hingað
+Advanced Settings	Ítarlegar stillingar
+YOU	ÞÚ
+Your personality	Persónuleikinn þinn
+Language	Tungumál
+English	Enska
+What should she call you?	Hvað á hún að kalla þig?
+Save	Vista
+Volume	Hljóðstyrkur
+Pitch	Tónhæð
+Speed	Hraði
+Robot	Vélmenni
+Glitch	Glitch
+Sounds	Hljóð
+Typing sound	Hljóð við innslátt
+Listen for Capri	Hlusta eftir Capri
+Hearing	Heyrn
+Auto	Sjálfvirkt
+Free voice in games	Frí rödd í leikjum
+Call mode (beta)	Símtalsstilling (beta)
+Her voice in your mic	Rödd hennar í hljóðnemanum þínum
+Get VB-CABLE	Sækja VB-CABLE
+How to	Hvernig
+Her voice in your mic: loudness	Rödd hennar í hljóðnemanum þínum: hljóðstyrkur
+MOVES	HREYFINGAR
+Pop-in times	Tímar innskráningar
+Mini player	Smáspilari
+Wander	Reika
+Sleep	Sofa
+Pop-ins	Innskráningar
+Glitch in at startup	Glitch við ræsingu
+KEYS	LYKLAR
+Talk: Ctrl + Alt + V	Tala: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Þagga hljóðnema: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Skrifa: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Fela/sýna: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Þögn: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Leikjastilling: Ctrl + Alt + G
+Confirm	Staðfesta
+Cancel	Hætta við
+Size	Stærð
+Check in on me	Kíktu á mig
+Edit check-in lines	Breyta innskráningarlínum
+Always on top	Alltaf efst
+Mainframe size	Stærð Mainframe
+Mainframe colours	Litir Mainframe
+Head pats	Klapp á kollinn
+Pat stroke	Klapp
+Chaos when upset	Ringulreið þegar hún verður pirruð
+Legacy stand	Eldri stoð
+Jealous of other AIs	Öfundsjúk út í aðrar gervigreindir
+Teases when another AI comes to the front.	Stríðir þegar önnur gervigreind kemur fram.
+Close other AIs for me	Loka öðrum gervigreindum fyrir mig
+Asks before closing only the apps you choose.	Spyr áður en lokað er aðeins forritunum sem þú velur.
+Apps she may close	Forrit sem hún má loka
+Choose apps	Velja forrit
+WATCH	HORFA
+Watch my screen	Horfa á skjáinn minn
+Screens	Skjáir
+All screens	Allir skjáir
+Remember what she sees	Muna hvað hún sér
+Every	Hver
+Watch-along memory	Minning vegna áhorfs saman
+Code/Husk Mode	Kóðastilling/Husk-stilling
+Thinking	Hugsa
+Default	Sjálfgefið
+Extra request JSON	Aukabeiðni JSON
+Add	Bæta við
+Verbosity	Orðfæri
+Replies	Svör
+Memory	Minni
+Memory size	Stærð minnis
+Max reply	Hámarkssvar
+Bubble	Blaðra
+Follow-up messages	Eftirfylgjandi skilaboð
+Use	Nota
+A model in Ollama, on your local server or on your key.	Líkan í Ollama, á þínum staðbundna þjóni eða með þínum lykli.
+HABITS	VENJUR
+Open her memories	Opna minningarnar hennar
+Start with Windows	Ræsa með Windows
+Show on Discord	Sýna á Discord
+Use her cursor	Nota bendilinn hennar
+Remember our chats	Muna spjöllin okkar
+Power saver	Orkusparnaður
+Music app	Tónlistarforrit
+Perch	Setstaður
+Keep PC awake for jobs	Halda tölvunni vakandi fyrir verkefni
+Hide in full screen	Fela í öllum skjánum
+Mini player over full screen	Smáspilari yfir öllum skjánum
+Explore while I'm away	Kanna á meðan ég er í burtu
+Explore after	Kanna eftir
+GAMES	LEIKIR
+Controls	Stýringar
+Comments	Athugasemdir
+Live reactions	Viðbrögð í beinni
+Game sounds	Leikjahljóð
+Gaming Mode	Leikjastilling
+She reacts to your game until you close it.	Hún bregst við leiknum þínum þangað til þú lokar honum.
+Works best on MAX INTELLIGENCE.	Virkar best á MAX INTELLIGENCE.
+Fast hands in games	Hröð hönd í leikjum
+Mute her	Þagga niður í henni
+CLIPS	KLIPP
+Clip my games	Taka upp leikina mína
+Save big moments	Vista stór augnablik
+Save folder	Vistunarmappa
+Choose folder	Velja möppu
+Open clips folder	Opna klippamöppu
+Default length	Sjálfgefin lengd
+Frame rate	Rammatíðni
+Resolution	Upplausn
+Video bitrate	Myndbandsbitahraði
+Weather	Veður
+Code mods can reach your whole PC. Only trusted ones.	Kóðamod geta náð í alla tölvuna. Aðeins treyst.
+Import mod	Flytja inn mod
+Browse mods	Vafra um mod
+Mods folder	Mod-mappa
+INSTALLED	UPPSETT
+Update mods	Uppfæra mod
+No mods match.	Engin mod passa.
+On	Kveikt
+Remove	Fjarlægja
+Publish	Birta
+Options	Valkostir
+Back	Til baka
+Next	Næsta
+COLORS	LITIR
+Reset colors	Endurstilla liti
+Running on this PC	Keyrir á þessari tölvu
+NORMAL	VENJULEGT
+OFF	SLÖKKT
+Local server address	Vistfang staðbundins þjóns

@@ -1,0 +1,206 @@
+# Her menus and labels in Nepali: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe खोल्नुहोस्
+Her folder	उसको फोल्डर
+Play	बजाउनुहोस्
+Music	सङ्गीत
+Chess	चेस
+Connect four	चार लहरमा
+Tic-tac-toe	टिक-ट्याक-टो
+Rock, paper, scissors	ढुङ्गा, कागज, कैँची
+Hide Capri	Capri लुकाउनुहोस्
+Hologram	होलोग्राम
+Normal	सामान्य
+Small	सानो
+Medium	मध्यम
+Large	ठूलो
+Huge	विशाल
+Giant	विशाल
+Move	सार्नुहोस्
+Wander around	वरिपरि घुम्नुहोस्
+Dance to music	सङ्गीतमा नाच्नुहोस्
+Dance	नाच्नुहोस्
+Ride cursor	कर्सरमा सवार हुनुहोस्
+Sit on windows	झ्यालहरूमाथि बस
+Sit here	यहाँ बस
+Hang here	यहाँ बस्नुहोस्
+Lie down	पल्टनुहोस्
+Go to sleep	सुत्न जानुहोस्
+Bring to this screen	यो स्क्रिनमा ल्याउनुहोस्
+Go to the next screen	अर्को स्क्रिनमा जानुहोस्
+Black	कालो
+White	सेतो
+Test	परीक्षण
+Stop	रोक्नुहोस्
+Help	मद्दत
+Commands	आदेशहरू
+Help page	मद्दत पृष्ठ
+Join the Discord	Discord मा सामेल हुनुहोस्
+Copy error details	त्रुटिको विवरण प्रतिलिपि गर्नुहोस्
+Check for updates	अपडेट जाँच गर्नुहोस्
+Quit Capri	Capri बन्द गर्नुहोस्
+MAINFRAME	MAINFRAME
+Settings	सेटिङ
+Mods	मोडहरू
+BRAIN	दिमाग
+Provider	प्रदायक
+Using your server with no key	कुञ्जी बिना तपाईंको सर्भर प्रयोग गर्दै
+Refresh	ताजा गर्नुहोस्
+Set up her brain	उसको दिमाग सेटअप गर्नुहोस्
+Have Ollama? Open it, then press Refresh.	Ollama छ? खोल्नुहोस्, त्यसपछि ताजा गर्नुहोस् थिच्नुहोस्।
+Pick one. Only one brain runs at a time.	एउटा छान्नुहोस्। एकै समयमा एउटै दिमाग चल्छ।
+MEDIUM INTELLIGENCE	मध्यम बुद्धिमत्ता
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	अफ
+Free key	नि:शुल्क कुञ्जी
+Connect	जडान गर्नुहोस्
+Free keys can be rate limited and slow.	नि:शुल्क कुञ्जीमा दर सीमा हुन सक्छ र ढिला हुन सक्छन्।
+That's a paid key: it goes under MAX INTELLIGENCE.	त्यो भुक्तानी गरिएको कुञ्जी हो: यो MAX INTELLIGENCE मुनि जान्छ।
+Move to MAX	MAX मा सार्नुहोस्
+VOICE	आवाज
+Ctrl + Alt + V to talk	बोल्न Ctrl + Alt + V
+PREBUILT LOCAL	पूर्व-निर्मित लोकल
+CUSTOM LOCAL	कस्टम लोकल
+CLOUD VOICE	क्लाउड आवाज
+Set up	सेटअप गर्नुहोस्
+Setup guide	सेटअप गाइड
+Fish Audio	Fish Audio
+Default model	पूर्वनिर्धारित मोडेल
+Pick a voice model	आवाज मोडेल छान्नुहोस्
+Get free voice	नि:शुल्क आवाज लिनुहोस्
+Mic: default	माइक: पूर्वनिर्धारित
+Her speaker: Default	उसको स्पिकर: पूर्वनिर्धारित
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N ले माइक म्युट गर्छ
+CAPRI	CAPRI
+Support	सहयोग
+Remote	Remote
+Bring here	यहाँ ल्याउनुहोस्
+Advanced Settings	उन्नत सेटिङ
+YOU	तपाईं
+Your personality	तपाईंको व्यक्तित्व
+Language	भाषा
+English	अंग्रेजी
+What should she call you?	उसले तपाईंलाई के भनेर बोलाउनुपर्छ?
+Save	बचत गर्नुहोस्
+Volume	भोल्युम
+Pitch	पिच
+Speed	गति
+Robot	रोबोट
+Glitch	ग्लिच
+Sounds	ध्वनिहरू
+Typing sound	टाइपिङ आवाज
+Listen for Capri	Capri सुन्नुहोस्
+Hearing	सुनाइ
+Auto	स्वतः
+Free voice in games	खेलमा नि:शुल्क आवाज
+Call mode (beta)	कल मोड (बिटा)
+Her voice in your mic	तपाईंको माइकमा उसको आवाज
+Get VB-CABLE	VB-CABLE लिनुहोस्
+How to	कसरी
+Her voice in your mic: loudness	तपाईंको माइकमा उसको आवाज: भोल्युम
+MOVES	चालहरू
+Pop-in times	पप-इन समय
+Mini player	मिनी प्लेयर
+Wander	घुम्नुहोस्
+Sleep	सुत्नु
+Pop-ins	पप-इनहरू
+Glitch in at startup	सुरुमा ग्लिच
+KEYS	कुञ्जीहरू
+Talk: Ctrl + Alt + V	बोल्नुहोस्: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	माइक म्युट: Ctrl + Alt + N
+Type: Ctrl + Alt + T	टाइप: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	लुकाउने/देखाउने: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	शान्त: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Gaming Mode: Ctrl + Alt + G
+Confirm	पुष्टि गर्नुहोस्
+Cancel	रद्द
+Size	आकार
+Check in on me	मेरो हालचाल सोध
+Edit check-in lines	मेरो हालचाल सोध का पङ्क्तिहरू सम्पादन
+Always on top	सधैँ माथि
+Mainframe size	Mainframe आकार
+Mainframe colours	Mainframe रङहरू
+Head pats	टाउको थप्पड
+Pat stroke	टाउको थप्पड
+Chaos when upset	रिसाउँदा अव्यवस्था
+Legacy stand	पुरानो स्ट्यान्ड
+Jealous of other AIs	अन्य AI हरूसँग ईर्ष्या
+Teases when another AI comes to the front.	अर्को AI अगाडि आउँदा उसले खिल्ली उडाउँछे।
+Close other AIs for me	मेरा लागि अन्य AI बन्द गर्नुहोस्
+Asks before closing only the apps you choose.	तपाईंले छानेका एपहरू मात्र बन्द गर्नुअघि सोध्छ।
+Apps she may close	उसले बन्द गर्न सक्ने एपहरू
+Choose apps	एपहरू छान्नुहोस्
+WATCH	हेर्नुहोस्
+Watch my screen	मेरो स्क्रिन हेर्नुहोस्
+Screens	स्क्रिनहरू
+All screens	सबै स्क्रिन
+Remember what she sees	उसले देखेको कुरा सम्झनुहोस्
+Every	हरेक
+Watch-along memory	सँगै हेर्ने मेमोरी
+Code/Husk Mode	Code/Husk मोड
+Thinking	सोच्दै
+Default	पूर्वनिर्धारित
+Extra request JSON	अतिरिक्त अनुरोध JSON
+Add	थप्नुहोस्
+Verbosity	शब्दाडम्बर
+Replies	जवाफहरू
+Memory	मेमोरी
+Memory size	मेमोरी आकार
+Max reply	अधिकतम जवाफ
+Bubble	बबल
+Follow-up messages	फलो-अप सन्देशहरू
+Use	प्रयोग गर्नुहोस्
+A model in Ollama, on your local server or on your key.	Ollama मा मोडेल, तपाईंको स्थानीय सर्भर वा तपाईंको कुञ्जीमा।
+HABITS	बानीहरू
+Open her memories	उसका सम्झनाहरू खोल्नुहोस्
+Start with Windows	Windows सँग सुरु गर्नुहोस्
+Show on Discord	Discord मा देखाउनुहोस्
+Use her cursor	उसको कर्सर प्रयोग गर्नुहोस्
+Remember our chats	हाम्रा च्याटहरू सम्झनुहोस्
+Power saver	पावर सेभर
+Music app	सङ्गीत एप
+Perch	पर्च
+Keep PC awake for jobs	कामका लागि PC जागा राख्नुहोस्
+Hide in full screen	पूर्ण स्क्रिनमा लुकाउनुहोस्
+Mini player over full screen	पूर्ण स्क्रिनमाथि मिनी प्लेयर
+Explore while I'm away	म टाढा हुँदा अन्वेषण
+Explore after	पछि अन्वेषण
+GAMES	खेलहरू
+Controls	नियन्त्रणहरू
+Comments	टिप्पणीहरू
+Live reactions	प्रत्यक्ष प्रतिक्रियाहरू
+Game sounds	खेल आवाजहरू
+Gaming Mode	Gaming Mode
+She reacts to your game until you close it.	तपाईंले बन्द नगरेसम्म उसले तपाईंको खेलमा प्रतिक्रिया दिन्छे।
+Works best on MAX INTELLIGENCE.	MAX INTELLIGENCE मा राम्रो काम गर्छ।
+Fast hands in games	खेलमा छिटो हात
+Mute her	उसलाई म्युट गर्नुहोस्
+CLIPS	क्लिपहरू
+Clip my games	मेरा खेलहरू रेकर्ड गर्नुहोस्
+Save big moments	ठूला क्षणहरू बचत गर्नुहोस्
+Save folder	बचत फोल्डर
+Choose folder	फोल्डर छान्नुहोस्
+Open clips folder	क्लिप फोल्डर खोल्नुहोस्
+Default length	पूर्वनिर्धारित लम्बाइ
+Frame rate	फ्रेम दर
+Resolution	रिजोलुसन
+Video bitrate	भिडियो बिटरेट
+Weather	मौसम
+Code mods can reach your whole PC. Only trusted ones.	कोड मोडहरूले तपाईंको सम्पूर्ण PC पहुँच गर्न सक्छन्। भरोसायोग्य मात्र।
+Import mod	मोड आयात गर्नुहोस्
+Browse mods	मोडहरू ब्राउज
+Mods folder	मोड फोल्डर
+INSTALLED	स्थापना भयो
+Update mods	मोडहरू अपडेट गर्नुहोस्
+No mods match.	कुनै मेल खाने मोड छैन।
+On	अन
+Remove	हटाउनुहोस्
+Publish	प्रकाशित गर्नुहोस्
+Options	विकल्पहरू
+Back	फिर्ता
+Next	अर्को
+COLORS	रङहरू
+Reset colors	रङ रिसेट गर्नुहोस्
+Running on this PC	यो PC मा चल्दैछ
+NORMAL	सामान्य
+OFF	अफ
+Local server address	लोकल सर्भर ठेगाना

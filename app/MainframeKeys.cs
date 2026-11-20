@@ -577,7 +577,12 @@ namespace CapriDesktop
             Settle();
             Update();
             string name = "mainframe-mark-" + kind + ".png";
-            if (!control.Visible || !control.Enabled || (marked ? Held() != control || !HeldMarked() : HeldMarked())) throw new Exception("Her mark is wrong before saving " + name + ".");
+            if (!control.Visible || !control.Enabled || (marked ? Held() != control || !HeldMarked() : HeldMarked()))
+            {
+                Control held = Held();
+                throw new Exception("Her mark is wrong before saving " + name + ": visible " + control.Visible + ", enabled " + control.Enabled
+                    + ", holding " + (held == null ? "nothing" : held.GetType().Name + " " + (held.AccessibleName ?? held.Text)) + ", marked " + HeldMarked() + ".");
+            }
             Rectangle around = control.Bounds;
             Toggle toggle = control as Toggle;
             if (toggle != null) around = new Rectangle(control.Right - toggle.Switch, control.Top, toggle.Switch, control.Height);
@@ -661,8 +666,8 @@ namespace CapriDesktop
             more.Focus();
             string modPage = TabWalk(1, 12);
             Strike(Keys.H);
-            if (main != "BRAIN VOICE CAPRI" || mainBack != "CAPRI VOICE BRAIN" || fromTitle != "CAPRI" || page != "YOU VOICE MOVES KEYS GAMES CLIPS CAPRI WATCH BRAIN HABITS SOUNDS"
-                || pageBack != "SOUNDS HABITS BRAIN WATCH CAPRI CLIPS GAMES KEYS MOVES VOICE YOU" || fromMiddle != "KEYS" || !first || modPage != "MODS INSTALLED COLORS")
+            if (main != "BRAIN VOICE CAPRI" || mainBack != "CAPRI VOICE BRAIN" || fromTitle != "CAPRI" || page != "YOU VOICE MOVES KEYS GAMES CLIPS WEATHER DOOMSCROLL CAPRI WATCH BRAIN HABITS SOUNDS"
+                || pageBack != "SOUNDS HABITS BRAIN WATCH CAPRI DOOMSCROLL WEATHER CLIPS GAMES KEYS MOVES VOICE YOU" || fromMiddle != "KEYS" || !first || modPage != "MODS INSTALLED COLORS")
                 throw new Exception("Tab between her Mainframe's sections went wrong: main " + main + " / back " + mainBack + " / from the title " + fromTitle + " / Settings " + page + " / back " + pageBack + " / from Dance to music " + fromMiddle + ", first " + first + " / Mods " + modPage);
             checks.Add("PASS Mainframe Tab and Shift+Tab: Tab jumps to the first option of the next section and Shift+Tab to the one before, BRAIN, VOICE, CAPRI on her main page, YOU, VOICE, MOVES, KEYS and on through both columns of Settings, and MODS, INSTALLED, COLORS on Mods, wrapping at either end");
         }

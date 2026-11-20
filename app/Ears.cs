@@ -2591,6 +2591,9 @@ namespace CapriDesktop
 
         internal static double? Level() { float level = 0; return Use(delegate(ISpeakerVolume volume) { return volume.GetMasterVolumeLevelScalar(out level); }) ? level : (double?)null; }
 
+        // The same volume in decibels below full, the way the speakers hear it: 0 at the top, minus as it goes down.
+        internal static double? Decibels() { float level = 0; return Use(delegate(ISpeakerVolume volume) { return volume.GetMasterVolumeLevel(out level); }) ? level : (double?)null; }
+
         internal static bool SetLevel(double level) { return Use(delegate(ISpeakerVolume volume) { return volume.SetMasterVolumeLevelScalar((float)Math.Max(0, Math.Min(1, level)), IntPtr.Zero); }); }
 
         private static bool Use(Func<ISpeakerVolume, int> act)

@@ -1,0 +1,26 @@
+# Words French always uses for these terms: the English, a tab, then the word. The GUI maker hands
+# them to her brain with every batch. Blank means not decided yet. Edit any of them; it is the one place to fix a term.
+Refresh	Actualiser
+Settings	Paramètres
+Provider	Fournisseur
+Saved providers	
+Local servers	
+Fallback brain	Cerveau de secours
+Voice	
+Mic	
+Mods	Mods
+Music	Musique
+Chess	Échecs
+Connect four	Puissance 4
+Tic-tac-toe	Morpion
+Rock, paper, scissors	Pierre, papier, ciseaux
+Quiet	
+Check in on me	Vérifier mon état
+Watch my screen	Regarder mon écran
+Personality	Personnalité
+Mood	
+Hide Capri	Masquer Capri
+Open	
+Close	
+Off	Arrêt
+On	Activé

@@ -359,6 +359,7 @@ namespace CapriDesktop
         // A code mod started, stopped or set its options, or one changed her skins: the list shows it, and a stopped mod's options close.
         internal void ModsChanged()
         {
+            RefreshKept();
             if (optionsSheet != null && !optionsSheet.IsDisposed && !capri.HasModOptions(optionsSheet.ModId)) optionsSheet.Close();
             if (pageSheet != null && !pageSheet.IsDisposed && !capri.ModRunningNow(pageSheet.ModId)) pageSheet.Close();
             if (modded) FillMods();
@@ -430,9 +431,162 @@ namespace CapriDesktop
 
         internal Func<ModFile, string, bool> ModAsk;
 
+        // ---------- Dropped in ----------
+        // A mod put straight into her mods folder while she runs is taken in the way the Import key takes one, so
+        // dropping a file in is all it takes: a code mod gets her own read of what it reaches for and their yes
+        // first, the rest go straight in. A mod changed in place goes through the same again, and one taken out of
+        // the folder comes out of her. Her own writes are told apart by the file's hash, so an import she makes
+        // does not set itself off. Nothing runs before their yes that did not run before.
+        private System.IO.FileSystemWatcher modWatch;
+        private readonly Dictionary<string, DateTime> dropsDue = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, string> dropsKnown = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> dropsGone = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private Timer dropTick;
+
+        internal void WatchMods()
+        {
+            if (modWatch != null || capri.Testing) return;
+            try
+            {
+                string folder = capri.ModList.Folder;
+                Directory.CreateDirectory(folder);
+                foreach (string file in Directory.GetFiles(folder)) if (IsModFile(file)) dropsKnown[file] = DropHash(file);
+                modWatch = new System.IO.FileSystemWatcher(folder);
+                modWatch.NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size;
+                System.IO.FileSystemEventHandler seen = delegate(object sender, System.IO.FileSystemEventArgs e) { Dropped(e.FullPath, false); };
+                modWatch.Created += seen;
+                modWatch.Changed += seen;
+                modWatch.Renamed += delegate(object sender, System.IO.RenamedEventArgs e) { Dropped(e.OldFullPath, true); Dropped(e.FullPath, false); };
+                modWatch.Deleted += delegate(object sender, System.IO.FileSystemEventArgs e) { Dropped(e.FullPath, true); };
+                modWatch.EnableRaisingEvents = true;
+                dropTick = new Timer { Interval = 500 };
+                dropTick.Tick += delegate { TakeDrops(); };
+                dropTick.Start();
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+        }
+
+        private static bool IsModFile(string file)
+        {
+            string kind = Path.GetExtension(file ?? "");
+            return string.Equals(kind, Mods.Extension, StringComparison.OrdinalIgnoreCase) || string.Equals(kind, Mods.CodeExtension, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(kind, Mods.SkinExtension, StringComparison.OrdinalIgnoreCase) || string.Equals(kind, Mods.SkillExtension, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string DropHash(string file)
+        {
+            try
+            {
+                using (System.Security.Cryptography.SHA256 sha = System.Security.Cryptography.SHA256.Create())
+                    return Convert.ToBase64String(sha.ComputeHash(File.ReadAllBytes(file)));
+            }
+            catch (Exception) { return null; }
+        }
+
+        // Off her window's thread, from the watcher: noted, and taken two seconds after the last change, so a file
+        // still being copied in is not read half written.
+        private void Dropped(string file, bool gone)
+        {
+            if (!IsModFile(file)) return;
+            try
+            {
+                BeginInvoke((MethodInvoker)delegate
+                {
+                    if (gone) dropsGone.Add(file); else dropsGone.Remove(file);
+                    dropsDue[file] = DateTime.UtcNow.AddSeconds(2);
+                });
+            }
+            catch (InvalidOperationException) { }
+        }
+
+        private void TakeDrops()
+        {
+            if (dropsDue.Count == 0 || Quitting || IsDisposed) return;
+            List<string> ready = new List<string>();
+            foreach (KeyValuePair<string, DateTime> one in dropsDue) if (DateTime.UtcNow >= one.Value) ready.Add(one.Key);
+            foreach (string file in ready)
+            {
+                dropsDue.Remove(file);
+                try { TakeDrop(file); }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            }
+        }
+
+        private void TakeDrop(string file)
+        {
+            Mod had = capri.ModList.All.Find(delegate(Mod one) { return string.Equals(one.Path, file, StringComparison.OrdinalIgnoreCase); });
+            if (dropsGone.Contains(file) || !File.Exists(file))
+            {
+                dropsGone.Remove(file);
+                dropsKnown.Remove(file);
+                if (had == null || File.Exists(file)) return;
+                capri.ModList.Remove(had);
+                FillMods();
+                ModSays(had.File.Name + " was taken out of the mods folder, so it's off and gone.", false);
+                Brain.Log("mods", -1, had.File.Name + ": taken out of the mods folder, so taken out of her.");
+                ModsChanged();
+                return;
+            }
+            string hash = DropHash(file), known;
+            if (hash == null) { dropsDue[file] = DateTime.UtcNow.AddSeconds(2); return; }
+            if (dropsKnown.TryGetValue(file, out known) && known == hash) return;
+            if (had != null && had.Hash != null && had.Hash == DropHashOfCode(file) && !had.Changed) { dropsKnown[file] = hash; return; }
+            dropsKnown[file] = hash;
+            Brain.Log("mods", -1, Path.GetFileName(file) + ": dropped into the mods folder, so taken in the way Import takes one.");
+            // A code mod's question needs them to see it, so her Mainframe comes up for it.
+            if (string.Equals(Path.GetExtension(file), Mods.CodeExtension, StringComparison.OrdinalIgnoreCase) && !Visible) { Show(); Activate(); }
+            ImportMod(file);
+            string after = DropHash(file);
+            if (after != null) dropsKnown[file] = after;
+            ModsChanged();
+        }
+
+        // A code mod's hash as her mod list keeps it, which is over the text as read, not the raw bytes.
+        private string DropHashOfCode(string file)
+        {
+            if (!string.Equals(Path.GetExtension(file), Mods.CodeExtension, StringComparison.OrdinalIgnoreCase)) return null;
+            try { return Mods.HashOf(File.ReadAllBytes(file)); }
+            catch (Exception) { return null; }
+        }
+
+        // A mod dropped straight into her folder is taken in, the same file again is left alone, and one taken out
+        // goes. The watcher is off in a test run, so this drives what it would hand over.
+        internal void CheckDrops(List<string> checks)
+        {
+            Mods mods = capri.ModList;
+            string file = Path.Combine(mods.Folder, "drop-test" + Mods.Extension);
+            try
+            {
+                Directory.CreateDirectory(mods.Folder);
+                File.WriteAllText(file, "{\"format\":1,\"id\":\"drop-test\",\"name\":\"Drop Test\",\"version\":\"1.0.0\",\"author\":\"Avery\",\"description\":\"Answers to one more name.\",\"wake_names\":[\"Zelda\"]}");
+                dropsKnown.Remove(file);
+                TakeDrop(file);
+                Mod taken = mods.All.Find(delegate(Mod one) { return one.File.Id == "drop-test"; });
+                bool inAndOn = taken != null && taken.On && Hands.HeardName("Zelda, what time is it?");
+                int before = mods.All.Count;
+                TakeDrop(file);
+                bool leftAlone = mods.All.Count == before;
+                File.Delete(file);
+                dropsGone.Add(file);
+                TakeDrop(file);
+                bool gone = !mods.All.Exists(delegate(Mod one) { return one.File.Id == "drop-test"; }) && !Hands.HeardName("Zelda, what time is it?");
+                if (!inAndOn || !leftAlone || !gone)
+                    throw new Exception("A mod dropped into her folder went wrong: taken in and on " + inAndOn + ", the same file left alone " + leftAlone + ", gone when taken out " + gone);
+                checks.Add("PASS a mod dropped into her mods folder is taken in the way Import takes one, the same file again is left alone, and one taken out of the folder comes out of her");
+            }
+            finally
+            {
+                Mod left = mods.All.Find(delegate(Mod one) { return one.File.Id == "drop-test"; });
+                if (left != null) try { mods.Remove(left); } catch (Exception) { }
+                if (File.Exists(file)) File.Delete(file);
+            }
+        }
+
         private bool AskToRun(ModFile mod, string hash)
         {
-            return Question.Ask(this, Mods.Consent(mod, hash), "Run this code mod?");
+            if (!Question.Ask(this, Mods.Consent(mod, hash), "Run this code mod?")) return false;
+            // Code nobody can read is asked about again, on its own, after the first yes.
+            return !mod.AskTwice || Question.Ask(this, Mods.Unclear(mod), "Run code you can't read?");
         }
 
         private void RemoveMod(int row)

@@ -1,0 +1,206 @@
+# Her menus and labels in Yoruba: the English, a tab, then the translation.
+Open Capri Mainframe	Ṣí Capri Mainframe
+Her folder	Àpò rẹ̀
+Play	Ṣe
+Music	Orin
+Chess	Chess
+Connect four	Mẹ́rin lórí ọ̀wọ́n
+Tic-tac-toe	Tic-tac-toe
+Rock, paper, scissors	Òkúta, ìwé, àkàbà
+Hide Capri	Fi Capri pamọ́
+Hologram	Hologram
+Normal	Déédéé
+Small	Kékeré
+Medium	Àárín
+Large	Tóbi
+Huge	Tó tóbi gan-an
+Giant	Ńlá
+Move	Gbé
+Wander around	Rìn káàkiri
+Dance to music	Jó sí orin
+Dance	Ijó
+Ride cursor	Gun kọ̀sọ̀ọ̀ bí ẹṣin
+Sit on windows	Jókòó lórí fèrèsé
+Sit here	Jókòó síbí
+Hang here	Dúró síbí
+Lie down	Dùbúlẹ̀
+Go to sleep	Lọ sùn
+Bring to this screen	Mú wá sí ìbòjú yìí
+Go to the next screen	Lọ sí ìbòjú tó tẹ̀lé
+Black	Dúdú
+White	Funfun
+Test	Idanwo
+Stop	Dúró
+Help	Ìrànlọ́wọ́
+Commands	Àwọn àṣẹ
+Help page	Ojú ìwé ìrànlọ́wọ́
+Join the Discord	Darapọ̀ mọ́ Discord
+Copy error details	Daakọ àlàyé àṣìṣe
+Check for updates	Ṣayẹ̀wò fún àtúnṣe
+Quit Capri	Jáde kúrò ní Capri
+MAINFRAME	MAINFRAME
+Settings	Ètò
+Mods	Mods
+BRAIN	ỌPỌLỌ
+Provider	Olùpèsè
+Using your server with no key	Lo olupin rẹ láì sí kọ́kọ́rọ́
+Refresh	Sọ̀tun
+Set up her brain	Ṣètò ọpọlọ rẹ̀
+Have Ollama? Open it, then press Refresh.	Ṣé o ní Ollama? Ṣí i, lẹ́yìn náà tẹ Tún ṣe.
+Pick one. Only one brain runs at a time.	Yan ọ̀kan. Ọpọlọ kan ṣoṣo ni ó ń ṣiṣẹ́ ní àkókò kan.
+MEDIUM INTELLIGENCE	ÒYE ALÁÀRÍN
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Pa
+Free key	Kọ́kọ́rọ́ ọ̀fẹ́
+Connect	Sopọ̀
+Free keys can be rate limited and slow.	Àwọn kọ́kọ́rọ́ ọ̀fẹ́ lè ní ààlà ìyára àti lọ́ra.
+That's a paid key: it goes under MAX INTELLIGENCE.	Kọ́kọ́rọ́ tí a san owó fún nìyí: yóò lọ sí MAX INTELLIGENCE.
+Move to MAX	Gbé lọ sí MAX
+VOICE	OHÙN
+Ctrl + Alt + V to talk	Ctrl + Alt + V láti sọ̀rọ̀
+PREBUILT LOCAL	ÀṢÉTÒ NÍ AGBEGBE
+CUSTOM LOCAL	AGBEGBE ÀDÁDÁ
+CLOUD VOICE	OHÙN AWỌSÁNMỌ́
+Set up	Ṣètò
+Setup guide	Ìtọ́sọ́nà ìṣètò
+Fish Audio	Fish Audio
+Default model	Àwòṣe àìyípadà
+Pick a voice model	Yan àwòṣe ohùn
+Get free voice	Gba ohùn ọ̀fẹ́
+Mic: default	Maikirofónù: àìyípadà
+Her speaker: Default	Agbọ̀rọ̀sọ: Àìyípadà
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N pa maikirofónù
+CAPRI	CAPRI
+Support	Àtìlẹ́yìn
+Remote	Latọ́nà jíjìn
+Bring here	Mú wá síbí
+Advanced Settings	Ètò Àfikún
+YOU	ÌWỌ
+Your personality	Ìwà rẹ
+Language	Èdè
+English	Gẹ̀ẹ́sì
+What should she call you?	Kí ló yẹ kí ó pè ọ́?
+Save	Fipamọ́
+Volume	Ìwọ̀n ohùn
+Pitch	Ohùn orin
+Speed	Iyára
+Robot	Róbọ́ọ̀tì
+Glitch	Glitch
+Sounds	Àwọn ohun
+Typing sound	Ohùn títẹ̀
+Listen for Capri	Gbọ́ Capri
+Hearing	Gbọ́
+Auto	Aládàáṣe
+Free voice in games	Ohùn ọ̀fẹ́ nínú àwọn eré
+Call mode (beta)	Ipò ìpè (beta)
+Her voice in your mic	Ohùn rẹ̀ nínú maikirofónù rẹ
+Get VB-CABLE	Gba VB-CABLE
+How to	Bí a ṣe ń ṣe
+Her voice in your mic: loudness	Ohùn rẹ̀ nínú maikirofónù rẹ: ìró
+MOVES	ÌṢÍPÒ
+Pop-in times	Àkókò ìfarahàn
+Mini player	Ẹ̀rọ orin kékeré
+Wander	Rìn kiri
+Sleep	Sùn
+Pop-ins	Àwọn ìfarahàn
+Glitch in at startup	Glitch nígbà ìbẹ̀rẹ̀
+KEYS	Àwọn BỌ́TÌNÌ
+Talk: Ctrl + Alt + V	Sọ̀rọ̀: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Pa maikirofónù: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Tẹ̀: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Fi/ṣe àfihàn: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Ìdákẹ́jẹ́ẹ́: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Ipò Ere: Ctrl + Alt + G
+Confirm	Jẹ́rìísí
+Cancel	Fagilee
+Size	Ìwọ̀n
+Check in on me	Wá wò mí
+Edit check-in lines	Ṣatunkọ àwọn ìlà ìwọlé
+Always on top	Nígbàgbogbo lórí
+Mainframe size	Ìwọ̀n Mainframe
+Mainframe colours	Àwọn àwọ̀ Mainframe
+Head pats	Fífọwọ́ pa orí
+Pat stroke	Fífọwọ́ pa
+Chaos when upset	Rúdurùdu nígbà tí ó bá bínú
+Legacy stand	Àtẹ atijọ
+Jealous of other AIs	Ń ṣe ìlara àwọn AI mìíràn
+Teases when another AI comes to the front.	Ó ń fi ṣe yẹ̀yẹ́ nígbà tí AI mìíràn bá wá sí iwájú.
+Close other AIs for me	Pa àwọn AI mìíràn fún mi
+Asks before closing only the apps you choose.	Ó máa bèèrè kí o tó pa àwọn ohun èlò tí o yàn nìkan.
+Apps she may close	Àwọn ohun èlò tó lè ti pa
+Choose apps	Yan àwọn ohun èlò
+WATCH	WO
+Watch my screen	Wo ìbòjú mi
+Screens	Àwọn ìbòjú
+All screens	Gbogbo ìbòjú
+Remember what she sees	Rántí ohun tí ó rí
+Every	Gbogbo
+Watch-along memory	Ìrántí wíwo papọ̀
+Code/Husk Mode	Ipò Kóòdù/Husk
+Thinking	Ń rò
+Default	Àìyípadà
+Extra request JSON	JSON ìbéèrè afikún
+Add	Fi kun
+Verbosity	Ìmọ̀ràn
+Replies	Àwọn ìdáhùn
+Memory	Ìrántí
+Memory size	Ìwọ̀n ìrántí
+Max reply	Ìdáhùn tó pọ̀ jù
+Bubble	Àkùkọ
+Follow-up messages	Àwọn ifiranṣẹ atẹ̀lé
+Use	Lo
+A model in Ollama, on your local server or on your key.	Àwòṣe kan nínú Ollama, lórí olùpèsè rẹ tàbí pẹ̀lú kọ́kọ́rọ́ rẹ.
+HABITS	ÌWÀ
+Open her memories	Ṣí àwọn ìrántí rẹ̀
+Start with Windows	Bẹ̀rẹ̀ pẹ̀lú Windows
+Show on Discord	Fi hàn lórí Discord
+Use her cursor	Lo kọ̀sọ̀ọ̀ rẹ̀
+Remember our chats	Rántí àwọn ìwíregbè wa
+Power saver	Ẹni tó ń fi agbára pamọ́
+Music app	Ohun èlò orin
+Perch	Perch
+Keep PC awake for jobs	Jẹ́ kí PC wà lójú fún àwọn iṣẹ́
+Hide in full screen	Fi pamọ́ ní ipò gbogbo ìbòjú
+Mini player over full screen	Ẹ̀rọ orin kékeré lórí gbogbo ìbòjú
+Explore while I'm away	Ṣàwárí nígbà tí mo bá lọ
+Explore after	Ṣàwárí lẹ́yìn
+GAMES	ÈRÉ
+Controls	Àwọn ìṣakoso
+Comments	Àwọn ọ̀rọ̀ ìfiwéra
+Live reactions	Àwọn ìdáhùn lójúkan náà
+Game sounds	Àwọn ohun ere
+Gaming Mode	Ipò Ere
+She reacts to your game until you close it.	Ó ń dáhùn sí eré rẹ títí o fi tì í.
+Works best on MAX INTELLIGENCE.	Ó ṣiṣẹ́ dára jù lórí MAX INTELLIGENCE.
+Fast hands in games	Ọwọ́ yára nínú àwọn eré
+Mute her	Pa ohùn rẹ̀
+CLIPS	ÀJẸKÙ
+Clip my games	Ṣe àjẹkù àwọn ere mi
+Save big moments	Fi àwọn àkókò ńlá pamọ́
+Save folder	Àpò ìfipamọ́
+Choose folder	Yan àpò
+Open clips folder	Ṣí àpò àwọn ajẹkù
+Default length	Gígùn àìyípadà
+Frame rate	Iyara fireemu
+Resolution	Ìpinnu
+Video bitrate	Bitrate fídíò
+Weather	Ojú ọjọ́
+Code mods can reach your whole PC. Only trusted ones.	Àwọn mod kóòdù lè dé gbogbo PC rẹ. Àwọn tí o gbẹ́kẹ̀lé nìkan.
+Import mod	Gbé mod wọlé
+Browse mods	Wá kiri mods
+Mods folder	Àpò mods
+INSTALLED	TI FI SÍ
+Update mods	Ṣe àtúnṣe mods
+No mods match.	Kò sí mod tó bámu.
+On	Tan
+Remove	Yọ kúrò
+Publish	Tẹ̀ jáde
+Options	Àwọn àṣàyàn
+Back	Padà
+Next	Tókàn
+COLORS	ÀWỌ̀
+Reset colors	Tún àwọn àwọ̀ ṣe
+Running on this PC	Ó ń ṣiṣẹ́ lórí PC yìí
+NORMAL	DEÉDÉÉ
+OFF	PA
+Local server address	Àdírẹ́sì olùpèsè agbègbè

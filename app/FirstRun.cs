@@ -577,7 +577,7 @@ namespace CapriDesktop
                 MakeKey("ChatGPT plan", 310, 136, 262, 40, Body(18, true), Cyan, delegate { Plan("codex"); }).AccessibleName = "ChatGPT plan, runs Codex on this PC";
                 Caption("Runs Claude Code or Codex on this PC, signed in.", 28, 184, Wide - 56, 20, Mono(14), Faint);
                 Caption("OLLAMA", 28, 222, 200, 20, Mono(15), Faint);
-                MakeKey("Open Ollama, I'll find it", 28, 246, 262, 40, Body(18, true), Rose, delegate { Ollama(); });
+                MakeKey("Use Ollama, I'll start it", 28, 246, 262, 40, Body(18, true), Rose, delegate { Ollama(); });
                 return KeyRow(306, "OR A KEY", "OpenAI, Claude, DeepSeek, Google, NVIDIA or OpenRouter.", false);
             }
 
@@ -594,7 +594,7 @@ namespace CapriDesktop
             {
                 waitingOllama = true;
                 capri.FindBrain();
-                if (heard != null) { heard.ForeColor = Cyan; heard.Text = "Looking for Ollama. Open it if it isn't running."; }
+                if (heard != null) { heard.ForeColor = Cyan; heard.Text = "Looking for Ollama, and starting it if it's installed."; }
             }
 
             private int BuildOnline()
@@ -1315,11 +1315,19 @@ namespace CapriDesktop
         {
             if (quitting || IsDisposed) return;
             bool landing = FirstRunLanding != null ? FirstRunLanding() : falling || spawnFall || dropAfter || clip == arrive;
+            // An intro plays through first: the card came up over Door 2 on a fresh install. Held for as long as the
+            // intro runs, which her own intro limit and its veil already cap, and the landing after it gets its own wait.
+            if (FirstRunLanding == null && IntroShowing(clock.Elapsed.TotalSeconds))
+            {
+                ThreadPool.QueueUserWorkItem(delegate { Thread.Sleep(250); Post(delegate { OpenWhenLanded(step, pick, resumed, 0); }); });
+                return;
+            }
             if (waited < 6000 && landing)
             {
                 ThreadPool.QueueUserWorkItem(delegate { Thread.Sleep(150); Post(delegate { OpenWhenLanded(step, pick, resumed, waited + 150); }); });
                 return;
             }
+            Brain.Log("first run", -1, "Setup card opened " + clock.Elapsed.TotalSeconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s after her start.");
             OpenFirstRun(step, pick, resumed);
         }
 

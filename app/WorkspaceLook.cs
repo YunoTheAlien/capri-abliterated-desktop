@@ -1258,7 +1258,7 @@ namespace CapriDesktop
                     }
                     mainframe.LayoutScale(96, scale);
                     string keyFit = mainframe.WorkspaceKeyFits();
-                    if (keyFit != null) throw new Exception(keyFit);
+                    if (keyFit != null) throw new Exception(keyFit + " Text at " + scale + "%.");
                 }
                 mainframe.LayoutScale(0, 0);
                 checks.Add("PASS Workspace window and Mainframe button fit at 100%, 125%, 150% and 200% and at the smallest size; code is in her mono, messages copy, tool results open, drafts and pickers save, scrolling follows only at the end, Enter sends and Shift+Enter adds a line");

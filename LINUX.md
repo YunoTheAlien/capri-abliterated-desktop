@@ -6,6 +6,20 @@ Native package/assembly identity is v0.8.6.1. Linux TALK uses the English Parake
 
 The native White-look menu correction supplies the pinned Fluent menu-item, state and submenu resources from the existing palette. It preserves typography, geometry, native host/input handling and renderer.
 
+## Install
+
+Download `Capri-<version>-linux-x64.run` from the release, with `SHA256SUMS.txt` beside it if you want to check it (`sha256sum -c SHA256SUMS.txt --ignore-missing`). Then run:
+
+```
+sh Capri-<version>-linux-x64.run
+```
+
+It installs her for your user only, with no root and no password. She goes in `~/.local/opt/capri`, with a launcher in your app menu, an optional desktop shortcut, and a `capri` command if you don't already have one. Running a newer `.run` replaces her program and keeps everything of yours. To remove her, right-click her launcher and pick **Uninstall Capri**, or run `~/.local/opt/capri/uninstall`. Your settings, notes and chats in `~/.config/Capri` are kept either way.
+
+It's built for 64-bit x86 with glibc. If she doesn't start, the installer lists any system libraries she's missing.
+
+Without a terminal: `--silent` installs with no questions (add `--desktop` for the shortcut), `--uninstall` removes her, `--verify` only checks the file, and `--extract <folder>` unpacks her without installing. Exit codes are 0 done, 1 failed, 2 a command it didn't understand.
+
 ## Build and run
 
 Use .NET 10 and the pinned Avalonia 11.3.22 dependencies. On Arch install `dotnet-sdk base-devel python wayland libxkbcommon libxcb fontconfig freetype2 libx11 libice libsm libxrandr libxext icu openssl glib2 libpulse libarchive bubblewrap pipewire ffmpeg python-dbus python-gobject`. A functioning desktop/audio session is needed for native interaction. Hyprland capture uses `grim`; input uses the bundled compositor-protocol helper, not a new root service or udev rule.
@@ -29,6 +43,8 @@ For an explicit new download or recovery, `tools/voice_pack_setup.py` retains th
 ## Native actions and limitations
 
 Hyprland inventory covers native Wayland and XWayland windows; focus/close/explicit force-close bind to fresh compositor and process identities. User service actions accept literal user-unit names only; power operations use one logind request. Screenshot workers do not type shell commands; explicit terminal jobs use the separate intent-checked native terminal route described below. Native jobs use fresh foreground pixels, a bounded native-density crop, one action then observation, account/session/focus/target revalidation and held-input cleanup. Stop cancels child work. Owner-pointer and focus changes yield; global physical keyboard interruption is not fully qualified. Requested read-only screen observation maps the full selected output or area and bounds its encoded long side to2048 pixels; actionable jobs retain their separate fresh native-density crop and authority checks. Browser close-tab remains unavailable until tab-count and after-state verification are reliable.
+
+**GNOME on Wayland.** GNOME gives apps no way to see or control other apps' windows, so Capri ships a small GNOME Shell extension of her own, *Capri window helper* (`capri-windows@capriai.app`, source in `cross/gnome/capri-windows.js`). On first start she writes it into `~/.local/share/gnome-shell/extensions/` and adds it to your turned-on extensions; nothing outside your home folder changes. GNOME loads it at your next log-in, and from then on she can see where your windows are (to sit on them) and switch to, minimize and close them. The helper only answers over your session bus, on this computer, and does nothing while Capri isn't running. To remove it, turn it off in the Extensions app or delete that folder; if you turn it off, she leaves it off and tells you where to turn it back on. It needs GNOME 40 or newer, with extensions not switched off. It is checked against a headless GNOME Shell by `tests/gnome-bridge/run.sh`, and on other distros' GNOME by `tests/gnome-bridge/run-other-gnome.sh`.
 
 The pet now uses the native Hyprland output adapter in production. Visual pointer samples carry session/layout identity and ordered publication; computer actions retain their separate fresh, locked-session checks. One asynchronous coalescing writer moves each owned surface in compositor coordinates, switching its output/workspace before positioning. This matters when XRandR and Wayland enumerate displays in different orders. The original sprites, body anchor and character behavior remain in use. Press acquisition captures the event point and observed origin once, fences older samples and pauses autonomous movement below threshold. During a hold, fresh compositor samples schedule only drag work, with one queued UI dispatch and one pending native position. Release settles accepted writes before physics continues; stale/locked/hidden results are discarded. Sprite timing and background habits retain their own cadence. This removes the fixed 33 ms drag scheduler; a configured sample interval is not a claim of delivered display refresh.
 

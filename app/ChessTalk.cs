@@ -49,10 +49,10 @@ namespace CapriDesktop
         internal const string Defaults =
             "# What she says over a chess board\n" +
             "\n" +
-            "> One line each time something happens on the board. Add or change any of them.\n" +
-            "> Delete a line to stop her saying it, or a whole section to fall back to the ones she ships.\n" +
-            "> Nothing repeats until its section has been round.\n" +
-            "> Tokens: %petname% %name%\n" +
+            ">! One line each time something happens on the board. Add or change any of them.\n" +
+            ">! Delete a line to stop her saying it, or a whole section to fall back to the ones she ships.\n" +
+            ">! Nothing repeats until its section has been round.\n" +
+            ">! Tokens: %petname% %name%\n" +
             "\n" +
             "## When she takes your queen\n" +
             "\n" +

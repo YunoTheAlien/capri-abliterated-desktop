@@ -1,0 +1,206 @@
+# Her menus and labels in Czech: the English, a tab, then the translation.
+Open Capri Mainframe	Otevřít Capri Mainframe
+Her folder	Její složka
+Play	Přehrát
+Music	Hudba
+Chess	Šachy
+Connect four	Čtyři v řadě
+Tic-tac-toe	Piškvorky
+Rock, paper, scissors	Kámen, nůžky, papír
+Hide Capri	Skrýt Capri
+Hologram	Hologram
+Normal	Normální
+Small	Malé
+Medium	Střední
+Large	Velké
+Huge	Obrovské
+Giant	Obří
+Move	Přesunout
+Wander around	Toulat se
+Dance to music	Tancovat na hudbu
+Dance	Tanec
+Ride cursor	Jet kurzorem
+Sit on windows	Sedni na okna
+Sit here	Sedni si sem
+Hang here	Zůstaň tady
+Lie down	Lehni si
+Go to sleep	Jdi spát
+Bring to this screen	Přenést na tuto obrazovku
+Go to the next screen	Jdi na další obrazovku
+Black	Černá
+White	Bílá
+Test	Test
+Stop	Zastavit
+Help	Nápověda
+Commands	Příkazy
+Help page	Stránka nápovědy
+Join the Discord	Připoj se na Discord
+Copy error details	Kopírovat podrobnosti chyby
+Check for updates	Hledat aktualizace
+Quit Capri	Ukončit Capri
+MAINFRAME	MAINFRAME
+Settings	Nastavení
+Mods	Mody
+BRAIN	MOZEK
+Provider	Poskytovatel
+Using your server with no key	Používání tvého serveru bez klíče
+Refresh	Obnovit
+Set up her brain	Nastavit její mozek
+Have Ollama? Open it, then press Refresh.	Máš Ollama? Otevři ji a stiskni Obnovit.
+Pick one. Only one brain runs at a time.	Vyber jeden. Najednou běží jen jeden mozek.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Vypnuto
+Free key	Bezplatný klíč
+Connect	Připojit
+Free keys can be rate limited and slow.	Bezplatné klíče můžou mít omezení rychlosti a být pomalé.
+That's a paid key: it goes under MAX INTELLIGENCE.	To je placený klíč: patří pod MAX INTELLIGENCE.
+Move to MAX	Přesunout na MAX
+VOICE	HLAS
+Ctrl + Alt + V to talk	Ctrl + Alt + V pro mluvení
+PREBUILT LOCAL	PŘEDPŘIPRAVENÝ LOKÁLNÍ
+CUSTOM LOCAL	VLASTNÍ LOKÁLNÍ
+CLOUD VOICE	CLOUDOVÝ HLAS
+Set up	Nastavit
+Setup guide	Průvodce nastavením
+Fish Audio	Fish Audio
+Default model	Výchozí model
+Pick a voice model	Vyber model hlasu
+Get free voice	Získat bezplatný hlas
+Mic: default	Mikrofon: výchozí
+Her speaker: Default	Její reproduktor: Výchozí
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N ztlumí mikrofon
+CAPRI	CAPRI
+Support	Podpora
+Remote	Vzdáleně
+Bring here	Přenést sem
+Advanced Settings	Rozšířená nastavení
+YOU	TY
+Your personality	Tvá osobnost
+Language	Jazyk
+English	Angličtina
+What should she call you?	Jak ti má říkat?
+Save	Uložit
+Volume	Hlasitost
+Pitch	Výška
+Speed	Rychlost
+Robot	Robot
+Glitch	Glitch
+Sounds	Zvuky
+Typing sound	Zvuk psaní
+Listen for Capri	Poslouchat Capri
+Hearing	Sluch
+Auto	Auto
+Free voice in games	Bezplatný hlas ve hrách
+Call mode (beta)	Režim hovoru (beta)
+Her voice in your mic	Její hlas v tvém mikrofonu
+Get VB-CABLE	Získat VB-CABLE
+How to	Jak na
+Her voice in your mic: loudness	Její hlas v tvém mikrofonu: hlasitost
+MOVES	POHYBY
+Pop-in times	Časy vyskakování
+Mini player	Mini přehrávač
+Wander	Toulání
+Sleep	Spánek
+Pop-ins	Vyskakování
+Glitch in at startup	Glitch při spuštění
+KEYS	KLÁVESY
+Talk: Ctrl + Alt + V	Mluvit: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Ztlumit mikrofon: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Psaní: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Skrýt/zobrazit: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Tiše: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Herní režim: Ctrl + Alt + G
+Confirm	Potvrdit
+Cancel	Zrušit
+Size	Velikost
+Check in on me	Ozvi se mi
+Edit check-in lines	Upravit řádky check-in
+Always on top	Vždy nahoře
+Mainframe size	Velikost Mainframe
+Mainframe colours	Barvy Mainframe
+Head pats	Pohlazení
+Pat stroke	Pohlazení tahem
+Chaos when upset	Chaos, když se naštve
+Legacy stand	Starý stojan
+Jealous of other AIs	Žárlím na jiné AI
+Teases when another AI comes to the front.	Škádlí, když se do popředí dostane jiná AI.
+Close other AIs for me	Zavři za mě ostatní AI
+Asks before closing only the apps you choose.	Před zavřením se zeptá jen u aplikací, které vybereš.
+Apps she may close	Aplikace, které smí zavřít
+Choose apps	Vyber aplikace
+WATCH	SLEDOVAT
+Watch my screen	Sleduj mou obrazovku
+Screens	Obrazovky
+All screens	Všechny obrazovky
+Remember what she sees	Pamatovat si, co vidí
+Every	Každých
+Watch-along memory	Paměť společného sledování
+Code/Husk Mode	Režim Code/Husk
+Thinking	Přemýšlím
+Default	Výchozí
+Extra request JSON	Extra JSON požadavku
+Add	Přidat
+Verbosity	Upovídanost
+Replies	Odpovědi
+Memory	Paměť
+Memory size	Velikost paměti
+Max reply	Maximální odpověď
+Bubble	Bublina
+Follow-up messages	Navazující zprávy
+Use	Použít
+A model in Ollama, on your local server or on your key.	Model v Ollama, na tvém lokálním serveru nebo s tvým klíčem.
+HABITS	NÁVYKY
+Open her memories	Otevřít její vzpomínky
+Start with Windows	Spustit se systémem Windows
+Show on Discord	Zobrazit na Discordu
+Use her cursor	Použít její kurzor
+Remember our chats	Pamatovat si naše rozhovory
+Power saver	Úspora energie
+Music app	Hudební aplikace
+Perch	Bidýlko
+Keep PC awake for jobs	Nechat PC bdělé kvůli úkolům
+Hide in full screen	Skrýt na celou obrazovku
+Mini player over full screen	Mini přehrávač nad celou obrazovkou
+Explore while I'm away	Prozkoumat, když nejsem doma
+Explore after	Prozkoumat potom
+GAMES	HRY
+Controls	Ovládání
+Comments	Komentáře
+Live reactions	Živé reakce
+Game sounds	Herní zvuky
+Gaming Mode	Herní režim
+She reacts to your game until you close it.	Reaguje na tvou hru, dokud ji nezavřeš.
+Works best on MAX INTELLIGENCE.	Nejlépe funguje na MAX INTELLIGENCE.
+Fast hands in games	Rychlé ruce ve hrách
+Mute her	Ztlumit ji
+CLIPS	KLIPY
+Clip my games	Nahrávej mé hry
+Save big moments	Ulož velké okamžiky
+Save folder	Složka pro uložení
+Choose folder	Vyber složku
+Open clips folder	Otevřít složku klipů
+Default length	Výchozí délka
+Frame rate	Snímková frekvence
+Resolution	Rozlišení
+Video bitrate	Datový tok videa
+Weather	Počasí
+Code mods can reach your whole PC. Only trusted ones.	Mody s kódem mohou dosáhnout na celý tvůj PC. Jen důvěryhodné.
+Import mod	Importovat mod
+Browse mods	Procházet mody
+Mods folder	Složka modů
+INSTALLED	NAINSTALOVÁNO
+Update mods	Aktualizovat mody
+No mods match.	Žádné mody neodpovídají.
+On	Zapnuto
+Remove	Odebrat
+Publish	Zveřejnit
+Options	Možnosti
+Back	Zpět
+Next	Další
+COLORS	BARVY
+Reset colors	Obnovit barvy
+Running on this PC	Běží na tomto PC
+NORMAL	NORMÁLNÍ
+OFF	VYPNUTO
+Local server address	Adresa místního serveru

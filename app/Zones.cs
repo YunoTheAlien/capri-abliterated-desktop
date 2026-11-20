@@ -57,7 +57,7 @@ namespace CapriDesktop
         internal static void Fresh()
         {
             // The switch decides which headings a file even has, so when it moves the files are asked again.
-            bool senpai = Brain.Adult;
+            bool senpai = Brain.SenpaiLive;
             bool again;
             lock (gate) { again = !everAsked || senpai != wasSenpai; wasSenpai = senpai; everAsked = true; }
             if (again) Ask();
@@ -73,7 +73,7 @@ namespace CapriDesktop
             foreach (string one in sections) Offers(Name(file, one));
         }
 
-        // A file to ask again later. Which headings a file has depends on the adult switch, and that is read
+        // A file to ask again later. Which headings a file has depends on the switch, and that is read
         // out of sys.md after this is first asked, so the answer at startup is the censored one even on a
         // machine where the switch is on.
         private static readonly List<KeyValuePair<string, Func<string[]>>> pools = new List<KeyValuePair<string, Func<string[]>>>();
@@ -132,7 +132,7 @@ namespace CapriDesktop
                     // A senpai pool is not reachable while the switch is off, so a mod claiming one is not
                     // registered at all rather than held and ignored: nothing of it is in memory, and
                     // nothing of it reaches the list she writes.
-                    if (!Brain.Uncensored && one.Key.IndexOf(LineFile.SenpaiMark, StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    if (!Brain.SenpaiOn && one.Key.IndexOf(LineFile.SenpaiMark, StringComparison.OrdinalIgnoreCase) >= 0) continue;
                     string had;
                     if (holder.TryGetValue(one.Key, out had) && had != mod) fought.Add(one.Key + ", also wanted by " + had);
                     taken[one.Key] = one.Value;
@@ -177,14 +177,14 @@ namespace CapriDesktop
                 StringBuilder made = new StringBuilder();
                 made.AppendLine("# What a mod can take over");
                 made.AppendLine();
-                made.AppendLine("> Every pool of lines she has, by file and heading. A mod claims one by name in its own");
-                made.AppendLine("> .capri-mod file and she says its lines there instead of her own. No code, no compiler.");
+                made.AppendLine(">! Every pool of lines she has, by file and heading. A mod claims one by name in its own");
+                made.AppendLine(">! .capri-mod file and she says its lines there instead of her own. No code, no compiler.");
                 made.AppendLine(">");
-                made.AppendLine("> \"zones\": { \"moments: When she pops in\": [\"a line\", \"another line\"] }");
+                made.AppendLine(">! \"zones\": { \"moments: When she pops in\": [\"a line\", \"another line\"] }");
                 made.AppendLine(">");
-                made.AppendLine("> Her own lines are never replaced, only looked at second, so a mod turned off, removed or");
-                made.AppendLine("> refused leaves her exactly as she shipped. This is what she says; what she does is not");
-                made.AppendLine("> claimable. Hers to read, not to edit: she writes this file.");
+                made.AppendLine(">! Her own lines are never replaced, only looked at second, so a mod turned off, removed or");
+                made.AppendLine(">! refused leaves her exactly as she shipped. This is what she says; what she does is not");
+                made.AppendLine(">! claimable. Hers to read, not to edit: she writes this file.");
                 made.AppendLine();
                 if (names.Count == 0) made.AppendLine("Nothing read yet. Open her for a while and this fills in.");
                 foreach (string one in names)
@@ -205,13 +205,58 @@ namespace CapriDesktop
     {
         // The zone system had no check of its own: a settings mod claiming a pool, her own lines coming back
         // when it lets go, a zone two mods want, and the list she writes for modders.
+        // Personalities and moods a mod brings: written when it is on, taken away when it is not, a file somebody
+        // edited left alone, one that was there first never written over, and a senpai one not written with the
+        // switch off.
+        internal void CheckModPacks(List<string> checks, string output)
+        {
+            Mods mods = ModList;
+            Func<ModFile, string, bool> askWas = mainframe.ModAsk;
+            mainframe.ModAsk = delegate { return true; };
+            bool switchWas = Brain.SenpaiOn;
+            string first = Personalities.PlainPathOf("Packfirst");
+            try
+            {
+                Brain.SenpaiOn = false;
+                foreach (Mod old in mods.All.ToArray()) mods.Remove(old);
+                File.WriteAllText(first, "# Packfirst\r\n\r\nMine.\r\n");
+                string file = Path.Combine(output, "packtest" + Mods.Extension);
+                File.WriteAllText(file, "{\"format\":1,\"id\":\"packtest\",\"name\":\"Pack test\",\"version\":\"1\",\"author\":\"Smoke\",\"description\":\"A test.\","
+                    + "\"personalities\":[{\"name\":\"Packtest\",\"text\":\"## Her character\\n\\nA test.\"},{\"name\":\"Packfirst\",\"text\":\"Theirs.\"},"
+                    + "{\"name\":\"Packother\",\"senpai\":true,\"text\":\"Other side.\"}],"
+                    + "\"moods\":[{\"name\":\"Packmood\",\"text\":\"## How it changes her\\n\\nA test.\"}]}");
+                if (!mainframe.ImportMod(file)) throw new Exception("The pack mod was not taken in.");
+                string pack = Personalities.PlainPathOf("Packtest"), mood = Dynamics.PlainPathOf("Packmood");
+                if (!File.Exists(pack) || File.ReadAllText(pack).IndexOf("# Packtest", StringComparison.Ordinal) < 0) throw new Exception("A mod's personality was not written with its title.");
+                if (!File.Exists(mood)) throw new Exception("A mod's mood was not written.");
+                if (File.ReadAllText(first).IndexOf("Mine.", StringComparison.Ordinal) < 0) throw new Exception("A mod wrote over a personality that was there first.");
+                string other = Personalities.SenpaiPathOf("Packother");
+                if (other != null && File.Exists(other)) throw new Exception("A mod's senpai personality was written with the switch off.");
+                foreach (Mod one in mods.All.ToArray()) mods.Remove(one);
+                if (File.Exists(pack) || File.Exists(mood)) throw new Exception("Removing the mod left its personality or mood behind.");
+                if (!File.Exists(first)) throw new Exception("Removing the mod took a personality it never wrote.");
+                if (!mainframe.ImportMod(file)) throw new Exception("The pack mod was not taken in a second time.");
+                File.AppendAllText(pack, "Edited.\r\n");
+                foreach (Mod one in mods.All.ToArray()) mods.Remove(one);
+                if (!File.Exists(pack)) throw new Exception("Removing the mod took a personality somebody had edited.");
+                checks.Add("PASS a mod's personalities and moods are written when it is on and taken away when it is not, an edited one stays, one that was there first is never written over, and a senpai one waits for the switch");
+            }
+            finally
+            {
+                try { foreach (string left in new[] { first, Personalities.PlainPathOf("Packtest"), Dynamics.PlainPathOf("Packmood") }) if (left != null && File.Exists(left)) File.Delete(left); }
+                catch (IOException) { }
+                Brain.SenpaiOn = switchWas;
+                mainframe.ModAsk = askWas;
+            }
+        }
+
         internal void CheckModZones(List<string> checks, string output)
         {
             Mods mods = ModList;
             Func<ModFile, string, bool> askWas = mainframe.ModAsk;
             mainframe.ModAsk = delegate { return true; };
             string zone = Zones.Name(Moments.Kept, Moments.PopIn);
-            string senpai = Zones.Name(Touch.Kept, LineFile.Senpai(Touch.Chest));
+            string senpai = Zones.Name(Touch.Kept, LineFile.Senpai(Touch.Upper ?? Touch.Tickled));
             string[] first = { "Only the first mod says this.", "And this one as well." };
             string[] second = { "Only the second mod says this." };
             Func<string, string[], string, string> write = delegate(string id, string[] lines, string named)
@@ -286,7 +331,7 @@ namespace CapriDesktop
                 Zones.DropAll();
                 checks.Add("PASS mod zones: a mod claiming again releases what it held last time without anything dropping it first, so Claim is correct on its own rather than only inside Apply");
 
-                if (!Brain.Uncensored)
+                if (!Brain.SenpaiOn)
                 {
                     if (!string.IsNullOrEmpty(senpai) && mainframe.ImportMod(write("zonesenpai", first, senpai)) && Zones.Claimed(senpai) != null)
                         throw new Exception("A mod claimed a senpai pool on a censored install.");
@@ -299,7 +344,7 @@ namespace CapriDesktop
                     string listed = File.ReadAllText(Zones.Listed);
                     if (listed.IndexOf(zone, StringComparison.OrdinalIgnoreCase) < 0) throw new Exception("The zone list left out a pool she had read.");
                     if (listed.IndexOf("taken by", StringComparison.OrdinalIgnoreCase) < 0) throw new Exception("The zone list did not say who held a taken zone.");
-                    if (!Brain.Uncensored && listed.IndexOf(LineFile.SenpaiMark, StringComparison.OrdinalIgnoreCase) >= 0) throw new Exception("The zone list named a senpai pool on a censored install.");
+                    if (!Brain.SenpaiOn && listed.IndexOf(LineFile.SenpaiMark, StringComparison.OrdinalIgnoreCase) >= 0) throw new Exception("The zone list named a senpai pool on a censored install.");
                     checks.Add("PASS mod zones: " + Zones.ListFile + " lists every pool she has read, names the mod holding one, and on a censored install has no senpai pool in it");
                 }
                 else checks.Add("LIMIT mod zones: " + Zones.ListFile + " was not written in this run, so its contents weren't read");
@@ -355,10 +400,10 @@ namespace CapriDesktop
             // The rule the readers rely on: settings sit above the first "## heading" and a reader opens a
             // section only on "##". A reader that takes a bare "#" as a heading puts the preamble in its scope,
             // and since headings match ignoring case, a title repeating a section name makes them readable.
-            string made = "# What you are into\n\n> A note.\n\n" + CapriDesktop.Notes.ResetKey + ": 0\n\n## what you are into\n\nfeet\n";
+            string made = "# Rainy days\n\n>! A note.\n\n" + CapriDesktop.Notes.ResetKey + ": 0\n\n## rainy days\n\npuzzles\n";
             Dictionary<string, string[]> got = LineFile.PoolsForTest(made);
             string[] right;
-            if (!got.TryGetValue("what you are into", out right) || right == null || right.Length != 1 || right[0] != "feet")
+            if (!got.TryGetValue("rainy days", out right) || right == null || right.Length != 1 || right[0] != "puzzles")
                 throw new Exception("Her reader did not keep the preamble out of a section whose name repeats the title: "
                     + (right == null ? "nothing" : string.Join(" | ", right)));
             foreach (KeyValuePair<string, string[]> pool in got)

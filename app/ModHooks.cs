@@ -978,7 +978,7 @@ namespace CapriDesktop
             {
                 string said = Clean(line, LongestModLine);
                 if (said.Length == 0 || over) return;
-                capri.Post(delegate { capri.Remark("(mod)", said); });
+                capri.Post(delegate { capri.WhenIntroLets(id, delegate { capri.Remark("(mod)", said); }); });
             }
 
             private static string Clean(string text, int longest)
@@ -1644,18 +1644,53 @@ namespace CapriDesktop
                 try { path = Path.IsPathRooted(file) ? file : Path.Combine(Folder, file); }
                 catch (ArgumentException) { return false; }
                 if (!path.EndsWith(".wav", StringComparison.OrdinalIgnoreCase))
-                    return File.Exists(path) && Sfx.Level > 0 && ModTunes.Play(path, Math.Max(0, Math.Min(1, volume)) * Sfx.Level / 100.0);
+                {
+                    if (!File.Exists(path) || Sfx.Level <= 0) return false;
+                    double level = Math.Min(Math.Max(0, Math.Min(1, volume)) * Sfx.Level / 100.0, Math.Pow(10, (LoudestBelowFull - SpeakersDecibels()) / 20));
+                    if (!capri.HeldForIntro(id)) return ModTunes.Play(path, level);
+                    capri.Post(delegate { capri.WhenIntroLets(id, delegate { ModTunes.Play(path, level); }); });
+                    return true;
+                }
                 short[] samples = ModSound.ReadWave(path, volume);
                 if (samples == null) return false;
+                Capped(samples);
                 capri.OnWindow(delegate
                 {
-                    Action<short[]> output = Sfx.Out;
-                    if (output != null && Sfx.Level > 0 && !over) output(samples);
+                    capri.WhenIntroLets(id, delegate
+                    {
+                        Action<short[]> output = Sfx.Out;
+                        if (output != null && Sfx.Level > 0 && !over) output(samples);
+                    });
                 });
                 return true;
             }
 
-            void ICapriSounds.Cue(string cue) { Sound(cue); }
+            // However loud the PC is turned up, a mod's sound peaks no higher than this far under the speakers' full
+            // volume. The door's sound was blasting people at a high system volume; at an ordinary one nothing changes.
+            private const double LoudestBelowFull = -20;
+
+            // The speakers' volume in decibels, or full when Windows won't say, which is the safe guess.
+            private static double SpeakersDecibels()
+            {
+                double? found = null;
+                try { found = Speakers.Decibels(); } catch (Exception) { }
+                return found.HasValue ? Math.Min(0, found.Value) : 0;
+            }
+
+            // Scaled down when its loudest sample, at her own sound level and the speakers' volume, would pass the ceiling.
+            private static void Capped(short[] samples)
+            {
+                int peak = 0;
+                foreach (short one in samples) peak = Math.Max(peak, Math.Abs((int)one));
+                if (peak == 0) return;
+                double own = Math.Max(1, Sfx.Level) / 100.0;
+                double atPeak = 20 * Math.Log10(peak / 32768.0) + 20 * Math.Log10(own) + SpeakersDecibels();
+                if (atPeak <= LoudestBelowFull) return;
+                double scale = Math.Pow(10, (LoudestBelowFull - atPeak) / 20);
+                for (int i = 0; i < samples.Length; i++) samples[i] = (short)Math.Round(samples[i] * scale);
+            }
+
+            void ICapriSounds.Cue(string cue) { capri.Post(delegate { capri.WhenIntroLets(id, delegate { Sound(cue); }); }); }
         }
     }
 }

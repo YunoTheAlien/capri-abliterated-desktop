@@ -1,0 +1,206 @@
+# Her menus and labels in Marathi: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe उघडा
+Her folder	तिचा फोल्डर
+Play	प्ले
+Music	संगीत
+Chess	बुद्धिबळ
+Connect four	कनेक्ट फोर
+Tic-tac-toe	टिक-टॅक-टो
+Rock, paper, scissors	दगड, कागद, कात्री
+Hide Capri	Capri लपवा
+Hologram	होलोग्राम
+Normal	सामान्य
+Small	लहान
+Medium	मध्यम
+Large	मोठा
+Huge	प्रचंड
+Giant	प्रचंड
+Move	हलवा
+Wander around	फिरा
+Dance to music	संगीतावर नाच
+Dance	नाच
+Ride cursor	कर्सरवर स्वार व्हा
+Sit on windows	खिडक्यांवर बस
+Sit here	इथे बस
+Hang here	इथे थांब
+Lie down	झोप
+Go to sleep	झोपायला जा
+Bring to this screen	या स्क्रीनवर आणा
+Go to the next screen	पुढच्या स्क्रीनवर जा
+Black	काळा
+White	पांढरा
+Test	चाचणी
+Stop	थांबवा
+Help	मदत
+Commands	कमांड्स
+Help page	मदत पेज
+Join the Discord	Discord मध्ये सामील व्हा
+Copy error details	एरर तपशील कॉपी करा
+Check for updates	अपडेट तपासा
+Quit Capri	Capri बंद करा
+MAINFRAME	MAINFRAME
+Settings	सेटिंग्ज
+Mods	मॉड्स
+BRAIN	मेंदू
+Provider	प्रदाता
+Using your server with no key	कीशिवाय तुमचा सर्व्हर वापरत आहे
+Refresh	Refresh
+Set up her brain	तिचा मेंदू सेट अप करा
+Have Ollama? Open it, then press Refresh.	Ollama आहे का? उघडा, मग Refresh दाबा.
+Pick one. Only one brain runs at a time.	एक निवडा. एका वेळी फक्त एक मेंदू चालतो.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	बंद
+Free key	मोफत की
+Connect	जोडा
+Free keys can be rate limited and slow.	मोफत की मर्यादित आणि संथ असू शकतात.
+That's a paid key: it goes under MAX INTELLIGENCE.	ती पैसे भरलेली की आहे: ती MAX INTELLIGENCE अंतर्गत जाते.
+Move to MAX	MAX मध्ये हलवा
+VOICE	VOICE
+Ctrl + Alt + V to talk	बोलण्यासाठी Ctrl + Alt + V
+PREBUILT LOCAL	प्रीबिल्ट स्थानिक
+CUSTOM LOCAL	स्वतःचे स्थानिक
+CLOUD VOICE	क्लाउड आवाज
+Set up	सेट अप करा
+Setup guide	सेटअप मार्गदर्शक
+Fish Audio	Fish Audio
+Default model	डीफॉल्ट मॉडेल
+Pick a voice model	आवाज मॉडेल निवडा
+Get free voice	मोफत आवाज मिळवा
+Mic: default	मायक्रोफोन: डीफॉल्ट
+Her speaker: Default	तिचा स्पीकर: डीफॉल्ट
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N मायक्रोफोन म्यूट करते
+CAPRI	CAPRI
+Support	सपोर्ट
+Remote	Remote
+Bring here	इथे आणा
+Advanced Settings	प्रगत सेटिंग्ज
+YOU	तुम्ही
+Your personality	तुमचे व्यक्तिमत्त्व
+Language	भाषा
+English	इंग्रजी
+What should she call you?	तिने तुम्हाला काय म्हणावे?
+Save	जतन करा
+Volume	आवाज पातळी
+Pitch	पिच
+Speed	वेग
+Robot	रोबोट
+Glitch	Glitch
+Sounds	आवाज
+Typing sound	टायपिंग आवाज
+Listen for Capri	Capri चे ऐका
+Hearing	ऐकणे
+Auto	ऑटो
+Free voice in games	गेममध्ये मोफत आवाज
+Call mode (beta)	कॉल मोड (बीटा)
+Her voice in your mic	तुमच्या मायक्रोफोनमध्ये तिचा आवाज
+Get VB-CABLE	VB-CABLE मिळवा
+How to	कसे
+Her voice in your mic: loudness	तुमच्या मायक्रोफोनमध्ये तिचा आवाज: आवाज पातळी
+MOVES	MOVES
+Pop-in times	Pop-in वेळा
+Mini player	मिनी प्लेयर
+Wander	भटकणे
+Sleep	झोप
+Pop-ins	Pop-ins
+Glitch in at startup	स्टार्टअपवेळी Glitch
+KEYS	कीज
+Talk: Ctrl + Alt + V	बोला: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	मायक्रोफोन म्यूट: Ctrl + Alt + N
+Type: Ctrl + Alt + T	टाइप: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	लपवा/दाखवा: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	शांत: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Gaming Mode: Ctrl + Alt + G
+Confirm	पुष्टी करा
+Cancel	रद्द करा
+Size	आकार
+Check in on me	माझी चौकशी करा
+Edit check-in lines	check-in ओळी संपादित करा
+Always on top	नेहमी वर
+Mainframe size	Mainframe आकार
+Mainframe colours	Mainframe रंग
+Head pats	डोक्यावर थाप
+Pat stroke	थाप स्ट्रोक
+Chaos when upset	चिडल्यावर गोंधळ
+Legacy stand	जुना स्टँड
+Jealous of other AIs	इतर AI चा हेवा
+Teases when another AI comes to the front.	दुसरा AI समोर आला की चिडवते.
+Close other AIs for me	माझ्यासाठी इतर AI बंद कर
+Asks before closing only the apps you choose.	तुम्ही निवडलेली ॲप्सच बंद करण्यापूर्वी विचारते.
+Apps she may close	तिला बंद करता येतील असे ॲप्स
+Choose apps	ॲप्स निवडा
+WATCH	WATCH
+Watch my screen	माझी स्क्रीन पहा
+Screens	Screens
+All screens	सर्व स्क्रीन
+Remember what she sees	ती काय पाहते ते लक्षात ठेवा
+Every	प्रत्येक
+Watch-along memory	एकत्र पाहण्याची स्मृती
+Code/Husk Mode	Code/Husk मोड
+Thinking	विचार करत आहे
+Default	डीफॉल्ट
+Extra request JSON	Extra request JSON
+Add	जोडा
+Verbosity	शब्दबहुलता
+Replies	उत्तरे
+Memory	मेमरी
+Memory size	मेमरी आकार
+Max reply	कमाल उत्तर
+Bubble	बबल
+Follow-up messages	फॉलो-अप संदेश
+Use	वापरा
+A model in Ollama, on your local server or on your key.	Ollama मधील मॉडेल, तुमच्या स्थानिक सर्व्हरवर किंवा तुमच्या की वर.
+HABITS	HABITS
+Open her memories	तिच्या आठवणी उघडा
+Start with Windows	Windows सोबत सुरू करा
+Show on Discord	Discord वर दाखवा
+Use her cursor	तिचा कर्सर वापरा
+Remember our chats	आपल्या चॅट्स लक्षात ठेवा
+Power saver	पॉवर सेव्हर
+Music app	संगीत ॲप
+Perch	Perch
+Keep PC awake for jobs	कामांसाठी PC जागा ठेवा
+Hide in full screen	फुल स्क्रीनमध्ये लपवा
+Mini player over full screen	फुल स्क्रीनवर मिनी प्लेयर
+Explore while I'm away	मी नसताना एक्सप्लोर करा
+Explore after	नंतर एक्सप्लोर करा
+GAMES	GAMES
+Controls	नियंत्रणे
+Comments	कमेंट्स
+Live reactions	लाइव्ह प्रतिक्रिया
+Game sounds	गेम आवाज
+Gaming Mode	Gaming Mode
+She reacts to your game until you close it.	तुम्ही बंद करेपर्यंत ती तुमच्या गेमवर प्रतिक्रिया देते.
+Works best on MAX INTELLIGENCE.	MAX INTELLIGENCE वर सर्वोत्तम चालते.
+Fast hands in games	गेममध्ये जलद हात
+Mute her	तिला म्यूट करा
+CLIPS	CLIPS
+Clip my games	माझे गेम क्लिप करा
+Save big moments	मोठे क्षण जतन करा
+Save folder	जतन फोल्डर
+Choose folder	फोल्डर निवडा
+Open clips folder	क्लिप्स फोल्डर उघडा
+Default length	डीफॉल्ट लांबी
+Frame rate	फ्रेम रेट
+Resolution	रिझोल्यूशन
+Video bitrate	व्हिडिओ bitrate
+Weather	हवामान
+Code mods can reach your whole PC. Only trusted ones.	कोड मॉड्स तुमच्या संपूर्ण PC पर्यंत पोहोचू शकतात. फक्त विश्वासू मॉड्स.
+Import mod	मॉड इम्पोर्ट करा
+Browse mods	मॉड्स ब्राउझ करा
+Mods folder	मॉड्स फोल्डर
+INSTALLED	इन्स्टॉल झालेले
+Update mods	मॉड्स अपडेट करा
+No mods match.	कोणतेही मॉड्स जुळत नाहीत.
+On	चालू
+Remove	काढा
+Publish	प्रकाशित करा
+Options	पर्याय
+Back	मागे
+Next	पुढे
+COLORS	रंग
+Reset colors	रंग रीसेट करा
+Running on this PC	या PC वर चालत आहे
+NORMAL	सामान्य
+OFF	बंद
+Local server address	स्थानिक सर्व्हर पत्ता

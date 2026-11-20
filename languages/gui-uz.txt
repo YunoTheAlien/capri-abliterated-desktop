@@ -1,0 +1,206 @@
+# Her menus and labels in Uzbek: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe'ni oching
+Her folder	Uning papkasi
+Play	Ijro
+Music	Musiqa
+Chess	Shaxmat
+Connect four	To'rtta ketma-ket
+Tic-tac-toe	Tik-tak-to
+Rock, paper, scissors	Tosh, qog'oz, qaychi
+Hide Capri	Capri'ni yashirish
+Hologram	Gologramma
+Normal	Oddiy
+Small	Kichik
+Medium	O'rtacha
+Large	Katta
+Huge	Juda katta
+Giant	Ulkan
+Move	Ko'chirish
+Wander around	Atrofda sayr qilish
+Dance to music	Musiqaga raqs tushish
+Dance	Raqsga tushish
+Ride cursor	Kursorda uchish
+Sit on windows	Oynalarda o'tir
+Sit here	Shu yerda o'tir
+Hang here	Shu yerda qol
+Lie down	Yot
+Go to sleep	Uxlashga ket
+Bring to this screen	Bu ekranga olib kel
+Go to the next screen	Keyingi ekranga o'ting
+Black	Qora
+White	Oq
+Test	Sinov
+Stop	To'xtatish
+Help	Yordam
+Commands	Buyruqlar
+Help page	Yordam sahifasi
+Join the Discord	Discord'ga qo'shiling
+Copy error details	Xato tafsilotlarini nusxalash
+Check for updates	Yangilanishlarni tekshirish
+Quit Capri	Capri'dan chiqish
+MAINFRAME	MAINFRAME
+Settings	Sozlamalar
+Mods	Modlar
+BRAIN	MIYA
+Provider	Provayder
+Using your server with no key	Kalitsiz serveringizdan foydalanish
+Refresh	Yangilash
+Set up her brain	Uning miyasini sozlash
+Have Ollama? Open it, then press Refresh.	Ollama bormi? Uni oching, so'ng Yangilash'ni bosing.
+Pick one. Only one brain runs at a time.	Bittasini tanlang. Bir vaqtda faqat bitta miya ishlaydi.
+MEDIUM INTELLIGENCE	O'RTACHA INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	O'chiq
+Free key	Bepul kalit
+Connect	Ulash
+Free keys can be rate limited and slow.	Bepul kalitlarda so'rovlar cheklangan va sekin bo'lishi mumkin.
+That's a paid key: it goes under MAX INTELLIGENCE.	Bu pullik kalit: u MAX INTELLIGENCE ostiga tushadi.
+Move to MAX	MAX'ga ko'chirish
+VOICE	OVOZ
+Ctrl + Alt + V to talk	Gapirish uchun Ctrl + Alt + V
+PREBUILT LOCAL	OLDINDAN O'RNATILGAN MAHALLIY
+CUSTOM LOCAL	MAXSUS MAHALLIY
+CLOUD VOICE	BULUT OVOZI
+Set up	Sozlash
+Setup guide	Sozlash qo'llanmasi
+Fish Audio	Fish Audio
+Default model	Standart model
+Pick a voice model	Ovoz modelini tanlang
+Get free voice	Bepul ovoz olish
+Mic: default	Mikrofon: standart
+Her speaker: Default	Uning karnayi: Standart
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N mikrofonni o'chiradi
+CAPRI	CAPRI
+Support	Qo'llab-quvvatlash
+Remote	Masofadan boshqarish
+Bring here	Bu yerga olib kel
+Advanced Settings	Kengaytirilgan sozlamalar
+YOU	SIZ
+Your personality	Sizning shaxsiyatingiz
+Language	Til
+English	Ingliz tili
+What should she call you?	U sizni nima deb chaqirishi kerak?
+Save	Saqlash
+Volume	Balandlik
+Pitch	Pitch
+Speed	Tezlik
+Robot	Robot
+Glitch	Nosozlik
+Sounds	Tovushlar
+Typing sound	Yozish tovushi
+Listen for Capri	Capri'ni tinglang
+Hearing	Eshitish
+Auto	Avto
+Free voice in games	O'yinlarda bepul ovoz
+Call mode (beta)	Qo'ng'iroq rejimi (beta)
+Her voice in your mic	Uning ovozi mikrofoningizda
+Get VB-CABLE	VB-CABLE olish
+How to	Qanday
+Her voice in your mic: loudness	Uning ovozi mikrofoningizda: balandlik
+MOVES	HARAKATLAR
+Pop-in times	Ko'rinish vaqtlari
+Mini player	Mini pleyer
+Wander	Sayr
+Sleep	Uyqu
+Pop-ins	Ko'rinishlar
+Glitch in at startup	Ishga tushganda nosozlik
+KEYS	TUGMALAR
+Talk: Ctrl + Alt + V	Gapirish: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Mikrofonni ovozsiz qilish: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Yozish: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Yashirish/ko'rsatish: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Jim: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	O'yin rejimi: Ctrl + Alt + G
+Confirm	Tasdiqlash
+Cancel	Bekor qilish
+Size	Hajm
+Check in on me	Holimni so'rang
+Edit check-in lines	Tekshiruv iboralarini tahrirlash
+Always on top	Doim tepada
+Mainframe size	Mainframe o'lchami
+Mainframe colours	Mainframe ranglari
+Head pats	Boshni silash
+Pat stroke	Bosh silash
+Chaos when upset	Xafa bo'lganda tartibsizlik
+Legacy stand	Eski stend
+Jealous of other AIs	Boshqa AI'larga hasad
+Teases when another AI comes to the front.	Boshqa AI oldinga chiqqanda masxara qiladi.
+Close other AIs for me	Men uchun boshqa AI'larni yoping
+Asks before closing only the apps you choose.	Faqat tanlagan ilovalaringizni yopishdan oldin so'raydi.
+Apps she may close	Yopishi mumkin bo'lgan ilovalar
+Choose apps	Ilovalarni tanlang
+WATCH	KUZATISH
+Watch my screen	Ekranimni kuzatish
+Screens	Ekranlar
+All screens	Barcha ekranlar
+Remember what she sees	Uning ko'rganini eslab qol
+Every	Har
+Watch-along memory	Birga tomosha qilish xotirasi
+Code/Husk Mode	Kod/Husk rejimi
+Thinking	O'ylayapman
+Default	Standart
+Extra request JSON	Qo'shimcha so'rov JSON
+Add	Qo'shish
+Verbosity	So'z ko'pligi
+Replies	Javoblar
+Memory	Xotira
+Memory size	Xotira hajmi
+Max reply	Maksimal javob
+Bubble	Pufak
+Follow-up messages	Davom ettiruvchi xabarlar
+Use	Ishlatish
+A model in Ollama, on your local server or on your key.	Ollama'dagi model, mahalliy serveringizda yoki kalitingiz bilan.
+HABITS	ODATLAR
+Open her memories	Uning xotiralarini oching
+Start with Windows	Windows bilan ishga tushirish
+Show on Discord	Discord'da ko'rsatish
+Use her cursor	Uning kursoridan foydalanish
+Remember our chats	Suhbatlarimizni eslab qol
+Power saver	Quvvat tejash
+Music app	Musiqa ilovasi
+Perch	Joy
+Keep PC awake for jobs	Ishlar uchun PC'ni uyg'oq saqlash
+Hide in full screen	To'liq ekranda yashirish
+Mini player over full screen	To'liq ekran ustida mini pleyer
+Explore while I'm away	Men yo'q paytimda o'rganish
+Explore after	Keyin o'rganish
+GAMES	O'YINLAR
+Controls	Boshqaruv
+Comments	Izohlar
+Live reactions	Jonli reaksiyalar
+Game sounds	O'yin tovushlari
+Gaming Mode	O'yin rejimi
+She reacts to your game until you close it.	U o'yiningizni yopguningizcha unga reaksiya bildiradi.
+Works best on MAX INTELLIGENCE.	MAX INTELLIGENCE'da eng yaxshi ishlaydi.
+Fast hands in games	O'yinlarda tez qo'llar
+Mute her	Uni ovozsiz qilish
+CLIPS	KLIPLAR
+Clip my games	Mening o'yinlarimni yozib oling
+Save big moments	Katta lahzalarni saqlash
+Save folder	Saqlash papkasi
+Choose folder	Papkani tanlang
+Open clips folder	Klip papkasini oching
+Default length	Standart uzunlik
+Frame rate	Kadr tezligi
+Resolution	Ruxsat
+Video bitrate	Video bitreyt
+Weather	Ob-havo
+Code mods can reach your whole PC. Only trusted ones.	Kod modlari butun kompyuteringizga yetishi mumkin. Faqat ishonchlilari.
+Import mod	Modni import qilish
+Browse mods	Modlarni ko'rish
+Mods folder	Modlar papkasi
+INSTALLED	O'RNATILGAN
+Update mods	Modlarni yangilash
+No mods match.	Hech qanday mod mos kelmaydi.
+On	Yoqiq
+Remove	Olib tashlash
+Publish	Nashr qilish
+Options	Variantlar
+Back	Orqaga
+Next	Keyingi
+COLORS	RANGLAR
+Reset colors	Ranglarni tiklash
+Running on this PC	Bu PC'da ishlamoqda
+NORMAL	ODDIY
+OFF	O'CHIQ
+Local server address	Mahalliy server manzili

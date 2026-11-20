@@ -1,0 +1,206 @@
+# Her menus and labels in Kazakh: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe ашу
+Her folder	Оның қапқасы
+Play	Ойнату
+Music	Музыка
+Chess	Шахмат
+Connect four	Төртеу қатарынан
+Tic-tac-toe	Крестики-нолики
+Rock, paper, scissors	Тас, қағаз, қайшы
+Hide Capri	Capri-ді жасыру
+Hologram	Голограмма
+Normal	Қалыпты
+Small	Кіші
+Medium	Орташа
+Large	Үлкен
+Huge	Өте үлкен
+Giant	Алып
+Move	Жылжыту
+Wander around	Айналып жүру
+Dance to music	Музыкаға би
+Dance	Би
+Ride cursor	Курсорды мінгізу
+Sit on windows	Терезелердің үстінде отыр
+Sit here	Осында отыр
+Hang here	Осында ілін
+Lie down	Жатыңыз
+Go to sleep	Ұйықтату
+Bring to this screen	Осы экранға әкел
+Go to the next screen	Келесі экранға өту
+Black	Қара
+White	Ақ
+Test	Тест
+Stop	Тоқтату
+Help	Анықтама
+Commands	Пәрмендер
+Help page	Анықтама беті
+Join the Discord	Discord-қа қосылу
+Copy error details	Қате мәліметтерін көшіру
+Check for updates	Жаңартуларды тексеру
+Quit Capri	Capri-ден шығу
+MAINFRAME	MAINFRAME
+Settings	Параметрлер
+Mods	Модтар
+BRAIN	МИ
+Provider	Провайдер
+Using your server with no key	Кілтсіз өз серверіңізді пайдалану
+Refresh	Жаңарту
+Set up her brain	Оның миын орнату
+Have Ollama? Open it, then press Refresh.	Ollama бар ма? Ашыңыз, содан кейін Жаңарту түймесін басыңыз.
+Pick one. Only one brain runs at a time.	Біреуін таңдаңыз. Бір уақытта тек бір ми іске қосылады.
+MEDIUM INTELLIGENCE	ОРТА ИНТЕЛЛЕКТ
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Өшірулі
+Free key	Тегін кілт
+Connect	Қосылу
+Free keys can be rate limited and slow.	Тегін кілттерде жылдамдық шегі болуы және баяу болуы мүмкін.
+That's a paid key: it goes under MAX INTELLIGENCE.	Бұл ақылы кілт: ол MAX INTELLIGENCE астына өтеді.
+Move to MAX	MAX-ке жылжыту
+VOICE	ДАУЫС
+Ctrl + Alt + V to talk	Сөйлесу үшін Ctrl + Alt + V
+PREBUILT LOCAL	АЛДЫН АЛА ДАЙЫНДАЛҒАН ЖЕРГІЛІКТІ
+CUSTOM LOCAL	ЖЕРГІЛІКТІ ӨЗГЕРТІЛГЕН
+CLOUD VOICE	БҰЛТТЫҚ ДАУЫС
+Set up	Орнату
+Setup guide	Орнату нұсқаулығы
+Fish Audio	Fish Audio
+Default model	Әдепкі модель
+Pick a voice model	Дауыс моделін таңдаңыз
+Get free voice	Тегін дауыс алу
+Mic: default	Микрофон: әдепкі
+Her speaker: Default	Динамик: Әдепкі
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N микрофонды өшіреді
+CAPRI	CAPRI
+Support	Қолдау
+Remote	Қашықтан
+Bring here	Мұнда әкел
+Advanced Settings	Кеңейтілген параметрлер
+YOU	СІЗ
+Your personality	Сіздің жеке басыңыз
+Language	Тіл
+English	Ағылшын
+What should she call you?	Оның сізді қалай атағанын қалайсыз?
+Save	Сақтау
+Volume	Дыбыс деңгейі
+Pitch	Биіктік
+Speed	Жылдамдық
+Robot	Робот
+Glitch	Glitch
+Sounds	Дыбыстар
+Typing sound	Теру дыбысы
+Listen for Capri	Capri-ді тыңда
+Hearing	Есту
+Auto	Авто
+Free voice in games	Ойындағы тегін дауыс
+Call mode (beta)	Қоңырау режимі (бета)
+Her voice in your mic	Оның дауысы сіздің микрофоныңызда
+Get VB-CABLE	VB-CABLE алу
+How to	Қалай
+Her voice in your mic: loudness	Сіздің микрофоныңыздағы оның дауысы: қаттылық
+MOVES	ҚОЗҒАЛЫСТАР
+Pop-in times	Пайда болу уақыттары
+Mini player	Шағын ойнатқыш
+Wander	Кезу
+Sleep	Ұйқы
+Pop-ins	Пайда болулар
+Glitch in at startup	Іске қосқанда glitch
+KEYS	ПЕРНЕЛЕР
+Talk: Ctrl + Alt + V	Сөйлеу: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Микрофонды өшіру: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Теру: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Жасыру/көрсету: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Үнсіз: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Ойын режимі: Ctrl + Alt + G
+Confirm	Растау
+Cancel	Бас тарту
+Size	Өлшемі
+Check in on me	Менімен тексеріңіз
+Edit check-in lines	Кіру жолдарын өңдеу
+Always on top	Әрқашан үстінде
+Mainframe size	Mainframe өлшемі
+Mainframe colours	Mainframe түстері
+Head pats	Бас сипау
+Pat stroke	Бас сипау
+Chaos when upset	Ренжігенде хаос
+Legacy stand	Ескі тірек
+Jealous of other AIs	Басқа AI-larға қызғанышты
+Teases when another AI comes to the front.	Басқа AI алдыңғы қатарға шыққанда мазақ етеді.
+Close other AIs for me	Мен үшін басқа AI-ларды жабу
+Asks before closing only the apps you choose.	Тек таңдаған қолданбаларыңызды жабар алдында сұрайды.
+Apps she may close	Жабуы мүмкін қолданбалар
+Choose apps	Қолданбаларды таңдау
+WATCH	КӨРУ
+Watch my screen	Экранымды бақылау
+Screens	Экрандар
+All screens	Барлық экрандар
+Remember what she sees	Ол көретінін есте сақтау
+Every	Әр
+Watch-along memory	Бірге қараған кездегі жад
+Code/Husk Mode	Код/Husk режимі
+Thinking	Ойлануда
+Default	Әдепкі
+Extra request JSON	Қосымша сұраным JSON
+Add	Қосу
+Verbosity	Сөздер көптігі
+Replies	Жауаптар
+Memory	Жад
+Memory size	Жад өлшемі
+Max reply	Ең көп жауап
+Bubble	Көпіршік
+Follow-up messages	Жалғастыру хабарлары
+Use	Пайдалану
+A model in Ollama, on your local server or on your key.	Ollama-дағы модель, жергілікті серверіңізде немесе өз кілтіңізбен.
+HABITS	ӘДЕТТЕР
+Open her memories	Оның естеліктерін ашу
+Start with Windows	Windows-пен бірге іске қосу
+Show on Discord	Discord-та көрсету
+Use her cursor	Оның курсорын пайдалану
+Remember our chats	Біздің чаттарымызды есте сақтау
+Power saver	Энергия үнемдегіш
+Music app	Музыка қолданбасы
+Perch	Perch
+Keep PC awake for jobs	Жұмыстар үшін PC-ді оятып ұстау
+Hide in full screen	Толық экранда жасыру
+Mini player over full screen	Толық экран үстіндегі шағын ойнатқыш
+Explore while I'm away	Мен жоқ кезде зерттеу
+Explore after	Кейін зерттеу
+GAMES	ОЙЫНДАР
+Controls	Басқару элементтері
+Comments	Пікірлер
+Live reactions	Тікелей реакциялар
+Game sounds	Ойын дыбыстары
+Gaming Mode	Ойын режимі
+She reacts to your game until you close it.	Сіз жапқанша сіздің ойыныңызға жауап береді.
+Works best on MAX INTELLIGENCE.	MAX INTELLIGENCE-де ең жақсы жұмыс істейді.
+Fast hands in games	Ойындағы жылдам қолдар
+Mute her	Оны дыбыссыз ету
+CLIPS	КЛИПТЕР
+Clip my games	Менің ойындарымды клиптеу
+Save big moments	Үлкен сәттерді сақтау
+Save folder	Сақтау қапқасы
+Choose folder	Қапқа таңдау
+Open clips folder	Клиптер қапқасын ашу
+Default length	Әдепкі ұзындық
+Frame rate	Кадр жылдамдығы
+Resolution	Ажыратымдылық
+Video bitrate	Бейне bitrate
+Weather	Ауа райы
+Code mods can reach your whole PC. Only trusted ones.	Код модтары бүкіл PC-іңізге қол жеткізе алады. Тек сенімдісін пайдаланыңыз.
+Import mod	Модты импорттау
+Browse mods	Модтарды шолу
+Mods folder	Модтар қапқасы
+INSTALLED	ОРНАТЫЛҒАН
+Update mods	Модтарды жаңарту
+No mods match.	Сәйкес мод жоқ.
+On	Қосулы
+Remove	Жою
+Publish	Жариялау
+Options	Опциялар
+Back	Артқа
+Next	Келесі
+COLORS	ТҮСТЕР
+Reset colors	Түстерді қалпына келтіру
+Running on this PC	Осы PC-де іске қосылған
+NORMAL	ҚАЛЫПТЫ
+OFF	ӨШІРУЛІ
+Local server address	Жергілікті сервер мекенжайы

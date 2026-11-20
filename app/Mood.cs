@@ -17,7 +17,7 @@ namespace CapriDesktop
     //      and never talks about one.
     //
     // Left behind: the mod's fixed event table, where thrown is always -15 happiness and +40 upset. That is the exact
-    // assumption we spent a day removing, and it would break a masochist all over again. Weights stay where they are,
+    // assumption we spent a day removing, and it would break a pack that likes being thrown all over again. Weights stay where they are,
     // in her personality and her mood, on our own small integer scale.
     internal static class Mood
     {
@@ -37,8 +37,7 @@ namespace CapriDesktop
             //  act            seconds   per hour
             { "petted",          "20",     "40" },
             { "thrown",          "12",     "30" },
-            { "slapped",         "12",     "30" },
-            { "degraded",        "20",     "20" },
+            { "insulted",        "20",     "20" },
             { "praised",         "45",     "12" },
             { "called on",       "30",     "30" },
             { "ignored",        "240",      "8" }
@@ -77,7 +76,10 @@ namespace CapriDesktop
             for (int row = 0; row < Limits.GetLength(0); row++)
                 if (string.Equals(Limits[row, 0], act, StringComparison.OrdinalIgnoreCase))
                     return int.Parse(Limits[row, column]);
-            return 0;
+            // A senpai act's limits come with it, as "seconds, per hour".
+            string[] two = (Extended.Get("limit." + (act ?? "").ToLowerInvariant()) ?? "").Split(',');
+            int given;
+            return two.Length == 2 && int.TryParse(two[column - 1].Trim(), out given) ? given : 0;
         }
 
         internal static void Cool()

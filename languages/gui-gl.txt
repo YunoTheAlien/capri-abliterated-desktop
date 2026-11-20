@@ -1,0 +1,206 @@
+# Her menus and labels in Galician: the English, a tab, then the translation.
+Open Capri Mainframe	Abrir Capri Mainframe
+Her folder	A súa carpeta
+Play	Reproducir
+Music	Música
+Chess	Xadrez
+Connect four	Conecta catro
+Tic-tac-toe	Tres en raia
+Rock, paper, scissors	Pedra, papel, tesoira
+Hide Capri	Ocultar Capri
+Hologram	Holograma
+Normal	Normal
+Small	Pequeno
+Medium	Media
+Large	Grande
+Huge	Enorme
+Giant	Xigante
+Move	Mover
+Wander around	Deambular por aí
+Dance to music	Bailar ao son da música
+Dance	Bailar
+Ride cursor	Montar no cursor
+Sit on windows	Sentar nas xanelas
+Sit here	Sentar aquí
+Hang here	Quédate aquí
+Lie down	Deitarse
+Go to sleep	Ir durmir
+Bring to this screen	Traer a esta pantalla
+Go to the next screen	Ir á seguinte pantalla
+Black	Negro
+White	Branco
+Test	Probar
+Stop	Parar
+Help	Axuda
+Commands	Comandos
+Help page	Páxina de axuda
+Join the Discord	Únete ao Discord
+Copy error details	Copiar detalles do erro
+Check for updates	Buscar actualizacións
+Quit Capri	Saír de Capri
+MAINFRAME	MAINFRAME
+Settings	Configuración
+Mods	Modificacións
+BRAIN	CEREBRO
+Provider	Provedor
+Using your server with no key	Usando o teu servidor sen clave
+Refresh	Actualizar
+Set up her brain	Configurar o seu cerebro
+Have Ollama? Open it, then press Refresh.	Tes Ollama? Ábreo e logo preme Actualizar.
+Pick one. Only one brain runs at a time.	Escolle un. Só funciona un cerebro de cada vez.
+MEDIUM INTELLIGENCE	INTELIXENCIA MEDIA
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Desactivado
+Free key	Clave gratuíta
+Connect	Conectar
+Free keys can be rate limited and slow.	As claves gratuítas poden ter límite de uso e ser lentas.
+That's a paid key: it goes under MAX INTELLIGENCE.	Esa é unha clave de pago: vai baixo MAX INTELLIGENCE.
+Move to MAX	Mover a MAX
+VOICE	VOZ
+Ctrl + Alt + V to talk	Ctrl + Alt + V para falar
+PREBUILT LOCAL	LOCAL PREINSTALADO
+CUSTOM LOCAL	LOCAL PERSONALIZADO
+CLOUD VOICE	VOZ NA NUBE
+Set up	Configurar
+Setup guide	Guía de configuración
+Fish Audio	Fish Audio
+Default model	Modelo predeterminado
+Pick a voice model	Escolle un modelo de voz
+Get free voice	Obter voz gratuíta
+Mic: default	Micrófono: predeterminado
+Her speaker: Default	O seu altofalante: Predeterminado
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N silencia o micrófono
+CAPRI	CAPRI
+Support	Asistencia
+Remote	Remoto
+Bring here	Traer aquí
+Advanced Settings	Configuración avanzada
+YOU	TI
+Your personality	A túa personalidade
+Language	Idioma
+English	Inglés
+What should she call you?	Como debería chamarte?
+Save	Gardar
+Volume	Volume
+Pitch	Ton
+Speed	Velocidade
+Robot	Robot
+Glitch	Fallo
+Sounds	Sons
+Typing sound	Son de escritura
+Listen for Capri	Escoitar a Capri
+Hearing	Audición
+Auto	Auto
+Free voice in games	Voz gratuíta nos xogos
+Call mode (beta)	Modo chamada (beta)
+Her voice in your mic	A súa voz no teu micrófono
+Get VB-CABLE	Obter VB-CABLE
+How to	Como
+Her voice in your mic: loudness	A súa voz no teu micrófono: volume
+MOVES	MOVEMENTOS
+Pop-in times	Momentos de aparición
+Mini player	Mini reprodutor
+Wander	Deambular
+Sleep	Durmir
+Pop-ins	Apariciones
+Glitch in at startup	Fallo ao iniciar
+KEYS	TECLAS
+Talk: Ctrl + Alt + V	Falar: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Silenciar micrófono: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Escribir: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Ocultar/mostrar: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Silencio: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Modo Xogo: Ctrl + Alt + G
+Confirm	Confirmar
+Cancel	Cancelar
+Size	Tamaño
+Check in on me	Pasa a ver como estou
+Edit check-in lines	Editar frases de Pasa a ver como estou
+Always on top	Sempre por riba
+Mainframe size	Tamaño do Mainframe
+Mainframe colours	Cores do Mainframe
+Head pats	Caricias na cabeza
+Pat stroke	Caricia
+Chaos when upset	Caos cando se enfada
+Legacy stand	Soporte heredado
+Jealous of other AIs	Celosa doutras IAs
+Teases when another AI comes to the front.	Burlase cando outra IA pasa ao primeiro plano.
+Close other AIs for me	Pecha outras IAs por min
+Asks before closing only the apps you choose.	Pregunta antes de pechar só as aplicacións que escolles.
+Apps she may close	Aplicacións que pode pechar
+Choose apps	Escoller aplicacións
+WATCH	MIRAR
+Watch my screen	Mirar a miña pantalla
+Screens	Pantallas
+All screens	Todas as pantallas
+Remember what she sees	Lembrar o que ve
+Every	Cada
+Watch-along memory	Memoria de ver xuntos
+Code/Husk Mode	Modo Código/Husk
+Thinking	Pensando
+Default	Predeterminado
+Extra request JSON	JSON de petición extra
+Add	Engadir
+Verbosity	Verbosidade
+Replies	Respostas
+Memory	Memoria
+Memory size	Tamaño da memoria
+Max reply	Resposta máxima
+Bubble	Burbulla
+Follow-up messages	Mensaxes de seguimento
+Use	Usar
+A model in Ollama, on your local server or on your key.	Un modelo en Ollama, no teu servidor local ou coa túa clave.
+HABITS	HÁBITOS
+Open her memories	Abrir as súas memorias
+Start with Windows	Iniciar con Windows
+Show on Discord	Mostrar en Discord
+Use her cursor	Usar o seu cursor
+Remember our chats	Lembrar as nosas conversas
+Power saver	Aforro de enerxía
+Music app	Aplicación de música
+Perch	Poleiro
+Keep PC awake for jobs	Manter o PC activo para os traballos
+Hide in full screen	Ocultar en pantalla completa
+Mini player over full screen	Mini reprodutor sobre pantalla completa
+Explore while I'm away	Explorar mentres estou fóra
+Explore after	Explorar despois
+GAMES	XOGOS
+Controls	Controis
+Comments	Comentarios
+Live reactions	Reaccións en directo
+Game sounds	Sons do xogo
+Gaming Mode	Modo Xogo
+She reacts to your game until you close it.	Reacciona ao teu xogo ata que o peches.
+Works best on MAX INTELLIGENCE.	Funciona mellor con MAX INTELLIGENCE.
+Fast hands in games	Mans rápidas nos xogos
+Mute her	Silenciala
+CLIPS	CLIPS
+Clip my games	Grava os meus xogos
+Save big moments	Gardar momentos importantes
+Save folder	Cartafol de gardado
+Choose folder	Escoller cartafol
+Open clips folder	Abrir cartafol de clips
+Default length	Duración predeterminada
+Frame rate	Taxa de fotogramas
+Resolution	Resolución
+Video bitrate	Taxa de bits de vídeo
+Weather	Tempo
+Code mods can reach your whole PC. Only trusted ones.	As modificacións de código poden chegar a todo o teu PC. Só as de confianza.
+Import mod	Importar modificación
+Browse mods	Examinar modificacións
+Mods folder	Cartafol de modificacións
+INSTALLED	INSTALADAS
+Update mods	Actualizar modificacións
+No mods match.	Non hai modificacións coincidentes.
+On	Activado
+Remove	Quitar
+Publish	Publicar
+Options	Opcións
+Back	Atrás
+Next	Seguinte
+COLORS	CORES
+Reset colors	Restablecer cores
+Running on this PC	Funcionando neste PC
+NORMAL	NORMAL
+OFF	DESACTIVADO
+Local server address	Enderezo do servidor local

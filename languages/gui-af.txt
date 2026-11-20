@@ -1,0 +1,206 @@
+# Her menus and labels in Afrikaans: the English, a tab, then the translation.
+Open Capri Mainframe	Maak Capri Mainframe oop
+Her folder	Haar gids
+Play	Speel
+Music	Musiek
+Chess	Skaak
+Connect four	Vier op 'n ry
+Tic-tac-toe	Boter, kaas en eiers
+Rock, paper, scissors	Klip, papier, skêr
+Hide Capri	Versteek Capri
+Hologram	Hologram
+Normal	Normaal
+Small	Klein
+Medium	Medium
+Large	Groot
+Huge	Enorm
+Giant	Reusagtig
+Move	Skuif
+Wander around	Rondloop
+Dance to music	Dans na musiek
+Dance	Dans
+Ride cursor	Ry kursor
+Sit on windows	Sit op vensters
+Sit here	Sit hier
+Hang here	Hang hier
+Lie down	Gaan lê
+Go to sleep	Gaan slaap
+Bring to this screen	Bring na hierdie skerm
+Go to the next screen	Gaan na die volgende skerm
+Black	Swart
+White	Wit
+Test	Toets
+Stop	Stop
+Help	Hulp
+Commands	Opdragte
+Help page	Hulpbladsy
+Join the Discord	Sluit aan by die Discord
+Copy error details	Kopieer foutbesonderhede
+Check for updates	Soek vir opdaterings
+Quit Capri	Sluit Capri af
+MAINFRAME	MAINFRAME
+Settings	Instellings
+Mods	Modifikasies
+BRAIN	BREIN
+Provider	Verskaffer
+Using your server with no key	Gebruik jou bediener sonder 'n sleutel
+Refresh	Verfris
+Set up her brain	Stel haar brein op
+Have Ollama? Open it, then press Refresh.	Het jy Ollama? Maak dit oop en druk dan Verfris.
+Pick one. Only one brain runs at a time.	Kies een. Net een brein loop op 'n slag.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Af
+Free key	Gratis sleutel
+Connect	Koppel
+Free keys can be rate limited and slow.	Gratis sleutels kan beperk en stadig wees.
+That's a paid key: it goes under MAX INTELLIGENCE.	Dis 'n betaalde sleutel: dit gaan onder MAX INTELLIGENCE.
+Move to MAX	Skuif na MAX
+VOICE	STEM
+Ctrl + Alt + V to talk	Ctrl + Alt + V om te praat
+PREBUILT LOCAL	VOORGEBOU PLAASLIK
+CUSTOM LOCAL	PERSOONLIK PLAASLIK
+CLOUD VOICE	WOLKSTEM
+Set up	Stel op
+Setup guide	Opstelgids
+Fish Audio	Fish Audio
+Default model	Standaardmodel
+Pick a voice model	Kies 'n stemmodel
+Get free voice	Kry gratis stem
+Mic: default	Mikrofoon: standaard
+Her speaker: Default	Haar luidspreker: Standaard
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N demp mikrofoon
+CAPRI	CAPRI
+Support	Ondersteuning
+Remote	Afstand
+Bring here	Bring hierheen
+Advanced Settings	Gevorderde instellings
+YOU	JOU
+Your personality	Jou persoonlikheid
+Language	Taal
+English	Engels
+What should she call you?	Wat moet sy jou noem?
+Save	Stoor
+Volume	Volume
+Pitch	Toonhoogte
+Speed	Spoed
+Robot	Robot
+Glitch	Gly
+Sounds	Klanke
+Typing sound	Tiklank
+Listen for Capri	Luister vir Capri
+Hearing	Gehoor
+Auto	Outo
+Free voice in games	Gratis stem in speletjies
+Call mode (beta)	Oproepmodus (beta)
+Her voice in your mic	Haar stem in jou mikrofoon
+Get VB-CABLE	Kry VB-CABLE
+How to	Hoe om
+Her voice in your mic: loudness	Haar stem in jou mikrofoon: luidheid
+MOVES	BEWEGINGS
+Pop-in times	Inloer-tye
+Mini player	Mini-speler
+Wander	Rondloop
+Sleep	Slaap
+Pop-ins	Inloerbesoeke
+Glitch in at startup	Gly by opstart
+KEYS	SLEUTELS
+Talk: Ctrl + Alt + V	Praat: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Demp mikrofoon: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Tik: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Versteek/wys: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Stil: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Speelmodus: Ctrl + Alt + G
+Confirm	Bevestig
+Cancel	Kanselleer
+Size	Grootte
+Check in on me	Kyk na my
+Edit check-in lines	Wysig inboekreëls
+Always on top	Altyd bo-op
+Mainframe size	Mainframe-grootte
+Mainframe colours	Mainframe-kleure
+Head pats	Kopklopsels
+Pat stroke	Kopklopsel-streel
+Chaos when upset	Chaos wanneer ontsteld
+Legacy stand	Ou standaard
+Jealous of other AIs	Jaloers op ander KI's
+Teases when another AI comes to the front.	Terg wanneer 'n ander KI na vore kom.
+Close other AIs for me	Maak ander KI's vir my toe
+Asks before closing only the apps you choose.	Vra eers voordat net die programme wat jy kies, gesluit word.
+Apps she may close	Programme wat sy mag sluit
+Choose apps	Kies programme
+WATCH	KYK
+Watch my screen	Kyk na my skerm
+Screens	Skerms
+All screens	Alle skerms
+Remember what she sees	Onthou wat sy sien
+Every	Elke
+Watch-along memory	Saamkyk-geheue
+Code/Husk Mode	Kode/Husk-modus
+Thinking	Dink
+Default	Standaard
+Extra request JSON	Ekstra versoek-JSON
+Add	Voeg by
+Verbosity	Woordrykheid
+Replies	Antwoorde
+Memory	Geheue
+Memory size	Geheuegrootte
+Max reply	Maksimum antwoord
+Bubble	Borrel
+Follow-up messages	Opvolgboodskappe
+Use	Gebruik
+A model in Ollama, on your local server or on your key.	'n Model in Ollama, op jou plaaslike bediener of met jou sleutel.
+HABITS	GEWOONTES
+Open her memories	Maak haar herinneringe oop
+Start with Windows	Begin met Windows
+Show on Discord	Wys op Discord
+Use her cursor	Gebruik haar kursor
+Remember our chats	Onthou ons klets
+Power saver	Kragspaar
+Music app	Musiekprogram
+Perch	Sitplek
+Keep PC awake for jobs	Hou rekenaar wakker vir take
+Hide in full screen	Versteek in volskerm
+Mini player over full screen	Mini-speler oor volskerm
+Explore while I'm away	Verken terwyl ek weg is
+Explore after	Verken daarna
+GAMES	SPELETJIES
+Controls	Beheer
+Comments	Kommentaar
+Live reactions	Lewendige reaksies
+Game sounds	Speletjiklanke
+Gaming Mode	Speelmodus
+She reacts to your game until you close it.	Sy reageer op jou speletjie totdat jy dit toemaak.
+Works best on MAX INTELLIGENCE.	Werk die beste op MAX INTELLIGENCE.
+Fast hands in games	Vinnige hande in speletjies
+Mute her	Demp haar
+CLIPS	KLIPPE
+Clip my games	Knip my speletjies
+Save big moments	Stoor groot oomblikke
+Save folder	Stoorgids
+Choose folder	Kies gids
+Open clips folder	Maak klipsgids oop
+Default length	Standaardlengte
+Frame rate	Raamkoers
+Resolution	Resolusie
+Video bitrate	Video-bitkoers
+Weather	Weer
+Code mods can reach your whole PC. Only trusted ones.	Kodemodifikasies kan jou hele rekenaar bereik. Net vertroude.
+Import mod	Voer modifikasie in
+Browse mods	Blaai deur modifikasies
+Mods folder	Modifikasiegids
+INSTALLED	GEÏNSTALLEER
+Update mods	Werk modifikasies op
+No mods match.	Geen modifikasies pas nie.
+On	Aan
+Remove	Verwyder
+Publish	Publiseer
+Options	Opsies
+Back	Terug
+Next	Volgende
+COLORS	KLEURE
+Reset colors	Stel kleure terug
+Running on this PC	Loop op hierdie rekenaar
+NORMAL	NORMAAL
+OFF	AF
+Local server address	Plaaslike bedieneradres

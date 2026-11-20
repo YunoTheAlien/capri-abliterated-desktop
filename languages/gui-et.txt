@@ -1,0 +1,206 @@
+# Her menus and labels in Estonian: the English, a tab, then the translation.
+Open Capri Mainframe	Ava Capri Mainframe
+Her folder	Tema kaust
+Play	Esita
+Music	Muusika
+Chess	Malev
+Connect four	Neli rida
+Tic-tac-toe	Ristmänguke
+Rock, paper, scissors	Kivi, paber, käärid
+Hide Capri	Peida Capri
+Hologram	Hologramm
+Normal	Tavaline
+Small	Väike
+Medium	Keskmine
+Large	Suur
+Huge	Hiiglaslik
+Giant	Hiiglane
+Move	Liiguta
+Wander around	Uitab ringi
+Dance to music	Tantsi muusika järgi
+Dance	Tantsi
+Ride cursor	Sõida kursoril
+Sit on windows	Istu akende peale
+Sit here	Istu siia
+Hang here	Jää siia
+Lie down	Heida pikali
+Go to sleep	Mine magama
+Bring to this screen	Too sellele ekraanile
+Go to the next screen	Mine järgmisele ekraanile
+Black	Must
+White	Valge
+Test	Test
+Stop	Peata
+Help	Abi
+Commands	Käsud
+Help page	Abilehekülg
+Join the Discord	Liitu Discordiga
+Copy error details	Kopeeri veateave
+Check for updates	Kontrolli uuendusi
+Quit Capri	Sulge Capri
+MAINFRAME	MAINFRAME
+Settings	Seaded
+Mods	Modifikatsioonid
+BRAIN	AJU
+Provider	Teenusepakkuja
+Using your server with no key	Kasutan sinu serverit ilma võtmeta
+Refresh	Värskenda
+Set up her brain	Seadista tema aju
+Have Ollama? Open it, then press Refresh.	Kas sul on Ollama? Ava see ja vajuta Värskenda.
+Pick one. Only one brain runs at a time.	Vali üks. Korraga töötab ainult üks aju.
+MEDIUM INTELLIGENCE	KESKMINE INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Väljas
+Free key	Tasuta võti
+Connect	Ühenda
+Free keys can be rate limited and slow.	Tasuta võtmetel võib olla päringupiirang ja need võivad olla aeglased.
+That's a paid key: it goes under MAX INTELLIGENCE.	See on tasuline võti: see läheb jaotisse MAX INTELLIGENCE.
+Move to MAX	Liiguta MAX-i
+VOICE	HÄÄL
+Ctrl + Alt + V to talk	Ctrl + Alt + V rääkimiseks
+PREBUILT LOCAL	EELEHITATUD KOHALIK
+CUSTOM LOCAL	KOHALIK ENDA
+CLOUD VOICE	PILVEHÄÄL
+Set up	Seadista
+Setup guide	Seadistusjuhend
+Fish Audio	Fish Audio
+Default model	Vaikimisi mudel
+Pick a voice model	Vali häälemudel
+Get free voice	Hangi tasuta hääl
+Mic: default	Mikrofon: vaikimisi
+Her speaker: Default	Tema kõlar: Vaikimisi
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N vaigistab mikrofoni
+CAPRI	CAPRI
+Support	Tugi
+Remote	Kaugjuhtimine
+Bring here	Too siia
+Advanced Settings	Täpsemad seaded
+YOU	SINA
+Your personality	Su isiksus
+Language	Keel
+English	Inglise keel
+What should she call you?	Mida ta peaks sind kutsuma?
+Save	Salvesta
+Volume	Helitugevus
+Pitch	Kõrgus
+Speed	Kiirus
+Robot	Robot
+Glitch	Tõrge
+Sounds	Helid
+Typing sound	Tippimise heli
+Listen for Capri	Kuula Capri'd
+Hearing	Kuulmine
+Auto	Automaatne
+Free voice in games	Tasuta hääl mängudes
+Call mode (beta)	Kõnerežiim (beeta)
+Her voice in your mic	Tema hääl sinu mikrofonis
+Get VB-CABLE	Hangi VB-CABLE
+How to	Kuidas
+Her voice in your mic: loudness	Tema hääl sinu mikrofonis: valjus
+MOVES	LIIKUMISED
+Pop-in times	Sisselangemise ajad
+Mini player	Mini-mängija
+Wander	Uitab
+Sleep	Uni
+Pop-ins	Sisselangemised
+Glitch in at startup	Tõrge käivitamisel
+KEYS	KLAHVID
+Talk: Ctrl + Alt + V	Räägi: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Vaigista mikrofon: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Tippimine: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Peida/näita: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Vaikne: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Mängurežiim: Ctrl + Alt + G
+Confirm	Kinnita
+Cancel	Tühista
+Size	Suurus
+Check in on me	Vaata, kuidas mul läheb
+Edit check-in lines	Muuda „Vaata, kuidas mul läheb“ ridu
+Always on top	Alati peal
+Mainframe size	Mainframe'i suurus
+Mainframe colours	Mainframe'i värvid
+Head pats	Pai pead
+Pat stroke	Pai pea
+Chaos when upset	Kaos, kui pahane
+Legacy stand	Pärandalus
+Jealous of other AIs	Kade teiste AI-de peale
+Teases when another AI comes to the front.	Narrib, kui teine AI tuleb esiplaanile.
+Close other AIs for me	Sulge minu eest teised AI-d
+Asks before closing only the apps you choose.	Küsib enne sulgemist ainult sinu valitud rakendusi.
+Apps she may close	Rakendused, mida ta võib sulgeda
+Choose apps	Vali rakendused
+WATCH	VAATA
+Watch my screen	Vaata mu ekraani
+Screens	Ekraanid
+All screens	Kõik ekraanid
+Remember what she sees	Mäleta, mida ta näeb
+Every	Iga
+Watch-along memory	Ühiselt vaatamise mälu
+Code/Husk Mode	Kood/Husk režiim
+Thinking	Mõtlen
+Default	Vaikimisi
+Extra request JSON	Lisapäringu JSON
+Add	Lisa
+Verbosity	Sõnaohtrus
+Replies	Vastused
+Memory	Mälu
+Memory size	Mälu suurus
+Max reply	Maksimaalne vastus
+Bubble	Mull
+Follow-up messages	Järelsõnumid
+Use	Kasuta
+A model in Ollama, on your local server or on your key.	Mudel Ollamas, sinu kohalikul serveril või sinu võtmega.
+HABITS	HARJUMUSED
+Open her memories	Ava tema mälestused
+Start with Windows	Käivita koos Windowsiga
+Show on Discord	Näita Discordis
+Use her cursor	Kasuta tema kursorit
+Remember our chats	Mäleta meie vestlusi
+Power saver	Energiasäästja
+Music app	Muusikarakendus
+Perch	Istumiskoht
+Keep PC awake for jobs	Hoia arvuti tööde jaoks ärkvel
+Hide in full screen	Peida täisekraanil
+Mini player over full screen	Mini-mängija täisekraani peal
+Explore while I'm away	Uuri, kui ma eemal olen
+Explore after	Uuri pärast
+GAMES	MÄNGUD
+Controls	Juhtnupud
+Comments	Kommentaarid
+Live reactions	Reaalajas reaktsioonid
+Game sounds	Mängu helid
+Gaming Mode	Mängurežiim
+She reacts to your game until you close it.	Ta reageerib sinu mängule, kuni selle sulged.
+Works best on MAX INTELLIGENCE.	Parim tulemus MAX INTELLIGENCE'iga.
+Fast hands in games	Kiired käed mängudes
+Mute her	Vaigista ta
+CLIPS	KLIPID
+Clip my games	Salvesta mu mängud
+Save big moments	Salvesta suured hetked
+Save folder	Salvestuskaust
+Choose folder	Vali kaust
+Open clips folder	Ava klippide kaust
+Default length	Vaikimisi pikkus
+Frame rate	Kaadrisagedus
+Resolution	Eraldusvõime
+Video bitrate	Video bitikiirus
+Weather	Ilm
+Code mods can reach your whole PC. Only trusted ones.	Koodimodifikatsioonid võivad pääseda kogu sinu arvutini. Ainult usaldusväärsed.
+Import mod	Impordi modifikatsioon
+Browse mods	Sirvi modifikatsioone
+Mods folder	Modifikatsioonide kaust
+INSTALLED	PAIGALDATUD
+Update mods	Uuenda modifikatsioone
+No mods match.	Ükski modifikatsioon ei vasta.
+On	Sees
+Remove	Eemalda
+Publish	Avalda
+Options	Valikud
+Back	Tagasi
+Next	Järgmine
+COLORS	VÄRVID
+Reset colors	Lähtesta värvid
+Running on this PC	Käib sellel arvutil
+NORMAL	TAVALINE
+OFF	VÄLJAS
+Local server address	Kohaliku serveri aadress

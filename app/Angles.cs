@@ -44,10 +44,10 @@ namespace CapriDesktop
         internal static string Defaults { get { return
             "# How she watches your screen\n" +
             "\n" +
-            "> One of these is picked each time she looks, and it steers her reaction. She never says them.\n" +
-            "> Without them she settles into one shape: the same few verbs, the same length, every look.\n" +
-            "> Add your own, one per line. Keep them short and keep them an attitude, not a script.\n" +
-            "> Delete any you do not want. Empty the section and she falls back to the ones she ships with.\n" +
+            ">! One of these is picked each time she looks, and it steers her reaction. She never says them.\n" +
+            ">! Without them she settles into one shape: the same few verbs, the same length, every look.\n" +
+            ">! Add your own, one per line. Keep them short and keep them an attitude, not a script.\n" +
+            ">! Delete any you do not want. Empty the section and she falls back to the ones she ships with.\n" +
             "\n" +
             "## How she takes a look\n" +
             "\n" +
@@ -200,6 +200,22 @@ namespace CapriDesktop
             "notice you have said a lot today and be brief\n" +
             "be more interested in them than in the screen\n" +
             "treat your own guess as a fact\n" +
-            SenpaiAngles; } }
+            "pick one name you can actually read on screen and have an opinion about it\n" +
+            "guess what they are building from what is visible, and commit to the guess\n" +
+            "notice how long they have been at it and say something kind\n" +
+            "react to the colour of the code rather than the code\n" +
+            "be impressed by something small that worked\n" +
+            "suggest a break without nagging\n" +
+            "pretend to read along and get lost halfway\n" +
+            "root for the bug to lose\n" +
+            "ask nothing, just say something encouraging\n" +
+            "notice what changed since the last time you looked\n" +
+            "be curious about the file they are in, not what is in it\n" +
+            "make it about the music instead, if there is any\n" +
+            "be dramatic about a typo you can actually see\n" +
+            "offer moral support like a pit crew\n" +
+            "say nothing about the screen and something about them\n" +
+            "treat a wall of text like weather\n" +
+            Legacy.Modern(SenpaiAngles); } }
     }
 }

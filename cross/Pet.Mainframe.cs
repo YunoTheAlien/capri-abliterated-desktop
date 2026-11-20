@@ -11,6 +11,24 @@ namespace CapriDesktop
     {
         internal Mods ModList { get; private set; }
         internal static volatile string SkinFolder;
+        // Her stamped build (AssemblyInfo.cs's file version), as Windows' Companion.Built reads it; the codex's
+        // ReleaseFile names the release to fetch from by it.
+        private static string built;
+        internal static string Built
+        {
+            get
+            {
+                if (built != null) return built;
+                string said = null;
+                try { said = System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Reflection.AssemblyFileVersionAttribute>(typeof(Pet).Assembly)?.Version; }
+                catch (Exception caughtOne) { Brain.Caught(caughtOne); }
+                if (string.IsNullOrEmpty(said)) said = typeof(Pet).Assembly.GetName().Version.ToString(3);
+                // Always three parts, as Windows' release tags are (v0.9.426), whatever the SDK stamped.
+                Version read;
+                if (Version.TryParse(said, out read) && read.Build >= 0) said = read.ToString(3);
+                return built = said;
+            }
+        }
         internal static volatile string[] SkinAccessories = Array.Empty<string>();
         internal static volatile bool LegacyArt;
 
@@ -285,7 +303,8 @@ namespace CapriDesktop
                 mainframe = new Mainframe(this);
                 mainframe.Closed += (_, _) => mainframe = null;
                 mainframe.Show();
-                if (Program.Smoke == null) { RefreshBrains(); if (voices == null) ListVoices(); }
+                if (Program.Smoke == null) { RefreshBrains(); ListAudioDevices(); if (voices == null) ListVoices(); }
+                RefreshWatchScreens();
             }
             else { mainframe.Show(); mainframe.WindowState = WindowState.Normal; mainframe.Activate(); }
         }
@@ -385,11 +404,41 @@ namespace CapriDesktop
             if (MainframeTier == 0) { Brain.Remote = null; Brain.Model = Brain.Server == null ? Saved.Model : Saved.ServerModel; }
             else if (Brain.Remote == null) Brain.Model = null;
         }
+        internal bool MainframeNoAi { get { return Saved.NoAi; } }
+
+        // No AI on (Windows' SetNoAi): she stays on their desktop with no brain at all, and their keys, models and plan stay
+        // where they are. Picking any tier, or ChatGPT plan, switches it back off and brings that brain back.
+        internal void SetNoAi(bool on)
+        {
+            if (Saved.NoAi == on) { NotifySettings(); return; }
+            Saved.NoAi = on;
+            Brain.Off = on;
+            brainRequests++;
+            cloudRequests++;
+            frameProblem = null;
+            if (on)
+            {
+                CancelAccountConnection();
+                StopNativeListening();
+                TerminalJobs.StopAll();
+                Brain.Provider?.Cancel();
+                Brain.Provider = null;
+                Brain.Cancel();
+                Brain.Remote = null;
+                cloudModels = null;
+                cloudListing = false;
+            }
+            Save();
+            NotifySettings();
+        }
+
         internal void SetBrainTier(int tier)
         {
             tier = Math.Clamp(tier, 0, 2);
             CancelAccountConnection();
-            if (MainframeTier == tier && Brain.Provider == null) return;
+            bool wasOff = Saved.NoAi;
+            if (wasOff) { Saved.NoAi = false; Brain.Off = false; }
+            if (MainframeTier == tier && Brain.Provider == null && !wasOff) return;
             StopNativeListening();
             Brain.Provider?.Cancel();
             Brain.Provider = null;

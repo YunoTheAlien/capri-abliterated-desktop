@@ -1,0 +1,206 @@
+# Her menus and labels in Persian: the English, a tab, then the translation.
+Open Capri Mainframe	باز کردن Capri Mainframe
+Her folder	پوشه‌ی او
+Play	پخش
+Music	موسیقی
+Chess	شطرنج
+Connect four	چهار در یک ردیف
+Tic-tac-toe	دوز
+Rock, paper, scissors	سنگ، کاغذ، قیچی
+Hide Capri	پنهان کردن Capri
+Hologram	هولوگرام
+Normal	عادی
+Small	کوچک
+Medium	متوسط
+Large	بزرگ
+Huge	خیلی بزرگ
+Giant	غول‌پیکر
+Move	انتقال
+Wander around	دور و برت پرسه بزن
+Dance to music	با موسیقی برقص
+Dance	رقصیدن
+Ride cursor	سوار بر نشانگر
+Sit on windows	روی پنجره‌ها بنشین
+Sit here	اینجا بنشین
+Hang here	همین‌جا بمان
+Lie down	دراز بکش
+Go to sleep	برو بخواب
+Bring to this screen	به این صفحه بیاور
+Go to the next screen	برو به صفحه‌ی بعدی
+Black	مشکی
+White	سفید
+Test	تست
+Stop	توقف
+Help	راهنما
+Commands	دستورها
+Help page	صفحه‌ی راهنما
+Join the Discord	به Discord بپیوند
+Copy error details	کپی جزئیات خطا
+Check for updates	بررسی به‌روزرسانی‌ها
+Quit Capri	خروج از Capri
+MAINFRAME	MAINFRAME
+Settings	تنظیمات
+Mods	مدها
+BRAIN	مغز
+Provider	ارائه‌دهنده
+Using your server with no key	استفاده از سرور شما بدون کلید
+Refresh	تازه‌سازی
+Set up her brain	راه‌اندازی مغز او
+Have Ollama? Open it, then press Refresh.	Ollama داری؟ بازش کن، بعد تازه‌سازی را بزن.
+Pick one. Only one brain runs at a time.	یکی انتخاب کن. در هر لحظه فقط یک مغز اجرا می‌شود.
+MEDIUM INTELLIGENCE	INTELLIGENCE متوسط
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	خاموش
+Free key	کلید رایگان
+Connect	اتصال
+Free keys can be rate limited and slow.	کلیدهای رایگان ممکن است محدودیت نرخ داشته باشند و کند باشند.
+That's a paid key: it goes under MAX INTELLIGENCE.	این یک کلید پولی است: زیر MAX INTELLIGENCE می‌رود.
+Move to MAX	انتقال به MAX
+VOICE	صدا
+Ctrl + Alt + V to talk	Ctrl + Alt + V برای صحبت
+PREBUILT LOCAL	محلی از پیش‌ساخته
+CUSTOM LOCAL	محلی سفارشی
+CLOUD VOICE	صدای ابری
+Set up	راه‌اندازی
+Setup guide	راهنمای راه‌اندازی
+Fish Audio	Fish Audio
+Default model	مدل پیش‌فرض
+Pick a voice model	یک مدل صدا انتخاب کن
+Get free voice	دریافت صدای رایگان
+Mic: default	میکروفون: پیش‌فرض
+Her speaker: Default	بلندگوی او: پیش‌فرض
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N میکروفون را بی‌صدا می‌کند
+CAPRI	CAPRI
+Support	پشتیبانی
+Remote	ریموت
+Bring here	بیاور اینجا
+Advanced Settings	تنظیمات پیشرفته
+YOU	تو
+Your personality	شخصیت تو
+Language	زبان
+English	انگلیسی
+What should she call you?	او تو را چه صدا بزند؟
+Save	ذخیره
+Volume	بلندی صدا
+Pitch	زیر و بمی
+Speed	سرعت
+Robot	ربات
+Glitch	لغزش
+Sounds	صداها
+Typing sound	صدای تایپ
+Listen for Capri	گوش کن برای Capri
+Hearing	شنیدن
+Auto	خودکار
+Free voice in games	صدای رایگان در بازی‌ها
+Call mode (beta)	حالت تماس (بتا)
+Her voice in your mic	صدای او در میکروفون شما
+Get VB-CABLE	دریافت VB-CABLE
+How to	راهنمای
+Her voice in your mic: loudness	صدای او در میکروفون شما: بلندی
+MOVES	حرکات
+Pop-in times	زمان‌های سر زدن
+Mini player	پخش‌کننده‌ی کوچک
+Wander	پرسه زدن
+Sleep	خواب
+Pop-ins	سر زدن‌ها
+Glitch in at startup	لغزش هنگام راه‌اندازی
+KEYS	کلیدها
+Talk: Ctrl + Alt + V	صحبت: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	بی‌صدا کردن میکروفون: Ctrl + Alt + N
+Type: Ctrl + Alt + T	تایپ: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	پنهان/نمایش: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	سکوت: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	حالت بازی: Ctrl + Alt + G
+Confirm	تأیید
+Cancel	لغو
+Size	اندازه
+Check in on me	سر بزن به من
+Edit check-in lines	ویرایش خطوط سر زدن
+Always on top	همیشه بالا
+Mainframe size	اندازه‌ی Mainframe
+Mainframe colours	رنگ‌های Mainframe
+Head pats	نوازش سر
+Pat stroke	کشیدن دست
+Chaos when upset	وقتی ناراحت است، آشوب می‌کند
+Legacy stand	پایه‌ی قدیمی
+Jealous of other AIs	نسبت به AIهای دیگر حسودی می‌کند
+Teases when another AI comes to the front.	وقتی AI دیگری جلو بیاید سر به سرش می‌گذارد.
+Close other AIs for me	برای من AIهای دیگر را ببند
+Asks before closing only the apps you choose.	فقط قبل از بستن برنامه‌هایی که انتخاب می‌کنی می‌پرسد.
+Apps she may close	برنامه‌هایی که ممکن است ببندد
+Choose apps	انتخاب برنامه‌ها
+WATCH	تماشا
+Watch my screen	صفحه‌ام را تماشا کن
+Screens	صفحه‌ها
+All screens	همه‌ی صفحه‌ها
+Remember what she sees	آنچه را می‌بیند به یاد داشته باش
+Every	هر
+Watch-along memory	خاطره‌ی تماشای مشترک
+Code/Husk Mode	حالت Code/Husk
+Thinking	در حال فکر کردن
+Default	پیش‌فرض
+Extra request JSON	JSON درخواست اضافی
+Add	افزودن
+Verbosity	میزان پرحرفی
+Replies	پاسخ‌ها
+Memory	حافظه
+Memory size	اندازه‌ی حافظه
+Max reply	حداکثر پاسخ
+Bubble	حباب
+Follow-up messages	پیام‌های پیگیری
+Use	استفاده
+A model in Ollama, on your local server or on your key.	یک مدل در Ollama، روی سرور محلی شما یا با کلید شما.
+HABITS	عادت‌ها
+Open her memories	باز کردن خاطرات او
+Start with Windows	با Windows اجرا شود
+Show on Discord	نمایش در Discord
+Use her cursor	از نشانگر او استفاده کن
+Remember our chats	گفتگوهای ما را به یاد داشته باش
+Power saver	صرفه‌جویی انرژی
+Music app	برنامه‌ی موسیقی
+Perch	نشستن
+Keep PC awake for jobs	رایانه را برای کارها بیدار نگه دار
+Hide in full screen	در حالت تمام‌صفحه پنهان کن
+Mini player over full screen	پخش‌کننده‌ی کوچک روی تمام‌صفحه
+Explore while I'm away	گشت‌زنی وقتی نیستم
+Explore after	گشت‌زنی بعد از
+GAMES	بازی‌ها
+Controls	کنترل‌ها
+Comments	نظرات
+Live reactions	واکنش‌های زنده
+Game sounds	صداهای بازی
+Gaming Mode	حالت بازی
+She reacts to your game until you close it.	تا وقتی بازی را ببندی به آن واکنش نشان می‌دهد.
+Works best on MAX INTELLIGENCE.	روی MAX INTELLIGENCE بهترین عملکرد را دارد.
+Fast hands in games	دست‌های سریع در بازی‌ها
+Mute her	او را بی‌صدا کن
+CLIPS	کلیپ‌ها
+Clip my games	بازی‌هایم را کلیپ کن
+Save big moments	لحظات بزرگ را ذخیره کن
+Save folder	پوشه‌ی ذخیره
+Choose folder	انتخاب پوشه
+Open clips folder	باز کردن پوشه‌ی کلیپ‌ها
+Default length	طول پیش‌فرض
+Frame rate	نرخ فریم
+Resolution	وضوح
+Video bitrate	بیت‌ریت ویدیو
+Weather	آب‌وهوا
+Code mods can reach your whole PC. Only trusted ones.	مدهای کد می‌توانند به کل رایانه‌ات دسترسی داشته باشند. فقط مدهای مورد اعتماد.
+Import mod	وارد کردن مد
+Browse mods	مرور مدها
+Mods folder	پوشه‌ی مدها
+INSTALLED	نصب‌شده
+Update mods	به‌روزرسانی مدها
+No mods match.	هیچ مدی مطابقت ندارد.
+On	روشن
+Remove	حذف
+Publish	انتشار
+Options	گزینه‌ها
+Back	بازگشت
+Next	بعدی
+COLORS	رنگ‌ها
+Reset colors	بازنشانی رنگ‌ها
+Running on this PC	در حال اجرا روی این رایانه
+NORMAL	عادی
+OFF	خاموش
+Local server address	آدرس سرور محلی

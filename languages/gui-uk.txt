@@ -1,0 +1,206 @@
+# Her menus and labels in Ukrainian: the English, a tab, then the translation.
+Open Capri Mainframe	Відкрити Capri Mainframe
+Her folder	Її папка
+Play	Відтворити
+Music	Музика
+Chess	Шахи
+Connect four	Чотири в ряд
+Tic-tac-toe	Хрестики-нулики
+Rock, paper, scissors	Камінь, ножиці, папір
+Hide Capri	Приховати Capri
+Hologram	Голограма
+Normal	Звичайний
+Small	Малий
+Medium	Середня
+Large	Великий
+Huge	Величезна
+Giant	Гігантська
+Move	Перемістити
+Wander around	Блукати навколо
+Dance to music	Танцювати під музику
+Dance	Танці
+Ride cursor	Їхати на курсорі
+Sit on windows	Сісти на вікна
+Sit here	Сісти тут
+Hang here	Зависнути тут
+Lie down	Лягти
+Go to sleep	Іди спати
+Bring to this screen	Перенести на цей екран
+Go to the next screen	Перейти на наступний екран
+Black	Чорна
+White	Біла
+Test	Тест
+Stop	Зупинити
+Help	Довідка
+Commands	Команди
+Help page	Сторінка довідки
+Join the Discord	Приєднатися до Discord
+Copy error details	Копіювати деталі помилки
+Check for updates	Перевірити оновлення
+Quit Capri	Вийти з Capri
+MAINFRAME	MAINFRAME
+Settings	Налаштування
+Mods	Модифікації
+BRAIN	МОЗОК
+Provider	Постачальник
+Using your server with no key	Використовується твій сервер без ключа
+Refresh	Оновити
+Set up her brain	Налаштувати її мозок
+Have Ollama? Open it, then press Refresh.	Маєш Ollama? Відкрий її, потім натисни «Оновити».
+Pick one. Only one brain runs at a time.	Обери одну. Одночасно працює лише один мозок.
+MEDIUM INTELLIGENCE	СЕРЕДНІЙ INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Вимкнено
+Free key	Безкоштовний ключ
+Connect	Підключити
+Free keys can be rate limited and slow.	Безкоштовні ключі можуть мати обмеження запитів і працювати повільно.
+That's a paid key: it goes under MAX INTELLIGENCE.	Це платний ключ: він потрапляє під MAX INTELLIGENCE.
+Move to MAX	Перемістити в MAX
+VOICE	ГОЛОС
+Ctrl + Alt + V to talk	Ctrl + Alt + V для розмови
+PREBUILT LOCAL	ГОТОВИЙ ЛОКАЛЬНИЙ
+CUSTOM LOCAL	ВЛАСНИЙ ЛОКАЛЬНИЙ
+CLOUD VOICE	ХМАРНИЙ ГОЛОС
+Set up	Налаштувати
+Setup guide	Посібник з налаштування
+Fish Audio	Fish Audio
+Default model	Модель за замовчуванням
+Pick a voice model	Обери модель голосу
+Get free voice	Отримати безкоштовний голос
+Mic: default	Мікрофон: за замовчуванням
+Her speaker: Default	Її динамік: за замовчуванням
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N вимикає мікрофон
+CAPRI	CAPRI
+Support	Підтримка
+Remote	Віддалений
+Bring here	Принести сюди
+Advanced Settings	Розширені налаштування
+YOU	ТИ
+Your personality	Твоя особистість
+Language	Мова
+English	Англійська
+What should she call you?	Як їй тебе називати?
+Save	Зберегти
+Volume	Гучність
+Pitch	Висота
+Speed	Швидкість
+Robot	Робот
+Glitch	Збій
+Sounds	Звуки
+Typing sound	Звук друку
+Listen for Capri	Слухати Capri
+Hearing	Слух
+Auto	Авто
+Free voice in games	Безкоштовний голос в іграх
+Call mode (beta)	Режим дзвінка (бета)
+Her voice in your mic	Її голос у твоєму мікрофоні
+Get VB-CABLE	Отримати VB-CABLE
+How to	Як
+Her voice in your mic: loudness	Її голос у твоєму мікрофоні: гучність
+MOVES	РУХИ
+Pop-in times	Час появи
+Mini player	Міні-плеєр
+Wander	Блукати
+Sleep	Сон
+Pop-ins	Появи
+Glitch in at startup	Збій під час запуску
+KEYS	КЛАВІШІ
+Talk: Ctrl + Alt + V	Розмова: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Вимкнути мікрофон: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Друк: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Приховати/показати: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Тиша: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Ігровий режим: Ctrl + Alt + G
+Confirm	Підтвердити
+Cancel	Скасувати
+Size	Розмір
+Check in on me	Перевір, як я
+Edit check-in lines	Редагувати рядки перевірки
+Always on top	Завжди зверху
+Mainframe size	Розмір Mainframe
+Mainframe colours	Кольори Mainframe
+Head pats	Погладжування по голові
+Pat stroke	Штрих для погладжування
+Chaos when upset	Хаос, коли засмучена
+Legacy stand	Старий стенд
+Jealous of other AIs	Ревную до інших AI
+Teases when another AI comes to the front.	Дражнить, коли на передній план виходить інший AI.
+Close other AIs for me	Закривати за мене інші AI
+Asks before closing only the apps you choose.	Питатиме перед закриттям лише тих програм, які ти вибереш.
+Apps she may close	Програми, які вона може закрити
+Choose apps	Вибрати програми
+WATCH	ДИВИСЬ
+Watch my screen	Дивитися мій екран
+Screens	Екрани
+All screens	Усі екрани
+Remember what she sees	Пам'ятати, що вона бачить
+Every	Кожна
+Watch-along memory	Пам'ять спільного перегляду
+Code/Husk Mode	Режим Code/Husk
+Thinking	Думаю
+Default	За замовчуванням
+Extra request JSON	Додатковий JSON запиту
+Add	Додати
+Verbosity	Розгорнутість
+Replies	Відповіді
+Memory	Пам'ять
+Memory size	Обсяг пам'яті
+Max reply	Максимум відповіді
+Bubble	Бульбашка
+Follow-up messages	Наступні повідомлення
+Use	Використати
+A model in Ollama, on your local server or on your key.	Модель в Ollama, на твоєму локальному сервері або з твоїм ключем.
+HABITS	ЗВИЧКИ
+Open her memories	Відкрити її спогади
+Start with Windows	Запускати разом із Windows
+Show on Discord	Показати в Discord
+Use her cursor	Використовувати її курсор
+Remember our chats	Пам'ятати наші розмови
+Power saver	Економія енергії
+Music app	Музичний застосунок
+Perch	Сідало
+Keep PC awake for jobs	Не давати ПК заснути для завдань
+Hide in full screen	Приховати в повноекранному режимі
+Mini player over full screen	Міні-плеєр поверх повного екрана
+Explore while I'm away	Досліджувати, поки мене немає
+Explore after	Досліджувати після
+GAMES	ІГРИ
+Controls	Керування
+Comments	Коментарі
+Live reactions	Миттєві реакції
+Game sounds	Звуки гри
+Gaming Mode	Ігровий режим
+She reacts to your game until you close it.	Вона реагує на твою гру, доки ти її не закриєш.
+Works best on MAX INTELLIGENCE.	Найкраще працює на MAX INTELLIGENCE.
+Fast hands in games	Швидкі руки в іграх
+Mute her	Вимкнути її звук
+CLIPS	КЛІПИ
+Clip my games	Записувати мої ігри
+Save big moments	Зберігати великі моменти
+Save folder	Папка збереження
+Choose folder	Вибрати папку
+Open clips folder	Відкрити папку кліпів
+Default length	Тривалість за замовчуванням
+Frame rate	Частота кадрів
+Resolution	Роздільна здатність
+Video bitrate	Бітрейт відео
+Weather	Погода
+Code mods can reach your whole PC. Only trusted ones.	Модифікації коду можуть дістатися до всього твого ПК. Лише перевірені.
+Import mod	Імпортувати модифікацію
+Browse mods	Огляд модифікацій
+Mods folder	Папка модифікацій
+INSTALLED	ВСТАНОВЛЕНО
+Update mods	Оновити модифікації
+No mods match.	Жодна модифікація не відповідає.
+On	Увімкнено
+Remove	Видалити
+Publish	Опублікувати
+Options	Параметри
+Back	Назад
+Next	Далі
+COLORS	КОЛЬОРИ
+Reset colors	Скинути кольори
+Running on this PC	Працює на цьому ПК
+NORMAL	ЗВИЧАЙНИЙ
+OFF	ВИМК
+Local server address	Адреса локального сервера

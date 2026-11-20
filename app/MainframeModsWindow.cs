@@ -73,7 +73,7 @@ namespace CapriDesktop
             {
                 List<ModListing> found = null;
                 string problem = null;
-                try { found = ModDirectory.Newer(ModDirectory.Updates(ModDirectory.Browse(), installed), installed, ModDownloads); }
+                try { found = ModDirectory.Newer(ModDirectory.Updates(ModDirectory.BrowseNow(), installed), installed, ModDownloads); }
                 catch (Exception error) { problem = DirectoryProblem(error, "Couldn't reach the mods directory: "); }
                 try
                 {
@@ -199,15 +199,24 @@ namespace CapriDesktop
             return Math.Max(0.75f, Math.Min(zoom, Math.Min(area.Width / (wide * dpi), area.Height / (tall * dpi))));
         }
 
+        // Made once and kept like her other windows. Its list is read each time it opens, as it was when every
+        // close threw the window away.
         private void BrowseMods()
         {
-            float fit = SheetZoom(ModsSheet.Wide, ModsSheet.Tall);
-            if (browser != null && !browser.IsDisposed && browser.Zoom != fit) browser.Close();
-            bool fresh = browser == null || browser.IsDisposed;
-            if (fresh) browser = new ModsSheet(this, fit);
-            if (!browser.Visible) browser.Show(this);
+            System.Diagnostics.Stopwatch took = System.Diagnostics.Stopwatch.StartNew();
+            MakeMods();
+            bool opening = !browser.Visible;
+            if (opening) browser.Show(this);
             browser.Activate();
-            if (fresh) browser.LoadMods();
+            if (opening) browser.LoadMods();
+            Timed(took, "Mods");
+        }
+
+        private void MakeMods()
+        {
+            float fit = SheetZoom(ModsSheet.Wide, ModsSheet.Tall);
+            if (browser != null && !browser.IsDisposed && browser.Zoom != fit) { browser.Dispose(); browser = null; }
+            if (browser == null || browser.IsDisposed) browser = Kept(new ModsSheet(this, fit));
         }
 
         private void PublishMod(int row)
@@ -603,21 +612,29 @@ namespace CapriDesktop
                 Run(delegate
                 {
                     List<ModListing> found = null;
-                    string problem = null;
-                    try { found = ModDirectory.Browse(); }
+                    string problem = null, trouble = null;
+                    try { found = ModDirectory.Browse(out trouble); }
                     catch (Exception error) { problem = DirectoryProblem(error, "Couldn't reach the mods directory: "); }
-                    Back(delegate { if (mine == ticket) Showing(found, problem, mine); });
+                    Back(delegate { if (mine == ticket) Showing(found, problem, mine, trouble); });
                 });
             }
 
-            private void Showing(List<ModListing> found, string problem, int mine)
+            // trouble: the list is an older one kept from before, and why the fresh one could not be had. Said, and
+            // the list still shown, since an old list of mods is far more use than none.
+            private void Showing(List<ModListing> found, string problem, int mine, string trouble = null)
             {
                 listings = found ?? new List<ModListing>();
                 Fill();
                 if (problem != null) { Says(problem, true); return; }
-                if (listings.Count == 0) { Says("No mods in the directory yet.", false); return; }
-                statusTimer.Stop();
-                status.Text = "";
+                // Why the list is an old one comes before whether it is empty: an empty list kept from a moment ago,
+                // after a refresh that failed, read as a directory with nothing in it.
+                if (trouble != null) Says(trouble, true);
+                else if (listings.Count == 0) { Says("No mods in the directory yet.", false); return; }
+                else
+                {
+                    statusTimer.Stop();
+                    status.Text = "";
+                }
                 // Marks the cards of installed mods with a newer copy, without saying anything on her mods page.
                 Frame.LookForUpdates(true);
                 Run(delegate

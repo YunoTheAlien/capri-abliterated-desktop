@@ -219,7 +219,35 @@ namespace CapriDesktop
 
         // Words typed key by key when they're plain letters, digits and spaces, which sit in the same place on nearly every
         // layout; anything else goes through the clipboard and ctrl+v, so accents and symbols come out right on any layout.
-        internal static Func<string, bool> Copy = WlCopy;
+        // Her own clipboard first (Avalonia's, in process: GNOME passes it between XWayland and Wayland apps, so nothing
+        // has to be installed), then wl-copy or xclip, as the owner ordered (12:10, 19 Nov).
+        internal static Func<string, bool> Copy = text => OwnCopy(text) || WlCopy(text);
+        // Her window's clipboard, set when she starts.
+        internal static Func<Avalonia.Input.Platform.IClipboard> Board;
+        // Why her own clipboard last failed, for errors.txt and the smoke test.
+        internal static string CopyProblem;
+
+        private static bool OwnCopy(string text)
+        {
+            Func<Avalonia.Input.Platform.IClipboard> board = Board;
+            // Her window's clipboard is only reached on its own thread, and blocking that thread here would never finish.
+            if (board == null || Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) return false;
+            try
+            {
+                System.Threading.Tasks.Task<bool> setting = Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    Avalonia.Input.Platform.IClipboard clipboard = board();
+                    if (clipboard == null) return false;
+                    await clipboard.SetTextAsync(text);
+                    string back = await clipboard.GetTextAsync();
+                    if (back != text) CopyProblem = "read back " + (back == null ? "nothing" : back.Length + " characters");
+                    return back == text;
+                });
+                if (!setting.Wait(3000)) { CopyProblem = "no answer in 3 s"; return false; }
+                return setting.Result;
+            }
+            catch (Exception error) { CopyProblem = error.GetType().Name + ": " + error.Message; return false; }
+        }
 
         internal static bool Type(string text)
         {

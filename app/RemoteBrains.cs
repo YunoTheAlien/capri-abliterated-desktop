@@ -167,7 +167,7 @@ namespace CapriDesktop
             balloonPage = null;
             balloonUpdate = false;
             balloonMainframe = true;
-            tray.ShowBalloonTip(8000, "Capri Remote", words + ". Click to see BRAIN in her Mainframe.", ToolTipIcon.Info);
+            Balloon(8000, "Capri Remote", words + ". Click to see BRAIN in her Mainframe.", ToolTipIcon.Info);
         }
 
         // Her brains as a phone sees them: the rung in use, what BRAIN shows for it, and which rungs have a key.

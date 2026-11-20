@@ -62,12 +62,18 @@ namespace CapriDesktop
 
         private void OpenRemote()
         {
-            float fit = SheetZoom(RemoteSheet.Wide, RemoteSheet.Tall);
-            if (remoteSheet != null && !remoteSheet.IsDisposed && remoteSheet.Zoom != fit) remoteSheet.Close();
-            if (remoteSheet == null || remoteSheet.IsDisposed) remoteSheet = new RemoteSheet(this, fit, true);
+            MakeRemote();
             remoteSheet.Fill(capri.RemoteView());
             if (!remoteSheet.Visible) remoteSheet.Show(this);
             remoteSheet.Activate();
+        }
+
+        // Made once and kept, like her other windows; a zoom that no longer fits the screen makes it again.
+        private void MakeRemote()
+        {
+            float fit = SheetZoom(RemoteSheet.Wide, RemoteSheet.Tall);
+            if (remoteSheet != null && !remoteSheet.IsDisposed && remoteSheet.Zoom != fit) { remoteSheet.Dispose(); remoteSheet = null; }
+            if (remoteSheet == null || remoteSheet.IsDisposed) remoteSheet = Kept(new RemoteSheet(this, fit, true));
         }
 
         // The smoke test's look at the sheet: drawn at a zoom with a made-up view, checked for crowding, saved as a picture.

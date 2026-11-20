@@ -1,0 +1,206 @@
+# Her menus and labels in Macedonian: the English, a tab, then the translation.
+Open Capri Mainframe	Отвори Capri Mainframe
+Her folder	Нејзината папка
+Play	Пушти
+Music	Музика
+Chess	Шах
+Connect four	Четири во низа
+Tic-tac-toe	Tic-tac-toe
+Rock, paper, scissors	Камен, ножици, хартија
+Hide Capri	Скриј Capri
+Hologram	Холограм
+Normal	Нормално
+Small	Мала
+Medium	Средно
+Large	Голема
+Huge	Огромно
+Giant	Гигантско
+Move	Премести
+Wander around	Талкај наоколу
+Dance to music	Танцувај на музика
+Dance	Танцувај
+Ride cursor	Вози со курсорот
+Sit on windows	Седни на прозорци
+Sit here	Седни тука
+Hang here	Остани тука
+Lie down	Легни
+Go to sleep	Оди да спиеш
+Bring to this screen	Донеси на овој екран
+Go to the next screen	Оди на следниот екран
+Black	Црна
+White	Бела
+Test	Тест
+Stop	Запри
+Help	Помош
+Commands	Команди
+Help page	Страница за помош
+Join the Discord	Придружи се на Discord
+Copy error details	Копирај детали за грешката
+Check for updates	Провери за ажурирања
+Quit Capri	Излези од Capri
+MAINFRAME	MAINFRAME
+Settings	Поставки
+Mods	Модови
+BRAIN	МОЗОК
+Provider	Давател
+Using your server with no key	Го користиш твојот сервер без клуч
+Refresh	Освежи
+Set up her brain	Постави го нејзиниот мозок
+Have Ollama? Open it, then press Refresh.	Имаш Ollama? Отвори го, па притисни Освежи.
+Pick one. Only one brain runs at a time.	Избери еден. Истовремено работи само еден мозок.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Исклучено
+Free key	Бесплатен клуч
+Connect	Поврзи
+Free keys can be rate limited and slow.	Бесплатните клучеви може да имаат ограничување и да бидат бавни.
+That's a paid key: it goes under MAX INTELLIGENCE.	Тоа е платен клуч: оди под MAX INTELLIGENCE.
+Move to MAX	Премести на MAX
+VOICE	ГЛАС
+Ctrl + Alt + V to talk	Ctrl + Alt + V за зборување
+PREBUILT LOCAL	ПРЕДИНСТАЛИРАН ЛОКАЛЕН
+CUSTOM LOCAL	ПРИЛАГОДЕНО ЛОКАЛНО
+CLOUD VOICE	ОБЛАЧЕН ГЛАС
+Set up	Постави
+Setup guide	Водич за поставување
+Fish Audio	Fish Audio
+Default model	Стандарден модел
+Pick a voice model	Избери модел на глас
+Get free voice	Преземи бесплатен глас
+Mic: default	Микрофон: стандардно
+Her speaker: Default	Нејзиниот звучник: Стандардно
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N го исклучува микрофонот
+CAPRI	CAPRI
+Support	Поддршка
+Remote	Remote
+Bring here	Донеси тука
+Advanced Settings	Напредни поставки
+YOU	ТИ
+Your personality	Твојата личност
+Language	Јазик
+English	Англиски
+What should she call you?	Како да те вика?
+Save	Зачувај
+Volume	Гласност
+Pitch	Висина
+Speed	Брзина
+Robot	Робот
+Glitch	Glitch
+Sounds	Звуци
+Typing sound	Звук на пишување
+Listen for Capri	Слушај за Capri
+Hearing	Слушање
+Auto	Автоматски
+Free voice in games	Бесплатен глас во игрите
+Call mode (beta)	Режим на повик (бета)
+Her voice in your mic	Нејзиниот глас во твојот микрофон
+Get VB-CABLE	Преземи VB-CABLE
+How to	Како
+Her voice in your mic: loudness	Нејзиниот глас во твојот микрофон: гласност
+MOVES	ДВИЖЕЊА
+Pop-in times	Времиња на појавување
+Mini player	Мини плеер
+Wander	Талкај
+Sleep	Спиј
+Pop-ins	Појавувања
+Glitch in at startup	Glitch при старт
+KEYS	КЛУЧЕВИ
+Talk: Ctrl + Alt + V	Зборувај: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Исклучи микрофон: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Пиши: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Скриј/прикажи: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Тишина: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Gaming Mode: Ctrl + Alt + G
+Confirm	Потврди
+Cancel	Откажи
+Size	Големина
+Check in on me	Пројди кај мене
+Edit check-in lines	Уреди линии за пријавување
+Always on top	Секогаш на врв
+Mainframe size	Големина на Mainframe
+Mainframe colours	Бои на Mainframe
+Head pats	Глаѓања по главата
+Pat stroke	Погалување
+Chaos when upset	Хаос кога ќе се налути
+Legacy stand	Стар штанд
+Jealous of other AIs	Љубомора кон други AI
+Teases when another AI comes to the front.	Исмејува кога друга AI ќе дојде напред.
+Close other AIs for me	Затвори други AI за мене
+Asks before closing only the apps you choose.	Прашува пред да затвори само апликациите што ќе ги избереш.
+Apps she may close	Апликации што може да ги затвори
+Choose apps	Избери апликации
+WATCH	СЛЕДИ
+Watch my screen	Гледај го мојот екран
+Screens	Екрани
+All screens	Сите екрани
+Remember what she sees	Запомни што гледа
+Every	Секој
+Watch-along memory	Меморија за заедничко гледање
+Code/Husk Mode	Режим Code/Husk
+Thinking	Размислувам
+Default	Стандардно
+Extra request JSON	Дополнително JSON барање
+Add	Додај
+Verbosity	Опширност
+Replies	Одговори
+Memory	Меморија
+Memory size	Големина на меморијата
+Max reply	Максимален одговор
+Bubble	Меур
+Follow-up messages	Последователни пораки
+Use	Користи
+A model in Ollama, on your local server or on your key.	Модел во Ollama, на твојот локален сервер или со твојот клуч.
+HABITS	НАВИКИ
+Open her memories	Отвори ги нејзините спомени
+Start with Windows	Стартувај со Windows
+Show on Discord	Прикажи на Discord
+Use her cursor	Користи нејзин курсор
+Remember our chats	Запомни ги нашите разговори
+Power saver	Штедач на енергија
+Music app	Музичка апликација
+Perch	Седиште
+Keep PC awake for jobs	Држи го PC будно за задачи
+Hide in full screen	Скриј во цел екран
+Mini player over full screen	Мини плеер над цел екран
+Explore while I'm away	Истражувај кога не сум тука
+Explore after	Истражувај потоа
+GAMES	ИГРИ
+Controls	Контроли
+Comments	Коментари
+Live reactions	Live реакции
+Game sounds	Звуци од игри
+Gaming Mode	Gaming Mode
+She reacts to your game until you close it.	Реагира на твојата игра додека не ја затвориш.
+Works best on MAX INTELLIGENCE.	Најдобро работи на MAX INTELLIGENCE.
+Fast hands in games	Брзи раце во игрите
+Mute her	Исклучи ја
+CLIPS	КЛИПОВИ
+Clip my games	Снимај ги моите игри
+Save big moments	Зачувај големи моменти
+Save folder	Папка за зачувување
+Choose folder	Избери папка
+Open clips folder	Отвори папка со клипови
+Default length	Стандардно траење
+Frame rate	Фреквенција на кадри
+Resolution	Резолуција
+Video bitrate	Битрејт на видеото
+Weather	Време
+Code mods can reach your whole PC. Only trusted ones.	Кодните модови можат да го достигнат целиот твој PC. Само доверливи.
+Import mod	Увези мод
+Browse mods	Прелистај модови
+Mods folder	Папка со модови
+INSTALLED	ИНСТАЛИРАНО
+Update mods	Ажурирај модови
+No mods match.	Ниеден мод не одговара.
+On	Вклучено
+Remove	Отстрани
+Publish	Објави
+Options	Опции
+Back	Назад
+Next	Следно
+COLORS	БОИ
+Reset colors	Врати бои
+Running on this PC	Работи на овој PC
+NORMAL	НОРМАЛНО
+OFF	ИСКЛУЧЕНО
+Local server address	Адреса на локалниот сервер

@@ -574,6 +574,8 @@ namespace CapriDesktop
                 Brain.LogPath = System.IO.Path.Combine(folder, "errors.txt");
                 // Her next question's time is not pushed about by a check.
                 Probes.Keep = delegate { };
+                Probes.Asked = delegate { };
+                Feelings.Keep = delegate { };
                 preferences.Silent = true;
                 CloseTalk();
 
@@ -586,6 +588,56 @@ namespace CapriDesktop
                 if (kept.IndexOf("personalityLikes=be a bit more dominant", StringComparison.Ordinal) < 0 || Probes.Pending != null || Probes.PendingKey != null)
                     throw new Exception("Their answer to her own question was not written down: notes [" + kept.Replace("\r\n", " ") + "], still waiting on " + (Probes.Pending ?? "nothing"));
                 CloseTalk();
+
+                // A reply her brain tidies replaces an hours line rather than joining it: three answers appended read
+                // "nothing at the moment, That was working, all over the place".
+                distilTest = delegate(string key, string had, string said) { return key == "workHours" ? "rotating shifts" : null; };
+                try
+                {
+                    Brain.NoteKey("workHours", "Uh nothing at the moment", true);
+                    Probes.Said("Are your work hours steady, or all over the place?", "workHours");
+                    Hear("uh it's like rotating shifts, nights one week then days");
+                    WaitedForReply();
+                    kept = System.IO.File.ReadAllText(Brain.MemoryPath);
+                    if (kept.IndexOf("workHours=rotating shifts", StringComparison.Ordinal) < 0 || kept.IndexOf("nothing at the moment", StringComparison.OrdinalIgnoreCase) >= 0)
+                        throw new Exception("A tidied answer did not replace the hours line: notes [" + kept.Replace("\r\n", " ") + "]");
+                    if (!Probes.Irregular("rotating shifts") || Probes.Irregular("9 to 5 weekdays")) throw new Exception("A moving schedule was told apart wrongly.");
+                }
+                finally { distilTest = null; }
+                CloseTalk();
+
+                // Small talk: back from a night is "how did you sleep", once a day, and it is never filed.
+                Func<DateTime, string> backWas = Probes.Back;
+                Func<string, double, bool> freshWas = Probes.Fresh;
+                try
+                {
+                    System.Collections.Generic.HashSet<string> asked = new System.Collections.Generic.HashSet<string>();
+                    Probes.Fresh = delegate(string kind, double hours) { return asked.Add(kind); };
+                    Probes.Back = delegate { return "slept"; };
+                    string chat = Probes.Chat(new DateTime(2026, 11, 20, 9, 0, 0));
+                    if (chat == null || chat.IndexOf("sleep", StringComparison.OrdinalIgnoreCase) < 0 && chat.IndexOf("rest", StringComparison.OrdinalIgnoreCase) < 0 && chat.IndexOf("head", StringComparison.OrdinalIgnoreCase) < 0)
+                        throw new Exception("Back from a night did not ask how they slept: " + (chat ?? "nothing"));
+                    string twice = Probes.Chat(new DateTime(2026, 11, 20, 9, 30, 0));
+                    if (twice != null) throw new Exception("Small talk asked twice in a morning: " + twice);
+                    Probes.Back = delegate { return null; };
+                    string evening = Probes.Chat(new DateTime(2026, 11, 20, 19, 0, 0));
+                    if (evening == null) throw new Exception("An evening had no small talk to ask.");
+                }
+                finally { Probes.Back = backWas; Probes.Fresh = freshWas; }
+
+                // Their mood: a rough stretch makes her gentler and gets one "you doing alright?", and only a number is kept.
+                try
+                {
+                    Feelings.Set(0);
+                    Feelings.Heard("ugh, long day, I'm exhausted and stressed");
+                    Feelings.Heard("honestly a bad day, I'm so tired");
+                    string low = Feelings.Line();
+                    if (low == null || low.IndexOf("low", StringComparison.Ordinal) < 0) throw new Exception("A rough stretch didn't reach her brain as one: " + (low ?? "nothing"));
+                    Feelings.Set(0);
+                    Feelings.Heard("what's the weather");
+                    if (Feelings.Line() != null) throw new Exception("An ordinary line moved their mood.");
+                }
+                finally { Feelings.Set(0); }
 
                 // A brush-off tells her nothing, so nothing is written and the question is over: left pending, whatever
                 // they said next would have been filed as the answer to it.
@@ -651,7 +703,7 @@ namespace CapriDesktop
                 string logged = System.IO.File.Exists(Brain.LogPath) ? System.IO.File.ReadAllText(Brain.LogPath) : "";
                 if (logged.IndexOf("personalityLikes", StringComparison.Ordinal) < 0 || logged.IndexOf("be a bit more dominant", StringComparison.Ordinal) >= 0)
                     throw new Exception("The line about keeping their answer is missing, or it repeated what they said.");
-                checks.Add("PASS the answer to a question she asked is kept: a brain that replies without calling remember still gets their words into me.md under her question's key, a brush-off writes nothing and closes the question, a brain that does call remember keeps its own words with nothing written over them, a job for her hands is not an answer and leaves the question standing, and errors.txt names the key without repeating what they said");
+                checks.Add("PASS the answer to a question she asked is kept: a brain that replies without calling remember still gets their words into me.md under her question's key, a brush-off writes nothing and closes the question, a brain that does call remember keeps its own words with nothing written over them, a job for her hands is not an answer and leaves the question standing, a tidied hours answer replaces the line rather than joining it, small talk fits the morning and evening and is asked once, a rough stretch reaches her brain as one and an ordinary line doesn't, and errors.txt names the key without repeating what they said");
             }
             finally
             {
@@ -704,11 +756,14 @@ namespace CapriDesktop
                 if (preferences.PaidKey != null || preferences.PaidSpare != null || preferences.PaidSpareModel != null)
                     throw new Exception("Forget left a key behind: key " + (preferences.PaidKey ?? "none") + ", spare " + (preferences.PaidSpare ?? "none"));
 
-                // And it is scrubbed out of errors.txt like every other key she holds.
-                preferences.PaidSpare = Voice.Protect("sk-ant-spare-test");
-                bool scrubbed = false;
-                foreach (string one in SavedKeys()) if (one == "sk-ant-spare-test") scrubbed = true;
-                if (!scrubbed) throw new Exception("The spare key is not in the list that is kept out of errors.txt.");
+                // And it is scrubbed out of errors.txt like every other key she holds, by its fingerprint: the scrubber never
+                // opens it, so it is not among the open keys either.
+                const string spareKey = "sk-ant-spare-test-0123456789";
+                preferences.PaidSpare = Voice.Protect(spareKey);
+                string logged = Brain.Scrubbed("refused with " + spareKey + ". then " + Uri.EscapeDataString(spareKey));
+                if (logged.Contains(spareKey) || logged.IndexOf("[redacted]", StringComparison.Ordinal) < 0)
+                    throw new Exception("The spare key was not kept out of errors.txt: " + logged);
+                foreach (string one in SavedKeys()) if (one == spareKey) throw new Exception("The scrubber opened a sealed key to keep it out of errors.txt.");
                 checks.Add("PASS her plan and her key are both kept under MAX INTELLIGENCE: picking one moves the other to the spare with its own model, the way back is offered by name and swaps the pair so it works in both directions, Forget drops both, and the spare is scrubbed out of errors.txt like every other key");
             }
             finally
@@ -781,11 +836,148 @@ namespace CapriDesktop
             }
         }
 
+        // A build with a word after its number, like 0.9.427pi: still that number to her update check, so the next
+        // release replaces it, and its own release files are fetched from the tag with the numbers only.
+        private static void SmokeReleaseTags(List<string> checks)
+        {
+            Version labelled = NumbersOf("0.9.427pi");
+            if (labelled == null || labelled != new Version(0, 9, 427) || !IsNewer("v0.9.428", labelled) || IsNewer("v0.9.427", labelled) || NumbersOf("pi") != null)
+                throw new Exception("A build named with a word on the end lost its number, so the next release would not replace it.");
+            if (!IsNewer("v0.9.427", new Version(0, 9, 426)) || IsNewer("v0.9.427pi", new Version(0, 9, 426)))
+                throw new Exception("An older build's view of the release tags changed.");
+            if (ReleaseFile.Own("0.9.427pi") != "0.9.427" || ReleaseFile.Own("0.9.426") != "0.9.426" || ReleaseFile.Own("0.9.070") != "0.9.070"
+                || !ReleaseFile.Address("capri-codex-1.pack", "0.9.425").EndsWith("/releases/download/v0.9.425/capri-codex-1.pack", StringComparison.Ordinal))
+                throw new Exception("A release file was looked for under the wrong tag.");
+            checks.Add("PASS release tags: 0.9.427pi is 0.9.427 to her update check, so v0.9.428 replaces it; an older build sees v0.9.427 and not v0.9.427pi; her own files come from the numbers-only tag");
+        }
+
+        // A site that is also an app: the app first, what they use or say decides it after, and a question when they
+        // use both. "My music" the same way between her own playlist and their player.
+        private static void SmokeAppOrWeb(List<string> checks)
+        {
+            Func<List<InstalledApp>> catalogWas = Hands.Catalog;
+            Action<string> runWas = Hands.Run;
+            Func<string, string, string> playlistWas = Hands.Playlist;
+            Func<bool> stockedWas = Hands.PlaylistStocked;
+            Func<DateTime> clockWas = Hands.ChooseClock;
+            string keptWas = Favourites.Kept;
+            string kept = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "capri-apps-used-" + Guid.NewGuid().ToString("N") + ".txt");
+            DateTime now = new DateTime(2026, 11, 20, 12, 0, 0, DateTimeKind.Utc);
+            List<string> ran = new List<string>();
+            try
+            {
+                Hands.Catalog = delegate { return new List<InstalledApp> { new InstalledApp("Spotify", "SpotifyAB.SpotifyMusic!Spotify") }; };
+                Hands.Forget();
+                Hands.Run = delegate(string id) { ran.Add(id); };
+                Hands.Playlist = delegate(string action, string what) { return "playlist " + action; };
+                Hands.PlaylistStocked = delegate { return false; };
+                Hands.ChooseClock = delegate { return now; };
+                Favourites.Kept = kept;
+                Action fresh = delegate
+                {
+                    try { System.IO.File.Delete(kept); } catch (System.IO.IOException) { } catch (UnauthorizedAccessException) { }
+                    Favourites.Reload();
+                };
+                fresh();
+                string tool;
+                ToolArguments args;
+                Func<string, string> heard = delegate(string said)
+                {
+                    if (!Hands.Heard(said, out tool, out args)) return "nothing";
+                    return (tool + ":" + (args.Name ?? args.Site ?? args.Action) + (args.Browser != null ? "@" + args.Browser : "") + (args.Choose != null ? "?" + args.Choose : "")).ToLowerInvariant();
+                };
+
+                if (heard("open spotify") != "open_app:spotify") throw new Exception("An installed app did not come first: " + heard("open spotify"));
+                if (heard("open spotify on the web") != "open_website:spotify" || Favourites.Where("spotify") != "web")
+                    throw new Exception("Asking for the web did not open the page and become the one she uses: " + heard("open spotify on the web") + " / " + Favourites.Where("spotify"));
+                if (heard("open spotify") != "open_website:spotify") throw new Exception("After the web was asked for, Spotify still opened the app.");
+                heard("open the spotify app");
+                if (Favourites.Where("spotify") != "app" || heard("open spotify") != "open_app:spotify") throw new Exception("Asking for the app did not make it the one she uses again.");
+                heard("on brave open spotify");
+                if (Favourites.Where("spotify") != "web") throw new Exception("Naming a browser did not make the page the one she uses.");
+                checks.Add("PASS app or web: an installed app comes first, and \"on the web\", a browser named or \"the spotify app\" opens that and becomes the one she uses");
+
+                // Seen in front: the app and the page about as often is a question; mostly one is that one.
+                fresh();
+                if (Favourites.WebSite("brave", "Spotify - Web Player - Brave") != "spotify" || Favourites.WebSite("Spotify", "Spotify Premium") != null || Favourites.WebSite("brave", "News - Brave") != null)
+                    throw new Exception("A site in a browser's title was misread.");
+                for (int spell = 0; spell < 4; spell++)
+                {
+                    now = now.AddMinutes(5); Favourites.Seen("Spotify", "Spotify Premium", now);
+                    now = now.AddMinutes(5); Favourites.Seen("brave", "Spotify - Web Player - Brave", now);
+                }
+                if (Favourites.Where("spotify") != "both") throw new Exception("Using the app and the page alike did not read as both: " + Favourites.Where("spotify"));
+                foreach (string one in Favourites.Choices("music")) if (one.StartsWith("web:", StringComparison.OrdinalIgnoreCase)) throw new Exception("A page in a browser was counted as a music program.");
+                if (heard("open spotify") != "open_website:spotify?site:spotify") throw new Exception("Using both did not ask which: " + heard("open spotify"));
+                Hands.Heard("open spotify", out tool, out args);
+                string asked = Hands.Do(tool, args);
+                if (asked != "The Spotify app, or Spotify in your browser?" || ran.Count != 0) throw new Exception("Her question of which was wrong, or something opened: " + asked);
+                if (heard("the app please") != "open_app:spotify" || Favourites.Where("spotify") != "app") throw new Exception("\"The app\" did not answer her question or stick.");
+                Hands.Heard("the app please", out tool, out args);
+                Hands.Do(tool, args);
+                if (ran.Count != 1 || heard("the app") == "open_app:spotify") throw new Exception("The answer did not open the app once and let the question go.");
+
+                fresh();
+                for (int spell = 0; spell < 4; spell++)
+                {
+                    now = now.AddMinutes(5); Favourites.Seen("Spotify", "Spotify Premium", now);
+                    now = now.AddMinutes(5); Favourites.Seen("brave", "Spotify - Web Player - Brave", now);
+                }
+                Hands.Heard("open spotify", out tool, out args);
+                Hands.Do(tool, args);
+                if (heard("in brave") != "open_website:spotify@brave" || Favourites.Where("spotify") != "web") throw new Exception("Naming a browser did not answer her question.");
+                Hands.Heard("open spotify", out tool, out args);
+                if (args.Choose != null) throw new Exception("Her question came back after it was answered.");
+                fresh();
+                for (int spell = 0; spell < 4; spell++)
+                {
+                    now = now.AddMinutes(5); Favourites.Seen("Spotify", "Spotify Premium", now);
+                    now = now.AddMinutes(5); Favourites.Seen("brave", "Spotify - Web Player - Brave", now);
+                }
+                Hands.Heard("open spotify", out tool, out args);
+                Hands.Do(tool, args);
+                if (heard("what time is it") == "open_app:spotify" || heard("the app") == "open_app:spotify") throw new Exception("Something other than an answer kept her question waiting.");
+                Hands.Heard("open spotify", out tool, out args);
+                Hands.Do(tool, args);
+                now = now.AddMinutes(3);
+                if (heard("the app") == "open_app:spotify") throw new Exception("An answer three minutes later was taken for her question.");
+                checks.Add("PASS app or web: using the app and the page about as much asks which, the answer opens it once and sticks, a browser named answers it, and anything else or a late answer lets the question go");
+
+                // My music: their player first; with her playlist stocked too, a question, and the answer sticks.
+                fresh();
+                if (heard("open my music") != "open_app:spotify") throw new Exception("\"Open my music\" did not open their player: " + heard("open my music"));
+                Hands.PlaylistStocked = delegate { return true; };
+                if (heard("play my music") != "open_app:spotify?music:spotify") throw new Exception("A stocked playlist and a player did not ask which: " + heard("play my music"));
+                Hands.Heard("play my music", out tool, out args);
+                if (Hands.Do(tool, args) != "Your music folder, or Spotify?") throw new Exception("Her music question was wrong.");
+                if (heard("the folder") != "playlist:play" || Favourites.Picked("where:music") != "folder") throw new Exception("\"The folder\" did not answer or stick.");
+                Hands.Heard("the folder", out tool, out args);
+                Hands.Do(tool, args);
+                if (heard("play my music") != "playlist:play") throw new Exception("After the folder was picked, my music still went elsewhere.");
+                Favourites.Tell("music", "Spotify");
+                if (heard("play my music") != "open_app:spotify") throw new Exception("A player picked did not become their music.");
+                checks.Add("PASS my music: their player first, a question between her playlist and the player when both have music, and the answer becomes the one she uses");
+            }
+            finally
+            {
+                Hands.Catalog = catalogWas;
+                Hands.Forget();
+                Hands.Run = runWas;
+                Hands.Playlist = playlistWas;
+                Hands.PlaylistStocked = stockedWas;
+                Hands.ChooseClock = clockWas;
+                Favourites.Kept = keptWas;
+                Favourites.Reload();
+                try { System.IO.File.Delete(kept); } catch (System.IO.IOException) { } catch (UnauthorizedAccessException) { }
+            }
+        }
+
         // Her packs split in two by what is in them, and a folder from before the split moved into the new shape.
         // The promise being checked is that a censored install's files do not contain her senpai lines at all.
         private static void SmokePackFolders(List<string> checks)
         {
             string folderWas = Personalities.Folder;
+            bool switchWas = Brain.SenpaiOn;
             string root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "capri-packs-" + Guid.NewGuid().ToString("N"));
             try
             {
@@ -793,43 +985,75 @@ namespace CapriDesktop
                 System.IO.Directory.CreateDirectory(old);
                 Personalities.Folder = System.IO.Path.Combine(root, Personalities.SettingsName, Personalities.FolderName);
 
-                // One pack with both halves in it, and one that is adult all the way through.
-                string both = "# Testy\r\n\r\n> Notes.\r\n\r\n## Her character\r\n\r\nPlain character.\r\n\r\n## When you pet her\r\n\r\nPlain pet line.\r\n\r\n## When you pet her (uncensored)\r\n\r\nSenpai pet line.\r\n";
-                string whole = "# Marky\r\n\r\n## Her character\r\n\r\nAdult throughout.\r\n\r\n## When you pet her\r\n\r\nAdult pet line.\r\n\r\nuncensored only: yes\r\n";
+                // One pack with both halves in it, and one that is senpai all the way through.
+                string both = "# Testy\r\n\r\n>! Notes.\r\n\r\n## Her character\r\n\r\nPlain character.\r\n\r\n## When you pet her\r\n\r\nPlain pet line.\r\n\r\n## When you pet her (overdrive)\r\n\r\nSenpai pet line.\r\n";
+                string whole = "# Marky\r\n\r\n## Her character\r\n\r\nSenpai throughout.\r\n\r\n## When you pet her\r\n\r\nSenpai pet line.\r\n\r\noverdrive only: yes\r\n";
                 System.IO.File.WriteAllText(System.IO.Path.Combine(old, "Testy.md"), both, new System.Text.UTF8Encoding(false));
                 System.IO.File.WriteAllText(System.IO.Path.Combine(old, "Marky.md"), whole, new System.Text.UTF8Encoding(false));
 
+                // Switch off first: the plain half moves, nothing is written to the senpai folder, and the file they
+                // had stays whole where it was until the switch goes on.
+                Brain.SenpaiOn = false;
                 Personalities.Install();
-
                 string plain = System.IO.Path.Combine(Personalities.Plain, "Testy.md");
-                string senpai = System.IO.Path.Combine(Personalities.Senpais, "Testy.md");
+                if (!System.IO.File.Exists(plain) || System.IO.Directory.Exists(Personalities.Senpais) || System.IO.File.ReadAllText(System.IO.Path.Combine(old, "Testy.md")) != both)
+                    throw new Exception("With the switch off, a pack with both halves wrote its senpai half or lost the file it came from.");
+                Brain.SenpaiOn = true;
+                Personalities.Install();
+                // Files in the senpai folder go by slot names, so each is found through its slot.
+                string senpai = Personalities.SenpaiPathOf("Testy");
+
                 if (!System.IO.File.Exists(plain) || !System.IO.File.Exists(senpai)) throw new Exception("A pack with both halves did not end up in both folders.");
                 string hadPlain = System.IO.File.ReadAllText(plain), hadSenpai = System.IO.File.ReadAllText(senpai);
-                if (hadPlain.IndexOf("Senpai pet line", StringComparison.Ordinal) >= 0 || hadPlain.IndexOf("(uncensored)", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (hadPlain.IndexOf("Senpai pet line", StringComparison.Ordinal) >= 0 || Legacy.HasTag(hadPlain))
                     throw new Exception("The censored half still contains her senpai lines.");
                 if (hadPlain.IndexOf("Plain pet line", StringComparison.Ordinal) < 0 || hadPlain.IndexOf("Plain character", StringComparison.Ordinal) < 0)
                     throw new Exception("The censored half lost her plain lines or her character.");
                 if (hadSenpai.IndexOf("Senpai pet line", StringComparison.Ordinal) < 0 || hadSenpai.IndexOf("# Testy", StringComparison.Ordinal) < 0)
-                    throw new Exception("The uncensored half lost its lines or its title.");
-                if (hadSenpai.IndexOf("Plain pet line", StringComparison.Ordinal) >= 0)
-                    throw new Exception("The uncensored half carries a second copy of the plain lines.");
+                    throw new Exception("The senpai half lost its lines or its title.");
+                if (hadSenpai.IndexOf("Plain pet line", StringComparison.Ordinal) < 0 || hadSenpai.IndexOf("Plain character", StringComparison.Ordinal) < 0)
+                    throw new Exception("The senpai copy is not whole: it is missing her plain lines or her character.");
 
-                // Adult all the way through: one file, in the senpai folder, and nothing in the censored one.
+                // Senpai all the way through: one file, in the senpai folder, and nothing in the censored one.
                 if (System.IO.File.Exists(System.IO.Path.Combine(Personalities.Plain, "Marky.md"))
-                    || !System.IO.File.Exists(System.IO.Path.Combine(Personalities.Senpais, "Marky.md")))
-                    throw new Exception("A pack that is adult throughout was split or left in the censored folder.");
+                    || !System.IO.File.Exists(Personalities.SenpaiPathOf("Marky")))
+                    throw new Exception("A pack that is senpai throughout was split or left in the censored folder.");
 
                 // Nothing is deleted on the way.
-                if (System.IO.File.Exists(System.IO.Path.Combine(old, "Testy.md")) || !System.IO.File.Exists(System.IO.Path.Combine(old, "Testy.md.bak")))
+                if (System.IO.File.Exists(System.IO.Path.Combine(old, "Testy.md")) || SpareFiles.Of(System.IO.Path.Combine(old, "Testy.md")).Count != 1)
                     throw new Exception("The file it came from was deleted instead of kept as a .bak.");
 
                 // Her own packs are there too, each with the same split, and every name she ships can be read back.
                 string[] shipped = { "Devoted.md", "Caregiver.md" };
                 foreach (string name in shipped)
                     if (!System.IO.File.Exists(System.IO.Path.Combine(Personalities.Plain, name))) throw new Exception("She did not write " + name + " into the censored folder.");
-                if (!System.IO.File.Exists(System.IO.Path.Combine(Personalities.Senpais, "Devoted.md"))) throw new Exception("Devoted's senpai half is missing.");
-                if (System.IO.File.ReadAllText(System.IO.Path.Combine(Personalities.Plain, "Devoted.md")).IndexOf("(uncensored)", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!System.IO.File.Exists(Personalities.SenpaiPathOf("Devoted"))) throw new Exception("Devoted's senpai copy is missing.");
+                if (Legacy.HasTag(System.IO.File.ReadAllText(System.IO.Path.Combine(Personalities.Plain, "Devoted.md"))))
                     throw new Exception("A shipped pack's censored half still has a senpai section in it.");
+
+                // Running again changes nothing, which is what stops a startup rewriting her files every time.
+                Dictionary<string, string> before = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (string file in Personalities.Files()) before[file] = System.IO.File.ReadAllText(file);
+                Personalities.Install();
+                foreach (string file in Personalities.Files())
+                {
+                    string had;
+                    if (!before.TryGetValue(file, out had)) throw new Exception("A second pass added " + System.IO.Path.GetFileName(file) + ".");
+                    string now = System.IO.File.ReadAllText(file);
+                    if (had != now)
+                    {
+                        int differs = 0;
+                        while (differs < had.Length && differs < now.Length && had[differs] == now[differs]) differs++;
+                        // Its shape only, letters masked: the file may hold the switch's side.
+                        Func<string, string> shape = delegate(string text)
+                        {
+                            int from = Math.Max(0, differs - 40);
+                            return System.Text.RegularExpressions.Regex.Replace(text.Substring(from, Math.Min(text.Length - from, 120)), "[A-Za-z]", "a").Replace("\r", "\\r").Replace("\n", "\\n");
+                        };
+                        throw new Exception("A second pass rewrote " + System.IO.Path.GetFileName(file) + ": " + had.Length + " characters to " + now.Length + ", first different at " + differs
+                            + ", first pass there: " + shape(had) + " / second: " + shape(now));
+                    }
+                }
 
                 // A pack she does not ship has no stock to go back to, so a reset marker set in it resets nothing
                 // and the file is left exactly as it was. It used to be replaced with a two-line stub, which is
@@ -841,21 +1065,12 @@ namespace CapriDesktop
                 CapriDesktop.Notes.Stock(theirs, delegate { return Personalities.Half(theirs, "Ourown"); });
                 if (System.IO.File.ReadAllText(theirs) != wrote) throw new Exception("A reset marker in someone's own pack rewrote it: " + System.IO.File.ReadAllText(theirs));
 
-                // Running again changes nothing, which is what stops a startup rewriting her files every time.
-                Dictionary<string, string> before = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                foreach (string file in Personalities.Files()) before[file] = System.IO.File.ReadAllText(file);
-                Personalities.Install();
-                foreach (string file in Personalities.Files())
-                {
-                    string had;
-                    if (!before.TryGetValue(file, out had)) throw new Exception("A second pass added " + System.IO.Path.GetFileName(file) + ".");
-                    if (had != System.IO.File.ReadAllText(file)) throw new Exception("A second pass rewrote " + System.IO.Path.GetFileName(file) + ".");
-                }
-                checks.Add("PASS her packs are split by what is in them: censored\\ holds her plain sections with no senpai line and no senpai heading anywhere in the file, uncensored\\ holds the senpai sections under the pack's title with no second copy of the plain text, a pack that is adult throughout is one file in uncensored\\ only, a folder from before the split is moved into both with the old file kept as a .bak, and a second pass changes nothing, a pack she does not ship has no stock to go back to so a reset marker in it leaves the file exactly as it was");
+                checks.Add("PASS her packs are split by what is in them: censored\\ holds her plain sections with no senpai line and no senpai heading anywhere in the file, interests\\ holds a whole copy, her plain sections and the senpai ones together, a pack that is senpai throughout is one file in interests\\ only, a folder from before the split is moved into both with the old file kept as a .bak, and a second pass changes nothing, a pack she does not ship has no stock to go back to so a reset marker in it leaves the file exactly as it was");
             }
             finally
             {
                 Personalities.Folder = folderWas;
+                Brain.SenpaiOn = switchWas;
                 try { System.IO.Directory.Delete(root, true); } catch (System.IO.IOException) { }
                 catch (UnauthorizedAccessException) { }
             }
@@ -1479,12 +1694,16 @@ namespace CapriDesktop
                 string bigger = set("size", "bigger"), giant = set("size", "giant"), wander = set("wander", "often"), still = set("wander", "off"), pops = set("pop_ins", "rarely"), sleep = set("sleep", "10 min");
                 string volume = set("volume", "50%"), speed = set("voice_speed", "faster"), replies = set("replies", "long"), bubble = set("bubble", "quick");
                 if (!listed.Contains("my size: Medium; Wander: Rarely; Pop-ins: Sometimes; Sleep: 5 min; my voice's volume: 80%; my voice's speed: 1.2x; Replies: Medium; Bubble: Normal;")
-                    || bigger != "Set my size to Medium+." || giant != "Set my size to Giant." || preferences.Size != MaxSize || Size != CanvasSize(MaxSize)
+                    // Giant is 560; the steps past it (Huge+ up to Triple) came later, so Giant is no longer her largest.
+                    || bigger != "Set my size to Medium+." || giant != "Set my size to Giant." || preferences.Size != 560 || Size != CanvasSize(560)
                     || wander != "Set Wander to Often." || still != "Set Wander to Off." || preferences.Wander || WanderLevel != 0 || preferences.WanderPace != 2
                     || pops != "Set Pop-ins to Rarely." || preferences.PopPace != 0 || sleep != "Set Sleep to 10 min." || preferences.SleepAfter != 600
                     || volume != "Set my voice's volume to 50%." || Voice.Loudness != 50 || preferences.Volume != 50 || speed != "Set my voice's speed to 1.3x." || VoiceFx.Speed != 130
                     || replies != "Set Replies to Long." || Brain.Wordiness != 2 || bubble != "Set Bubble to Quick." || preferences.BubbleTime != 0 || asking != askingWas)
-                    throw new Exception("Her settings tool didn't move her real sliders: " + listed + " / " + bigger + " / " + giant + " / " + wander + " / " + still + " / " + pops + " / " + sleep + " / " + volume + " / " + speed + " / " + replies + " / " + bubble + " / asking moved " + (asking - askingWas));
+                    throw new Exception("Her settings tool didn't move her real sliders: " + listed + " / " + bigger + " / " + giant + " / " + wander + " / " + still + " / " + pops + " / " + sleep + " / " + volume + " / " + speed + " / " + replies + " / " + bubble + " / asking moved " + (asking - askingWas)
+                        + " / size " + preferences.Size + " canvas " + Size + ", wander " + preferences.Wander + " " + WanderLevel + " " + preferences.WanderPace
+                        + ", pops " + preferences.PopPace + ", sleep " + preferences.SleepAfter + ", loud " + Voice.Loudness + " " + preferences.Volume + ", speed " + VoiceFx.Speed
+                        + ", words " + Brain.Wordiness + ", bubble " + preferences.BubbleTime);
                 checks.Add("PASS her settings tool flips Dance to music, Head pats, Chaos when upset, Legacy stand, Sit on windows, Always on top, Mini player, Typing sound, Follow-up messages, Hide in full screen and Glitch in at startup the way their own switches do, moves her size, wander, pop-ins, sleep, voice volume and speed, replies and bubble the way her Mainframe's sliders do, reads each one back from the setting itself, and never talks over her brain's reply");
             }
             finally
@@ -1770,20 +1989,20 @@ namespace CapriDesktop
             checks.Add("PASS a personality whose file is gone: the saved choice falls back to her own lines and is written back, her own lines and Dynamic are modes rather than files and are never treated as missing, and every pack she lists is seen as present");
         }
 
-        // A sweep of everything she has written, looking for the adult side in a censored install.
+        // A sweep of everything she has written, looking for the senpai side in a censored install.
         //
         // Her wall is built in a dozen places: a folder not made, a section not written, a tab not listed, a
         // band that reads as nothing. Each has its own check, and each could be right while the install as a
         // whole still has a trace in it, because the thing that leaks is whichever one nobody thought of.
         //
         // So this one does not test a mechanism. It reads every file she has written and looks for what only
-        // exists on the adult side, which is the question actually being asked: can somebody find it.
+        // exists on the senpai side.
         private void SmokeCensoredSweep(List<string> checks)
         {
             List<string> problems = new List<string>();
-            if (Brain.Uncensored)
+            if (Brain.SenpaiOn)
             {
-                checks.Add("SKIP the censored sweep: the adult switch is on here, and the sweep is about what a censored install has");
+                checks.Add("SKIP the censored sweep: the switch is on here, and the sweep is about what a censored install has");
                 return;
             }
             try
@@ -1796,18 +2015,23 @@ namespace CapriDesktop
                 }
 
                 // The folders and files that only exist with the switch on.
-                foreach (string named in new[] { Personalities.SenpaiName, Personalities.WasSenpaiName })
-                    foreach (string found in System.IO.Directory.GetDirectories(folder, named, System.IO.SearchOption.AllDirectories))
+                foreach (string found in System.IO.Directory.GetDirectories(folder, "*", System.IO.SearchOption.AllDirectories))
+                {
+                    string leaf = System.IO.Path.GetFileName(found);
+                    if (string.Equals(leaf, Personalities.SenpaiName, StringComparison.OrdinalIgnoreCase) || Legacy.WasFolder(leaf))
                         problems.Add("a senpai folder exists: " + found.Substring(folder.Length).TrimStart('\\'));
+                }
+                // The old names are null in a build without the senpai files, which is the build this check is
+                // for, so a null one is skipped rather than handed to Path.Combine.
                 foreach (string named in new[] { Interests.FileName, Interests.HersName, Interests.YoursName, Interests.WasFileName, Interests.WasHersName, Interests.WasYoursName })
-                    if (System.IO.File.Exists(System.IO.Path.Combine(folder, named))) problems.Add("a senpai file exists: " + named);
+                    if (!string.IsNullOrEmpty(named) && System.IO.File.Exists(System.IO.Path.Combine(folder, named))) problems.Add("a senpai file exists: " + named);
 
                 // Every line of the senpai halves of every pack and mood she ships, which is what a leak would
                 // be made of. Read from the build rather than from a list written by hand, so a pack added
                 // later is swept without anybody remembering to add it here.
                 // Only the lines the senpai side has and the censored side does not.
                 //
-                // Being in a senpai section is not the same as being adult. She ships plain greetings to both
+                // Being in a senpai section is not the same as being senpai. She ships plain greetings to both
                 // halves on purpose, so "There you are, %petname%." sat in a senpai pool and in Caregiver,
                 // Devoted and Welcome Home, and the sweep called three affectionate greetings a leak on
                 // every censored install. A check that cries wolf is worse than no check: the next real one
@@ -1864,7 +2088,7 @@ namespace CapriDesktop
                 int read = 0;
                 List<string> everything = new List<string>(System.IO.Directory.GetFiles(folder, "*.md", System.IO.SearchOption.AllDirectories));
                 // And what the split left beside them: a backup of a file written before the split holds both
-                // halves of it, which is the adult side in plain sight on a censored install.
+                // halves of it.
                 everything.AddRange(System.IO.Directory.GetFiles(folder, "*.bak", System.IO.SearchOption.AllDirectories));
                 foreach (string file in everything)
                 {
@@ -1873,7 +2097,7 @@ namespace CapriDesktop
                     catch (System.IO.IOException) { continue; }
                     read++;
                     string named = file.Substring(folder.Length).TrimStart('\\');
-                    if (body.IndexOf("(uncensored)", StringComparison.OrdinalIgnoreCase) >= 0) problems.Add("a senpai heading is in " + named);
+                    if (Legacy.HasTag(body)) problems.Add("a senpai heading is in " + named);
                     // Whole lines, not anywhere in the text. A senpai line that happens to be the opening of
                     // a longer censored one was found inside it: "There you are, %petname%." is a line of
                     // its own in a senpai pool and the start of "There you are, %petname%. Have you had a
@@ -1889,16 +2113,22 @@ namespace CapriDesktop
                 if (problems.Count == 0) checks.Add("PASS the censored sweep: " + read + " of her files read, " + senpaiLines.Count + " senpai lines looked for" + (attached ? "" : " (nothing attached one, so there was none to look for)") + ", no senpai folder, file, heading or line anywhere in a censored install");
             }
             catch (Exception bad) { problems.Add("the sweep could not finish: " + bad.Message); }
-            if (problems.Count > 0) throw new Exception("A censored install has the adult side in it: " + string.Join("; ", problems.ToArray()));
+            if (problems.Count > 0) throw new Exception("A censored install has the senpai side in it: " + string.Join("; ", problems.ToArray()));
         }
 
         // Where a hand lands, and the wall around the senpai half of it: that a censored install is written none
         // of it and can reach none of it, that the switch alone is not enough, and that her forwardness decides.
         private void SmokeTouchZones(List<string> checks)
         {
+            // The senpai zones are named by what attached; a build with nothing attached has none to write.
+            if (CapriDesktop.Touch.Upper == null)
+            {
+                checks.Add("LIMIT touch zones: nothing attached here names the senpai zones, so only her ordinary ones were there to check");
+                return;
+            }
             List<string> problems = new List<string>();
             string keptWas = CapriDesktop.Touch.Kept;
-            bool senpaiWas = Brain.Uncensored, airWas = Brain.OnAir;
+            bool senpaiWas = Brain.SenpaiOn, airWas = Brain.OnAir;
             int specialInterestWas = Personalities.SpecialInterestOverride;
             string folder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "capri-touch-" + Guid.NewGuid().ToString("N"));
             try
@@ -1909,27 +2139,27 @@ namespace CapriDesktop
                 // Censored: the senpai sections are not written at all, and asking for one gets nothing whatever
                 // her forwardness says. A file that merely hid them would still be a file naming them.
                 Brain.OnAir = false;
-                Brain.Uncensored = false;
+                Brain.SenpaiOn = false;
                 CapriDesktop.Touch.Forget();
                 CapriDesktop.Touch.Write(false);
                 string had = System.IO.File.ReadAllText(CapriDesktop.Touch.Kept);
-                if (had.IndexOf("(uncensored)", StringComparison.OrdinalIgnoreCase) >= 0 || had.IndexOf("hips", StringComparison.OrdinalIgnoreCase) >= 0 || had.IndexOf("her chest", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (Legacy.HasTag(had) || (CapriDesktop.Touch.Lower != null && had.IndexOf(CapriDesktop.Touch.Lower, StringComparison.OrdinalIgnoreCase) >= 0) || (CapriDesktop.Touch.Upper != null && had.IndexOf(CapriDesktop.Touch.Upper, StringComparison.OrdinalIgnoreCase) >= 0))
                     problems.Add("a censored install was written the senpai zones");
-                if (CapriDesktop.Touch.Line(CapriDesktop.Touch.Hips, 10) != null || CapriDesktop.Touch.Line(CapriDesktop.Touch.Chest, 10) != null || CapriDesktop.Touch.Line(CapriDesktop.Touch.Slapped, 10) != null)
+                if (CapriDesktop.Touch.Line(CapriDesktop.Touch.Lower, 10) != null || CapriDesktop.Touch.Line(CapriDesktop.Touch.Upper, 10) != null || CapriDesktop.Touch.Line(CapriDesktop.Touch.ClickZone, 10) != null)
                     problems.Add("a censored install answered for a senpai zone");
                 if (CapriDesktop.Touch.Line(CapriDesktop.Touch.Head, 0) == null) problems.Add("her head said nothing on a censored install");
 
                 // The switch on: the sections are written, and her forwardness decides which answer comes back.
-                Brain.Uncensored = true;
+                Brain.SenpaiOn = true;
                 CapriDesktop.Touch.Forget();
                 CapriDesktop.Touch.Write(false);
                 had = System.IO.File.ReadAllText(CapriDesktop.Touch.Kept);
-                if (had.IndexOf("(uncensored)", StringComparison.OrdinalIgnoreCase) < 0) problems.Add("the switch did not write the senpai zones");
-                string willing = CapriDesktop.Touch.Line(CapriDesktop.Touch.Hips, CapriDesktop.Touch.Willing);
-                string not = CapriDesktop.Touch.Line(CapriDesktop.Touch.Hips, CapriDesktop.Touch.Willing - 1);
+                if (!Legacy.HasTag(had)) problems.Add("the switch did not write the senpai zones");
+                string willing = CapriDesktop.Touch.Line(CapriDesktop.Touch.Lower, CapriDesktop.Touch.Willing);
+                string not = CapriDesktop.Touch.Line(CapriDesktop.Touch.Lower, CapriDesktop.Touch.Willing - 1);
                 if (string.IsNullOrEmpty(willing) || string.IsNullOrEmpty(not)) problems.Add("a senpai zone said nothing with the switch on");
                 else if (willing == not) problems.Add("her forwardness made no difference to a senpai zone");
-                string refused = CapriDesktop.Touch.Line(CapriDesktop.Touch.Chest, 0);
+                string refused = CapriDesktop.Touch.Line(CapriDesktop.Touch.Upper, 0);
                 if (string.IsNullOrEmpty(refused)) problems.Add("an unwelcome touch said nothing at all");
 
                 // On air her forwardness is zero by its own rule, so nothing senpai can be reached while she is
@@ -1942,7 +2172,7 @@ namespace CapriDesktop
             {
                 CapriDesktop.Touch.Kept = keptWas;
                 CapriDesktop.Touch.Forget();
-                Brain.Uncensored = senpaiWas;
+                Brain.SenpaiOn = senpaiWas;
                 Brain.OnAir = airWas;
                 Personalities.SpecialInterestOverride = specialInterestWas;
                 try { System.IO.Directory.Delete(folder, true); } catch (System.IO.IOException) { }
@@ -1993,6 +2223,48 @@ namespace CapriDesktop
                 System.IO.File.WriteAllText(Lore.Kept, "# What she tells you about herself\r\n");
                 Lore.Forget();
                 if (Lore.Next() != null) problems.Add("an empty lore file still told a story");
+
+                // A story whose mood matches hers comes first; with none matching, the next untold one does.
+                Func<string> feelingWas = Lore.Feeling;
+                string packWas = Lore.PackPath;
+                try
+                {
+                    Lore.PackPath = null;
+                    System.IO.File.WriteAllText(Lore.Kept,
+                        "# What she tells you about herself\r\n\r\n## One\r\n> mood: funny\r\nfirst of one\r\n\r\n## Two\r\n> mood: sad\r\nfirst of two\r\n");
+                    Lore.Feeling = delegate { return "Melancholy"; };
+                    Lore.Forget();
+                    string matched = Lore.Next();
+                    if (matched != "first of two") problems.Add("a sad story did not come first in a sad mood: " + (matched ?? "nothing"));
+                    Lore.Feeling = delegate { return "Smug"; };
+                    Lore.Forget();
+                    string fallback = Lore.Next();
+                    if (fallback != "first of one") problems.Add("with no proud story she did not fall back to the next one: " + (fallback ?? "nothing"));
+                    if (Lore.Moods().Count != 2) problems.Add("the mood tags read as " + Lore.Moods().Count + " rather than 2");
+                }
+                finally { Lore.Feeling = feelingWas; Lore.PackPath = packWas; }
+
+                // A piece the pack renamed takes the new heading rather than arriving as a second copy, and a copy
+                // already appended that way is taken out. A piece whose lines differ is left alone.
+                bool changed;
+                string mine = "## The old name\r\n\r\nsame line one\r\nsame line two\r\n\r\n## Rewritten by them\r\n\r\ntheir own line\r\n";
+                string renamedPack = "## The new name\r\n\r\nsame line one\r\nsame line two\r\n\r\n## Rewritten by them\r\n\r\nthe shipped line\r\n";
+                string followed = Lore.Renamed(mine, renamedPack, out changed);
+                if (!changed || followed.IndexOf("## The new name", StringComparison.Ordinal) < 0 || followed.IndexOf("The old name", StringComparison.Ordinal) >= 0 || followed.IndexOf("their own line", StringComparison.Ordinal) < 0)
+                    problems.Add("a renamed piece was not followed: " + followed.Replace("\r\n", " | "));
+                string doubled = "## The old name\r\n\r\nsame line one\r\nsame line two\r\n\r\n## The new name\r\n\r\nsame line one\r\nsame line two\r\n";
+                string tidied = Lore.Renamed(doubled, renamedPack, out changed);
+                if (!changed || tidied.IndexOf("The old name", StringComparison.Ordinal) >= 0 || tidied.IndexOf("## The new name", StringComparison.Ordinal) < 0)
+                    problems.Add("the second copy of a renamed piece stayed: " + tidied.Replace("\r\n", " | "));
+
+                // lore1.md beside lore.md is more of her stories; a file named any other way is not.
+                Lore.Forget();
+                System.IO.File.WriteAllText(Lore.Kept, "## One\r\n\r\nfirst of one\r\n");
+                System.IO.File.WriteAllText(System.IO.Path.Combine(folder, "lore1.md"), "## Extra\r\n\r\nfirst of extra\r\n");
+                System.IO.File.WriteAllText(System.IO.Path.Combine(folder, "lore copy.md"), "## Spare\r\n\r\nfirst of spare\r\n");
+                System.IO.File.WriteAllText(Lore.Marked, "");
+                string heard = (Lore.Next() ?? "") + " / " + (Lore.Next() ?? "") + " / " + (Lore.Next() ?? "");
+                if (heard != "first of one / first of extra / first of one") problems.Add("the numbered lore file was read wrong: " + heard);
             }
             finally
             {
@@ -2002,7 +2274,7 @@ namespace CapriDesktop
                 try { System.IO.Directory.Delete(folder, true); } catch (System.IO.IOException) { }
             }
             if (problems.Count > 0) throw new Exception("Her stories went wrong: " + string.Join("; ", problems.ToArray()));
-            checks.Add("PASS her stories are told a piece at a time: the lines of one come in the order they are written, the piece is finished before another starts, the set comes round again once she has been through it, her place survives being closed mid-story, and an empty file says nothing");
+            checks.Add("PASS her stories are told a piece at a time: the lines of one come in the order they are written, the piece is finished before another starts, the set comes round again once she has been through it, her place survives being closed mid-story, an empty file says nothing, and a story matching her mood comes first with the next one as the fallback; a piece the pack renamed is followed rather than doubled, and lore1.md is read as more of her stories while other names are not");
         }
 
         // The lines she says on her own: that they come out of her file, that her file can be edited and emptied
@@ -2095,9 +2367,18 @@ namespace CapriDesktop
                 if (Away.Ask(night.AddHours(8).AddMinutes(20), out again)) problems.Add("the same gap was asked about twice: " + again);
 
                 // Their answer settles it, and her line to her brain says work rather than sleep.
-                Away.Told("I was at work");
+                Away.Called("worked");
                 string line = Away.Line(night.AddHours(8).AddMinutes(30));
                 if (line == null || line.IndexOf("working", StringComparison.OrdinalIgnoreCase) < 0) problems.Add("after they said work, her line did not say so: " + (line ?? "nothing"));
+
+                // Twice the same shift placed as work, and the third is placed by her routine without a question.
+                Away.Forget();
+                Away.Add(night.AddDays(-2), night.AddDays(-2).AddHours(8), "worked");
+                Away.Add(night.AddDays(-1), night.AddDays(-1).AddHours(8), "worked");
+                Away.Add(night, night.AddHours(8), "");
+                string routine;
+                if (Away.Ask(night.AddHours(8).AddMinutes(10), out routine)) problems.Add("a shift she had seen twice was still asked about: " + routine);
+                if (Away.Back(night.AddHours(8).AddMinutes(15)) != "worked") problems.Add("a shift she had seen twice was not placed as work");
 
                 // A night they have not called anything reads as sleep, and a short one says so.
                 Away.Forget();
@@ -2150,7 +2431,7 @@ namespace CapriDesktop
                 // A me.md from an older build gains the keys she ships now, and nothing of theirs moves.
                 Brain.MemoryPath = System.IO.Path.Combine(folder, "me.md");
                 System.IO.File.WriteAllText(Brain.MemoryPath,
-                    "# What Capri remembers about you\r\n> She reads this every time you chat.\r\n\r\n- thingsUserLikes=\r\n- awakeHours=9am-1am\r\n- They have a cat called Biscuit\r\n");
+                    "# What Capri remembers about you\r\n>! She reads this every time you chat.\r\n\r\n- thingsUserLikes=\r\n- awakeHours=9am-1am\r\n- They have a cat called Biscuit\r\n");
                 Brain.TopUpNotes();
                 string notes = System.IO.File.ReadAllText(Brain.MemoryPath);
                 if (!Probes.Filled(notes, "awakeHours") || notes.IndexOf("Biscuit", StringComparison.Ordinal) < 0)
@@ -2181,7 +2462,7 @@ namespace CapriDesktop
                         if (row.Trim().Length > 0 && !row.TrimStart().StartsWith("#", StringComparison.Ordinal) && !row.TrimStart().StartsWith(">", StringComparison.Ordinal)) many++;
                     if (many < 40) problems.Add("her watching file shipped only " + many + " angles");
                     // Nothing gated reaches a censored install, here as anywhere else.
-                    if (!Brain.Adult && anglesHad.IndexOf("(uncensored)", StringComparison.OrdinalIgnoreCase) >= 0)
+                    if (!Brain.SenpaiLive && Legacy.HasTag(anglesHad))
                         problems.Add("a censored install was written a senpai section of her watching file");
                 }
                 finally

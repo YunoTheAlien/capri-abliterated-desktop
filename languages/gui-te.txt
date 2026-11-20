@@ -1,0 +1,206 @@
+# Her menus and labels in Telugu: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe తెరువు
+Her folder	ఆమె ఫోల్డర్
+Play	ప్లే
+Music	సంగీతం
+Chess	చెస్
+Connect four	కనెక్ట్ ఫోర్
+Tic-tac-toe	టిక్-టాక్-టో
+Rock, paper, scissors	రాయి, కాగితం, కత్తెర
+Hide Capri	Capri దాచు
+Hologram	హోలోగ్రామ్
+Normal	సాధారణం
+Small	చిన్నది
+Medium	మధ్యస్థం
+Large	పెద్దది
+Huge	భారీ
+Giant	జెయింట్
+Move	తరలించు
+Wander around	చుట్టూ తిరుగు
+Dance to music	సంగీతానికి డాన్స్ చేయి
+Dance	డాన్స్
+Ride cursor	కర్సర్‌పై ప్రయాణించు
+Sit on windows	కిటికీలపై కూర్చో
+Sit here	ఇక్కడ కూర్చో
+Hang here	ఇక్కడే ఉండు
+Lie down	పడుకో
+Go to sleep	నిద్రపోవడానికి వెళ్ళు
+Bring to this screen	ఈ స్క్రీన్‌కు తీసుకురా
+Go to the next screen	తదుపరి స్క్రీన్‌కు వెళ్ళు
+Black	నలుపు
+White	తెలుపు
+Test	Test
+Stop	ఆపు
+Help	సహాయం
+Commands	ఆదేశాలు
+Help page	సహాయ పేజీ
+Join the Discord	Discordలో చేరు
+Copy error details	లోపం వివరాలను కాపీ చేయి
+Check for updates	అప్‌డేట్‌ల కోసం చూడు
+Quit Capri	Capri నిష్క్రమించు
+MAINFRAME	MAINFRAME
+Settings	సెట్టింగ్‌లు
+Mods	మోడ్‌లు
+BRAIN	బ్రెయిన్
+Provider	ప్రొవైడర్
+Using your server with no key	కీ లేకుండా మీ సర్వర్‌ను ఉపయోగిస్తోంది
+Refresh	రిఫ్రెష్
+Set up her brain	ఆమె బ్రెయిన్‌ను సెటప్ చేయి
+Have Ollama? Open it, then press Refresh.	Ollama ఉందా? దాన్ని తెరిచి, రిఫ్రెష్ నొక్కు.
+Pick one. Only one brain runs at a time.	ఒకటి ఎంచుకో. ఒకేసారి ఒక బ్రెయిన్ మాత్రమే నడుస్తుంది.
+MEDIUM INTELLIGENCE	మధ్యస్థ ఇంటెలిజెన్స్
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	ఆఫ్
+Free key	ఉచిత కీ
+Connect	కనెక్ట్ చేయి
+Free keys can be rate limited and slow.	ఉచిత కీలు రేట్ లిమిట్ అయి నెమ్మదిగా ఉండవచ్చు.
+That's a paid key: it goes under MAX INTELLIGENCE.	అది చెల్లింపు కీ: MAX INTELLIGENCE కిందకు వెళ్తుంది.
+Move to MAX	MAXకి తరలించు
+VOICE	VOICE
+Ctrl + Alt + V to talk	మాట్లాడటానికి Ctrl + Alt + V
+PREBUILT LOCAL	ప్రీబిల్ట్ లోకల్
+CUSTOM LOCAL	కస్టమ్ లోకల్
+CLOUD VOICE	క్లౌడ్ వాయిస్
+Set up	సెటప్ చేయి
+Setup guide	సెటప్ గైడ్
+Fish Audio	Fish Audio
+Default model	డిఫాల్ట్ మోడల్
+Pick a voice model	వాయిస్ మోడల్ ఎంచుకో
+Get free voice	ఉచిత వాయిస్ పొందు
+Mic: default	మైక్: డిఫాల్ట్
+Her speaker: Default	ఆమె స్పీకర్: డిఫాల్ట్
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N మైక్‌ను మ్యూట్ చేస్తుంది
+CAPRI	CAPRI
+Support	మద్దతు
+Remote	రిమోట్
+Bring here	ఇక్కడికి తీసుకురా
+Advanced Settings	అధునాతన సెట్టింగ్‌లు
+YOU	నువ్వు
+Your personality	మీ వ్యక్తిత్వం
+Language	భాష
+English	ఇంగ్లీష్
+What should she call you?	ఆమె నిన్ను ఏమని పిలవాలి?
+Save	సేవ్ చేయి
+Volume	వాల్యూమ్
+Pitch	పిచ్
+Speed	వేగం
+Robot	రోబో
+Glitch	గ్లిచ్
+Sounds	శబ్దాలు
+Typing sound	టైపింగ్ శబ్దం
+Listen for Capri	Capri కోసం వినండి
+Hearing	వినికిడి
+Auto	ఆటో
+Free voice in games	ఆటల్లో ఉచిత వాయిస్
+Call mode (beta)	కాల్ మోడ్ (బీటా)
+Her voice in your mic	మీ మైక్‌లో ఆమె వాయిస్
+Get VB-CABLE	VB-CABLE పొందు
+How to	ఎలా
+Her voice in your mic: loudness	మీ మైక్‌లో ఆమె వాయిస్: లౌడ్‌నెస్
+MOVES	కదలికలు
+Pop-in times	పాప్-ఇన్ సమయాలు
+Mini player	మినీ ప్లేయర్
+Wander	తిరుగు
+Sleep	నిద్ర
+Pop-ins	పాప్-ఇన్‌లు
+Glitch in at startup	ప్రారంభంలో గ్లిచ్
+KEYS	కీలు
+Talk: Ctrl + Alt + V	మాట్లాడు: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	మైక్ మ్యూట్: Ctrl + Alt + N
+Type: Ctrl + Alt + T	టైప్: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	దాచు/చూపు: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	నిశ్శబ్దం: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	గేమింగ్ మోడ్: Ctrl + Alt + G
+Confirm	నిర్ధారించు
+Cancel	రద్దు చేయి
+Size	పరిమాణం
+Check in on me	నన్ను చెక్ చేయి
+Edit check-in lines	చెక్-ఇన్ లైన్లను సవరించు
+Always on top	ఎల్లప్పుడూ పైన
+Mainframe size	Mainframe పరిమాణం
+Mainframe colours	Mainframe రంగులు
+Head pats	తలపై నిమురుట
+Pat stroke	నిమురుడు
+Chaos when upset	కోపం వచ్చినప్పుడు గందరగోళం
+Legacy stand	పాత స్టాండ్
+Jealous of other AIs	ఇతర AIలపై అసూయ
+Teases when another AI comes to the front.	మరో AI ముందుకు వచ్చినప్పుడు ఆటపట్టిస్తుంది.
+Close other AIs for me	నా కోసం ఇతర AIలను మూసివేయి
+Asks before closing only the apps you choose.	మీరు ఎంచుకున్న యాప్‌లను మాత్రమే మూసివేసే ముందు అడుగుతుంది.
+Apps she may close	ఆమె మూసివేయగల యాప్‌లు
+Choose apps	యాప్‌లను ఎంచుకో
+WATCH	చూడు
+Watch my screen	నా స్క్రీన్ చూడు
+Screens	స్క్రీన్లు
+All screens	అన్ని స్క్రీన్లు
+Remember what she sees	ఆమె చూసేది గుర్తుంచుకో
+Every	ప్రతి
+Watch-along memory	కలిసి చూసిన జ్ఞాపకం
+Code/Husk Mode	కోడ్/Husk మోడ్
+Thinking	ఆలోచిస్తోంది
+Default	డిఫాల్ట్
+Extra request JSON	అదనపు అభ్యర్థన JSON
+Add	జోడించు
+Verbosity	వివరణ స్థాయి
+Replies	సమాధానాలు
+Memory	మెమరీ
+Memory size	మెమరీ పరిమాణం
+Max reply	గరిష్ట సమాధానం
+Bubble	బుడగ
+Follow-up messages	తదుపరి సందేశాలు
+Use	ఉపయోగించు
+A model in Ollama, on your local server or on your key.	Ollamaలోని మోడల్, మీ లోకల్ సర్వర్‌లో లేదా మీ కీతో.
+HABITS	అలవాట్లు
+Open her memories	ఆమె జ్ఞాపకాలు తెరువు
+Start with Windows	Windowsతో ప్రారంభించు
+Show on Discord	Discordలో చూపు
+Use her cursor	ఆమె కర్సర్‌ను ఉపయోగించు
+Remember our chats	మన చాట్‌లను గుర్తుంచుకో
+Power saver	పవర్ సేవర్
+Music app	మ్యూజిక్ యాప్
+Perch	పెర్చ్
+Keep PC awake for jobs	పనుల కోసం PCని మెలకువగా ఉంచు
+Hide in full screen	ఫుల్ స్క్రీన్‌లో దాచు
+Mini player over full screen	ఫుల్ స్క్రీన్ పైన మినీ ప్లేయర్
+Explore while I'm away	నేను లేనప్పుడు అన్వేషించు
+Explore after	తర్వాత అన్వేషించు
+GAMES	ఆటలు
+Controls	నియంత్రణలు
+Comments	వ్యాఖ్యలు
+Live reactions	లైవ్ ప్రతిచర్యలు
+Game sounds	ఆట శబ్దాలు
+Gaming Mode	గేమింగ్ మోడ్
+She reacts to your game until you close it.	మీరు మూసే వరకు ఆమె మీ ఆటకు స్పందిస్తుంది.
+Works best on MAX INTELLIGENCE.	MAX INTELLIGENCEపై ఉత్తమంగా పనిచేస్తుంది.
+Fast hands in games	ఆటల్లో వేగవంతమైన చేతులు
+Mute her	ఆమెను మ్యూట్ చేయి
+CLIPS	క్లిప్‌లు
+Clip my games	నా ఆటలను క్లిప్ చేయి
+Save big moments	పెద్ద క్షణాలను సేవ్ చేయి
+Save folder	సేవ్ ఫోల్డర్
+Choose folder	ఫోల్డర్‌ను ఎంచుకో
+Open clips folder	క్లిప్‌ల ఫోల్డర్ తెరువు
+Default length	డిఫాల్ట్ నిడివి
+Frame rate	ఫ్రేమ్ రేటు
+Resolution	రిజల్యూషన్
+Video bitrate	వీడియో బిట్‌రేట్
+Weather	వాతావరణం
+Code mods can reach your whole PC. Only trusted ones.	కోడ్ మోడ్‌లు మీ మొత్తం PCని చేరగలవు. నమ్మదగినవి మాత్రమే.
+Import mod	మోడ్‌ను దిగుమతి చేయి
+Browse mods	మోడ్‌లను బ్రౌజ్ చేయి
+Mods folder	మోడ్స్ ఫోల్డర్
+INSTALLED	ఇన్‌స్టాల్ అయింది
+Update mods	మోడ్‌లను అప్‌డేట్ చేయి
+No mods match.	సరిపోయే మోడ్‌లు లేవు.
+On	ఆన్
+Remove	తొలగించు
+Publish	ప్రచురించు
+Options	ఎంపికలు
+Back	వెనక్కు
+Next	తదుపరి
+COLORS	రంగులు
+Reset colors	రంగులను రీసెట్ చేయి
+Running on this PC	ఈ PCలో నడుస్తోంది
+NORMAL	సాధారణం
+OFF	ఆఫ్
+Local server address	లోకల్ సర్వర్ చిరునామా

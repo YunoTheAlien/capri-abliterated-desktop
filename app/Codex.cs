@@ -6,6 +6,9 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+#if CROSS
+using Companion = CapriDesktop.Pet;
+#endif
 
 namespace CapriDesktop
 {
@@ -37,6 +40,13 @@ namespace CapriDesktop
         {
             Dictionary<string, string> s = Gather();
             if (s.Count == 0) return 0;
+            File.WriteAllBytes(path, Sealed(s));
+            return s.Count;
+        }
+
+        // The named texts sealed, so nothing in the file reads as text to anybody opening it.
+        internal static byte[] Sealed(Dictionary<string, string> s)
+        {
             byte[] plain;
             using (MemoryStream m = new MemoryStream())
             {
@@ -52,8 +62,7 @@ namespace CapriDesktop
             }
             byte[] salt = Cut(RemoteCrypto.Sha256(RemoteCrypto.Join(plain, RemoteCrypto.Ascii("salt"))), SaltBytes);
             byte[] iv = Cut(RemoteCrypto.Sha256(RemoteCrypto.Join(plain, RemoteCrypto.Ascii("iv"))), RemoteCrypto.IvBytes);
-            File.WriteAllBytes(path, RemoteCrypto.Join(salt, RemoteCrypto.Seal(Keys(salt), Kind, Way, 0, plain, iv)));
-            return s.Count;
+            return RemoteCrypto.Join(salt, RemoteCrypto.Seal(Keys(salt), Kind, Way, 0, plain, iv));
         }
 
         private static Dictionary<string, string> Gather()
@@ -94,6 +103,8 @@ namespace CapriDesktop
                     catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
             Put(s, "touch", Touch.SenpaiTouch);
+            Put(s, "extended", Extended.Text);
+            if (Personalities.SenpaiAdded != null) s["added"] = Grid(Personalities.SenpaiAdded);
             Put(s, "angles", Angles.SenpaiAngles);
             if (VoiceProfiles.SenpaiVoice != null)
                 foreach (string one in Both(order, moods))
@@ -104,6 +115,9 @@ namespace CapriDesktop
                     if (v != null) s["voice/" + one] = v.Pitch + "," + v.Speed + "," + v.Volume + "," + v.Robot + "," + v.Glitch;
                 }
             if (Personalities.RepairData != null && Personalities.RepairData.Length == 3) s["repair"] = string.Join("\n", Personalities.RepairData);
+            // Her gated labels in each language, a table each.
+            Dictionary<string, string> gui = Gui.CodexTables;
+            if (gui != null) foreach (KeyValuePair<string, string> one in gui) Put(s, "gui/" + one.Key, one.Value);
             return s;
         }
 
@@ -156,6 +170,9 @@ namespace CapriDesktop
             Interests.SenpaiMore = Lines(Get(s, "more"));
             Sayings.SenpaiSectionFor = delegate(int which) { return Get(s, "lines/" + which) ?? ""; };
             Touch.SenpaiTouch = Get(s, "touch") ?? "";
+            Extended.Text = Get(s, "extended") ?? "";
+            string added = Get(s, "added");
+            if (added != null) Personalities.SenpaiAdded = Grid(added);
             Angles.SenpaiAngles = Get(s, "angles") ?? "";
             VoiceProfiles.SenpaiVoice = delegate(string named) { return Voice(Get(s, "voice/" + named)); };
             string[] repair = Lines(Get(s, "repair"));
@@ -165,8 +182,15 @@ namespace CapriDesktop
                 Personalities.RenamedFor = delegate { Mend(repair); };
                 Personalities.RenamedToFor = delegate(string chosen) { return MendedName(repair, chosen); };
             }
+            Dictionary<string, string> gui = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (KeyValuePair<string, string> one in s) if (one.Key.StartsWith("gui/", StringComparison.Ordinal)) gui[one.Key.Substring(4)] = one.Value;
+            Gui.CodexTables = gui.Count == 0 ? null : gui;
+            Gui.Forget();
             Attached = true;
         }
+
+        // For her checks: a sealed file opened back into its sections, without installing anything.
+        internal static Dictionary<string, string> Unsealed(byte[] file) { return Sections(Opened(file)); }
 
         private static Dictionary<string, string> Sections(byte[] raw)
         {
@@ -378,7 +402,15 @@ namespace CapriDesktop
     {
         internal static string Address(string name, string tag)
         {
-            return "https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/download/v" + (string.IsNullOrEmpty(tag) ? Companion.Built : tag) + "/" + name;
+            return "https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/download/v" + (string.IsNullOrEmpty(tag) ? Own(Companion.Built) : tag) + "/" + name;
+        }
+
+        // Her own release is tagged with the numbers of her version only, so 0.9.427pi fetches from v0.9.427: a word in
+        // the tag would hide the release from older builds' update check.
+        internal static string Own(string built)
+        {
+            string numbers = System.Text.RegularExpressions.Regex.Match(built ?? "", @"^\d+(?:\.\d+){1,3}").Value;
+            return numbers.Length > 0 ? numbers : built;
         }
 
         // Null when it is in place, otherwise why not.
@@ -437,4 +469,3 @@ namespace CapriDesktop
         }
     }
 }
-

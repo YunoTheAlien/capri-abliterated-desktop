@@ -38,6 +38,8 @@ namespace CapriDesktop
             using LinuxProfile profile = OperatingSystem.IsLinux() && Smoke == null ? new LinuxProfile() : null;
             // Whatever ends her leaves a line in errors.txt. A bad click or timer is caught once her app is up (CapriApp).
             if (Smoke == null) AppDomain.CurrentDomain.UnhandledException += delegate(object sender, UnhandledExceptionEventArgs crash) { Crashed(crash.ExceptionObject as Exception); };
+            // Before Avalonia reads them: its clipboard can't make the clipboard's X atoms itself (ClipboardAtoms).
+            ClipboardAtoms.Ensure();
             try
             {
                 NativePassive.Initialize().GetAwaiter().GetResult();
@@ -63,7 +65,7 @@ namespace CapriDesktop
                 lastCrashAt = Environment.TickCount;
                 try
                 {
-                    if (Brain.LogPath == null) Brain.LogPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Capri", "errors.txt");
+                    if (Brain.LogPath == null) Brain.LogPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.Create), "Capri", "errors.txt");
                     Directory.CreateDirectory(Path.GetDirectoryName(Brain.LogPath));
                 }
                 catch (IOException) { }

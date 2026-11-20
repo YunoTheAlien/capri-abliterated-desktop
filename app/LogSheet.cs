@@ -15,8 +15,28 @@ namespace CapriDesktop
     //
     // Output only, deliberately. There is nothing to type into it and nothing it can do to her: it opens the
     // files she is already writing, reads what has been added since it last looked, and shows it.
-    internal sealed class LogSheet : Form, LookWindow
+    internal sealed class LogSheet : Form, LookWindow, IMessageFilter
     {
+        // The wheel goes to whatever has focus, so a pointer resting on the log without a click first scrolled
+        // nothing. Every wheel turn is looked at before it is delivered, and one over the log or its bar scrolls
+        // the log, the way a web page scrolls under the pointer.
+        private const int WheelTurned = 0x020A, LineScroll = 0x00B6;
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr SendMessage(IntPtr window, int message, IntPtr wide, IntPtr tall);
+
+        public bool PreFilterMessage(ref Message message)
+        {
+            if (message.Msg != WheelTurned || IsDisposed || !Visible || !box.IsHandleCreated) return false;
+            Point at = Cursor.Position;
+            if (!box.RectangleToScreen(box.ClientRectangle).Contains(at) && !(bar.Visible && bar.RectangleToScreen(bar.ClientRectangle).Contains(at))) return false;
+            int turned = (short)((message.WParam.ToInt64() >> 16) & 0xFFFF);
+            SendMessage(box.Handle, LineScroll, IntPtr.Zero, new IntPtr(turned > 0 ? -3 : 3));
+            bar.Sync();
+            Moved();
+            return true;
+        }
+
         // What her key says in Mainframe's BRAIN band, kept here so the window names its own way in.
         internal const string KeyText = "LOG";
         internal const int Wide = 760, Tall = 470;
@@ -32,6 +52,8 @@ namespace CapriDesktop
         private int which;
         private long read;
         private bool following = true;
+        private readonly StringBuilder pending = new StringBuilder();
+        private int waiting;
 
         internal LogSheet(Form owner, float zoom, string[] files)
         {
@@ -65,7 +87,7 @@ namespace CapriDesktop
             picks[0] = Pick("What she said", 24, 52, 0);
             picks[1] = Pick("What went wrong", 150, 52, 1);
             Button follow = Pick("Follow", 290, 52, -1);
-            follow.Click += delegate { following = !following; Marked(); if (following) Bottom(); };
+            follow.Click += delegate { if (following) { following = false; Marked(); } else Resume(); };
             Button shut = Pick("Close", Wide - 92, 52, -2);
             shut.Click += delegate { Close(); };
 
@@ -97,14 +119,10 @@ namespace CapriDesktop
             bar.Watch(box);
             // Moving it by hand stops the follow, the way every log window works. Otherwise the next line
             // she writes pulls the view back to the bottom and it reads as a log that will not scroll.
-            bar.Taken = delegate { if (following) { following = false; Marked(); } };
-            // And the wheel, which is what anybody reaches for first. Rolling back up holds the view;
+            bar.Taken = Moved;
+            // The wheel is handled in PreFilterMessage above, focused or not. Rolling back up holds the view;
             // rolling to the bottom picks the follow up again, so it behaves like it looks.
-            box.MouseWheel += delegate(object who, MouseEventArgs rolled)
-            {
-                if (rolled.Delta < 0) return;
-                if (following) { following = false; Marked(); }
-            };
+            box.KeyUp += delegate { Moved(); };
             Controls.Add(bar);
 
             KeyDown += delegate(object sender, KeyEventArgs key) { if (key.KeyCode == Keys.Escape) Close(); };
@@ -112,8 +130,24 @@ namespace CapriDesktop
             beat.Tick += delegate { Fresh(); };
             ResumeLayout();
             Marked();
-            Load += delegate { Open(0); beat.Start(); };
+            // Kept between opens: closed by them it hides, stops reading its files while hidden, and opens again on
+            // the file it showed, read fresh from its end.
+            FormClosing += delegate(object sender, FormClosingEventArgs e)
+            {
+                if (e.CloseReason != CloseReason.UserClosing || Kept == false) return;
+                e.Cancel = true;
+                Hide();
+            };
+            // Every showing, the first included: what it reads starts here, and stops while it is hidden.
+            VisibleChanged += delegate
+            {
+                if (Visible) { Open(which); beat.Start(); Application.RemoveMessageFilter(this); Application.AddMessageFilter(this); }
+                else { beat.Stop(); Application.RemoveMessageFilter(this); }
+            };
         }
+
+        // False once she is quitting, so a close then is a real one.
+        internal bool Kept = true;
 
         private int At(int value) { return (int)Math.Round(value * Zoom); }
 
@@ -143,6 +177,10 @@ namespace CapriDesktop
             which = source < 0 || watching == null || source >= watching.Length ? 0 : source;
             read = 0;
             box.Text = "";
+            // A file just switched to is read from its end, so it follows; nothing held from the other one carries over.
+            following = true;
+            pending.Length = 0;
+            waiting = 0;
             Marked();
             Fresh();
         }
@@ -152,7 +190,28 @@ namespace CapriDesktop
             for (int one = 0; one < picks.Length; one++)
                 if (picks[one] != null) picks[one].ForeColor = one == which ? Neon.Rose : Neon.Cyan;
             string named = watching == null || which >= watching.Length ? "" : Path.GetFileName(watching[which]);
-            note.Text = named + (following ? "   ·   following" : "   ·   held") + "   ·   output only, nothing typed here reaches her";
+            string held = waiting == 0 ? "   ·   held" : "   ·   held, " + waiting + (waiting == 1 ? " new line" : " new lines") + " below";
+            note.Text = named + (following ? "   ·   following" : held) + "   ·   output only, nothing typed here reaches her";
+        }
+
+        // The view was moved by hand. Anywhere above the bottom holds it; the bottom follows again.
+        private void Moved()
+        {
+            if (IsDisposed) return;
+            if (bar.AtEnd) { if (!following) Resume(); return; }
+            if (following) { following = false; Marked(); }
+        }
+
+        // Back to following: what arrived while the view was held goes in, and the view goes to the end.
+        private void Resume()
+        {
+            following = true;
+            string held = pending.ToString();
+            pending.Length = 0;
+            waiting = 0;
+            Marked();
+            if (held.Length > 0) Add(held);
+            else Bottom();
         }
 
         // What has been added since the last look. A file that got shorter was rewritten under us, so it is
@@ -185,6 +244,16 @@ namespace CapriDesktop
 
         private void Add(string said)
         {
+            // Held, new lines wait rather than going in. Putting them in means replacing the box's text, and
+            // that sends the view back to the top: every line she wrote yanked the view away from where it
+            // had been scrolled to, which is what made the log read as one that could not be scrolled.
+            if (!following)
+            {
+                pending.Append(said);
+                foreach (char one in said) if (one == '\n') waiting++;
+                Marked();
+                return;
+            }
             string whole = box.Text + said.Replace("\r\n", "\n").Replace("\n", Environment.NewLine);
             // Enough to scroll back through and no more: this is a window on what is happening, not the file.
             string[] rows = whole.Split('\n');
@@ -208,6 +277,7 @@ namespace CapriDesktop
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             beat.Stop();
+            Application.RemoveMessageFilter(this);
             base.OnFormClosed(e);
         }
 

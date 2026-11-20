@@ -1,0 +1,206 @@
+# Her menus and labels in Catalan: the English, a tab, then the translation.
+Open Capri Mainframe	Obre Capri Mainframe
+Her folder	La seva carpeta
+Play	Reprodueix
+Music	Música
+Chess	Escacs
+Connect four	Connecta quatre
+Tic-tac-toe	Tres en ratlla
+Rock, paper, scissors	Pedra, paper, tisores
+Hide Capri	Amaga Capri
+Hologram	Holograma
+Normal	Normal
+Small	Petit
+Medium	Mitjà
+Large	Gran
+Huge	Enorme
+Giant	Gegant
+Move	Mou
+Wander around	Vagar per aquí
+Dance to music	Ballar amb la música
+Dance	Ballar
+Ride cursor	Munta el cursor
+Sit on windows	Seu a les finestres
+Sit here	Seu aquí
+Hang here	Queda't aquí
+Lie down	Estirat
+Go to sleep	Ves a dormir
+Bring to this screen	Porta a aquesta pantalla
+Go to the next screen	Ves a la pantalla següent
+Black	Negre
+White	Blanc
+Test	Prova
+Stop	Atura
+Help	Ajuda
+Commands	Ordres
+Help page	Pàgina d'ajuda
+Join the Discord	Uneix-te al Discord
+Copy error details	Copia els detalls de l'error
+Check for updates	Comprova si hi ha actualitzacions
+Quit Capri	Surt de Capri
+MAINFRAME	MAINFRAME
+Settings	Configuració
+Mods	Mods
+BRAIN	CERVELL
+Provider	Proveïdor
+Using your server with no key	Usant el teu servidor sense clau
+Refresh	Actualitza
+Set up her brain	Configura el seu cervell
+Have Ollama? Open it, then press Refresh.	Tens Ollama? Obre'l i prem Actualitza.
+Pick one. Only one brain runs at a time.	Tria'n un. Només un cervell funciona alhora.
+MEDIUM INTELLIGENCE	INTEL·LIGÈNCIA MITJANA
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Desactivat
+Free key	Clau gratuïta
+Connect	Connecta
+Free keys can be rate limited and slow.	Les claus gratuïtes poden tenir límit de peticions i anar lentes.
+That's a paid key: it goes under MAX INTELLIGENCE.	Aquesta és una clau de pagament: va sota MAX INTELLIGENCE.
+Move to MAX	Mou a MAX
+VOICE	VEU
+Ctrl + Alt + V to talk	Ctrl + Alt + V per parlar
+PREBUILT LOCAL	LOCAL PREFABRICAT
+CUSTOM LOCAL	LOCAL PERSONALITZAT
+CLOUD VOICE	VEU AL NÚVOL
+Set up	Configura
+Setup guide	Guia de configuració
+Fish Audio	Fish Audio
+Default model	Model per defecte
+Pick a voice model	Tria un model de veu
+Get free voice	Obtén una veu gratuïta
+Mic: default	Micro: per defecte
+Her speaker: Default	El seu altaveu: Per defecte
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N silencia el micro
+CAPRI	CAPRI
+Support	Suport
+Remote	Remot
+Bring here	Porta-la aquí
+Advanced Settings	Configuració avançada
+YOU	TU
+Your personality	La teva personalitat
+Language	Idioma
+English	Anglès
+What should she call you?	Com l'hauria de dir?
+Save	Desa
+Volume	Volum
+Pitch	To
+Speed	Velocitat
+Robot	Robot
+Glitch	Error
+Sounds	Sons
+Typing sound	So d'escriptura
+Listen for Capri	Escolta per Capri
+Hearing	Audició
+Auto	Automàtic
+Free voice in games	Veu gratuïta als jocs
+Call mode (beta)	Mode trucada (beta)
+Her voice in your mic	La seva veu al micro
+Get VB-CABLE	Obtén VB-CABLE
+How to	Com
+Her voice in your mic: loudness	La seva veu al micro: volum
+MOVES	MOVIMENTS
+Pop-in times	Moments d'aparició
+Mini player	Mini reproductor
+Wander	Vagar
+Sleep	Dormir
+Pop-ins	Aparicions
+Glitch in at startup	Error en iniciar
+KEYS	TECLES
+Talk: Ctrl + Alt + V	Parla: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Silencia micro: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Escriure: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Amaga/mostra: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Silenci: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Mode Joc: Ctrl + Alt + G
+Confirm	Confirma
+Cancel	Cancel·la
+Size	Mida
+Check in on me	Mira com estic
+Edit check-in lines	Edita les frases de «Mira com estic»
+Always on top	Sempre a dalt
+Mainframe size	Mida del Mainframe
+Mainframe colours	Colors del Mainframe
+Head pats	Carícies al cap
+Pat stroke	Carícia al cap
+Chaos when upset	Caos quan s'enfada
+Legacy stand	Suport antic
+Jealous of other AIs	Gelosa d'altres IA
+Teases when another AI comes to the front.	Es burla quan una altra IA es posa al davant.
+Close other AIs for me	Tanca per mi les altres IA
+Asks before closing only the apps you choose.	Pregunta abans de tancar només les aplicacions que triïs.
+Apps she may close	Aplicacions que pot tancar
+Choose apps	Tria aplicacions
+WATCH	MIRAR
+Watch my screen	Mira la meva pantalla
+Screens	Pantalles
+All screens	Totes les pantalles
+Remember what she sees	Recorda el que veu
+Every	Cada
+Watch-along memory	Memòria de mirar junts
+Code/Husk Mode	Mode Codi/Husk
+Thinking	Pensant
+Default	Per defecte
+Extra request JSON	JSON de sol·licitud extra
+Add	Afegeix
+Verbosity	Detall
+Replies	Respostes
+Memory	Memòria
+Memory size	Mida de memòria
+Max reply	Resposta màxima
+Bubble	Bombolla
+Follow-up messages	Missatges de seguiment
+Use	Usa
+A model in Ollama, on your local server or on your key.	Un model a Ollama, al teu servidor local o amb la teva clau.
+HABITS	HÀBITS
+Open her memories	Obre els seus records
+Start with Windows	Inicia amb Windows
+Show on Discord	Mostra al Discord
+Use her cursor	Usa el seu cursor
+Remember our chats	Recorda les nostres converses
+Power saver	Estalvi d'energia
+Music app	Aplicació de música
+Perch	Lloc
+Keep PC awake for jobs	Manté el PC despert per a les feines
+Hide in full screen	Amaga en pantalla completa
+Mini player over full screen	Mini reproductor sobre pantalla completa
+Explore while I'm away	Explora mentre no hi sóc
+Explore after	Explora després
+GAMES	JOCS
+Controls	Controls
+Comments	Comentaris
+Live reactions	Reaccions en directe
+Game sounds	Sons del joc
+Gaming Mode	Mode Joc
+She reacts to your game until you close it.	Reacciona al teu joc fins que el tanquis.
+Works best on MAX INTELLIGENCE.	Funciona millor amb MAX INTELLIGENCE.
+Fast hands in games	Mans ràpides als jocs
+Mute her	Silencia-la
+CLIPS	CLIPS
+Clip my games	Grava els meus jocs
+Save big moments	Desa els moments importants
+Save folder	Carpeta de desada
+Choose folder	Tria carpeta
+Open clips folder	Obre la carpeta de clips
+Default length	Durada per defecte
+Frame rate	Velocitat de fotogrames
+Resolution	Resolució
+Video bitrate	Bitrate de vídeo
+Weather	Temps
+Code mods can reach your whole PC. Only trusted ones.	Els mods de codi poden accedir a tot el teu PC. Només els de confiança.
+Import mod	Importa un mod
+Browse mods	Explora mods
+Mods folder	Carpeta de mods
+INSTALLED	INSTAL·LAT
+Update mods	Actualitza els mods
+No mods match.	Cap mod coincideix.
+On	Activat
+Remove	Elimina
+Publish	Publica
+Options	Opcions
+Back	Enrere
+Next	Següent
+COLORS	COLORS
+Reset colors	Restableix els colors
+Running on this PC	Executant-se en aquest PC
+NORMAL	NORMAL
+OFF	OFF
+Local server address	Adreça del servidor local

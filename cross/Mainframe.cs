@@ -191,6 +191,15 @@ namespace CapriDesktop
         private readonly NeonCaption build;
         private readonly Dictionary<NeonEntry, string> entries = new Dictionary<NeonEntry, string>();
         private readonly NeonRung[] brains = new NeonRung[3];
+        // BRAIN's OFF row, No AI (as on Windows). Drawn like VOICE's OFF row, one row above NORMAL; the tiers sit a row lower.
+        private NeonRung offRung;
+        // VOICE's Mic (with Test) and Her speaker, as on Windows: Linux only, between the voice note and Listen for Capri.
+        private NeonPicker micPicker, speakerPicker, screensPicker, providersPicker;
+        private NeonButton ride;
+        private NeonButton micTestKey;
+        private const int DeviceRows = 72;
+        private bool Device(Control control) { return control != null && (control == micPicker || control == micTestKey || control == speakerPicker); }
+        private const int OffRow = 24;
         private readonly NeonRung[] voices = new NeonRung[4];
         private readonly NeonPicker models, freeKeys, voicePicker, speechModels;
         private readonly NeonPicker huskMode;
@@ -209,9 +218,10 @@ namespace CapriDesktop
         private static readonly string[] Lengths = { "Short", "Medium", "Long" };
         private static readonly int[] Recalls = { 8, 16, 32 };
         private static readonly int[][] FoldedLeft = { new[] { 232, 428 }, new[] { 478, 506 }, new[] { 644, 1121 }, new[] { 1232, 1284 }, new[] { 1284, 1312 } };
-        private static readonly int[][] FoldedRight = { new[] { 166, 194 }, new[] { 400, 782 }, new[] { 978, 2028 } };
-        private static readonly int[][] MissingLeft = { new[] { 428, 648 }, new[] { 672, 700 }, new[] { 854, 1121 }, new[] { 1150, 1314 }, new[] { 1342, 1728 } };
-        private static readonly int[][] MissingRight = { new[] { 400, 428 }, new[] { 978, 1028 }, new[] { 1056, 1180 }, new[] { 1408, 2028 } };
+        // Screens took the empty row at 400 under WATCH, so the right column's Simple fold starts a row lower.
+        private static readonly int[][] FoldedRight = { new[] { 166, 194 }, new[] { 428, 782 }, new[] { 978, 2028 } };
+        private static readonly int[][] MissingLeft = { new[] { 428, 648 }, new[] { 854, 1121 }, new[] { 1150, 1314 }, new[] { 1342, 1728 } };
+        private static readonly int[][] MissingRight = { new[] { 978, 1028 }, new[] { 1056, 1180 }, new[] { 1408, 2028 } };
 
         internal Mainframe(Pet owner) : base("Mainframe")
         {
@@ -246,6 +256,8 @@ namespace CapriDesktop
             Caption("3. Pick a model.", 28, 182, 328, 18, MainframeTheme.Faint);
             Caption("Have Ollama? Open it, then press Refresh.", 28, 264, 328, 18, MainframeTheme.Faint, 12);
             tierNote = Caption("", 28, 168, 328, 16, MainframeTheme.Faint, 34.0 / 3);
+            offRung = Add(new NeonRung { Text = "OFF", Hint = "No AI · no brain at all" }, 28, 184, 328, 24, "No AI");
+            offRung.Click += (_, _) => pet.SetNoAi(true);
             string[] brainNames = { "NORMAL", "MEDIUM INTELLIGENCE", "MAX INTELLIGENCE" };
             string[] brainHints = { "Free · local model", "Free", "Cloud API keys" };
             for (int i = 0; i < 3; i++)
@@ -298,6 +310,9 @@ namespace CapriDesktop
             nameListeningNote = null;
             if (OperatingSystem.IsLinux())
             {
+                micPicker = Picker("Mic", 28, 531, 244, () => pet.MainframeMicIndex, pet.PickMic); micPicker.Ellipsis = true;
+                micTestKey = Key("Test", 280, 531, 76, 28, pet.TestMic);
+                speakerPicker = Picker("Her speaker", 28, 567, 328, () => pet.MainframeSpeakerIndex, pet.PickSpeaker); speakerPicker.Ellipsis = true;
                 Toggle("Listen for Capri", 0, 524, () => pet.NameListeningEnabled, pet.SetNameListening);
                 nameListeningNote = Caption("", 28, 555, 328, 22, MainframeTheme.Faint); nameListeningNote.Ellipsis = true;
                 MainframeTips.Explain(nameListeningNote, "Local decoder · 20-second follow-ups · selected physical microphone");
@@ -309,13 +324,16 @@ namespace CapriDesktop
             support.Heart = true;
             showHide = Key("Hide Capri", 28, 562, 104, 28, pet.MainframeToggleHidden);
             Key("Bring here", 140, 562, 104, 28, pet.Bring);
-            Key("Talk to her", 252, 562, 104, 28, () => pet.Talk.Open());
+            // Ride cursor, as Windows' CAPRI band has it (Hop off while she rides). Talk to her stays in her tray menu.
+            ride = Key("Ride cursor", 252, 562, 104, 28, pet.ToggleRide);
             Key("Check for updates", 28, 606, 150, 28, pet.MainframeUpdateCheck);
             Key("Help", 186, 606, 62, 28, () => { if (Program.Smoke == null) Pet.Browse(Pet.HelpPage); });
             Key("Quit Capri", 256, 606, 100, 28, pet.Quit).Accent = MainframeTheme.Hot;
             updateNote = Caption("", 28, 644, 328, 18, MainframeTheme.Faint, 34.0 / 3); updateNote.Ellipsis = true;
             building = 1;
             advanced = Key("Advanced Settings", 238, 20, 136, 22, () => { pet.SetAdvancedSettings(!pet.Saved.AdvancedSettings); ShowSettings(true); }); advanced.Accent = MainframeTheme.Cyan; advanced.Loud = true;
+            // Mods, right of Advanced Settings as on Windows' Settings page.
+            Key("Mods", 382, 20, 56, 22, OpenMods).Accent = MainframeTheme.Cyan;
             Section("YOU", 0, 58);
             var personality = Add(new NeonPicker(), 72, 55, 106, 20, "Her personality");
             personality.Check = false;
@@ -323,8 +341,9 @@ namespace CapriDesktop
             personality.Ellipsis = true;
             personality.Options(new[] { "Edit personality.md", "Reset to default" }); personality.Text = "Her personality";
             personality.Changed += i => { if (i == 0) pet.OpenPersonality(); else pet.ResetPersonality(); personality.Text = "Her personality"; };
-            Key("Open her notes", 184, 55, 96, 20, () => pet.OpenNotes()).Ellipsis = true;
-            Key("File editor", 286, 55, 70, 20, () => pet.OpenFiles(0)).Ellipsis = true;
+            // As Windows' YOU: MD editor (her editor for me.md and personality.md), then Her folder.
+            Key("MD editor", 184, 55, 96, 20, () => pet.OpenFiles(0)).Ellipsis = true;
+            Key("Her folder", 286, 55, 70, 20, () => pet.OpenHerFolder()).Ellipsis = true;
             var language = Picker("Language", 184, 85, 172, () => LanguageIndex(), i => pet.SetLanguage(Brain.Languages[i, 1]));
             language.Height = 22;
             var languages = new string[Brain.Languages.GetLength(0)];
@@ -350,6 +369,8 @@ namespace CapriDesktop
             Named("Typing mode", 0, 400);
             var typingMode = Picker("Typing mode", 184, 403, 172, () => pet.Saved.Typing, pet.SetTypingMode); typingMode.Height = 22; typingMode.Options(new[] { "Auto", "On", "Off" });
             Section("MOVES", 0, 648);
+            // Mini player, as Windows' MOVES starts: the row the layout always kept a gap for.
+            Toggle("Mini player", 0, 672, () => !pet.Saved.NoPlayer, on => pet.SetSetting("mini_player", on));
             Slider("Wander", Pet.WanderNames, 0, 700, () => pet.Saved.Wander, pet.SetWander);
             Slider("Sleep", Pet.SleepNames, 0, 728, () => Array.IndexOf(Pet.Sleeps, pet.SleepAfter), i => pet.SetSleepAfter(Pet.Sleeps[i]));
             Slider("Pop-ins", Pet.PopNames, 0, 756, () => pet.PopPace, pet.SetPopPace);
@@ -373,8 +394,11 @@ namespace CapriDesktop
             Toggle("Legacy stand", 380, 250, () => pet.LegacyStand, pet.SetLegacyStand);
             Section("WATCH", 380, 292);
             Toggle("Watch my screen", 380, 316, () => pet.Saved.Watch, on => pet.SetWatch(on));
-            Toggle("Remember what she sees", 380, 344, () => !pet.Saved.NoCaughtUp, pet.SetCaughtUp).Switch = 68;
-            Slider("Every", Pet.GlanceGapNames, 380, 372, () => Nearest(Pet.GlanceGaps, pet.GlanceGap), i => pet.SetGlanceGap(Pet.GlanceGaps[i]));
+            // Screens, under Watch my screen as on Windows: All screens or one monitor, with a missing one greyed at the end.
+            Named("Screens", 380, 344);
+            screensPicker = Picker("Screens", 564, 347, 172, () => pet.MainframeScreenIndex, pet.PickScreen); screensPicker.Height = 22; screensPicker.Ellipsis = true;
+            Toggle("Remember what she sees", 380, 372, () => !pet.Saved.NoCaughtUp, pet.SetCaughtUp).Switch = 68;
+            Slider("Every", Pet.GlanceGapNames, 380, 400, () => Nearest(Pet.GlanceGaps, pet.GlanceGap), i => pet.SetGlanceGap(Pet.GlanceGaps[i]));
             Section("BRAIN", 380, 442);
             huskLabel = Caption("Code/Husk Mode", 408, 472, 146, 16);
             readers.Add(delegate { if (huskMode != null) huskMode.Options(HuskWatch.Choices(pet.HuskMode)); });
@@ -423,7 +447,10 @@ namespace CapriDesktop
             custom = Entry("Custom model name", "Custom model name", 408, 665, 244, 22, () => pet.MainframePickModel(custom.Box.Text));
             Key("Use", 660, 665, 76, 22, () => pet.MainframePickModel(custom.Box.Text));
             Caption("A model in Ollama, on your local server or on your key.", 408, 694, 328, 22, MainframeTheme.Faint, 34.0 / 3);
-            Caption("Local server address", 408, 726, 328, 18);
+            Caption("Local server address", 408, 726, 152, 18);
+            // Saved providers, as on Windows: each provider that connected, picked again with its key and model.
+            providersPicker = Picker("Saved providers", 564, 723, 172, () => pet.MainframeProviderIndex, pet.PickProvider); providersPicker.Height = 22; providersPicker.Ellipsis = true;
+            readers.Add(() => providersPicker.IsEnabled = pet.MainframeHasProviders);
             localAddress = Entry("Local server address", "http://127.0.0.1:1234", 408, 755, 244, 22, () => UseServer());
             Key("Save", 660, 755, 76, 22, UseServer);
             Section("HABITS", 380, 796);
@@ -561,16 +588,23 @@ namespace CapriDesktop
                 if (pet.MainframeTier == 0) choices.Add("Download a model...");
                 models.Options(choices.ToArray());
                 voicePicker.Options(pet.MainframeVoices);
+                micPicker?.Options(pet.MainframeMics);
+                speakerPicker?.Options(pet.MainframeSpeakers);
+                screensPicker.Options(pet.MainframeScreens); screensPicker.Greyed = pet.MainframeScreensGreyed;
+                providersPicker.Options(pet.MainframeProviders);
                 speechModels.Options(pet.MainframeSpeechModels);
                 if (paidKey != null && pet.MainframeTier != 1) paidKey = null;
                 foreach (Action read in readers) read();
                 if (Array.IndexOf(pet.MainframeModels, pet.Brain.Model) < 0 && pet.Brain.Model != null) models.Text = pet.Brain.Model;
                 if (Array.IndexOf(pet.MainframeVoiceIds, pet.Saved.VoiceId) < 0) voicePicker.Text = "Voices";
-                for (int i = 0; i < brains.Length; i++) { brains[i].Checked = i == pet.MainframeTier; brains[i].InvalidateVisual(); }
+                bool noAi = pet.MainframeNoAi;
+                offRung.Checked = noAi; offRung.InvalidateVisual();
+                for (int i = 0; i < brains.Length; i++) { brains[i].Checked = !noAi && i == pet.MainframeTier; brains[i].InvalidateVisual(); }
                 for (int i = 0; i < voices.Length; i++) if (voices[i] != null) { voices[i].Checked = i == pet.MainframeVoiceMode; voices[i].InvalidateVisual(); }
                 brainName.Text = pet.Brain.Remote != null ? pet.Brain.Remote.Name + " · " + pet.Brain.Model : pet.Brain.Model ?? "Her brain isn't set up yet";
                 brainNote.Text = pet.MainframeProblem ?? (pet.Brain.Provider != null ? "ChatGPT plan · retained account" : pet.MainframeTier > 0 && pet.MainframeConnecting ? "Checking the key..." : pet.MainframeProblem ?? pet.MainframeProgress ?? (pet.Brain.Remote != null ? "Key saved, ends " + Voice.Tail(pet.MainframeBrainKey) : pet.MainframeTier > 0 ? "Paste a brain key and press Connect." : pet.Brain.Server != null ? pet.Brain.Server : pet.Brain.Model == null ? "Set up her brain, or open Ollama and press Refresh." : "Local model · Ollama"));
                 brainNote.Text = Brain.Brief(brainNote.Text) ?? brainNote.Text;
+                if (noAi) { brainName.Text = "No AI"; brainNote.Text = "No brain runs, and nothing is sent anywhere."; }
                 tierNote.Text = pet.MainframeTier == 1 ? pet.Brain.Remote?.Kind == "nvidia" ? "Most NVIDIA models can't see your screen." : "NVIDIA, Gemini, OpenRouter" : pet.MainframeTier == 2 ? "Gemini, OpenRouter, ChatGPT, Claude, DeepSeek" : "Pick one. Only one brain runs at a time.";
                 textKey.Cue = pet.MainframeBrainKey != null ? "Key saved, ends " + Voice.Tail(pet.MainframeBrainKey) : pet.MainframeTier == 1 ? "NVIDIA / Google AI Studio / OpenRouter" : "Paste a brain API key";
                 textConnect.Text = pet.MainframeBrainKey == null || !string.IsNullOrWhiteSpace(textKey.Box.Text) ? "Connect" : "Forget";
@@ -578,17 +612,24 @@ namespace CapriDesktop
                 voiceConnect.Text = pet.MainframeVoiceKey == null || !string.IsNullOrWhiteSpace(voiceKey.Box.Text) ? "Connect" : "Forget";
                 voiceNote.Text = pet.MainframeVoiceProblem ?? (pet.MainframeVoiceMode == 0 ? "Silent · text only" : pet.MainframeVoiceMode == 1 ? "Retained local voice · existing profile" : pet.MainframeVoiceMode == 2 ? "Local voice server" : pet.MainframeVoiceName ?? "Connect your ElevenLabs key.");
                 if (nameListeningNote != null) nameListeningNote.Text = pet.NameListeningStatus;
+                if (micPicker != null)
+                {
+                    micPicker.Text = pet.MicTesting ? Pet.LevelBar(pet.MicLevel) : pet.MainframeMicLabel;
+                    micTestKey.Text = pet.MicTesting ? "Stop" : "Test";
+                    speakerPicker.Text = pet.MainframeSpeakerLabel;
+                }
                 customVoice.Text = string.IsNullOrEmpty(pet.MainframeLocalModel) ? "Voice server" : pet.MainframeLocalModel;
                 showHide.Text = pet.Away ? "Show Capri" : "Hide Capri";
+                ride.Text = pet.Riding ? "Hop off" : "Ride cursor";
                 updateNote.Text = pet.MainframeUpdate;
                 Read(nickname, Brain.Nickname); Read(custom, pet.Brain.Model); Read(localAddress, pet.Brain.Server); Read(voiceId, pet.Saved.VoiceId);
                 more.Text = paged ? "Back" : "Settings"; advanced.Text = pet.Saved.AdvancedSettings ? "Simple Settings" : "Advanced Settings";
-                string next = paged + "|" + pet.Saved.AdvancedSettings + "|" + Pet.FrameSize(pet.Saved.MainframeSize) + "|" + pet.MainframeTier + "|" + pet.MainframeVoiceMode + "|" + (pet.MainframeVoiceKey != null) + "|" + Expanded + "|" + (paidKey != null);
+                string next = paged + "|" + pet.Saved.AdvancedSettings + "|" + Pet.FrameSize(pet.Saved.MainframeSize) + "|" + pet.MainframeTier + "|" + pet.MainframeVoiceMode + "|" + (pet.MainframeVoiceKey != null) + "|" + Expanded + "|" + (paidKey != null) + "|" + noAi;
                 if (layout != next) { layout = next; ArrangePage(); }
             }
             finally { syncing = false; }
         }
-        private bool Expanded { get { return pet.MainframeTier == 0 && (pet.Brain.Model == null || pet.MainframePulling); } }
+        private bool Expanded { get { return !pet.MainframeNoAi && pet.MainframeTier == 0 && (pet.Brain.Model == null || pet.MainframePulling); } }
         internal bool SettingsShown { get { return paged; } }
         internal void Shut() { finishing = true; Close(); }
         internal void ShowSettings(bool on) { paged = on; layout = null; CloseMenus(); Top(); Sync(); }
@@ -616,8 +657,10 @@ namespace CapriDesktop
         private void ArrangePage()
         {
             bool simple = !pet.Saved.AdvancedSettings;
-            int tier = pet.MainframeTier, voice = pet.MainframeVoiceMode;
-            double extra = Expanded ? 118 : 0, shift = extra + (tier == 0 ? 94 : 128 + (paidKey != null ? 86 : 0));
+            bool noAi = pet.MainframeNoAi;
+            // Under No AI nothing of a tier shows: no model picker, no key box, so BRAIN is as short as it gets.
+            int tier = noAi ? 0 : pet.MainframeTier, voice = pet.MainframeVoiceMode;
+            double extra = Expanded ? 118 : 0, shift = extra + OffRow + (tier == 0 ? 94 : 128 + (paidKey != null ? 86 : 0)) - (noAi ? 34 : 0);
             double fold = voice == 0 ? 72 : voice == 3 && pet.MainframeVoiceKey != null ? 0 : 36;
             double bottom = 0;
             foreach (Item item in items)
@@ -632,7 +675,7 @@ namespace CapriDesktop
                     double anchor = y + (control is NeonHead ? 5 : 0);
                     if (simple && In(anchor, right ? FoldedRight : FoldedLeft)) show = false;
                     int[][] missing = right ? MissingRight : MissingLeft;
-                    if (!right && pet.MainframeInputSetup) missing = new[] { new[] { 428, 648 }, new[] { 672, 700 }, new[] { 910, 1121 }, new[] { 1150, 1314 }, new[] { 1342, 1728 } };
+                    if (!right && pet.MainframeInputSetup) missing = new[] { new[] { 428, 648 }, new[] { 910, 1121 }, new[] { 1150, 1314 }, new[] { 1342, 1728 } };
                     y = Lift(anchor, missing, right ? FoldedRight : FoldedLeft, simple) - (control is NeonHead ? 5 : 0);
                     if (right && !simple && anchor >= 466 && control != huskMode && control != huskLabel && control != thinkingLevel && control != thinkingLabel && control != thinkingExtra && control != extraLabel) y += control == huskVerbosity ? 84 : 112;
                 }
@@ -640,9 +683,13 @@ namespace CapriDesktop
                 {
                     if (control == setup || item.Y == 264) show &= Expanded;
                     if (item.Y == 138 || item.Y == 160 || item.Y == 182) show &= Expanded;
-                    if (control == models) show &= !Expanded;
-                    if (control == refresh) y = Expanded ? 226 : 134;
-                    if (control == tierNote || Array.IndexOf(brains, control) >= 0 || control == freeKeys || control == textKey || control == textConnect || item.Y == 294) y += extra;
+                    if (control == models) show &= !Expanded && !noAi;
+                    if (control == refresh) { y = Expanded ? 226 : 134; show &= !noAi; }
+                    if (control == tierNote || control == offRung || Array.IndexOf(brains, control) >= 0 || control == freeKeys || control == textKey || control == textConnect || item.Y == 294) y += extra;
+                    // Everything from the tiers down to the key box sits one row lower, under OFF.
+                    if (Array.IndexOf(brains, control) >= 0 || control == freeKeys || control == textKey || control == textConnect || item.Y == 294 || item.Y == 315 || item.Y == 350) y += OffRow;
+                    // No AI hides the model row, so the rows under it come up into its place.
+                    if (noAi && (control == tierNote || control == offRung || Array.IndexOf(brains, control) >= 0)) y -= 34;
                     if (control == textKey || control == textConnect) show &= tier > 0;
                     if (item.Y == 294) show &= tier == 1;
                     if (item.Y == 315 || item.Y == 350) show &= tier == 1 && paidKey != null;
@@ -655,8 +702,10 @@ namespace CapriDesktop
                         if (item.Y >= 499) y -= 117 + fold;
                         // A section control starts five pixels above its authored band.
                         // Move CAPRI's heading with its rows past the name controls.
-                        if (OperatingSystem.IsLinux() && control != nameListeningNote &&
+                        if (OperatingSystem.IsLinux() && control != nameListeningNote && !Device(control) &&
                             (item.Y >= 539 || control is NeonHead band && band.Text == "CAPRI")) y += 70;
+                        // Mic and Her speaker sit under the voice note, so Listen for Capri and everything after move down two rows.
+                        if (micPicker != null && !Device(control) && (item.Y >= 524 || control is NeonHead capri && capri.Text == "CAPRI")) y += DeviceRows;
                     }
                     if (item.Y == 310) show &= voice == 3;
                     if (item.Y == 346)

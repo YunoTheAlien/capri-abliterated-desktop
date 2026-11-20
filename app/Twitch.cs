@@ -209,15 +209,17 @@ namespace CapriDesktop
         // What chat may set off, and what it said before her red alert existed. A list somebody has edited is
         // theirs: deleting a word is the documented way to switch that prank off, so only a list that still
         // reads exactly as the old one shipped is brought up to date.
-        internal const string BullyStock = "crash, clones, rampage, dance, mess, alert";
-        private const string BullyWas = "crash, clones, rampage, dance, mess";
+        internal const string BullyStock = "crash, clones, rampage, dance, mess, alert, surprise, goodbye, alive";
+        // Every list she shipped before, so a file still on any of them gets the new words.
+        private static readonly string[] BullyWas = { "crash, clones, rampage, dance, mess", "crash, clones, rampage, dance, mess, alert" };
         // The note under that list, which has to go back with the word: a prank nothing explains is half a
         // prank. Again by exact match, so a note somebody has written over is theirs.
         private const string BullyNoteWas = "> mess: your icons scatter for a bit. None of them touches a file.";
         private static readonly string[] BullyNoteNow =
         {
-            "> mess: your icons scatter for a bit. alert: six seconds of flashing red hexagons across your",
-            "> screens with her alarm over them, ending on any key. None of them touches a file."
+            ">! mess: your icons scatter for a bit. alert: six seconds of flashing red hexagons across your",
+            ">! screens with her alarm over them, ending on any key. None of them touches a file.",
+            ">! surprise, goodbye, alive: a GLaDOS line or a bit of Still Alive, with the words in her bubble."
         };
 
         // The timers she ships and the note explaining them, in one place. The file she writes and the top-up
@@ -232,14 +234,14 @@ namespace CapriDesktop
 
         private static readonly string[] TimerNotes =
         {
-            "> Every time takes s, m or h: 30s, 20m, 3h.",
-            "> general: gap between replies to ordinary chat. callout: gap for !capri. 0 means every message.",
-            "> check every: how often she looks for who is live.",
-            "> mention again: how long before she brings the same person up twice.",
-            "> still live for: how long they count as still live, so a long stream is not announced over and over.",
-            "> at most: how many she mentions at once.",
-            "> bully: gap between pranks chat sets off.",
-            "> prank for: how long a prank lasts before she clears it up. 30s is the shortest she will take."
+            ">! Every time takes s, m or h: 30s, 20m, 3h.",
+            ">! general: gap between replies to ordinary chat. callout: gap for !capri. 0 means every message.",
+            ">! check every: how often she looks for who is live.",
+            ">! mention again: how long before she brings the same person up twice.",
+            ">! still live for: how long they count as still live, so a long stream is not announced over and over.",
+            ">! at most: how many she mentions at once.",
+            ">! bully: gap between pranks chat sets off.",
+            ">! prank for: how long a prank lasts before she clears it up. 30s is the shortest she will take."
         };
 
         private static string TimerBlock
@@ -291,8 +293,9 @@ namespace CapriDesktop
                 bool prankList = false;
                 for (int one = 0; one < lines.Count; one++)
                 {
-                    if (lines[one].Trim() != BullyWas) continue;
-                    lines[one] = lines[one].Replace(BullyWas, BullyStock);
+                    string was = lines[one].Trim();
+                    if (Array.IndexOf(BullyWas, was) < 0) continue;
+                    lines[one] = lines[one].Replace(was, BullyStock);
                     prankList = true;
                     break;
                 }
@@ -301,6 +304,14 @@ namespace CapriDesktop
                     if (lines[one].Trim() != BullyNoteWas) continue;
                     lines.RemoveAt(one);
                     lines.InsertRange(one, BullyNoteNow);
+                    prankList = true;
+                    break;
+                }
+                // The two-line note from before the sound pranks gets their line under it.
+                for (int one = 0; one < lines.Count; one++)
+                {
+                    if (lines[one].Trim() != BullyNoteNow[1] || (one + 1 < lines.Count && lines[one + 1].Trim() == BullyNoteNow[2])) continue;
+                    lines.Insert(one + 1, BullyNoteNow[2]);
                     prankList = true;
                     break;
                 }
@@ -335,70 +346,70 @@ namespace CapriDesktop
                 {
                     "# Capri on Twitch",
                     "",
-                    "> Read fresh every message, so edit it while she runs.",
-                    "> On Twitch she is a chatbot only: no apps, no keys, no files, no moderating, and she never posts back.",
+                    ">! Read fresh every message, so edit it while she runs.",
+                    ">! On Twitch she is a chatbot only: no apps, no keys, no files, no moderating, and she never posts back.",
                     "",
                     "## What you can say to her",
                     "",
-                    "> Spoken or typed, read without her brain. These only turn the live mentions on and off.",
+                    ">! Spoken or typed, read without her brain. These only turn the live mentions on and off.",
                     ">",
-                    ">   turn off twitch live notifications",
-                    ">   turn on twitch live notifications",
-                    ">   stop telling me who's live",
+                    ">!   turn off twitch live notifications",
+                    ">!   turn on twitch live notifications",
+                    ">!   stop telling me who's live",
                     ">",
-                    "> Right-click her for Twitch > Read chat, Twitch > Edit twitch.md, and Clear memory.",
+                    ">! Right-click her for Twitch > Read chat, Twitch > Edit twitch.md, and Clear memory.",
                     "",
                     "## My channel",
                     "",
                     "channel:",
                     "",
-                    "> The chat she reads. Name or link. No account needed, so any live channel works.",
+                    ">! The chat she reads. Name or link. No account needed, so any live channel works.",
                     "",
                     "## Channels to watch",
                     "",
-                    "> She tells you when these go live. One per line or commas, best first.",
+                    ">! She tells you when these go live. One per line or commas, best first.",
                     "",
                     "## Timers",
                     "",
                     TimerBlock,
                     "## Streamer bully",
                     "",
-                    "> What chat can set off on your screen with !capri <word>. Delete a word to switch it off, empty the",
-                    "> list and chat can do nothing. These ignore full screen and the stream on purpose, but never fire while",
-                    "> she has your mouse or is mid-job. They are the only things chat can ever make her do.",
+                    ">! What chat can set off on your screen with !capri <word>. Delete a word to switch it off, empty the",
+                    ">! list and chat can do nothing. These ignore full screen and the stream on purpose, but never fire while",
+                    ">! she has your mouse or is mid-job. They are the only things chat can ever make her do.",
                     "",
                     BullyStock,
                     "",
-                    "> crash: her fake blue screen for five seconds. clones: copies of her that wander until cleared.",
-                    "> rampage: your desktop icons fly around for ten seconds, then go home. dance: she dances.",
-                    "> mess: your icons scatter for a bit. alert: six seconds of flashing red hexagons across your",
-                    "> screens with her alarm over them, ending on any key. None of them touches a file.",
+                    ">! crash: her fake blue screen for five seconds. clones: copies of her that wander until cleared.",
+                    ">! rampage: your desktop icons fly around for ten seconds, then go home. dance: she dances.",
+                    ">! mess: your icons scatter for a bit. alert: six seconds of flashing red hexagons across your",
+                    ">! screens with her alarm over them, ending on any key. None of them touches a file.",
                     "",
                     "## Connection",
                     "",
                     "token:",
                     "login:",
                     "",
-                    "> Leave blank. Only needed the day you want her posting into chat as an account.",
+                    ">! Leave blank. Only needed the day you want her posting into chat as an account.",
                     "",
                     "## Banned words",
                     "",
-                    "> One per line or commas. She stays silent on these, and will not say them herself while reading chat.",
-                    "> One word matches whole, so ip misses script. Anything with a space matches anywhere. Put slurs here.",
+                    ">! One per line or commas. She stays silent on these, and will not say them herself while reading chat.",
+                    ">! One word matches whole, so ip misses script. Anything with a space matches anywhere. Put slurs here.",
                     "",
                     "location, area, address, addy, postcode, zip code, suburb, ip, dox, doxx",
                     "where do you, where are you, what's your, whats your, real name, phone number",
                     "",
                     "## Banned users",
                     "",
-                    "> Ignored completely. Bots go here. One per line or commas.",
+                    ">! Ignored completely. Bots go here. One per line or commas.",
                     "",
                     "nightbot, streamelements, streamlabs, moobot, fossabot, sery_bot",
                     "",
                     "## Ignored",
                     "",
-                    "> Not worth a reply. A message of only these is skipped. She can still say them, so emotes go here.",
-                    "> One per line or commas.",
+                    ">! Not worth a reply. A message of only these is skipped. She can still say them, so emotes go here.",
+                    ">! One per line or commas.",
                     "",
                     "LUL, KEKW, OMEGALUL, Pog, PogChamp, POGGERS, Sadge, copium, W, L, f, lol, lmao, gg",
                     ""

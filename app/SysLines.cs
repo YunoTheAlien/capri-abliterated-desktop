@@ -19,12 +19,10 @@ namespace CapriDesktop
     internal static class SysLines
     {
         internal const string FileName = "sys.md";
-        // The adult switch. Kept here, at the bottom of a file about her wording, rather than on a menu
-        // anyone can hit by accident. 1 is on, anything else is off.
+        // The switch's key, the last thing in the file. 1 is on, anything else is off.
         internal const string SenpaiKey = "confirm";
         // What the key used to be called. Still read, so a file written before this keeps its answer rather
         // than being treated as unanswered and asking again.
-        internal const string WasSenpaiKey = "uncensored";
 
         // Programs she will not look at with Watch my screen on. Comma separated, matched against the program's
         // own name and its window title, so "brave" covers brave.exe and "qview" covers the image viewer whatever
@@ -36,6 +34,70 @@ namespace CapriDesktop
         // is on screen, the same as anything else she looks at. Blank means she works out which one from what
         // they keep in front; a name here settles it.
         internal const string CalendarKey = "my calendar";
+
+        // Her quiet: how long the quiet asked for in words lasts, and what makes her quiet on her own.
+        internal const string QuietHeading = "## Her quiet";
+        internal const string QuietTimeKey = "quiet time";
+        internal const string QuietCallsKey = "quiet on calls";
+        internal const string QuietVideoKey = "quiet on videos";
+        internal const string CallAppsKey = "call apps";
+        // Titles a window carries only while a call is on, not while the app merely sits open: Zoom's meeting
+        // window, a Google Meet tab, a Slack huddle, a Webex meeting, Teams' meeting and call windows.
+        internal const string CallAppsStock = "zoom meeting, zoom webinar, meet -, huddle, webex meeting, meeting in, call with, meeting compact view";
+
+        internal static string[] QuietLines()
+        {
+            return new[]
+            {
+                QuietHeading,
+                "",
+                ">! quiet time:      minutes she keeps to herself when you ask for quiet in words. Talking to her ends it.",
+                ">! quiet on calls:  1 and she goes quiet by herself while a call app below has a window open.",
+                ">! quiet on videos: 1 and she goes quiet by herself while a video plays full screen.",
+                ">! call apps:       comma separated, matched on any window's title or program. These are titles a",
+                ">!                  window has only during a call, so an app sitting open does not count.",
+                ">! Asked for quiet during a game, she stays quiet in that game until you tell her she can talk.",
+                "",
+                Line(QuietTimeKey, "120"),
+                Line(QuietCallsKey, "1"),
+                Line(QuietVideoKey, "1"),
+                Line(CallAppsKey, CallAppsStock)
+            };
+        }
+
+        internal static double QuietMinutes
+        {
+            get
+            {
+                double minutes;
+                if (!double.TryParse((Of(QuietTimeKey) ?? "").Trim(), System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out minutes) || minutes <= 0) minutes = 120;
+                return Math.Max(5, Math.Min(1440, minutes));
+            }
+        }
+
+        internal static bool QuietOnCalls { get { return Yes(Of(QuietCallsKey), true); } }
+
+        internal static bool QuietOnVideos { get { return Yes(Of(QuietVideoKey), true); } }
+
+        internal static string[] CallApps
+        {
+            get
+            {
+                string said = Of(CallAppsKey);
+                if (said == null) said = CallAppsStock;
+                List<string> apps = new List<string>();
+                foreach (string one in said.Split(',')) if (one.Trim().Length > 1) apps.Add(one.Trim().ToLowerInvariant());
+                return apps.ToArray();
+            }
+        }
+
+        private static bool Yes(string said, bool blank)
+        {
+            string plain = (said ?? "").Trim();
+            if (plain.Length == 0) return blank;
+            return plain == "1" || plain.Equals("yes", StringComparison.OrdinalIgnoreCase) || plain.Equals("on", StringComparison.OrdinalIgnoreCase) || plain.Equals("true", StringComparison.OrdinalIgnoreCase);
+        }
 
         // Whether her hello and goodbye come from whoever she is, or from the lines below. 1 is her personality.
         // Her error line is never part of this: that one has to read the same whoever she is, or a report of it
@@ -52,13 +114,15 @@ namespace CapriDesktop
         // not change; the right side is only what is shown.
         // Labels that only mean anything with the switch on. They are not written into a file on the other
         // side of it, and one already there is taken out, the same as the moods.
-        internal static bool SenpaiLabel(string named) { return named == "slaps you"; }
+        internal static bool SenpaiLabel(string named)
+        {
+            return !string.IsNullOrEmpty(named) && (named == Extended.Get("click.heard") || Legacy.WasLabel(named));
+        }
 
         internal static readonly string[,] Stock =
         {
             { "startup", "startup" },
             { "pets you", "pets you" },
-            { "slaps you", "slaps you" },
             { "high five", "high five" },
             { "picks you up", "picks you up" },
             { "clang", "clang" },
@@ -95,7 +159,7 @@ namespace CapriDesktop
 
         internal static WrittenNote Open() { Write(false); return new WrittenNote(Kept, Text, writing); }
 
-        // Whether adult mode is on, straight out of the file. Null when the file does not mention it yet, which is
+        // Whether the switch is on, straight out of the file. Null when the file does not mention it yet, which is
         // how an older sys.md is told apart from one deliberately set to off.
         internal static bool? Senpai
         {
@@ -107,7 +171,12 @@ namespace CapriDesktop
                     string said;
                     // The old name too, so a file written before the rename keeps the answer it has
                     // rather than reading as unanswered and asking again.
-                    if (!theirs.TryGetValue(SenpaiKey, out said) && !theirs.TryGetValue(WasSenpaiKey, out said)) return null;
+                    if (!theirs.TryGetValue(SenpaiKey, out said))
+                    {
+                        said = null;
+                        foreach (KeyValuePair<string, string> one in theirs) if (Legacy.WasSysKey(one.Key)) { said = one.Value; break; }
+                        if (said == null) return null;
+                    }
                     said = (said ?? "").Trim();
                     if (said.Length == 0) return null;
                     return said == "1" || said.Equals("yes", StringComparison.OrdinalIgnoreCase) || said.Equals("on", StringComparison.OrdinalIgnoreCase) || said.Equals("true", StringComparison.OrdinalIgnoreCase);
@@ -123,7 +192,7 @@ namespace CapriDesktop
             try
             {
                 if (!File.Exists(Kept)) { Write(false); }
-                string had = File.ReadAllText(Kept);
+                string had = CapriDesktop.Notes.ReadAll(Kept);
                 // Yes unlocks it. It ships No, so a fresh install has answered nothing.
                 string want = SenpaiKey + ": " + (on ? "Yes" : "No");
                 Match found = Regex.Match(had, @"(?mi)^[ \t]*" + Regex.Escape(SenpaiKey) + @"[ \t]*:[ \t]*.*$");
@@ -131,7 +200,7 @@ namespace CapriDesktop
                 else
                 {
                     if (had.Length > 0 && !had.EndsWith("\n")) had += Environment.NewLine;
-                    // The terms, then the question. Nothing here says what answering it does.
+                    // The terms, then the question.
                     had += Environment.NewLine + SenpaiHeading + Environment.NewLine + Environment.NewLine
                         + string.Join(Environment.NewLine, DealLines(), 1, DealLines().Length - 1) + Environment.NewLine + Environment.NewLine + want + Environment.NewLine;
                 }
@@ -271,7 +340,7 @@ namespace CapriDesktop
                 string kept = Library.Keep(said, Library.Sounds);
                 if (string.Equals(kept, said, StringComparison.OrdinalIgnoreCase)) return;
                 string relative = Library.Sounds + "/" + Path.GetFileName(kept);
-                string text = File.ReadAllText(Kept);
+                string text = CapriDesktop.Notes.ReadAll(Kept);
                 string made = Regex.Replace(text, @"(?mi)^([ \t]*" + Regex.Escape(SaverSoundKey) + @"[ \t]*:[ \t]*)[^\r\n]*", "${1}" + relative.Replace("$", "$$"));
                 if (made != text) Notes.Put(Kept, made);
             }
@@ -338,26 +407,26 @@ namespace CapriDesktop
             {
                 SaverHeading,
                 "",
-                "> What fills the screen while the PC is left alone. 1 is on, 0 is off. Spacebar ends it, or",
-                "> Escape, and it never covers a game, a full screen app or a stream. Her right-click menu shows",
-                "> any of them straight away without changing this.",
+                ">! What fills the screen while the PC is left alone. 1 is on, 0 is off. Spacebar ends it, or",
+                ">! Escape, and it never covers a game, a full screen app or a stream. Her right-click menu shows",
+                ">! any of them straight away without changing this.",
                 ">",
-                "> style:       terminals, little windows writing their own output. hexes, flashing hexagons.",
-                ">              code, lines written down columns. rain, characters falling.",
-                "> colour:      a name like blue or a hex code, the same as her bubble's. Blank is hers, and red",
-                ">              for hexes. background: what is behind it. Blank is near black.",
-                "> size:        small, normal, large, or a number where 1 is normal and 2 is twice.",
-                "> speed:       slow, normal, fast, or a number the same way.",
-                "> see through: 0 to 100, how much of the desktop shows through it. 0 is solid.",
-                "> screens:     all, or main for only the screen she is on.",
-                "> flashing:    on, gentle or off. Gentle slows it right down and off holds everything steady.",
-                "> sound:       a .wav to loop while it is shown from her menu or sounded as her red alert. Blank",
-                ">              is silent.",
-                ">              It never plays when the screensaver comes up by itself, since that is an alarm at an",
-">              empty chair. Nothing of the sort ships with her: this is for a file of your own.",
-                "> volume:      0 to 100, how loud that is against her sound volume. A looping alarm wants far",
-                ">              less than her chimes do, so it starts at 20.",
-                "> after:       minutes, and it takes a fraction, so 0.2 is twelve seconds.",
+                ">! style:       terminals, little windows writing their own output. hexes, flashing hexagons.",
+                ">!              code, lines written down columns. rain, characters falling.",
+                ">! colour:      a name like blue or a hex code, the same as her bubble's. Blank is hers, and red",
+                ">!              for hexes. background: what is behind it. Blank is near black.",
+                ">! size:        small, normal, large, or a number where 1 is normal and 2 is twice.",
+                ">! speed:       slow, normal, fast, or a number the same way.",
+                ">! see through: 0 to 100, how much of the desktop shows through it. 0 is solid.",
+                ">! screens:     all, or main for only the screen she is on.",
+                ">! flashing:    on, gentle or off. Gentle slows it right down and off holds everything steady.",
+                ">! sound:       a .wav to loop while it is shown from her menu or sounded as her red alert. Blank",
+                ">!              is silent.",
+                ">!              It never plays when the screensaver comes up by itself, since that is an alarm at an",
+">!              empty chair. Nothing of the sort ships with her: this is for a file of your own.",
+                ">! volume:      0 to 100, how loud that is against her sound volume. A looping alarm wants far",
+                ">!              less than her chimes do, so it starts at 20.",
+                ">! after:       minutes, and it takes a fraction, so 0.2 is twelve seconds.",
                 ""
             };
         }
@@ -407,7 +476,7 @@ namespace CapriDesktop
             try
             {
                 if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-                string had = File.ReadAllText(Kept);
+                string had = CapriDesktop.Notes.ReadAll(Kept);
                 if (had.IndexOf(ColourHeading, StringComparison.OrdinalIgnoreCase) < 0) return;
                 for (int one = 0; one < WentToLayout.GetLength(0); one++)
                 {
@@ -493,7 +562,7 @@ namespace CapriDesktop
                     return;
                 }
                 if (about.LastWriteTimeUtc == read && about.Length == wasLong) return;
-                string[] lines = File.ReadAllLines(Kept);
+                string[] lines = CapriDesktop.Notes.ReadLines(Kept);
                 lock (writing)
                 {
                     theirs.Clear();
@@ -513,7 +582,7 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
-        // Adult mode is the last thing in the file and has to stay there. It is the one switch in here with a
+        // The switch is the last thing in the file and has to stay there. It is the one switch in here with a
         // consequence, so it wants reading deliberately at the bottom rather than coming upon it halfway down
         // between two label rows.
         //
@@ -532,31 +601,29 @@ namespace CapriDesktop
             {
                 DealHeading,
                 "",
-                "> ACCEPTANCE. By installing or using this software you accept these terms. If you do not accept",
-                "> them, do not use it.",
-                "> LICENCE. Use of the software is governed by LICENSE.md, PolyForm Noncommercial 1.0.0, and by",
-                "> the notices in THIRD-PARTY-NOTICES.md. Noncommercial use only.",
-                "> NO WARRANTY. The software is provided \"as is\", without warranty of any kind, express or",
-                "> implied, including but not limited to the implied warranties of merchantability, fitness for a",
-                "> particular purpose and non-infringement.",
-                "> LIMITATION OF LIABILITY. In no event shall the authors or copyright holders be liable for any",
-                "> claim, damages or other liability, whether in an action of contract, tort or otherwise, arising",
-                "> from, out of or in connection with the software or its use.",
-                "> NO PROFESSIONAL ADVICE. Output is generated text and is not medical, legal, financial or safety",
-                "> advice. Verify anything that matters.",
-                "> USER RESPONSIBILITY. You are responsible for what you instruct the software to do on your",
-                "> computer and for the content you supply to it.",
-                "> THIRD-PARTY SERVICES. If you configure a cloud brain or voice service, your input is sent to",
-                "> that provider and is governed by that provider's own terms and privacy policy.",
-                "> AGE RESTRICTION. This software is for persons aged 18 or over, or the age of majority where",
-                "> you live, whichever is greater.",
-                "> If you've read this far, accepting this isn't needed and might make your girlfriend jealous."
+                ">! ACCEPTANCE. By installing or using this software you accept these terms. If you do not accept",
+                ">! them, do not use it.",
+                ">! LICENCE. Use of the software is governed by LICENSE.md, PolyForm Noncommercial 1.0.0, and by",
+                ">! the notices in THIRD-PARTY-NOTICES.md. Noncommercial use only.",
+                ">! NO WARRANTY. The software is provided \"as is\", without warranty of any kind, express or",
+                ">! implied, including but not limited to the implied warranties of merchantability, fitness for a",
+                ">! particular purpose and non-infringement.",
+                ">! LIMITATION OF LIABILITY. In no event shall the authors or copyright holders be liable for any",
+                ">! claim, damages or other liability, whether in an action of contract, tort or otherwise, arising",
+                ">! from, out of or in connection with the software or its use.",
+                ">! NO PROFESSIONAL ADVICE. Output is generated text and is not medical, legal, financial or safety",
+                ">! advice. Verify anything that matters.",
+                ">! USER RESPONSIBILITY. You are responsible for what you instruct the software to do on your",
+                ">! computer and for the content you supply to it.",
+                ">! THIRD-PARTY SERVICES. If you configure a cloud brain or voice service, your input is sent to",
+                ">! that provider and is governed by that provider's own terms and privacy policy.",
+                ">! AGE RESTRICTION. This software is for persons aged 18 or over, or the age of majority where",
+                ">! you live, whichever is greater.",
+                ">! If you've read this far, accepting this isn't needed and might make your girlfriend jealous."
             };
         }
 
-        // The warning that goes with it, so a block that has to be rebuilt still carries one.
-        // Nothing here says what the answer does. A file anybody may open states the terms and asks whether
-        // they are accepted, and that is all it says.
+        // The note that goes with it, so a block that has to be rebuilt still carries one.
         private static readonly string[] SenpaiNote = { };
 
         // Every line of the file written out with CRLF stripped, which is the whole reason this is done by line
@@ -568,8 +635,16 @@ namespace CapriDesktop
             return new List<string>((had ?? "").Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'));
         }
 
-        private static bool IsSenpaiHead(string row) { return Regex.IsMatch(row ?? "", @"^[ \t]*##[ \t]*(Adult mode|End User Licence Agreement)[ \t]*$", RegexOptions.IgnoreCase); }
-        private static bool IsSenpaiKey(string row) { return Regex.IsMatch(row ?? "", @"^[ \t]*(" + Regex.Escape(SenpaiKey) + "|" + Regex.Escape(WasSenpaiKey) + @")[ \t]*:", RegexOptions.IgnoreCase); }
+        private static bool IsSenpaiHead(string row)
+        {
+            Match m = Regex.Match(row ?? "", @"^[ \t]*##[ \t]*(.+?)[ \t]*$");
+            return m.Success && (m.Groups[1].Value.Equals("End User Licence Agreement", StringComparison.OrdinalIgnoreCase) || Legacy.WasSysHead(m.Groups[1].Value));
+        }
+        private static bool IsSenpaiKey(string row)
+        {
+            Match m = Regex.Match(row ?? "", @"^[ \t]*([^:\r\n]+?)[ \t]*:");
+            return m.Success && (m.Groups[1].Value.Equals(SenpaiKey, StringComparison.OrdinalIgnoreCase) || Legacy.WasSysKey(m.Groups[1].Value));
+        }
 
         // The block pulled out of the file: its heading, whatever note follows it, and the key wherever that ended
         // up. What comes back is the rest of the file, and the block itself through "block".
@@ -599,7 +674,7 @@ namespace CapriDesktop
             return rest;
         }
 
-        // Adult mode is the last thing in the file and stays there. It is the one switch in here with a consequence,
+        // The switch is the last thing in the file and stays there. It is the one switch in here with a consequence,
         // so it wants reading deliberately at the end rather than being come upon halfway down between two label
         // rows. It did not stay there on its own: every name a later build added was appended to the end of the
         // file, which pushed it up into the middle.
@@ -617,7 +692,7 @@ namespace CapriDesktop
             try
             {
                 if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-                string[] rows = File.ReadAllText(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+                string[] rows = CapriDesktop.Notes.ReadAll(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
                 Dictionary<string, bool> had = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
                 List<string> kept = new List<string>();
                 bool dropped = false;
@@ -658,8 +733,8 @@ namespace CapriDesktop
         // The two headings a name belongs under, with the note that goes with each. A file written before a
         // heading existed has the names and not the heading, which is the whole fault below.
         private const string LabelHeading = "The labels after it", SpeechHeading = "What she says herself";
-        private static readonly string[] LabelNote = { "> Taglines, not speech. They name what just happened." };
-        private static readonly string[] SpeechNote = { "> Real speech, not labels. Offer several with \"|\" between them and she picks one." };
+        private static readonly string[] LabelNote = { ">! Taglines, not speech. They name what just happened." };
+        private static readonly string[] SpeechNote = { ">! Real speech, not labels. Offer several with \"|\" between them and she picks one." };
 
         // Every name filed under its own heading. A top up appends a missing name as a bare line and Fitted
         // files it under whatever heading is above the append point, so nine of them sat under the wrong one
@@ -699,7 +774,7 @@ namespace CapriDesktop
             try
             {
                 if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-                string was = File.ReadAllText(Kept);
+                string was = CapriDesktop.Notes.ReadAll(Kept);
                 List<string> rows = Rows(was);
                 for (int at = 0; at < Banners.GetLength(0); at++)
                 {
@@ -768,15 +843,13 @@ namespace CapriDesktop
             try
             {
                 if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-                string had = File.ReadAllText(Kept), made = had;
-                made = Regex.Replace(made, @"(?mi)^[ \t]*##[ \t]*Adult mode[ \t\r]*$", SenpaiHeading);
+                string had = CapriDesktop.Notes.ReadAll(Kept), made = had;
+                made = Regex.Replace(made, @"(?m)^[ \t]*##[ \t]*([^\r\n]+?)[ \t]*(?=\r?$)", m => Legacy.WasSysHead(m.Groups[1].Value) ? SenpaiHeading : m.Value);
                 // A label that only means something with the switch on, taken out of a file on the other side.
                 // The switch alone: this deletes from disk, and going off air would not put them back.
-                if (!Brain.Uncensored)
-                    for (int line = 0; line < Stock.GetLength(0); line++)
-                        if (SenpaiLabel(Stock[line, 0]))
-                            made = Regex.Replace(made, @"(?mi)^[ \t]*" + Regex.Escape(Stock[line, 0]) + @"[ \t]*:[^\r\n]*\r?\n?", "");
-                made = Regex.Replace(made, @"(?mi)^([ \t]*)" + Regex.Escape(WasSenpaiKey) + @"([ \t]*:)", "$1" + SenpaiKey + "$2");
+                if (!Brain.SenpaiOn)
+                    made = Regex.Replace(made, @"(?m)^[ \t]*([^:\r\n#>]+?)[ \t]*:[^\r\n]*\r?\n?", m => SenpaiLabel(m.Groups[1].Value.Trim()) ? "" : m.Value);
+                made = Regex.Replace(made, @"(?m)^([ \t]*)([^:\r\n#>]+?)([ \t]*:)", m => Legacy.WasSysKey(m.Groups[2].Value) ? m.Groups[1].Value + SenpaiKey + m.Groups[3].Value : m.Value);
                 if (made == had) return;
                 Notes.Put(Kept, made);
                 lock (writing) { read = DateTime.MinValue; wasLong = -1; }
@@ -793,7 +866,7 @@ namespace CapriDesktop
                 for (int line = 0; line < Stock.GetLength(0); line++) belongs[Stock[line, 0]] = LabelHeading;
                 for (int line = 0; line < Spoken.GetLength(0); line++) belongs[Spoken[line, 0]] = SpeechHeading;
 
-                string had = File.ReadAllText(Kept);
+                string had = CapriDesktop.Notes.ReadAll(Kept);
                 List<string> rows = Rows(had), kept = new List<string>();
                 Dictionary<string, List<string>> moved = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
                 moved[LabelHeading] = new List<string>();
@@ -880,14 +953,14 @@ namespace CapriDesktop
                 {
                     "# Her settings", "",
                     "## How she comes and goes", "",
-                    "> 1: her hello and goodbye come from her personality file. 0: from the lines above.", "",
+                    ">! 1: her hello and goodbye come from her personality file. 0: from the lines above.", "",
                     "personality lines:    1", "",
                     "hello morning:        Good morning, mate.",
                     "goodbye:              Later, mate.", "",
                     "high five:            high five!!!",
                     "clang:                clang", "",
                     "## What she says herself", "",
-                    "> Real speech, not labels. Offer several with \"|\" between them and she picks one.", "",
+                    ">! Real speech, not labels. Offer several with \"|\" between them and she picks one.", "",
                     "broken:               There's something seriously broken with my code.",
                     "error:                error", "",
                     SenpaiHeading, "",
@@ -895,7 +968,7 @@ namespace CapriDesktop
                 };
                 Notes.Put(Kept, string.Join(Environment.NewLine, stranded) + Environment.NewLine);
                 Filed();
-                List<string> rows = Rows(File.ReadAllText(Kept));
+                List<string> rows = Rows(CapriDesktop.Notes.ReadAll(Kept));
 
                 string under = "";
                 Dictionary<string, string> sits = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -930,15 +1003,15 @@ namespace CapriDesktop
                 // Their words, not the stock ones.
                 if (value["hello morning"] != "Good morning, mate.") wrong.Add("their hello was rewritten: " + value["hello morning"]);
                 if (value["high five"] != "high five!!!") wrong.Add("their tagline was rewritten: " + value["high five"]);
-                string text = File.ReadAllText(Kept);
+                string text = CapriDesktop.Notes.ReadAll(Kept);
                 if (text.IndexOf("## " + LabelHeading, StringComparison.Ordinal) < 0) wrong.Add("the labels heading was never written");
                 if (text.IndexOf(LabelNote[0], StringComparison.Ordinal) < 0) wrong.Add("the labels heading went in without its note");
                 if (wrong.Count > 0) throw new Exception("The filing pass left names in the wrong place: " + string.Join(" | ", wrong.ToArray()));
 
                 // Run twice: a file already filed is left exactly as it is.
-                string once = File.ReadAllText(Kept);
+                string once = CapriDesktop.Notes.ReadAll(Kept);
                 Filed();
-                if (File.ReadAllText(Kept) != once) throw new Exception("The filing pass moved something on a file it had already filed.");
+                if (CapriDesktop.Notes.ReadAll(Kept) != once) throw new Exception("The filing pass moved something on a file it had already filed.");
                 // The grouping pass over a file it has already grouped. It once added a blank line in front of
                 // every section each time, so the file grew a little on every start.
                 Kept = Path.Combine(folder, "sys-grouped.md");
@@ -958,22 +1031,20 @@ namespace CapriDesktop
                 };
                 Notes.Put(Kept, string.Join(Environment.NewLine, jumbled) + Environment.NewLine);
                 Grouped();
-                string grouped = File.ReadAllText(Kept);
+                string grouped = CapriDesktop.Notes.ReadAll(Kept);
                 if (grouped.IndexOf(Banners[0, 0], StringComparison.Ordinal) < 0) throw new Exception("The grouping pass wrote no banner.");
                 if (grouped.IndexOf("## Her calendar", StringComparison.Ordinal) < grouped.IndexOf("## " + IntroHeading, StringComparison.Ordinal))
                     throw new Exception("The grouping pass left the calendar above her intro.");
                 Grouped();
-                if (File.ReadAllText(Kept) != grouped) throw new Exception("The grouping pass changed a file it had already grouped, so the file grows on every start.");
+                if (CapriDesktop.Notes.ReadAll(Kept) != grouped) throw new Exception("The grouping pass changed a file it had already grouped, so the file grows on every start.");
                 Grouped();
-                if (File.ReadAllText(Kept) != grouped) throw new Exception("The grouping pass changed a file it had already grouped twice over.");
+                if (CapriDesktop.Notes.ReadAll(Kept) != grouped) throw new Exception("The grouping pass changed a file it had already grouped twice over.");
                 checks.Add("PASS the grouping pass puts a jumbled sys.md in its groups and leaves one it has already been over exactly as it is");
                 Kept = Path.Combine(folder, "sys-filed.md");
 
                 // Nothing in a file anybody may open says what the answer unlocks.
                 string fresh2 = Text;
-                foreach (string word in new[] { "Adult mode", "uncensored", "sexual", "grown-up", "fetish", "adults only" })
-                    if (fresh2.IndexOf(word, StringComparison.OrdinalIgnoreCase) >= 0)
-                        throw new Exception("A fresh sys.md says " + Voice.Quote(word) + ", which it must never say.");
+                if (Legacy.SaysUnsaid(fresh2)) throw new Exception("A fresh sys.md says a word it must never say.");
                 if (fresh2.IndexOf(SenpaiKey + ":", StringComparison.Ordinal) < 0) throw new Exception("A fresh sys.md has no " + SenpaiKey + " line.");
                 if (fresh2.IndexOf(SenpaiKey + ":", StringComparison.Ordinal) < fresh2.IndexOf(SenpaiHeading, StringComparison.Ordinal))
                     throw new Exception("The question is above the terms it belongs to.");
@@ -987,13 +1058,13 @@ namespace CapriDesktop
         }
 
         // Her intro is the first section in the file. A sys.md that gained it later has it further down, so it
-        // is moved up once, the same way Adult mode is held at the bottom.
+        // is moved up once, the same way the switch is held at the bottom.
         private static void IntroFirst()
         {
             if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
             try
             {
-                string[] rows = File.ReadAllText(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+                string[] rows = CapriDesktop.Notes.ReadAll(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
                 int from = -1, to = rows.Length, first = -1;
                 for (int row = 0; row < rows.Length; row++)
                 {
@@ -1059,7 +1130,7 @@ namespace CapriDesktop
                 try
                 {
                     if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return false;
-                    Match said = Regex.Match(File.ReadAllText(Kept), @"(?mi)^[ \t]*" + Regex.Escape(CleanupKey) + @"[ \t]*:[ \t]*(\S+)");
+                    Match said = Regex.Match(CapriDesktop.Notes.ReadAll(Kept), @"(?mi)^[ \t]*" + Regex.Escape(CleanupKey) + @"[ \t]*:[ \t]*(\S+)");
                     string value = said.Success ? said.Groups[1].Value : "";
                     return value.Equals("yes", StringComparison.OrdinalIgnoreCase) || value == "1" || value.Equals("true", StringComparison.OrdinalIgnoreCase);
                 }
@@ -1072,7 +1143,7 @@ namespace CapriDesktop
             try
             {
                 if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-                string had = File.ReadAllText(Kept);
+                string had = CapriDesktop.Notes.ReadAll(Kept);
                 List<string> block, rows = Rows(had);
                 string key;
                 List<string> rest = WithoutSenpai(rows, out block, out key);
@@ -1106,8 +1177,8 @@ namespace CapriDesktop
             return Regex.IsMatch(row ?? "", @"^[ \t]*" + Regex.Escape(DealHeading) + @"[ \t]*$", RegexOptions.IgnoreCase);
         }
 
-        // The terms go directly above Adult mode, which SenpaiLast then puts under them. Their last line says the
-        // section below unlocks adult content, and on a file from an older build it did not: a top up appends at
+        // The terms go directly above the switch, which SenpaiLast then puts under them. Their last line says the
+        // section below unlocks senpai content, and on a file from an older build it did not: a top up appends at
         // the end, so the colours and the screensaver went in under them and the sentence pointed at the wrong one.
         //
         // Moved, not rewritten. Every line taken out goes back in, so a reworded copy of theirs is kept as theirs.
@@ -1116,7 +1187,7 @@ namespace CapriDesktop
             try
             {
                 if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-                string had = File.ReadAllText(Kept);
+                string had = CapriDesktop.Notes.ReadAll(Kept);
                 List<string> block, rest = WithoutDeal(Rows(had), out block);
                 if (block.Count == 0) return;
                 if (block.Count > 1 && block[1].Length > 0) block.Insert(1, "");
@@ -1174,7 +1245,7 @@ namespace CapriDesktop
                         adding.Add("");
                         adding.Add("## What goes in front of a line");
                         adding.Add("");
-                        adding.Add("> Change these to anything. A trailing space is added for you.");
+                        adding.Add(">! Change these to anything. A trailing space is added for you.");
                         adding.Add("");
                         if (!theirs.ContainsKey("sys prompt")) adding.Add(Line("sys prompt", SysMark));
                         if (!theirs.ContainsKey("you prompt")) adding.Add(Line("you prompt", YouMark));
@@ -1187,7 +1258,7 @@ namespace CapriDesktop
                         adding.Add("");
                         adding.Add("## What she says herself");
                         adding.Add("");
-                        adding.Add("> Real speech, not labels. Offer several with \"|\" between them and she picks one.");
+                        adding.Add(">! Real speech, not labels. Offer several with \"|\" between them and she picks one.");
                         adding.Add("");
                         adding.AddRange(words);
                     }
@@ -1196,9 +1267,9 @@ namespace CapriDesktop
                         adding.Add("");
                         adding.Add("## Never watch these");
                         adding.Add("");
-                        adding.Add("> Programs Watch my screen skips. Comma separated, and a partial name is enough:");
-                        adding.Add("> \"brave\" covers brave.exe. Matched on the program and on its window title.");
-                        adding.Add("> She says nothing at all while one of these is in front.");
+                        adding.Add(">! Programs Watch my screen skips. Comma separated, and a partial name is enough:");
+                        adding.Add(">! \"brave\" covers brave.exe. Matched on the program and on its window title.");
+                        adding.Add(">! She says nothing at all while one of these is in front.");
                         adding.Add("");
                         adding.Add(Line(ExcludedKey, ""));
                     }
@@ -1207,25 +1278,41 @@ namespace CapriDesktop
                         adding.Add("");
                         adding.Add("## Her calendar");
                         adding.Add("");
-                        adding.Add("> The app she opens to read your calendar. Blank and she uses the one you open most.");
-                        adding.Add("> She opens it and reads the screen. Nothing signs in and nothing is sent anywhere.");
+                        adding.Add(">! The app she opens to read your calendar. Blank and she uses the one you open most.");
+                        adding.Add(">! She opens it and reads the screen. Nothing signs in and nothing is sent anywhere.");
                         adding.Add("");
                         adding.Add(Line(CalendarKey, ""));
+                    }
+                    if (!theirs.ContainsKey(Doomscroll.ListKey))
+                    {
+                        adding.Add("");
+                        adding.Add("## Doomscroll guard");
+                        adding.Add("");
+                        adding.Add(">! Sites and apps Doomscroll guard keeps time on, once it's on in Mainframe > Settings > DOOMSCROLL.");
+                        adding.Add(">! Comma separated, matched on the window title: tiktok, youtube shorts, instagram, reddit and x");
+                        adding.Add(">! are known, and any other word counts when it's in the title or the program's name.");
+                        adding.Add("");
+                        adding.Add(Line(Doomscroll.ListKey, Doomscroll.Stock));
+                    }
+                    if (!theirs.ContainsKey(QuietTimeKey))
+                    {
+                        adding.Add("");
+                        adding.AddRange(QuietLines());
                     }
                     // A file from the two builds where that section was headed "The deal" loses it, so the one
                     // below replaces it rather than sitting beside it. It was notes only and never held a
                     // setting, so nothing of theirs can be inside it.
                     Unheaded("## The deal");
-                    // The terms, for a sys.md written before they existed. Added above Adult mode, which SenpaiLast
+                    // The terms, for a sys.md written before they existed. Added above the switch, which SenpaiLast
                     // puts back at the bottom whatever else goes in, so they end up last but one.
-                    if (!Regex.IsMatch(File.ReadAllText(Kept), @"(?mi)^[ \t]*" + Regex.Escape(DealHeading) + @"[ \t\r]*$"))
+                    if (!Regex.IsMatch(CapriDesktop.Notes.ReadAll(Kept), @"(?mi)^[ \t]*" + Regex.Escape(DealHeading) + @"[ \t\r]*$"))
                     {
                         adding.Add("");
                         foreach (string row in DealLines()) adding.Add(row);
                     }
-                    // The intro list, for a sys.md written before it existed. Added above Adult mode, which
+                    // The intro list, for a sys.md written before it existed. Added above the switch, which
                     // SenpaiLast puts back at the bottom whatever else goes in.
-                    if (!Regex.IsMatch(File.ReadAllText(Kept), @"(?mi)^[ \t]*##[ \t]*" + Regex.Escape(IntroHeading) + @"[ \t\r]*$"))
+                    if (!Regex.IsMatch(CapriDesktop.Notes.ReadAll(Kept), @"(?mi)^[ \t]*##[ \t]*" + Regex.Escape(IntroHeading) + @"[ \t\r]*$"))
                     {
                         adding.Add("");
                         foreach (string row in IntroBlock().Replace("\r\n", "\n").TrimEnd('\n').Split('\n')) adding.Add(row);
@@ -1244,7 +1331,7 @@ namespace CapriDesktop
                     bool saverNoteOld = false;
                     if (!saverShort)
                     {
-                        string whole = File.ReadAllText(Kept);
+                        string whole = CapriDesktop.Notes.ReadAll(Kept);
                         if (Regex.IsMatch(whole, @"(?mi)^[ \t]*" + Regex.Escape(SaverHeading) + @"[ \t\r]*$"))
                             foreach (string row in SaverNotes())
                                 if (row.StartsWith(">", StringComparison.Ordinal) && row.Trim().Length > 2 && !whole.Contains(row))
@@ -1271,8 +1358,8 @@ namespace CapriDesktop
                         adding.Add("");
                         adding.Add("## How she comes and goes");
                         adding.Add("");
-                        adding.Add("> 1: her hello and goodbye come from her personality file. 0: from the lines above.");
-                        adding.Add("> Her error line is never affected either way.");
+                        adding.Add(">! 1: her hello and goodbye come from her personality file. 0: from the lines above.");
+                        adding.Add(">! Her error line is never affected either way.");
                         adding.Add("");
                         adding.Add(Line(OwnLinesKey, "1"));
                     }
@@ -1282,8 +1369,10 @@ namespace CapriDesktop
                     List<string> tags = new List<string>();
                     for (int line = 0; line < Stock.GetLength(0); line++)
                         // The switch alone, like the pass that takes them out again.
-                        if (!theirs.ContainsKey(Stock[line, 0]) && (Brain.Uncensored || !SenpaiLabel(Stock[line, 0])))
+                        if (!theirs.ContainsKey(Stock[line, 0]) && (Brain.SenpaiOn || !SenpaiLabel(Stock[line, 0])))
                             tags.Add(Line(Stock[line, 0], Stock[line, 1]));
+                    string clickLabel = Extended.Get("click.heard");
+                    if (Brain.SenpaiOn && clickLabel != null && !theirs.ContainsKey(clickLabel)) tags.Add(Line(clickLabel, clickLabel));
                     if (tags.Count > 0)
                     {
                         adding.Add("");
@@ -1295,7 +1384,7 @@ namespace CapriDesktop
                     }
                 }
                 if (adding.Count == 0) { Painted(); Plainer(); Filed(); Grouped(); Empties(); Tidy(); IntroFirst(); DealLast(); SenpaiLast(); return; }
-                Notes.Put(Kept, Fitted(File.ReadAllText(Kept), adding));
+                Notes.Put(Kept, Fitted(CapriDesktop.Notes.ReadAll(Kept), adding));
                 read = DateTime.MinValue;
                 wasLong = -1;
                 Notes.Refresh(Kept, Text);
@@ -1322,7 +1411,7 @@ namespace CapriDesktop
             try
             {
                 if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-                string had = File.ReadAllText(Kept);
+                string had = CapriDesktop.Notes.ReadAll(Kept);
                 if (had.IndexOf(heading, StringComparison.OrdinalIgnoreCase) < 0) return;
                 List<string> made = new List<string>();
                 bool cutting = false;
@@ -1423,7 +1512,7 @@ namespace CapriDesktop
             if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
             try
             {
-                string[] rows = File.ReadAllText(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+                string[] rows = CapriDesktop.Notes.ReadAll(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
 
                 // Which block each line belongs to, how many keys each block holds, and how many each name holds
                 // across the whole file. A block with no keys whose name has keys somewhere else is the spare one.
@@ -1480,18 +1569,18 @@ namespace CapriDesktop
         }
 
         // Her start-up intro. The names sit under the key with a ">" in front, the way a interest does: take the
-        // ">" off one to switch it on, and with more than one on she picks at random. Adult mode still goes
-        // after this, because Adult mode is always the last thing in the file.
+        // ">" off one to switch it on, and with more than one on she picks at random. The switch still goes
+        // after this, because the switch is always the last thing in the file.
         internal const string IntroHeading = "Her start-up intro";
-        internal static readonly string[] IntroNames = { "shatter", "hijack", "wake", "door" };
+        internal static readonly string[] IntroNames = { "shatter", "hijack", "wake", "door", "door2" };
 
         internal static string IntroBlock()
         {
             StringBuilder made = new StringBuilder();
             made.AppendLine("## " + IntroHeading);
             made.AppendLine();
-            made.AppendLine("> How she turns up. Take the \">\" off one to use it, more than one and she picks.");
-            made.AppendLine("> Needs the Startup Intros mod in mods, approved once under Mainframe > Mods.");
+            made.AppendLine(">! How she turns up. Take the \">\" off one to use it, more than one and she picks.");
+            made.AppendLine(">! Needs the Startup Intros mod in mods, approved once under Mainframe > Mods.");
             made.AppendLine();
             made.AppendLine("intros:");
             foreach (string one in IntroNames) made.AppendLine("> " + one);
@@ -1507,7 +1596,7 @@ namespace CapriDesktop
             {
                 if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return on.ToArray();
                 bool inside = false;
-                foreach (string raw in File.ReadAllLines(Kept))
+                foreach (string raw in CapriDesktop.Notes.ReadLines(Kept))
                 {
                     string one = (raw ?? "").Trim();
                     if (one.StartsWith("#", StringComparison.Ordinal))
@@ -1537,7 +1626,7 @@ namespace CapriDesktop
         {
             try
             {
-                string[] rows = File.ReadAllText(Kept).Replace("\r\n", "\n").Split('\n');
+                string[] rows = CapriDesktop.Notes.ReadAll(Kept).Replace("\r\n", "\n").Split('\n');
                 int start = -1, last = -1;
                 List<string> seen = new List<string>();
                 for (int at = 0; at < rows.Length; at++)
@@ -1593,63 +1682,74 @@ namespace CapriDesktop
                 StringBuilder made = new StringBuilder();
                 made.AppendLine("# Her system lines");
                 made.AppendLine();
-                made.AppendLine("> The small grey labels she shows after \"> sys: \".");
-                made.AppendLine("> Change the text on the right. Leave one blank to use hers.");
-                made.AppendLine("> Names on the left are hers, so keep them as they are.");
-                made.AppendLine("> Delete this file to put everything back.");
+                made.AppendLine(">! The small grey labels she shows after \"> sys: \".");
+                made.AppendLine(">! Change the text on the right. Leave one blank to use hers.");
+                made.AppendLine(">! Names on the left are hers, so keep them as they are.");
+                made.AppendLine(">! Delete this file to put everything back.");
                 made.AppendLine();
                 made.AppendLine();
                 made.AppendLine("############### app settings");
                 made.Append(IntroBlock());
                 made.AppendLine("## Never watch these");
                 made.AppendLine();
-                made.AppendLine("> Programs Watch my screen skips. Comma separated, and a partial name is enough:");
-                made.AppendLine("> \"brave\" covers brave.exe. Matched on the program and on its window title.");
-                made.AppendLine("> She says nothing at all while one of these is in front.");
+                made.AppendLine(">! Programs Watch my screen skips. Comma separated, and a partial name is enough:");
+                made.AppendLine(">! \"brave\" covers brave.exe. Matched on the program and on its window title.");
+                made.AppendLine(">! She says nothing at all while one of these is in front.");
                 made.AppendLine();
                 made.AppendLine(Line(ExcludedKey, ""));
                 made.AppendLine();
                 made.AppendLine("## Her calendar");
                 made.AppendLine();
-                made.AppendLine("> The app she opens to read your calendar. Blank and she uses the one you open most.");
-                made.AppendLine("> She opens it and reads the screen. Nothing signs in and nothing is sent anywhere.");
+                made.AppendLine(">! The app she opens to read your calendar. Blank and she uses the one you open most.");
+                made.AppendLine(">! She opens it and reads the screen. Nothing signs in and nothing is sent anywhere.");
                 made.AppendLine();
                 made.AppendLine(Line(CalendarKey, ""));
+                made.AppendLine();
+                made.AppendLine("## Doomscroll guard");
+                made.AppendLine();
+                made.AppendLine(">! Sites and apps Doomscroll guard keeps time on, once it's on in Mainframe > Settings > DOOMSCROLL.");
+                made.AppendLine(">! Comma separated, matched on the window title: tiktok, youtube shorts, instagram, reddit and x");
+                made.AppendLine(">! are known, and any other word counts when it's in the title or the program's name.");
+                made.AppendLine();
+                made.AppendLine(Line(Doomscroll.ListKey, Doomscroll.Stock));
+                made.AppendLine();
+                foreach (string row in QuietLines()) made.AppendLine(row);
                 made.AppendLine();
                 made.AppendLine();
                 made.AppendLine("############### convo settings");
                 made.AppendLine("## What goes in front of a line");
                 made.AppendLine();
-                made.AppendLine("> Change these to anything. A trailing space is added for you.");
+                made.AppendLine(">! Change these to anything. A trailing space is added for you.");
                 made.AppendLine();
                 made.AppendLine(Line("sys prompt", SysMark));
                 made.AppendLine(Line("you prompt", YouMark));
                 made.AppendLine();
                 made.AppendLine("## What she says herself");
                 made.AppendLine();
-                made.AppendLine("> Real speech, not labels. Offer several with \"|\" between them and she picks one.");
+                made.AppendLine(">! Real speech, not labels. Offer several with \"|\" between them and she picks one.");
                 made.AppendLine();
                 for (int line = 0; line < Spoken.GetLength(0); line++)
                     made.AppendLine(Line(Spoken[line, 0], Spoken[line, 1]));
                 made.AppendLine();
                 made.AppendLine("## How she comes and goes");
                 made.AppendLine();
-                made.AppendLine("> 1: her hello and goodbye come from her personality file. 0: from the lines above.");
-                made.AppendLine("> Her error line is never affected either way.");
+                made.AppendLine(">! 1: her hello and goodbye come from her personality file. 0: from the lines above.");
+                made.AppendLine(">! Her error line is never affected either way.");
                 made.AppendLine();
                 made.AppendLine(Line(OwnLinesKey, "1"));
                 made.AppendLine();
                 made.AppendLine("## The labels after it");
                 made.AppendLine();
-                made.AppendLine("> Taglines, not speech. They name what just happened.");
+                made.AppendLine(">! Taglines, not speech. They name what just happened.");
                 made.AppendLine();
                 for (int line = 0; line < Stock.GetLength(0); line++)
                 {
-                    if (!Brain.Uncensored && SenpaiLabel(Stock[line, 0])) continue;
+                    if (!Brain.SenpaiOn && SenpaiLabel(Stock[line, 0])) continue;
                     made.AppendLine(Line(Stock[line, 0], Stock[line, 1]));
                 }
+                if (Brain.SenpaiOn && Extended.Has("click.heard")) made.AppendLine(Line(Extended.Get("click.heard"), Extended.Get("click.heard")));
                 made.AppendLine();
-                made.AppendLine("> What she says when handled lives in the personalities folder.");
+                made.AppendLine(">! What she says when handled lives in the personalities folder.");
                 made.AppendLine();
                 made.AppendLine();
                 made.AppendLine("############### colour settings");

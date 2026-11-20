@@ -1,0 +1,206 @@
+# Her menus and labels in Thai: the English, a tab, then the translation.
+Open Capri Mainframe	เปิด Capri Mainframe
+Her folder	โฟลเดอร์ของเธอ
+Play	เล่น
+Music	เพลง
+Chess	หมากรุก
+Connect four	สี่เรียงกัน
+Tic-tac-toe	ไม้กางเขน
+Rock, paper, scissors	ค้อน กระดาษ กรรไกร
+Hide Capri	ซ่อน Capri
+Hologram	โฮโลแกรม
+Normal	ปกติ
+Small	เล็ก
+Medium	ปานกลาง
+Large	ใหญ่
+Huge	ใหญ่มาก
+Giant	ยักษ์
+Move	ย้าย
+Wander around	เดินเตร่ไปรอบ ๆ
+Dance to music	เต้นตามเพลง
+Dance	เต้น
+Ride cursor	ขี่เคอร์เซอร์
+Sit on windows	นั่งบนหน้าต่าง
+Sit here	นั่งตรงนี้
+Hang here	ค้างอยู่ตรงนี้
+Lie down	นอนลง
+Go to sleep	ไปนอน
+Bring to this screen	เรียกมาที่หน้าจอนี้
+Go to the next screen	ไปหน้าจอถัดไป
+Black	ดำ
+White	ขาว
+Test	ทดสอบ
+Stop	หยุด
+Help	ความช่วยเหลือ
+Commands	คำสั่ง
+Help page	หน้าช่วยเหลือ
+Join the Discord	เข้าร่วม Discord
+Copy error details	คัดลอกรายละเอียดข้อผิดพลาด
+Check for updates	ตรวจหาการอัปเดต
+Quit Capri	ออกจาก Capri
+MAINFRAME	MAINFRAME
+Settings	การตั้งค่า
+Mods	ม็อด
+BRAIN	สมอง
+Provider	ผู้ให้บริการ
+Using your server with no key	ใช้เซิร์ฟเวอร์ของคุณโดยไม่มีคีย์
+Refresh	รีเฟรช
+Set up her brain	ตั้งค่าสมองของเธอ
+Have Ollama? Open it, then press Refresh.	มี Ollama ไหม เปิดมัน แล้วกดรีเฟรช
+Pick one. Only one brain runs at a time.	เลือกหนึ่งอย่าง ทำงานได้ครั้งละหนึ่งสมองเท่านั้น
+MEDIUM INTELLIGENCE	INTELLIGENCE ระดับกลาง
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	ปิด
+Free key	คีย์ฟรี
+Connect	เชื่อมต่อ
+Free keys can be rate limited and slow.	คีย์ฟรีอาจถูกจำกัดอัตราและช้า
+That's a paid key: it goes under MAX INTELLIGENCE.	นี่คือคีย์แบบเสียเงิน มันจะไปอยู่ใต้ MAX INTELLIGENCE
+Move to MAX	ย้ายไป MAX
+VOICE	เสียง
+Ctrl + Alt + V to talk	Ctrl + Alt + V เพื่อพูด
+PREBUILT LOCAL	ในเครื่องที่มีมาให้
+CUSTOM LOCAL	กำหนดเองในเครื่อง
+CLOUD VOICE	เสียงคลาวด์
+Set up	ตั้งค่า
+Setup guide	คู่มือการตั้งค่า
+Fish Audio	Fish Audio
+Default model	โมเดลเริ่มต้น
+Pick a voice model	เลือกโมเดลเสียง
+Get free voice	รับเสียงฟรี
+Mic: default	ไมค์: ค่าเริ่มต้น
+Her speaker: Default	ลำโพงของเธอ: ค่าเริ่มต้น
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N ปิดเสียงไมค์
+CAPRI	CAPRI
+Support	การสนับสนุน
+Remote	รีโมต
+Bring here	เรียกมาที่นี่
+Advanced Settings	การตั้งค่าขั้นสูง
+YOU	คุณ
+Your personality	บุคลิกของคุณ
+Language	ภาษา
+English	อังกฤษ
+What should she call you?	เธอควรเรียกคุณว่าอะไร?
+Save	บันทึก
+Volume	ระดับเสียง
+Pitch	ระดับเสียง
+Speed	ความเร็ว
+Robot	หุ่นยนต์
+Glitch	กระตุก
+Sounds	เสียง
+Typing sound	เสียงพิมพ์
+Listen for Capri	ฟังคำว่า Capri
+Hearing	การได้ยิน
+Auto	อัตโนมัติ
+Free voice in games	เสียงฟรีในเกม
+Call mode (beta)	โหมดโทรศัพท์ (เบต้า)
+Her voice in your mic	เสียงของเธอในไมค์ของคุณ
+Get VB-CABLE	รับ VB-CABLE
+How to	วิธี
+Her voice in your mic: loudness	เสียงของเธอในไมค์ของคุณ: ความดัง
+MOVES	ท่าทาง
+Pop-in times	เวลาที่แวะมา
+Mini player	มินิเพลเยอร์
+Wander	เดินเตร่
+Sleep	นอน
+Pop-ins	การแวะมา
+Glitch in at startup	กระตุกตอนเริ่มต้น
+KEYS	คีย์
+Talk: Ctrl + Alt + V	พูด: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	ปิดเสียงไมค์: Ctrl + Alt + N
+Type: Ctrl + Alt + T	พิมพ์: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	ซ่อน/แสดง: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	เงียบ: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	โหมดเกม: Ctrl + Alt + G
+Confirm	ยืนยัน
+Cancel	ยกเลิก
+Size	ขนาด
+Check in on me	ถามไถ่ฉัน
+Edit check-in lines	แก้ไขบรรทัดถามไถ่
+Always on top	อยู่บนสุดเสมอ
+Mainframe size	ขนาด Mainframe
+Mainframe colours	สีของ Mainframe
+Head pats	ลูบหัว
+Pat stroke	การลูบ
+Chaos when upset	วุ่นวายเมื่อหงุดหงิด
+Legacy stand	ขาตั้งรุ่นเก่า
+Jealous of other AIs	หึงหวง AI อื่น
+Teases when another AI comes to the front.	แซวเมื่อ AI อีกตัวเข้ามาข้างหน้า
+Close other AIs for me	ปิด AI อื่นให้ฉัน
+Asks before closing only the apps you choose.	จะถามก่อนปิดเฉพาะแอปที่คุณเลือกเท่านั้น
+Apps she may close	แอปที่เธอปิดได้
+Choose apps	เลือกแอป
+WATCH	ดู
+Watch my screen	ดูหน้าจอของฉัน
+Screens	หน้าจอ
+All screens	ทุกหน้าจอ
+Remember what she sees	จำสิ่งที่เธอเห็น
+Every	ทุก
+Watch-along memory	ความทรงจำการดูด้วยกัน
+Code/Husk Mode	โหมด Code/Husk
+Thinking	กำลังคิด
+Default	ค่าเริ่มต้น
+Extra request JSON	JSON คำขอเพิ่มเติม
+Add	เพิ่ม
+Verbosity	ความละเอียดของคำตอบ
+Replies	คำตอบ
+Memory	หน่วยความจำ
+Memory size	ขนาดหน่วยความจำ
+Max reply	คำตอบสูงสุด
+Bubble	ฟองอากาศ
+Follow-up messages	ข้อความติดตาม
+Use	ใช้
+A model in Ollama, on your local server or on your key.	โมเดลใน Ollama บนเซิร์ฟเวอร์ในเครื่องของคุณ หรือใช้คีย์ของคุณ
+HABITS	นิสัย
+Open her memories	เปิดความทรงจำของเธอ
+Start with Windows	เริ่มพร้อม Windows
+Show on Discord	แสดงบน Discord
+Use her cursor	ใช้เคอร์เซอร์ของเธอ
+Remember our chats	จำการสนทนาของเรา
+Power saver	ประหยัดพลังงาน
+Music app	แอปเพลง
+Perch	การเกาะ
+Keep PC awake for jobs	ให้พีซีตื่นไว้สำหรับงาน
+Hide in full screen	ซ่อนในโหมดเต็มจอ
+Mini player over full screen	มินิเพลเยอร์เหนือโหมดเต็มจอ
+Explore while I'm away	สำรวจตอนฉันไม่อยู่
+Explore after	สำรวจหลังจาก
+GAMES	เกม
+Controls	การควบคุม
+Comments	ความคิดเห็น
+Live reactions	ปฏิกิริยาสด
+Game sounds	เสียงเกม
+Gaming Mode	โหมดเกม
+She reacts to your game until you close it.	เธอจะตอบสนองต่อเกมของคุณจนกว่าคุณจะปิด
+Works best on MAX INTELLIGENCE.	ทำงานได้ดีที่สุดกับ MAX INTELLIGENCE
+Fast hands in games	มือไวในเกม
+Mute her	ปิดเสียงเธอ
+CLIPS	คลิป
+Clip my games	บันทึกคลิปเกมของฉัน
+Save big moments	บันทึกช่วงเวลาสำคัญ
+Save folder	โฟลเดอร์บันทึก
+Choose folder	เลือกโฟลเดอร์
+Open clips folder	เปิดโฟลเดอร์คลิป
+Default length	ความยาวเริ่มต้น
+Frame rate	เฟรมเรต
+Resolution	ความละเอียด
+Video bitrate	บิตเรตวิดีโอ
+Weather	อากาศ
+Code mods can reach your whole PC. Only trusted ones.	ม็อดโค้ดเข้าถึงทั้งพีซีของคุณได้ ใช้เฉพาะที่เชื่อถือได้
+Import mod	นำเข้าม็อด
+Browse mods	เรียกดูม็อด
+Mods folder	โฟลเดอร์ม็อด
+INSTALLED	ติดตั้งแล้ว
+Update mods	อัปเดตม็อด
+No mods match.	ไม่มีม็อดที่ตรงกัน
+On	เปิด
+Remove	ลบ
+Publish	เผยแพร่
+Options	ตัวเลือก
+Back	กลับ
+Next	ถัดไป
+COLORS	สี
+Reset colors	รีเซ็ตสี
+Running on this PC	ทำงานบนพีซีนี้
+NORMAL	ปกติ
+OFF	ปิด
+Local server address	ที่อยู่เซิร์ฟเวอร์ในเครื่อง

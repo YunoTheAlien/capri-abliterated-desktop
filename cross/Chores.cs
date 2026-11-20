@@ -292,7 +292,7 @@ namespace CapriDesktop
                     return "scrolled " + (notches < 0 ? "up " + -notches : "down " + (notches == 0 ? 3 : notches)) + at;
                 case "type":
                     string text = Text(order, "text");
-                    return Fingers.Type(text) ? "typed \"" + Voice.Short(text) + "\"" : "couldn't type that (no wl-copy or xclip for symbols)";
+                    return Fingers.Type(text) ? "typed \"" + Voice.Short(text) + "\"" : "couldn't type that (the clipboard didn't take it for the symbols)";
                 case "key":
                     string keys = Text(order, "keys");
                     return Fingers.Keys(keys) ? "pressed " + keys : "didn't know the key " + keys;

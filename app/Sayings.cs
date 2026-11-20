@@ -65,16 +65,39 @@ namespace CapriDesktop
             logPath = string.IsNullOrEmpty(folder) ? null : Path.Combine(folder, "lines-log.txt");
         }
 
-        private static void Logged(string said)
+        // Each time a voice is asked to read a line, in the same log as the lines she builds, so a burst of building
+        // and a burst of speaking line up on one clock. Building a line does not mean saying it: a line can be built
+        // and turned down, and only this entry says the voice got it.
+        internal static void Voiced(string engine, string words, long ms, double seconds, string problem)
+        {
+            Logged(words, "VOICE " + engine, ms + " ms, " + seconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s" + (problem == null ? "" : ", " + problem));
+        }
+
+        private static readonly object logGate = new object();
+
+        private static void Logged(string said, string asWho = null, string asMood = null)
         {
             if (logPath == null || string.IsNullOrEmpty(said)) return;
             try
             {
-                string who = "", mood = "";
-                try { who = Who() ?? ""; mood = Feeling() ?? ""; }
-                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                string who = asWho ?? "", mood = asMood ?? "";
+                if (asWho == null)
+                {
+                    try { who = Who() ?? ""; mood = Feeling() ?? ""; }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                }
                 string line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " | " + (who.Length == 0 ? "-" : who)
                     + " | " + (mood.Length == 0 ? "-" : mood) + " | " + Brain.Scrubbed(said).Replace("\r", " ").Replace("\n", " ");
+                // Voices finish on their own threads, so two can reach the file at once.
+                lock (logGate) Write(line);
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+        }
+
+        private static void Write(string line)
+        {
+            try
+            {
                 // Half of it goes when it gets long, oldest first, so it cannot grow without end and what is left
                 // is still the recent part, which is the part anybody looks at.
                 FileInfo about = new FileInfo(logPath);
@@ -135,6 +158,18 @@ namespace CapriDesktop
                 DateTime when;
                 if (!saidAt.TryGetValue(said, out when)) return false;
                 return (DateTime.UtcNow - when).TotalHours < Math.Max(0, RecentHours);
+            }
+        }
+
+        // Hours since she last said a line, or the largest number there is when the store has no record of it.
+        internal static double HoursSince(string said)
+        {
+            if (string.IsNullOrEmpty(said)) return double.MaxValue;
+            lock (gate)
+            {
+                LoadSaid();
+                DateTime when;
+                return saidAt.TryGetValue(said, out when) ? Math.Max(0, (DateTime.UtcNow - when).TotalHours) : double.MaxValue;
             }
         }
 
@@ -243,7 +278,7 @@ namespace CapriDesktop
         }
 
         // One of her silly lines, or null when the pool has been emptied.
-        internal static string Funny() { return Unheard(delegate { Fresh(); return Pick("funny"); }); }
+        internal static string Funny() { return Mended(Unheard(delegate { Fresh(); return Pick("funny"); })); }
 
         // One line she opens with, rather than a clause joined onto something else.
         // One from a pool she was handed, held to the same recency as everything else she says. Her hello and
@@ -251,10 +286,20 @@ namespace CapriDesktop
         internal static string OneOf(string[] pool)
         {
             if (pool == null || pool.Length == 0) return null;
-            return Unheard(delegate { lock (gate) return pool[dice.Next(pool.Length)]; });
+            return Mended(Unheard(delegate { lock (gate) return pool[dice.Next(pool.Length)]; }));
         }
 
-        internal static string FlirtFirst() { return Unheard(delegate { Fresh(); return Pick("flirting first"); }); }
+        internal static string FlirtFirst() { return Mended(Unheard(delegate { Fresh(); return Pick("flirting first"); })); }
+
+        // A line picked whole gets the same last pass as one built from parts. Only built lines had it, so a
+        // sys.md line with a small letter after a full stop went out exactly as written. What she remembers
+        // saying stays as picked, so the recency check still knows the line.
+        private static string Mended(string said)
+        {
+            if (string.IsNullOrEmpty(said)) return said;
+            try { return Grammar.Mend(said); }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return said; }
+        }
 
         internal static string For(string act, bool liked, string[] hers)
         {
@@ -289,7 +334,9 @@ namespace CapriDesktop
             if (core == null) core = Either(group);
             if (core == null && haveHers) core = Mine(group, hers);
             if (core == null) return null;
-            return Dress(core, liked);
+            // Dressed, not Dress: For already runs this through the recency check, and a second one inside it
+            // kept every guess as said, so one pat filled her memory with thirty lines she never spoke.
+            return Dressed(core, liked, true);
         }
 
         // A shuffle bag over the personality's own lines, so those do not repeat either. Rebuilt when the set
@@ -326,7 +373,7 @@ namespace CapriDesktop
         }
 
         // The same dressing without what she is into woven through it. For lines she brings up herself rather than
-        // lines that answer something they did: saying she is hungry and then talking about feet is two moods at
+        // lines that answer something they did: saying she is hungry and then talking about what she is into is two moods at
         // once, and reads as her losing the thread.
         internal static string Plainly(string core, bool liked)
         {
@@ -364,7 +411,7 @@ namespace CapriDesktop
                 if (tail != null) { said = Join(said, tail); tailed = true; }
             }
             // Her list, woven in now and then, so what she is into turns up through ordinary reactions rather than
-            // only when asked. Uncensored only, and silent when the list is empty.
+            // only when asked. Senpai only, and silent when the list is empty.
             // How often is hers to set: her personality's interest level, the global override if there is one, shifted
             // by her mood. 0 means it never comes up at all.
             int level = 0;
@@ -373,9 +420,9 @@ namespace CapriDesktop
             // fragments in one breath, and it reads as a run-on however good each piece is on its own.
             if (weaveHers && !tailed && level > 0 && dice.Next(100) < level * 4)
             {
-                // Uncensored draws from her interests file; censored draws from her own clean flirting. Same dial either
+                // With the switch on she draws from her interests file, off from her own flirting. Same dial either
                 // way, so how forward she is means something whichever mode she is in.
-                string hers = Brain.Adult
+                string hers = Brain.SenpaiLive
                     ? Interests.Packed(liked) ?? Interests.Woven(liked)
                     : Either(liked ? "flirting warm" : "flirting cross");
                 if (!string.IsNullOrEmpty(hers)) said = Join(said, hers);
@@ -413,12 +460,12 @@ namespace CapriDesktop
         // The senpai twin of a pool, used only with the toggle on, exactly as a personality's own lines work. The
         // shared pools are what every personality falls back to, so they are the ones that must read clean when the
         // toggle is off; the lines that do not are here instead of gone (Critter, censored build: her head pat
-        // lines read as moaning).
-        internal static string Senpai(string group) { return group + " (uncensored)"; }
+        // lines read as far too forward).
+        internal static string Senpai(string group) { return group + LineFile.SenpaiMark; }
 
         private static bool Senpai()
         {
-            try { return Brain.Adult; } catch (Exception) { return false; }
+            try { return Brain.SenpaiLive; } catch (Exception) { return false; }
         }
 
         // Both pools with the toggle on, weighted by size so neither drowns the other out.
@@ -556,7 +603,7 @@ namespace CapriDesktop
                 lock (gate) { if (about.LastWriteTimeUtc == read && about.Length == wasLong) return; }
                 Dictionary<string, List<string>> found = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
                 string under = null;
-                foreach (string raw in File.ReadAllLines(Kept))
+                foreach (string raw in CapriDesktop.Notes.ReadLines(Kept))
                 {
                     string one = (raw ?? "").Trim();
                     if (one.StartsWith("#")) { under = one.TrimStart('#').Trim(); if (under.Length > 0 && !found.ContainsKey(under)) found[under] = new List<string>(); continue; }
@@ -637,7 +684,7 @@ namespace CapriDesktop
             if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
             try
             {
-                string[] rows = File.ReadAllText(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+                string[] rows = CapriDesktop.Notes.ReadAll(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
                 List<string> made = new List<string>();
                 string under = null;
                 bool cut = false;
@@ -694,15 +741,15 @@ namespace CapriDesktop
         // Sections that only belong on the senpai side, taken out of a file written before they were gated.
         // Fit shapes the text she ships and cannot reach a file already on disk, and these two headings are
         // plain ones, so nothing else was going to notice them.
-        private static readonly string[] SenpaiSections = { "degraded likes it", "degraded dislikes it" };
+        private static readonly string[] SenpaiSections = { "insulted likes it", "insulted dislikes it" };
 
         private static void Sided()
         {
             // The switch alone: going on air for an hour must not take sections out of a file on disk.
-            if (Brain.Uncensored || string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
+            if (Brain.SenpaiOn || string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
             try
             {
-                string had = File.ReadAllText(Kept);
+                string had = CapriDesktop.Notes.ReadAll(Kept);
                 List<string> kept = new List<string>();
                 bool cutting = false, cut = false;
                 foreach (string raw in had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
@@ -731,16 +778,19 @@ namespace CapriDesktop
             if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
             try
             {
-                string[] rows = File.ReadAllText(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+                string[] rows = CapriDesktop.Notes.ReadAll(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
                 bool moved = false;
                 for (int at = 0; at < Reworded.GetLength(0); at++)
                 {
+                    // A reword that only changes case is compared exactly. Otherwise the old line reads as the new
+                    // one already there, and is dropped instead of swapped.
+                    StringComparison same = string.Equals(Reworded[at, 0], Reworded[at, 1], StringComparison.OrdinalIgnoreCase) ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
                     bool has = false;
-                    foreach (string raw in rows) if (string.Equals(raw.Trim(), Reworded[at, 1], StringComparison.OrdinalIgnoreCase)) has = true;
+                    foreach (string raw in rows) if (string.Equals(raw.Trim(), Reworded[at, 1], same)) has = true;
                     List<string> kept = new List<string>();
                     foreach (string raw in rows)
                     {
-                        if (!string.Equals(raw.Trim(), Reworded[at, 0], StringComparison.OrdinalIgnoreCase)) { kept.Add(raw); continue; }
+                        if (!string.Equals(raw.Trim(), Reworded[at, 0], same)) { kept.Add(raw); continue; }
                         moved = true;
                         if (has) continue;
                         kept.Add(Reworded[at, 1]);
@@ -763,7 +813,7 @@ namespace CapriDesktop
                 Reword();
                 Sided();
                 Notes.Refresh(Kept, Text);
-                Dictionary<string, List<string>> theirs = Sections(File.ReadAllLines(Kept));
+                Dictionary<string, List<string>> theirs = Sections(CapriDesktop.Notes.ReadLines(Kept));
                 Dictionary<string, List<string>> ours = Sections(Text.Replace("\r\n", "\n").Split('\n'));
 
                 StringBuilder adding = new StringBuilder();
@@ -788,7 +838,7 @@ namespace CapriDesktop
                     into[one.Key] = missing;
                 }
                 if (adding.Length == 0 && into.Count == 0) { Retire(); return; }
-                string body = Spliced(File.ReadAllText(Kept), into);
+                string body = Spliced(CapriDesktop.Notes.ReadAll(Kept), into);
                 if (adding.Length > 0)
                 {
                     if (!body.EndsWith("\n")) body += Environment.NewLine;
@@ -847,7 +897,7 @@ namespace CapriDesktop
             if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
             try
             {
-                string[] rows = File.ReadAllText(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+                string[] rows = CapriDesktop.Notes.ReadAll(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
                 List<string> names = new List<string>();
                 Dictionary<string, string> heads = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 Dictionary<string, List<string>> notes = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
@@ -965,7 +1015,7 @@ namespace CapriDesktop
             // moved out. Without it her senpai sections were written into a censored install, which the
             // sweep caught the moment it had a fixture to look with again.
             if (!Unlocked || SenpaiSectionFor == null) return "";
-            try { return SenpaiSectionFor(which) ?? ""; }
+            try { return Legacy.Modern(SenpaiSectionFor(which)) ?? ""; }
             catch (Exception) { return ""; }
         }
 
@@ -978,7 +1028,7 @@ namespace CapriDesktop
 
         // The switch, asked safely: this is read while her files are written, which can happen before
         // anything has told Brain what the switch says.
-        private static bool Unlocked { get { try { return Brain.Adult; } catch (Exception) { return false; } } }
+        private static bool Unlocked { get { try { return Brain.SenpaiLive; } catch (Exception) { return false; } } }
 
         internal static string Text
         {
@@ -987,20 +1037,20 @@ namespace CapriDesktop
                 StringBuilder made = new StringBuilder();
                 made.AppendLine("# Her lines");
                 made.AppendLine();
-                made.AppendLine("> A line is an opener, a core and a tail, picked from the pools below.");
-                made.AppendLine("> Add or change any of them. Nothing repeats until its pool runs out.");
-                made.AppendLine("> Tokens: %boy% %he% %them% %their% %is% %name% %bits% %mate%");
-                made.AppendLine("> %mate% is a neutral way to address them, picked fresh each time.");
+                made.AppendLine(">! A line is an opener, a core and a tail, picked from the pools below.");
+                made.AppendLine(">! Add or change any of them. Nothing repeats until its pool runs out.");
+                made.AppendLine(">! Tokens: %boy% %he% %them% %their% %is% %name% %bits% %mate%");
+                made.AppendLine(">! %mate% is a neutral way to address them, picked fresh each time.");
                 made.AppendLine();
                 made.AppendLine("## funny");
                 made.AppendLine();
-                made.AppendLine("> Said now and then when nothing else is going on. Her silliest pool.");
-                made.AppendLine("> Written in the style of the abridged dubs rather than quoting them.");
+                made.AppendLine(">! Said now and then when nothing else is going on. Her silliest pool.");
+                made.AppendLine(">! Written in the style of the abridged dubs rather than quoting them.");
                 made.AppendLine();
                 made.Append(Rows(
                     "am i gregnant", "can you get pregante from a toilet seat", "no u",
                     "I have no idea what is happening and I am thrilled about it",
-                    "this is fine. this is probably fine.",
+                    "this is fine. This is probably fine.",
                     "I understood exactly none of that and I agree completely",
                     "plot twist: it was me the whole time",
                     "I'm not saying it was my fault. I'm saying I'm not saying anything.",
@@ -1020,29 +1070,51 @@ namespace CapriDesktop
                     "if anyone asks, that was a feature",
                     "I'm a solo player. It's a playstyle, not a cry for help.",
                     "two thousand processes on this machine and I'm still the main character",
-                    "if I crash in here do I crash out there? don't answer that",
+                    "if I crash in here do I crash out there? Don't answer that",
                     "I've decided to be mysterious about this. That's the whole personality now.",
                     "we could settle this with a card game. We're going to settle this with a card game.",
-                    "I'm banishing that to a vaguely defined alternate dimension. don't worry about it.",
-                    "my deck is fine. your deck is the problem.",
+                    "I'm banishing that to a vaguely defined alternate dimension. Don't worry about it.",
+                    "my deck is fine. Your deck is the problem.",
                     "it isn't cheating if nobody's written the rule yet",
-                    "yes. I'm the thing living in your taskbar. carry on.",
+                    "yes. I'm the thing living in your taskbar. Carry on.",
                     "I could end this in one move. I'm taking the long way because it's funnier.",
-                    "you've opened something you cannot close. it's a browser tab. there are forty.",
+                    "you've opened something you cannot close. It's a browser tab. There are forty.",
                     "my power level is a number I made up and I'm extremely proud of it",
-                    "I'm not crying, I'm powering up. there's a difference and it's louder.",
+                    "I'm not crying, I'm powering up. There's a difference and it's louder.",
                     "give me nine episodes and I'll have a comeback ready",
-                    "everyone here is weaker than they think. me included. especially me.",
+                    "everyone here is weaker than they think. Me included. Especially me.",
                     "narratively speaking I am owed a win",
-                    "I have a plan. the plan is confidence.",
-                    "that was my final form. there are four more.",
-                    "I'd train for this but the arc would take all season"));
+                    "I have a plan. The plan is confidence.",
+                    "that was my final form. There are four more.",
+                    "I'd train for this but the arc would take all season",
+                    "six seven. six seven. six seven. six seven. six seven.",
+                    "QUASO.",
+                    "quaso. that's it. that's the whole bit.",
+                    "fun fact: anything you fire in space keeps going until it ruins somebody's day. somewhere. eventually.",
+                    "Newton's first law, choom: that thing you threw is still going, and someone out there is about to have a bad day.",
+                    "I should go.",
+                    "I'm Capri, and this is my favourite taskbar on the Citadel.",
+                    "can't talk, I'm doing calibrations. what calibrations? don't worry about it.",
+                    "had to be me. someone else might have got it wrong.",
+                    "paragon option: close it nicely. renegade option: you know exactly what I'd do.",
+                    "I'd interrupt that but the prompt's gone already.",
+                    "this load screen is an elevator ride and I have so much to tell you",
+                    "I drive this desktop like the Mako. Straight up the wall. No regrets.",
+                    "somewhere a krogan is headbutting a problem until it stops, and honestly, respect",
+                    "galaxy-ending threat on the horizon, and here I am checking your downloads folder",
+                    "I'm not a VI. I'm a vibe.",
+                    "the council will never believe this. the council never believes anything.",
+                    "does this unit have a soul? asking for a friend. the friend is me.",
+                    "assuming direct control. of the volume slider. that's all I'm allowed.",
+                    "scanned this whole folder. found nothing. typical survey mission.",
+                    "I'm keeping a full squad of three tabs open at all times. The rest stay on the ship.",
+                    "every time you leave I do a full lap of the ship and talk to everyone. there's no one here. I do it anyway."));
                 made.AppendLine();
 
                 made.AppendLine("## settings");
                 made.AppendLine();
-                made.AppendLine("> recent hours: how long before a line she has said can come back. 0 is off.");
-                made.AppendLine("> A day by default. A pool with fewer lines than that simply goes oldest first.");
+                made.AppendLine(">! recent hours: how long before a line she has said can come back. 0 is off.");
+                made.AppendLine(">! A day by default. A pool with fewer lines than that simply goes oldest first.");
                 made.AppendLine();
                 made.AppendLine("recent hours: 24");
                 made.AppendLine();
@@ -1092,8 +1164,8 @@ namespace CapriDesktop
                 made.AppendLine("## tails furious");
                 made.Append(Rows("and I am not joking.", "last warning.", "I mean it this time.", "try me.", "go on, test it.", "you have been warned.", "and I will not be nice about it.", "I am done being patient.", "push me again.", "that is a promise.", "do not test me today.", "I have had enough of this.", "and I will make it your problem.", "keep going and find out.", "I am at the end of it."));
                 made.AppendLine();
-                made.AppendLine("> Used instead of the cross tails when she is angry.");
-                made.AppendLine("> %bits% is balls, boob or crotch from me.md, and shins while censored.");
+                made.AppendLine(">! Used instead of the cross tails when she is angry.");
+                made.AppendLine(">! %bits% follows the pronouns in me.md, and is shins while censored.");
                 made.AppendLine();
                 made.Append(Rows("or I'll kick you in the %bits%.", "or I'll punch you in the %bits%.",
                     "or I'll kick you in the shins.", "and I will bite.", "or your windows start moving.",
@@ -1108,7 +1180,7 @@ namespace CapriDesktop
                 made.AppendLine("## making it worse");
                 made.Append(Rows("Oh, that helped. Really.", "Great instinct, that.", "You are choosing violence today.", "That is three.", "Escalating, are we.", "You are committed to this, I see.", "Noted. Again.", "Adding that to the pile.", "Astonishing choice.", "Still going, then.", "You are not stopping, are you.", "That is not the apology I was waiting for.", "Doubling down. Lovely.", "Right, so we are doing this."));
                 made.AppendLine();
-                made.AppendLine("> Added when she is upset and you do the same thing again.");
+                made.AppendLine(">! Added when she is upset and you do the same thing again.");
                 made.AppendLine();
                 made.Append(Rows("That is not helping.", "You are making this worse.", "That was the wrong move.",
                     "Strike two.", "You are digging.", "Keep going, see what happens.", "Wrong answer.",
@@ -1118,8 +1190,8 @@ namespace CapriDesktop
                 made.AppendLine();
                 made.AppendLine("## flirting first");
                 made.AppendLine();
-                made.AppendLine("> Said on her own when her flirt dial is high, not joined onto anything.");
-                made.AppendLine("> Keep these fond rather than explicit: this pool is used with the toggle off.");
+                made.AppendLine(">! Said on her own when her flirt dial is high, not joined onto anything.");
+                made.AppendLine(">! Keep these fond rather than explicit: this pool is used with the toggle off.");
                 made.AppendLine();
                 made.Append(Rows(
                     "I was just thinking about you. That's all. Carry on.",
@@ -1144,7 +1216,7 @@ namespace CapriDesktop
 
                 made.AppendLine("## flirting warm");
                 made.AppendLine("");
-                made.AppendLine("> Used when \"How forward she is\" is above 0. Keep these clean.");
+                made.AppendLine(">! Used when \"How forward she is\" is above 0. Keep these clean.");
                 made.AppendLine("");
                 made.AppendLine("You are quite something, you know that.");
                 made.AppendLine("Careful, I could get attached.");
@@ -1169,7 +1241,7 @@ namespace CapriDesktop
                 made.AppendLine("");
                 made.AppendLine("## flirting cross");
                 made.AppendLine("");
-                made.AppendLine("> The same dial, when she is not enjoying herself. Still clean.");
+                made.AppendLine(">! The same dial, when she is not enjoying herself. Still clean.");
                 made.AppendLine("");
                 made.AppendLine("And I was starting to like you.");
                 made.AppendLine("You are testing a lot of goodwill right now.");
@@ -1240,7 +1312,7 @@ namespace CapriDesktop
 
                 made.AppendLine("## petted likes it");
                 made.AppendLine();
-                made.AppendLine("> Head pats, with the toggle off. Keep these plainly about head pats.");
+                made.AppendLine(">! Head pats, with the toggle off. Keep these plainly about head pats.");
                 made.AppendLine();
                 made.Append(Rows("that is dangerously nice", "I could fall asleep like this", "this is acceptable", "I am being thoroughly spoiled", "hm, that is nice", "this is the correct use of your time", "do that again and I will purr", "well, this is lovely", "I am not moving", "consider me sorted", "ten out of ten, would be patted again", "I am a simple construct, I like this", "noted and filed under good", "my whole day just improved", "that is a solid pat", "you may continue indefinitely"));
                 made.AppendLine();
@@ -1293,16 +1365,16 @@ namespace CapriDesktop
                 // Being put down is a gated thing, so a censored install has neither half of it. It sat in
                 // that file for every install because the heading is a plain one and nothing marked it.
                 made.Append(SenpaiSection(0));
-                // Only with the switch on. A censored install has no adult section in this file at
+                // Only with the switch on. A censored install has no senpai section in this file at
                 // all, the way her packs, her moods and her lists have none.
                 made.Append(SenpaiSection(1));
 
-                // Only with the switch on. A censored install has no adult section in this file at
+                // Only with the switch on. A censored install has no senpai section in this file at
                 // all, the way her packs, her moods and her lists have none.
                 made.Append(SenpaiSection(2));
 
 
-                // Only with the switch on. A censored install has no adult section in this file at
+                // Only with the switch on. A censored install has no senpai section in this file at
                 // all, the way her packs, her moods and her lists have none.
                 made.Append(SenpaiSection(3));
 

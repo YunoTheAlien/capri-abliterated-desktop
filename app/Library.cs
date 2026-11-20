@@ -50,6 +50,7 @@ namespace CapriDesktop
             catch (Exception caughtOne) { Brain.Caught(caughtOne); return false; }
         }
 
+#if !CROSS  // her Windows voice clone (YourVoice), which the cross build does not have
         // The clip her HD voice actually reads, copied out of the model's folder, where a fresh download of the model
         // would take it with it. Refreshed whenever it changes.
         internal static void KeepHdVoice(string modelFolder)
@@ -67,6 +68,7 @@ namespace CapriDesktop
             }
             catch (Exception caughtOne) { Brain.Caught(caughtOne); }
         }
+#endif
 
         private static bool Same(string one, string two)
         {
@@ -113,13 +115,18 @@ namespace CapriDesktop
             return found;
         }
 
-        // When a spare was made: from its name, or for one from before that, from its creation time.
+        // When a spare was made: from its name, or for one from before that or put back by hand, the later of when it
+        // was created and when it was written, so one they put back is not taken for the oldest.
         internal static long When(string spare)
         {
             Match timed = Regex.Match(Path.GetFileName(spare) ?? "", @"\.([0-9]{9,})\.bak$", RegexOptions.IgnoreCase);
             long at;
             if (timed.Success && long.TryParse(timed.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out at)) return at;
-            try { return Epoch(File.GetCreationTimeUtc(spare)); }
+            try
+            {
+                DateTime made = File.GetCreationTimeUtc(spare), written = File.GetLastWriteTimeUtc(spare);
+                return Epoch(written > made ? written : made);
+            }
             catch (Exception caughtOne) { Brain.Caught(caughtOne); return 0; }
         }
 
@@ -200,7 +207,10 @@ namespace CapriDesktop
             try
             {
                 string file = Path.Combine(data, "settings.json");
-                return File.Exists(file) && Regex.IsMatch(File.ReadAllText(file), "\"Uncensored\"\\s*:\\s*true");
+                if (!File.Exists(file)) return false;
+                foreach (Match m in Regex.Matches(File.ReadAllText(file), "\"(\\w+)\"\\s*:\\s*true"))
+                    if (m.Groups[1].Value == "Interests" || Legacy.WasFolder(m.Groups[1].Value)) return true;
+                return false;
             }
             catch (Exception caughtOne) { Brain.Caught(caughtOne); return false; }
         }

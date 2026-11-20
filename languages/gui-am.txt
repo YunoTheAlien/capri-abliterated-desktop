@@ -1,0 +1,206 @@
+# Her menus and labels in Amharic: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframeን ክፈት
+Her folder	የእሷ ማህደር
+Play	አጫውት
+Music	ሙዚቃ
+Chess	ቼስ
+Connect four	አራት በመስመር
+Tic-tac-toe	ቲክ-ታክ-ቶ
+Rock, paper, scissors	ድንጋይ፣ ወረቀት፣ መቀስ
+Hide Capri	Capriን ደብቅ
+Hologram	ሆሎግራም
+Normal	ተራ
+Small	ትንሽ
+Medium	መካከለኛ
+Large	ትልቅ
+Huge	ግዙፍ
+Giant	ግዙፍ
+Move	አንቀሳቅስ
+Wander around	ዙሪያ ተዘዋወር
+Dance to music	ለሙዚቃ ጨፍር
+Dance	ጨፍር
+Ride cursor	ጠቋሚ ላይ ተቀመጥ
+Sit on windows	በመስኮቶች ላይ ተቀመጥ
+Sit here	እዚህ ተቀመጥ
+Hang here	እዚህ ቆይ
+Lie down	ተኛ
+Go to sleep	ለመተኛት ሂድ
+Bring to this screen	ወደዚህ ማያ አምጣ
+Go to the next screen	ወደሚቀጥለው ማያ ሂድ
+Black	ጥቁር
+White	ነጭ
+Test	ሞክር
+Stop	አቁም
+Help	እገዛ
+Commands	ትእዛዞች
+Help page	የእገዛ ገጽ
+Join the Discord	Discord ተቀላቀል
+Copy error details	የስህተት ዝርዝሮችን ቅዳ
+Check for updates	ዝማኔዎችን ይፈትሹ
+Quit Capri	Capriን ውጣ
+MAINFRAME	MAINFRAME
+Settings	ቅንብሮች
+Mods	ሞዶች
+BRAIN	አእምሮ
+Provider	አቅራቢ
+Using your server with no key	ሰርቨርዎን ያለ ቁልፍ ተጠቀም
+Refresh	አድስ
+Set up her brain	አእምሮዋን አዋቅር
+Have Ollama? Open it, then press Refresh.	Ollama አለህ? ክፈተው ከዚያ አድስ ይጫኑ።
+Pick one. Only one brain runs at a time.	አንዱን ምረጥ። በአንድ ጊዜ አንድ አእምሮ ብቻ ይሰራል።
+MEDIUM INTELLIGENCE	መካከለኛ ኢንተለጀንስ
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	ጠፍቷል
+Free key	ነፃ ቁልፍ
+Connect	አገናኝ
+Free keys can be rate limited and slow.	ነፃ ቁልፎች የጥያቄ ገደብ ሊኖራቸው እና ዘገምተኛ ሊሆኑ ይችላሉ።
+That's a paid key: it goes under MAX INTELLIGENCE.	ያ የሚከፈልበት ቁልፍ ነው፡ ከMAX INTELLIGENCE በታች ይሄዳል።
+Move to MAX	ወደ MAX አንቀሳቅስ
+VOICE	ድምፅ
+Ctrl + Alt + V to talk	Ctrl + Alt + V ለመናገር
+PREBUILT LOCAL	ቀድሞ የተሰራ ሎካል
+CUSTOM LOCAL	ብጁ ሎካል
+CLOUD VOICE	የደመና ድምፅ
+Set up	አዋቅር
+Setup guide	የማዋቀር መመሪያ
+Fish Audio	Fish Audio
+Default model	ነባሪ ሞዴል
+Pick a voice model	የድምፅ ሞዴል ምረጥ
+Get free voice	ነፃ ድምፅ ያግኙ
+Mic: default	ማይክ: ነባሪ
+Her speaker: Default	ድምፅ ማጉያዋ: ነባሪ
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N ማይክን ድምፅ ያጠፋል
+CAPRI	CAPRI
+Support	ድጋፍ
+Remote	REMOTE
+Bring here	እዚህ አምጣ
+Advanced Settings	የላቁ ቅንብሮች
+YOU	አንተ
+Your personality	ስብዕናህ
+Language	ቋንቋ
+English	እንግሊዝኛ
+What should she call you?	ምን ብላ ልጥራህ?
+Save	አስቀምጥ
+Volume	ድምፅ
+Pitch	ቃና
+Speed	ፍጥነት
+Robot	ሮቦት
+Glitch	ግሊች
+Sounds	ድምፆች
+Typing sound	የመተየብ ድምፅ
+Listen for Capri	Capriን አዳምጥ
+Hearing	ማዳመጥ
+Auto	ራስ-ሰር
+Free voice in games	በጨዋታዎች ነፃ ድምፅ
+Call mode (beta)	የጥሪ ሁኔታ (ቤታ)
+Her voice in your mic	ድምጿ በማይክዎ
+Get VB-CABLE	VB-CABLE ያግኙ
+How to	እንዴት
+Her voice in your mic: loudness	ድምጿ በማይክዎ: ድምጽ
+MOVES	እንቅስቃሴዎች
+Pop-in times	የመታየት ጊዜዎች
+Mini player	ሚኒ ማጫወቻ
+Wander	ተዘዋወር
+Sleep	እንቅልፍ
+Pop-ins	መታየቶች
+Glitch in at startup	ሲጀመር ግሊች
+KEYS	ቁልፎች
+Talk: Ctrl + Alt + V	ተናገር: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	ማይክ ድምፅ አጥፋ: Ctrl + Alt + N
+Type: Ctrl + Alt + T	ጻፍ: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	ደብቅ/አሳይ: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	ጸጥታ: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	የጨዋታ ሁነታ: Ctrl + Alt + G
+Confirm	አረጋግጥ
+Cancel	ሰርዝ
+Size	መጠን
+Check in on me	ያረጋግጡልኝ
+Edit check-in lines	የያረጋግጡልኝ መስመሮችን አርትዕ
+Always on top	ሁልጊዜ ከላይ
+Mainframe size	የMainframe መጠን
+Mainframe colours	የMainframe ቀለሞች
+Head pats	የራስ መንካት
+Pat stroke	የራስ መንካት
+Chaos when upset	ሲበሳጭ ትርምስ
+Legacy stand	የድሮ መቆሚያ
+Jealous of other AIs	ለሌሎች AIs ትቀናለች
+Teases when another AI comes to the front.	ሌላ AI ወደ ፊት ሲመጣ ታሾፋለች።
+Close other AIs for me	ሌሎች AIዎችን ለእኔ ዝጋ
+Asks before closing only the apps you choose.	የመረጧቸውን መተግበሪያዎች ብቻ ከመዝጋቱ በፊት ይጠይቃል።
+Apps she may close	ልትዘጋቸው የምትችላቸው መተግበሪያዎች
+Choose apps	መተግበሪያዎችን ምረጥ
+WATCH	ተመልከት
+Watch my screen	ማያዬን ተመልከት
+Screens	ማያዎች
+All screens	ሁሉም ማያዎች
+Remember what she sees	ያየችውን አስታውስ
+Every	በየ
+Watch-along memory	አብሮ የማየት ትዝታ
+Code/Husk Mode	የኮድ/Husk ሁነታ
+Thinking	እያሰበች ነው
+Default	ነባሪ
+Extra request JSON	ተጨማሪ የጥያቄ JSON
+Add	ጨምር
+Verbosity	ቃላት ብዛት
+Replies	ምላሾች
+Memory	ማህደረ ትውስታ
+Memory size	የማህደረ ትውስታ መጠን
+Max reply	ከፍተኛ መልስ
+Bubble	አረፋ
+Follow-up messages	የክትትል መልዕክቶች
+Use	ተጠቀም
+A model in Ollama, on your local server or on your key.	በOllama ውስጥ ያለ ሞዴል፣ በአገርዎ ሰርቨር ወይም በቁልፍዎ።
+HABITS	ልማዶች
+Open her memories	ትዝታዎቿን ክፈት
+Start with Windows	ከWindows ጋር ጀምር
+Show on Discord	በDiscord አሳይ
+Use her cursor	ጠቋሚዋን ተጠቀም
+Remember our chats	ውይይቶቻችንን አስታውስ
+Power saver	ኃይል ቆጣቢ
+Music app	የሙዚቃ መተግበሪያ
+Perch	ፐርች
+Keep PC awake for jobs	ለስራዎች ፒሲውን ነቅቶ አቆይ
+Hide in full screen	በሙሉ ማያ ደብቅ
+Mini player over full screen	ሚኒ ማጫወቻ በሙሉ ማያ ላይ
+Explore while I'm away	እኔ በሌለሁበት ያስስ
+Explore after	በኋላ ያስስ
+GAMES	ጨዋታዎች
+Controls	መቆጣጠሪያዎች
+Comments	አስተያየቶች
+Live reactions	ቀጥታ ምላሾች
+Game sounds	የጨዋታ ድምፆች
+Gaming Mode	የጨዋታ ሁነታ
+She reacts to your game until you close it.	ጨዋታዎን እስክትዘጉት ድረስ ለጨዋታዎ ምላሽ ትሰጣለች።
+Works best on MAX INTELLIGENCE.	ከMAX INTELLIGENCE ጋር ምርጥ ይሰራል።
+Fast hands in games	በጨዋታዎች ፈጣን እጆች
+Mute her	ድምጿን አጥፋ
+CLIPS	ክሊፖች
+Clip my games	ጨዋታዎቼን ቅረጽ
+Save big moments	ትላልቅ ጊዜያትን አስቀምጥ
+Save folder	የማስቀመጫ ማህደር
+Choose folder	ማህደር ምረጥ
+Open clips folder	የክሊፖች ማህደር ክፈት
+Default length	ነባሪ ርዝመት
+Frame rate	የፍሬም ፍጥነት
+Resolution	ጥራት
+Video bitrate	የቪዲዮ ቢትሬት
+Weather	የአየር ሁኔታ
+Code mods can reach your whole PC. Only trusted ones.	የኮድ ሞዶች ሙሉ ፒሲዎን ሊደርሱበት ይችላሉ። የታመኑትን ብቻ።
+Import mod	ሞድ አስመጣ
+Browse mods	ሞዶችን ቃኝ
+Mods folder	የሞዶች ማህደር
+INSTALLED	የተጫኑ
+Update mods	ሞዶችን አዘምን
+No mods match.	የሚመሳሰል ሞድ የለም።
+On	በርቷል
+Remove	አስወግድ
+Publish	አትም
+Options	አማራጮች
+Back	ተመለስ
+Next	ቀጣይ
+COLORS	ቀለሞች
+Reset colors	ቀለሞችን ዳግም አስጀምር
+Running on this PC	በዚህ ፒሲ ላይ እየሰራ
+NORMAL	መደበኛ
+OFF	ጠፍቷል
+Local server address	የሎካል ሰርቨር አድራሻ

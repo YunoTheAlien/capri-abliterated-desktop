@@ -1,0 +1,206 @@
+# Her menus and labels in Simplified Chinese: the English, a tab, then the translation.
+Open Capri Mainframe	打开 Capri Mainframe
+Her folder	她的文件夹
+Play	播放
+Music	音乐
+Chess	国际象棋
+Connect four	四子棋
+Tic-tac-toe	井字棋
+Rock, paper, scissors	石头、剪刀、布
+Hide Capri	隐藏 Capri
+Hologram	全息
+Normal	普通
+Small	小
+Medium	中
+Large	大
+Huge	超大
+Giant	巨大
+Move	移动
+Wander around	四处走走
+Dance to music	随音乐跳舞
+Dance	跳舞
+Ride cursor	骑乘光标
+Sit on windows	坐在窗口上
+Sit here	坐在这里
+Hang here	待在这里
+Lie down	躺下
+Go to sleep	去睡觉
+Bring to this screen	带到此屏幕
+Go to the next screen	切换到下一个屏幕
+Black	黑
+White	白
+Test	测试
+Stop	停止
+Help	帮助
+Commands	命令
+Help page	帮助页面
+Join the Discord	加入 Discord
+Copy error details	复制错误详情
+Check for updates	检查更新
+Quit Capri	退出 Capri
+MAINFRAME	MAINFRAME
+Settings	设置
+Mods	模组
+BRAIN	大脑
+Provider	提供方
+Using your server with no key	使用无密钥的自己的服务器
+Refresh	刷新
+Set up her brain	设置她的大脑
+Have Ollama? Open it, then press Refresh.	有 Ollama 吗？打开它，然后按刷新。
+Pick one. Only one brain runs at a time.	选一个。同一时间只运行一个大脑。
+MEDIUM INTELLIGENCE	中等智能
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	关
+Free key	免费密钥
+Connect	连接
+Free keys can be rate limited and slow.	免费密钥可能有速率限制，且速度较慢。
+That's a paid key: it goes under MAX INTELLIGENCE.	这是付费密钥：它会归入 MAX INTELLIGENCE。
+Move to MAX	移至 MAX
+VOICE	语音
+Ctrl + Alt + V to talk	Ctrl + Alt + V 说话
+PREBUILT LOCAL	预设本地
+CUSTOM LOCAL	自定义本地
+CLOUD VOICE	云语音
+Set up	设置
+Setup guide	设置指南
+Fish Audio	Fish Audio
+Default model	默认模型
+Pick a voice model	选择语音模型
+Get free voice	获取免费语音
+Mic: default	麦克风：默认
+Her speaker: Default	她的扬声器：默认
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N 静音麦克风
+CAPRI	CAPRI
+Support	支持
+Remote	远程
+Bring here	带到这里
+Advanced Settings	高级设置
+YOU	你
+Your personality	你的性格
+Language	语言
+English	英语
+What should she call you?	她该怎么称呼你？
+Save	保存
+Volume	音量
+Pitch	音调
+Speed	语速
+Robot	机器人
+Glitch	Glitch
+Sounds	声音
+Typing sound	打字声音
+Listen for Capri	听 Capri 的
+Hearing	听力
+Auto	自动
+Free voice in games	游戏中的免费语音
+Call mode (beta)	通话模式（测试版）
+Her voice in your mic	她的声音进入你的麦克风
+Get VB-CABLE	获取 VB-CABLE
+How to	如何
+Her voice in your mic: loudness	她的声音进入你的麦克风：音量
+MOVES	动作
+Pop-in times	出现时间
+Mini player	迷你播放器
+Wander	漫游
+Sleep	睡眠
+Pop-ins	出现
+Glitch in at startup	启动时故障
+KEYS	按键
+Talk: Ctrl + Alt + V	说话：Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	静音麦克风：Ctrl + Alt + N
+Type: Ctrl + Alt + T	输入：Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	隐藏/显示：Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	静默：Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	游戏模式：Ctrl + Alt + G
+Confirm	确认
+Cancel	取消
+Size	大小
+Check in on me	来看看我
+Edit check-in lines	编辑打招呼台词
+Always on top	始终置顶
+Mainframe size	Mainframe 大小
+Mainframe colours	Mainframe 颜色
+Head pats	摸头
+Pat stroke	摸头
+Chaos when upset	生气时的混乱
+Legacy stand	旧版支架
+Jealous of other AIs	对其他 AI 感到嫉妒
+Teases when another AI comes to the front.	其他 AI 出现在前台时她会调侃。
+Close other AIs for me	替我关闭其他 AI
+Asks before closing only the apps you choose.	只在关闭你所选应用之前询问。
+Apps she may close	她可以关闭的应用
+Choose apps	选择应用
+WATCH	观看
+Watch my screen	观看我的屏幕
+Screens	屏幕
+All screens	所有屏幕
+Remember what she sees	记住她看到的内容
+Every	每个
+Watch-along memory	一起观看时的记忆
+Code/Husk Mode	代码/Husk 模式
+Thinking	思考中
+Default	默认
+Extra request JSON	额外请求 JSON
+Add	添加
+Verbosity	详细程度
+Replies	回复
+Memory	记忆
+Memory size	记忆大小
+Max reply	最大回复
+Bubble	气泡
+Follow-up messages	后续消息
+Use	使用
+A model in Ollama, on your local server or on your key.	Ollama 中的一个模型，在你的本地服务器上或使用你的密钥。
+HABITS	习惯
+Open her memories	打开她的记忆
+Start with Windows	随 Windows 启动
+Show on Discord	在 Discord 上显示
+Use her cursor	使用她的光标
+Remember our chats	记住我们的聊天
+Power saver	省电
+Music app	音乐应用
+Perch	Perch
+Keep PC awake for jobs	为任务保持电脑唤醒
+Hide in full screen	全屏时隐藏
+Mini player over full screen	全屏上方的迷你播放器
+Explore while I'm away	我不在时探索
+Explore after	之后探索
+GAMES	游戏
+Controls	控制
+Comments	评论
+Live reactions	实时反应
+Game sounds	游戏声音
+Gaming Mode	游戏模式
+She reacts to your game until you close it.	她会一直对你的游戏做出反应，直到你关闭它。
+Works best on MAX INTELLIGENCE.	在 MAX INTELLIGENCE 上效果最佳。
+Fast hands in games	游戏中的快手
+Mute her	让她静音
+CLIPS	片段
+Clip my games	为我的游戏剪辑
+Save big moments	保存重要时刻
+Save folder	保存文件夹
+Choose folder	选择文件夹
+Open clips folder	打开片段文件夹
+Default length	默认时长
+Frame rate	帧率
+Resolution	分辨率
+Video bitrate	视频码率
+Weather	天气
+Code mods can reach your whole PC. Only trusted ones.	代码模组可以访问你的整台电脑。只安装可信的。
+Import mod	导入模组
+Browse mods	浏览模组
+Mods folder	模组文件夹
+INSTALLED	已安装
+Update mods	更新模组
+No mods match.	没有匹配的模组。
+On	开
+Remove	移除
+Publish	发布
+Options	选项
+Back	返回
+Next	下一步
+COLORS	颜色
+Reset colors	重置颜色
+Running on this PC	在此电脑上运行中
+NORMAL	正常
+OFF	关
+Local server address	本地服务器地址

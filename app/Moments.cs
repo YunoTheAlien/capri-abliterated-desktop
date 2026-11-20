@@ -48,10 +48,10 @@ namespace CapriDesktop
         internal const string Defaults =
             "# Capri's own moments\n" +
             "\n" +
-            "> The lines she says when nothing else is speaking for her, and the ones people hear most.\n" +
-            "> A personality or a mood with lines for the same moment speaks first; these are underneath them.\n" +
-            "> Add or change any line. Delete one to stop her saying it, or a whole section to silence that moment.\n" +
-            "> Tokens: %petname% %name%\n" +
+            ">! The lines she says when nothing else is speaking for her, and the ones people hear most.\n" +
+            ">! A personality or a mood with lines for the same moment speaks first; these are underneath them.\n" +
+            ">! Add or change any line. Delete one to stop her saying it, or a whole section to silence that moment.\n" +
+            ">! Tokens: %petname% %name%\n" +
             "\n" +
             "## When she pops in\n" +
             "\n" +

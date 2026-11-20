@@ -25,6 +25,16 @@ namespace CapriDesktop
         private PixelRect? MoveArea;
         private bool LyingClip { get { return clip == laydown || clip == laydownGlitch || clip == laydownTalk; } }
 
+        internal bool Riding { get { return riding; } }
+
+        // Mainframe > CAPRI > Ride cursor (Windows' TogglePerch): the same move as asking her, and what went wrong said in her bubble.
+        internal void ToggleRide()
+        {
+            string said = AskedMove(riding ? "hop_off" : "ride_cursor", null);
+            if (said != null && !riding && !said.StartsWith("Hopped", StringComparison.Ordinal)) Talk.Answer("(Ride cursor)", said);
+            NotifySettings();
+        }
+
         private string AskedMove(string action, string window)
         {
             if (action == "sit_on") return SitOn(window, false);
@@ -265,7 +275,7 @@ namespace CapriDesktop
                 if (problem != null) return problem;
                 spots = ledges.FindAll(ledge => ledge.Window == window);
             }
-            else if (!lie && (Desk is KWinDesk || Desk is NiriDesk))
+            else if (!lie && (Desk is KWinDesk || Desk is NiriDesk || Desk is GnomeDesk))
             {
                 List<long> windows = CatchUp.LinuxSeats(name, Windows());
                 if (windows.Count == 0) return "I can't see " + name + " open.";

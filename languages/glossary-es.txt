@@ -1,0 +1,26 @@
+# Words Spanish always uses for these terms: the English, a tab, then the word. The GUI maker hands
+# them to her brain with every batch. Blank means not decided yet. Edit any of them; it is the one place to fix a term.
+Refresh	Actualizar
+Settings	Configuración
+Provider	Proveedor
+Saved providers	
+Local servers	
+Fallback brain	Cerebro de respaldo
+Voice	
+Mic	
+Mods	Mods
+Music	Música
+Chess	Ajedrez
+Connect four	Cuatro en línea
+Tic-tac-toe	Tres en línea
+Rock, paper, scissors	Piedra, papel, tijeras
+Quiet	
+Check in on me	Revisa mi estado
+Watch my screen	Ver mi pantalla
+Personality	Personalidad
+Mood	
+Hide Capri	Ocultar Capri
+Open	
+Close	
+Off	Apagado
+On	Encendido

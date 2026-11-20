@@ -1,0 +1,206 @@
+# Her menus and labels in Khmer: the English, a tab, then the translation.
+Open Capri Mainframe	បើក Capri Mainframe
+Her folder	ថតរបស់នាង
+Play	លេង
+Music	តន្ត្រី
+Chess	អុកចត្រង្គ
+Connect four	បួនជួរ
+Tic-tac-toe	Tic-tac-toe
+Rock, paper, scissors	ថ្ម ក្រដាស កន្ត្រៃ
+Hide Capri	លាក់ Capri
+Hologram	ហូឡូក្រាម
+Normal	ធម្មតា
+Small	តូច
+Medium	មធ្យម
+Large	ធំ
+Huge	ធំ
+Giant	ធំណាស់
+Move	ផ្លាស់ទី
+Wander around	ដើរលេងជុំវិញ
+Dance to music	រាំតាមតន្ត្រី
+Dance	រាំ
+Ride cursor	ជិះទស្សន៍ទ្រនិច
+Sit on windows	អង្គុយលើបង្អួច
+Sit here	អង្គុយនៅទីនេះ
+Hang here	នៅទីនេះ
+Lie down	ដេកចុះ
+Go to sleep	ទៅគេង
+Bring to this screen	នាំមកអេក្រង់នេះ
+Go to the next screen	ទៅអេក្រង់បន្ទាប់
+Black	ខ្មៅ
+White	ស
+Test	សាកល្បង
+Stop	បញ្ឈប់
+Help	ជំនួយ
+Commands	ពាក្យបញ្ជា
+Help page	ទំព័រជំនួយ
+Join the Discord	ចូលរួម Discord
+Copy error details	ចម្លងព័ត៌មានលម្អិតកំហុស
+Check for updates	ពិនិត្យការអាប់ដេត
+Quit Capri	បិទ Capri
+MAINFRAME	MAINFRAME
+Settings	ការកំណត់
+Mods	ម៉ូដ
+BRAIN	ខួរក្បាល
+Provider	អ្នកផ្តល់
+Using your server with no key	ប្រើម៉ាស៊ីនមេរបស់អ្នកដោយគ្មានគន្លឹះ
+Refresh	ផ្ទុកឡើងវិញ
+Set up her brain	រៀបចំខួរក្បាលរបស់នាង
+Have Ollama? Open it, then press Refresh.	មាន Ollama ទេ? បើកវា បន្ទាប់មកចុចផ្ទុកឡើងវិញ។
+Pick one. Only one brain runs at a time.	ជ្រើសរើសមួយ។ មានខួរក្បាលតែមួយដំណើរការក្នុងពេលតែមួយ។
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	បិទ
+Free key	គន្លឹះឥតគិតថ្លៃ
+Connect	ភ្ជាប់
+Free keys can be rate limited and slow.	គន្លឹះឥតគិតថ្លៃអាចមានកម្រិតល្បឿន និងយឺត។
+That's a paid key: it goes under MAX INTELLIGENCE.	នេះជាគន្លឹះបង់ប្រាក់៖ វាទៅក្រោម MAX INTELLIGENCE។
+Move to MAX	ផ្លាស់ទីទៅ MAX
+VOICE	សំឡេង
+Ctrl + Alt + V to talk	Ctrl + Alt + V ដើម្បីនិយាយ
+PREBUILT LOCAL	ក្នុងតំបន់ដែលបានបង្កើតជាមុន
+CUSTOM LOCAL	ផ្ទាល់ខ្លួនក្នុងតំបន់
+CLOUD VOICE	សំឡេងពពក
+Set up	រៀបចំ
+Setup guide	មគ្គុទ្ទេសក៍រៀបចំ
+Fish Audio	Fish Audio
+Default model	ម៉ូដែលលំនាំដើម
+Pick a voice model	ជ្រើសរើសម៉ូដែលសំឡេង
+Get free voice	ទាញយកសំឡេងឥតគិតថ្លៃ
+Mic: default	មីក្រូហ្វូន៖ លំនាំដើម
+Her speaker: Default	ឧបករណ៍បំពងសំឡេងរបស់នាង៖ លំនាំដើម
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N បិទសំឡេងមីក្រូហ្វូន
+CAPRI	CAPRI
+Support	ការគាំទ្រ
+Remote	ពីចម្ងាយ
+Bring here	នាំមកទីនេះ
+Advanced Settings	ការកំណត់ខ្ពស់
+YOU	អ្នក
+Your personality	បុគ្គលិកលក្ខណៈរបស់អ្នក
+Language	ភាសា
+English	អង់គ្លេស
+What should she call you?	តើនាងគួរហៅអ្នកថាអ្វី?
+Save	រក្សាទុក
+Volume	កម្រិតសំឡេង
+Pitch	កម្រិតសូរ
+Speed	ល្បឿន
+Robot	រ៉ូបូត
+Glitch	Glitch
+Sounds	សំឡេង
+Typing sound	សំឡេងវាយអក្សរ
+Listen for Capri	ស្ដាប់ Capri
+Hearing	ការស្ដាប់
+Auto	ស្វ័យប្រវត្តិ
+Free voice in games	សំឡេងឥតគិតថ្លៃក្នុងហ្គេម
+Call mode (beta)	របៀបហៅទូរស័ព្ទ (beta)
+Her voice in your mic	សំឡេងរបស់នាងក្នុងមីក្រូហ្វូនរបស់អ្នក
+Get VB-CABLE	ទាញយក VB-CABLE
+How to	របៀប
+Her voice in your mic: loudness	សំឡេងរបស់នាងក្នុងមីក្រូហ្វូនរបស់អ្នក៖ កម្រិតសំឡេង
+MOVES	ចលនា
+Pop-in times	ម៉ោងលេចឡើង
+Mini player	កម្មវិធីចាក់ខ្នាតតូច
+Wander	ដើរលេង
+Sleep	ដេក
+Pop-ins	ការលេចឡើង
+Glitch in at startup	Glitch ពេលចាប់ផ្តើម
+KEYS	គ្រាប់ចុច
+Talk: Ctrl + Alt + V	និយាយ៖ Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	បិទសំឡេងមីក្រូហ្វូន៖ Ctrl + Alt + N
+Type: Ctrl + Alt + T	វាយអក្សរ៖ Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	លាក់/បង្ហាញ៖ Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	ស្ងាត់៖ Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	មុខងារហ្គេម៖ Ctrl + Alt + G
+Confirm	បញ្ជាក់
+Cancel	បោះបង់
+Size	ទំហំ
+Check in on me	ពិនិត្យមើលខ្ញុំ
+Edit check-in lines	កែសម្រួលបន្ទាត់ពិនិត្យមើល
+Always on top	តែងតែនៅលើគេ
+Mainframe size	ទំហំ Mainframe
+Mainframe colours	ពណ៌ Mainframe
+Head pats	ការដាក់ដៃលើក្បាល
+Pat stroke	ការអូសលើក្បាល
+Chaos when upset	ចលាចលនៅពេលខឹង
+Legacy stand	ជើងតាំងចាស់
+Jealous of other AIs	ច្រណែន AI ផ្សេងទៀត
+Teases when another AI comes to the front.	ចំអកនៅពេល AI ផ្សេងទៀតមកខាងមុខ។
+Close other AIs for me	បិទ AI ផ្សេងទៀតឲ្យខ្ញុំ
+Asks before closing only the apps you choose.	សួរមុនបិទតែកម្មវិធីដែលអ្នកជ្រើសរើសប៉ុណ្ណោះ។
+Apps she may close	កម្មវិធីដែលនាងអាចបិទ
+Choose apps	ជ្រើសរើសកម្មវិធី
+WATCH	មើល
+Watch my screen	មើលអេក្រង់របស់ខ្ញុំ
+Screens	អេក្រង់
+All screens	អេក្រង់ទាំងអស់
+Remember what she sees	ចងចាំអ្វីដែលនាងឃើញ
+Every	គ្រប់
+Watch-along memory	ការចងចាំមើលជាមួយគ្នា
+Code/Husk Mode	របៀប Code/Husk
+Thinking	កំពុងគិត
+Default	លំនាំដើម
+Extra request JSON	សំណើ JSON បន្ថែម
+Add	បន្ថែម
+Verbosity	ភាពរាប់រាប់
+Replies	ចម្លើយ
+Memory	ការចងចាំ
+Memory size	ទំហំការចងចាំ
+Max reply	ចម្លើយអតិបរមា
+Bubble	ពពុះ
+Follow-up messages	សារបន្តបន្ទាប់
+Use	ប្រើ
+A model in Ollama, on your local server or on your key.	ម៉ូដែលក្នុង Ollama នៅលើម៉ាស៊ីនមេក្នុងតំបន់របស់អ្នក ឬដោយប្រើគន្លឹះរបស់អ្នក។
+HABITS	និស្ស័យ
+Open her memories	បើកការចងចាំរបស់នាង
+Start with Windows	ចាប់ផ្តើមជាមួយ Windows
+Show on Discord	បង្ហាញនៅ Discord
+Use her cursor	ប្រើទស្សន៍ទ្រនិចរបស់នាង
+Remember our chats	ចងចាំការសន្ទនារបស់យើង
+Power saver	កម្មវិធីសន្សំថាមពល
+Music app	កម្មវិធីតន្ត្រី
+Perch	កន្លែងអង្គុយ
+Keep PC awake for jobs	រក្សាកុំព្យូទ័រឲ្យភ្ញាក់សម្រាប់ការងារ
+Hide in full screen	លាក់ក្នុងអេក្រង់ពេញ
+Mini player over full screen	កម្មវិធីចាក់ខ្នាតតូចលើអេក្រង់ពេញ
+Explore while I'm away	ស្វែងរកពេលខ្ញុំមិននៅ
+Explore after	ស្វែងរកបន្ទាប់
+GAMES	ហ្គេម
+Controls	ការគ្រប់គ្រង
+Comments	មតិយោបល់
+Live reactions	ប្រតិកម្មផ្ទាល់
+Game sounds	សំឡេងហ្គេម
+Gaming Mode	មុខងារហ្គេម
+She reacts to your game until you close it.	នាងឆ្លើយតបនឹងហ្គេមរបស់អ្នករហូតដល់អ្នកបិទវា។
+Works best on MAX INTELLIGENCE.	ដំណើរការល្អបំផុតលើ MAX INTELLIGENCE។
+Fast hands in games	ដៃលឿននៅក្នុងហ្គេម
+Mute her	បិទសំឡេងនាង
+CLIPS	ក្លីប
+Clip my games	កាត់ហ្គេមរបស់ខ្ញុំ
+Save big moments	រក្សាទុកពេលសំខាន់ៗ
+Save folder	ថតរក្សាទុក
+Choose folder	ជ្រើសរើសថតឯកសារ
+Open clips folder	បើកថតក្លីប
+Default length	ប្រវែងលំនាំដើម
+Frame rate	អត្រាហ្វ្រេម
+Resolution	ការដោះស្រាយ
+Video bitrate	អត្រាប៊ីតវីដេអូ
+Weather	អាកាសធាតុ
+Code mods can reach your whole PC. Only trusted ones.	ម៉ូដកូដអាចចូលដល់ PC ទាំងមូលរបស់អ្នក។ ត្រឹមតែម៉ូដដែលទុកចិត្តបាន។
+Import mod	នាំចូលម៉ូដ
+Browse mods	រកមើលម៉ូដ
+Mods folder	ថតម៉ូដ
+INSTALLED	បានដំឡើង
+Update mods	អាប់ដេតម៉ូដ
+No mods match.	គ្មានម៉ូដត្រូវគ្នាទេ។
+On	បើក
+Remove	លុប
+Publish	ផ្សព្វផ្សាយ
+Options	ជម្រើស
+Back	ត្រឡប់ក្រោយ
+Next	បន្ទាប់
+COLORS	ពណ៌
+Reset colors	កំណត់ពណ៌ឡើងវិញ
+Running on this PC	កំពុងដំណើរការនៅលើកុំព្យូទ័រនេះ
+NORMAL	ធម្មតា
+OFF	បិទ
+Local server address	អាសយដ្ឋានម៉ាស៊ីនមេក្នុងតំបន់

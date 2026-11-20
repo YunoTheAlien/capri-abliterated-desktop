@@ -93,7 +93,7 @@ namespace CapriDesktop
             {
                 if (!string.IsNullOrWhiteSpace(screen) || ScreenSelection.HasHint(focus))
                     throw new InvalidOperationException("I can't select that display on this desktop. Requested display selection requires the native Hyprland connection.");
-                byte[] picture = Screenshot(quiet ? QuietTools(OperatingSystem.IsMacOS(), Session, Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP")) : Tools(OperatingSystem.IsMacOS(), Session, Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP")));
+                byte[] picture = Capture(quiet);
                 CheckTicket(ticket);
                 return new EyesObservation(picture, null, ticket);
             }
@@ -171,6 +171,20 @@ namespace CapriDesktop
             }
         }
 
+        // Wayland only: X11's import, scrot and maim are silent and need no question, so they stay first there.
+        internal static bool PortalFirst(bool mac, string session) { return !mac && string.Equals(session, "wayland", StringComparison.OrdinalIgnoreCase); }
+        internal static Func<bool, byte[]> Portal = ScreenshotPortal.Shot;
+
+        // A whole-desktop screenshot without Hyprland's own capture: on Wayland the XDG Screenshot portal goes first, then
+        // the tool list (the owner's order, 19 Nov).
+        internal static byte[] Capture(bool quiet)
+        {
+            bool mac = OperatingSystem.IsMacOS();
+            string session = Session, desktop = Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP");
+            byte[] picture = PortalFirst(mac, session) ? Portal(quiet) : null;
+            return picture ?? Screenshot(quiet ? QuietTools(mac, session, desktop) : Tools(mac, session, desktop));
+        }
+
         internal static string Unwatchable
         {
             get
@@ -183,6 +197,7 @@ namespace CapriDesktop
         {
             if (mac) return "I can't watch your screen yet. Allow Capri under System Settings > Privacy & Security > Screen Recording, then open me again. If I'm already on that list, remove me with the minus button first.";
             if (Kde(desktop) && string.Equals(session, "wayland", StringComparison.OrdinalIgnoreCase)) return "I can't watch your screen yet. Install Spectacle for KDE, then ask again.";
+            if (string.Equals(session, "wayland", StringComparison.OrdinalIgnoreCase)) return "I can't watch your screen yet. Allow Capri when your desktop asks to take screenshots, then turn Watch my screen off and on again.";
             return "I can't watch your screen quietly here: this desktop's screenshots flash or ask first. I'll still look whenever you ask me to check your screen. On X11, installing scrot or maim fixes it.";
         }
 
@@ -213,7 +228,7 @@ namespace CapriDesktop
         // version lets Mac ask again.
         private static void ForgetOldBuild()
         {
-            string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Capri");
+            string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.Create), "Capri");
             string marker = Path.Combine(folder, "screen-asked.txt");
             string version = typeof(Eyes).Assembly.GetName().Version.ToString();
             if (!FreshAsk(File.Exists(marker) ? File.ReadAllText(marker) : null, version)) return;
@@ -240,6 +255,7 @@ namespace CapriDesktop
             if (mac) return "Couldn't take a screenshot. Allow Capri under System Settings > Privacy & Security > Screen Recording, then open Capri again. If Capri is already on that list, remove it with the minus button first.";
             string tool = Kde(desktop) ? "Spectacle for KDE" : string.Equals(session, "wayland", StringComparison.OrdinalIgnoreCase)
                 ? (desktop ?? "").ToLowerInvariant().Contains("gnome") ? "gnome-screenshot for GNOME" : "grim for your desktop" : "scrot or maim";
+            if (string.Equals(session, "wayland", StringComparison.OrdinalIgnoreCase)) return "Couldn't take a screenshot. Allow Capri when your desktop asks to take screenshots, or install " + tool + ", then ask again.";
             return "Couldn't take a screenshot. Install " + tool + ", then ask again.";
         }
 

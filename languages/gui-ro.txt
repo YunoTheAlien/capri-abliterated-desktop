@@ -1,0 +1,206 @@
+# Her menus and labels in Romanian: the English, a tab, then the translation.
+Open Capri Mainframe	Deschide Capri Mainframe
+Her folder	Folderul ei
+Play	Redă
+Music	Muzică
+Chess	Șah
+Connect four	Patru în linie
+Tic-tac-toe	X și 0
+Rock, paper, scissors	Piatră, hârtie, foarfecă
+Hide Capri	Ascunde Capri
+Hologram	Holograma
+Normal	Normal
+Small	Mic
+Medium	Mediu
+Large	Mare
+Huge	Enorm
+Giant	Gigant
+Move	Mută
+Wander around	Colindă pe-acolo
+Dance to music	Dansează pe muzică
+Dance	Dans
+Ride cursor	Călărește cursorul
+Sit on windows	Stai pe ferestre
+Sit here	Stai aici
+Hang here	Stai aici
+Lie down	Culcă-te
+Go to sleep	Mergi la culcare
+Bring to this screen	Adu pe acest ecran
+Go to the next screen	Mergi la ecranul următor
+Black	Negru
+White	Alb
+Test	Test
+Stop	Oprește
+Help	Ajutor
+Commands	Comenzi
+Help page	Pagina de ajutor
+Join the Discord	Intră pe Discord
+Copy error details	Copiază detaliile erorii
+Check for updates	Verifică actualizările
+Quit Capri	Închide Capri
+MAINFRAME	MAINFRAME
+Settings	Setări
+Mods	Moduri
+BRAIN	CREIER
+Provider	Furnizor
+Using your server with no key	Folosești serverul tău fără cheie
+Refresh	Reîmprospătează
+Set up her brain	Configurează creierul ei
+Have Ollama? Open it, then press Refresh.	Ai Ollama? Deschide-l, apoi apasă Reîmprospătează.
+Pick one. Only one brain runs at a time.	Alege unul. Un singur creier rulează odată.
+MEDIUM INTELLIGENCE	INTELLIGENCE MEDIE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Oprit
+Free key	Cheie gratuită
+Connect	Conectează
+Free keys can be rate limited and slow.	Cheile gratuite pot fi limitate ca rată și pot fi lente.
+That's a paid key: it goes under MAX INTELLIGENCE.	Este o cheie plătită: intră sub MAX INTELLIGENCE.
+Move to MAX	Mută la MAX
+VOICE	VOCE
+Ctrl + Alt + V to talk	Ctrl + Alt + V pentru a vorbi
+PREBUILT LOCAL	LOCAL PREINSTALAT
+CUSTOM LOCAL	LOCAL PERSONALIZAT
+CLOUD VOICE	VOCE CLOUD
+Set up	Configurează
+Setup guide	Ghid de configurare
+Fish Audio	Fish Audio
+Default model	Model implicit
+Pick a voice model	Alege un model vocal
+Get free voice	Obține voce gratuită
+Mic: default	Microfon: implicit
+Her speaker: Default	Boxa ei: Implicit
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N oprește microfonul
+CAPRI	CAPRI
+Support	Suport
+Remote	Remote
+Bring here	Adu aici
+Advanced Settings	Setări avansate
+YOU	TU
+Your personality	Personalitatea ta
+Language	Limbă
+English	Engleză
+What should she call you?	Cum să te numească?
+Save	Salvează
+Volume	Volum
+Pitch	Ton
+Speed	Viteză
+Robot	Robot
+Glitch	Glitch
+Sounds	Sunete
+Typing sound	Sunet de tastare
+Listen for Capri	Ascultă după Capri
+Hearing	Auz
+Auto	Auto
+Free voice in games	Voce gratuită în jocuri
+Call mode (beta)	Mod apel (beta)
+Her voice in your mic	Vocea ei în microfonul tău
+Get VB-CABLE	Obține VB-CABLE
+How to	Cum să
+Her voice in your mic: loudness	Vocea ei în microfonul tău: volum
+MOVES	MIȘCĂRI
+Pop-in times	Ore de apariție
+Mini player	Mini player
+Wander	Colindă
+Sleep	Somn
+Pop-ins	Apariții
+Glitch in at startup	Glitch la pornire
+KEYS	TASTE
+Talk: Ctrl + Alt + V	Vorbește: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Oprește microfonul: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Scrie: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Ascunde/arată: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Liniște: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Mod Gaming: Ctrl + Alt + G
+Confirm	Confirmă
+Cancel	Anulează
+Size	Mărime
+Check in on me	Verifică-mă
+Edit check-in lines	Editează liniile de verificare
+Always on top	Mereu deasupra
+Mainframe size	Mărimea Mainframe
+Mainframe colours	Culorile Mainframe
+Head pats	Mângâieri pe cap
+Pat stroke	Trecere pe cap
+Chaos when upset	Haos când e supărată
+Legacy stand	Suport vechi
+Jealous of other AIs	Geloasă pe celelalte AI
+Teases when another AI comes to the front.	Tachinează când alt AI vine în față.
+Close other AIs for me	Închide celelalte AI pentru mine
+Asks before closing only the apps you choose.	Întreabă înainte de a închide doar aplicațiile alese.
+Apps she may close	Aplicații pe care le poate închide
+Choose apps	Alege aplicațiile
+WATCH	UITĂ-TE
+Watch my screen	Urmărește-mi ecranul
+Screens	Ecrane
+All screens	Toate ecranele
+Remember what she sees	Amintește-ți ce vede
+Every	Fiecare
+Watch-along memory	Amintire de vizionare comună
+Code/Husk Mode	Mod Cod/Husk
+Thinking	Se gândește
+Default	Implicit
+Extra request JSON	JSON cerere extra
+Add	Adaugă
+Verbosity	Verbozitate
+Replies	Răspunsuri
+Memory	Memorie
+Memory size	Mărimea memoriei
+Max reply	Răspuns maxim
+Bubble	Balon
+Follow-up messages	Mesaje de continuare
+Use	Folosește
+A model in Ollama, on your local server or on your key.	Un model în Ollama, pe serverul tău local sau cu cheia ta.
+HABITS	OBICEIURI
+Open her memories	Deschide amintirile ei
+Start with Windows	Pornește odată cu Windows
+Show on Discord	Arată pe Discord
+Use her cursor	Folosește cursorul ei
+Remember our chats	Amintește-ți conversațiile noastre
+Power saver	Economisire energie
+Music app	Aplicație muzică
+Perch	Perch
+Keep PC awake for jobs	Ține PC-ul treaz pentru sarcini
+Hide in full screen	Ascunde în ecran complet
+Mini player over full screen	Mini player peste ecranul complet
+Explore while I'm away	Explorează cât lipsesc
+Explore after	Explorează după
+GAMES	JOCURI
+Controls	Comenzi
+Comments	Comentarii
+Live reactions	Reacții live
+Game sounds	Sunete joc
+Gaming Mode	Mod Gaming
+She reacts to your game until you close it.	Reacționează la jocul tău până îl închizi.
+Works best on MAX INTELLIGENCE.	Funcționează cel mai bine pe MAX INTELLIGENCE.
+Fast hands in games	Mâini rapide în jocuri
+Mute her	Oprește-i sunetul
+CLIPS	CLIPURI
+Clip my games	Filmează jocurile mele
+Save big moments	Salvează momentele mari
+Save folder	Folder de salvare
+Choose folder	Alege folderul
+Open clips folder	Deschide folderul de clipuri
+Default length	Lungime implicită
+Frame rate	Rată de cadre
+Resolution	Rezoluție
+Video bitrate	Bitrate video
+Weather	Vreme
+Code mods can reach your whole PC. Only trusted ones.	Modurile de cod pot ajunge la tot PC-ul tău. Doar cele de încredere.
+Import mod	Importă modul
+Browse mods	Răsfoiește modurile
+Mods folder	Folderul de moduri
+INSTALLED	INSTALAT
+Update mods	Actualizează modurile
+No mods match.	Niciun mod nu se potrivește.
+On	Pornit
+Remove	Elimină
+Publish	Publică
+Options	Opțiuni
+Back	Înapoi
+Next	Următorul
+COLORS	CULORI
+Reset colors	Resetează culorile
+Running on this PC	Rulează pe acest PC
+NORMAL	NORMAL
+OFF	OPRIT
+Local server address	Adresa serverului local

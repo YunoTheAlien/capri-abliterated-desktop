@@ -10,8 +10,7 @@ namespace CapriDesktop
     // the opener and tail pools from lines.md like everything else.
     internal static class Interests
     {
-        // Plain names and no type, so the folder reads as nothing and Windows has nothing to open them
-        // with. What they were called before is kept beside them, because a file written under the old
+        // File names. What they were called before is kept beside them, because a file written under the old
         // name is theirs and is renamed rather than left behind or written over.
         internal const string FileName = "random_interests";
 
@@ -34,7 +33,7 @@ namespace CapriDesktop
             get
             {
                 if (HeadFor == null) return "specialInterest:";
-                try { return HeadFor() ?? "specialInterest:"; }
+                try { return Legacy.Modern(HeadFor()) ?? "specialInterest:"; }
                 catch (Exception) { return "specialInterest:"; }
             }
         }
@@ -47,8 +46,17 @@ namespace CapriDesktop
         // All three are hers only with the toggle on: no tab, no reading, nothing written, with it off.
         internal const string HersName = "her_interests";
         internal const string YoursName = "your_interests";
-        internal const string WasHersName = "Her_Kinks.md";
-        internal const string WasYoursName = "Your_Kinks.md";
+        // The two other old names, set by the same pack as the first and null without it.
+        internal static Func<string> WasHersFor, WasYoursFor;
+        internal static string WasHersName { get { return Named(WasHersFor); } }
+        internal static string WasYoursName { get { return Named(WasYoursFor); } }
+
+        private static string Named(Func<string> hook)
+        {
+            if (hook == null) return null;
+            try { return hook(); }
+            catch (Exception) { return null; }
+        }
         internal static string HersKept, YoursKept;
 
         private static string[] Files { get { return new[] { Kept, HersKept, YoursKept }; } }
@@ -90,18 +98,18 @@ namespace CapriDesktop
         private static readonly object writing = new object();
         private static readonly Random dice = new Random();
 
-        internal static bool Shown { get { return Brain.Uncensored && !string.IsNullOrEmpty(Kept); } }
+        internal static bool Shown { get { return Brain.SenpaiOn && !string.IsNullOrEmpty(Kept); } }
 
         internal static WrittenNote Open()
         {
-            if (!Brain.Uncensored) throw new IOException("That one only opens with Uncensored on.");
+            if (!Brain.SenpaiOn) throw new IOException("That one only opens with the switch at the bottom of sys.md on.");
             Write(false);
             return new WrittenNote(Kept, Text, writing);
         }
 
         internal static WrittenNote OpenHers()
         {
-            if (!Brain.Uncensored) throw new IOException("That one only opens with Uncensored on.");
+            if (!Brain.SenpaiOn) throw new IOException("That one only opens with the switch at the bottom of sys.md on.");
             Write(false);
             Split();
             return new WrittenNote(HersKept, HersHead.Replace("\n", Environment.NewLine), writing);
@@ -109,7 +117,7 @@ namespace CapriDesktop
 
         internal static WrittenNote OpenYours()
         {
-            if (!Brain.Uncensored) throw new IOException("That one only opens with Uncensored on.");
+            if (!Brain.SenpaiOn) throw new IOException("That one only opens with the switch at the bottom of sys.md on.");
             Split();
             return new WrittenNote(YoursKept, YoursHead.Replace("\n", Environment.NewLine), writing);
         }
@@ -118,7 +126,7 @@ namespace CapriDesktop
         // appended so she can tell a reward from a threat, and their own entries are left exactly as they are.
         // Any section the build ships that the file does not have yet is appended, so new interest packs and new
         // template pools turn up in a file written by an older build. Their own lines are never touched.
-        // What belongs in Her_Kinks.md: the list of what she is into, and the pack of lines for each one.
+        // What belongs in her senpai interests file: the list of what she is into, and the pack of lines for each one.
         private static bool Hers(string heading)
         {
             string head = (heading ?? "").Trim();
@@ -129,9 +137,9 @@ namespace CapriDesktop
         private const string YoursHead =
             "# What you are into\n"
             + "\n"
-            + "> Yours, not hers. She reads this so she knows what you like without having to be told twice.\n"
-            + "> One a line. Empty is fine and she will not bring any of it up.\n"
-            + "> Only read with Uncensored on.\n"
+            + ">! Yours, not hers. She reads this so she knows what you like without having to be told twice.\n"
+            + ">! One a line. Empty is fine and she will not bring any of it up.\n"
+            + ">! Only read with the switch at the bottom of sys.md on.\n"
             + "\n"
             + "reset to stock: 0\n"
             + "\n"
@@ -141,8 +149,8 @@ namespace CapriDesktop
         private const string HersHead =
             "# What she is into\n"
             + "\n"
-            + "> Her list, and the lines that go with each one. Kept apart from her other one so neither gets lost.\n"
-            + "> Only read with Uncensored on.\n"
+            + ">! Her list, and the lines that go with each one. Kept apart from her other one so neither gets lost.\n"
+            + ">! Only read with the switch at the bottom of sys.md on.\n"
             + "\n"
             + "reset to stock: 0\n"
             + "\n";
@@ -155,7 +163,7 @@ namespace CapriDesktop
             {
                 if (string.IsNullOrEmpty(Kept) || string.IsNullOrEmpty(HersKept) || !File.Exists(Kept)) return;
                 if (File.Exists(HersKept)) return;
-                string[] rows = File.ReadAllText(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+                string[] rows = CapriDesktop.Notes.ReadAll(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
                 List<string> stays = new List<string>(), goes = new List<string>();
                 bool moving = false;
                 foreach (string raw in rows)
@@ -187,7 +195,7 @@ namespace CapriDesktop
         // Both only exist with the toggle on, like her interests file itself.
         internal static void Split()
         {
-            if (!Brain.Uncensored) return;
+            if (!Brain.SenpaiOn) return;
             Carve();
             MakeYours();
         }
@@ -229,13 +237,13 @@ namespace CapriDesktop
         }
 
         // Anything of hers left in her interests file after the carve, taken out. Nothing is lost: it is already in
-        // Her_Kinks.md by the time this runs, and anything only in her interests file is moved rather than dropped.
+        // her senpai interests file by the time this runs, and anything only in her interests file is moved rather than dropped.
         private static void NoHersInRandom()
         {
             try
             {
                 if (string.IsNullOrEmpty(Kept) || string.IsNullOrEmpty(HersKept) || !File.Exists(Kept) || !File.Exists(HersKept)) return;
-                string had = File.ReadAllText(Kept), theirs = File.ReadAllText(HersKept);
+                string had = CapriDesktop.Notes.ReadAll(Kept), theirs = File.ReadAllText(HersKept);
                 string[] rows = had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
                 List<string> stays = new List<string>(), moves = new List<string>();
                 bool moving = false, found = false;
@@ -279,7 +287,7 @@ namespace CapriDesktop
 
         internal static void TopUp()
         {
-            if (!Brain.Uncensored) { Gone(); return; }
+            if (!Brain.SenpaiOn) { Gone(); return; }
             if (string.IsNullOrEmpty(Kept)) return;
             Split();
             NoHersInRandom();
@@ -305,7 +313,7 @@ namespace CapriDesktop
             try
             {
                 if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return "Gentle";
-                foreach (string row in Chunk(File.ReadAllText(Kept), "## " + HandlingKey).Replace("\r\n", "\n").Split('\n'))
+                foreach (string row in Chunk(CapriDesktop.Notes.ReadAll(Kept), "## " + HandlingKey).Replace("\r\n", "\n").Split('\n'))
                 {
                     string line = row.Trim();
                     if (line.Length == 0 || line.StartsWith("#", StringComparison.Ordinal) || line.StartsWith(">", StringComparison.Ordinal)) continue;
@@ -338,7 +346,10 @@ namespace CapriDesktop
         {
             // "we end up at being told exactly what to do": her list is written as gerunds, so this one template
             // read as broken English every time it was picked.
-            { "More of this and we end up at %it%.", "More of this and we end up here: %it%." },
+            { "More of this and we end up at %it%.", "More of this and it leads to %it%." },
+            // And the one that replaced it, which still read oddly with a long line: "we end up here: being called good
+            // when I have earned it".
+            { "More of this and we end up here: %it%.", "More of this and it leads to %it%." },
             { "Ask nicely and it could be %it%.", "Ask nicely and we could get to %it%." },
             { "Behave like that and there is %it% in it for you.", "Behave like that and I might be talked into %it%." }
         };
@@ -360,7 +371,7 @@ namespace CapriDesktop
             if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
             try
             {
-                string had = File.ReadAllText(Kept);
+                string had = CapriDesktop.Notes.ReadAll(Kept);
                 string[] rows = had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
                 List<string> kept = new List<string>();
                 bool moved = false;
@@ -400,7 +411,7 @@ namespace CapriDesktop
             try
             {
                 if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-                string had = File.ReadAllText(Kept);
+                string had = CapriDesktop.Notes.ReadAll(Kept);
                 string[] rows = had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
                 Dictionary<string, bool> seen = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
                 List<string> kept = new List<string>();
@@ -429,7 +440,7 @@ namespace CapriDesktop
             try
             {
                 if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-                List<string> rows = new List<string>(File.ReadAllText(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'));
+                List<string> rows = new List<string>(CapriDesktop.Notes.ReadAll(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'));
                 // Every copy comes out, then one goes back in the right place. Appending and moving on separate
                 // runs left two of it, and a settings section that exists twice is worse than one in the wrong spot.
                 List<string> block = null;
@@ -502,8 +513,8 @@ namespace CapriDesktop
 
         internal static void Write(bool over)
         {
-            // Never written unless asked for: the file turning up on disk is itself a disclosure.
-            if (string.IsNullOrEmpty(Kept) || !Brain.Uncensored) return;
+            // Only written with the switch on.
+            if (string.IsNullOrEmpty(Kept) || !Brain.SenpaiOn) return;
             try
             {
                 if (!over && File.Exists(Kept)) return;
@@ -532,7 +543,7 @@ namespace CapriDesktop
             // Behind the switch, and said twice: her pack's list of this is written into the senpai half of her file,
             // which a censored install does not have, and this never asks for it there either. A section
             // somebody writes by hand into the plain half stays unread, which is the rule everywhere else.
-            if (!Brain.Adult) return null;
+            if (!Brain.SenpaiLive) return null;
             try
             {
                 string[] mine = Personalities.Lines("into", null);
@@ -544,7 +555,7 @@ namespace CapriDesktop
 
         internal static string Packed(bool liked)
         {
-            if (!Brain.Uncensored) return null;
+            if (!Brain.SenpaiOn) return null;
             string named = Hers() ?? Named(For("what she is into"));
             if (string.IsNullOrEmpty(named)) return null;
             return For(Head + " " + named, liked ? "liked" : "cross");
@@ -552,7 +563,7 @@ namespace CapriDesktop
 
         internal static string Woven(bool liked)
         {
-            if (!Brain.Uncensored) return null;
+            if (!Brain.SenpaiOn) return null;
             // Matched to how she feels about what just happened. An older file with the single combined section
             // still works, it simply does not know the difference.
             string how = For(liked ? "how she brings it up, pleased" : "how she brings it up, cross")
@@ -567,7 +578,7 @@ namespace CapriDesktop
         // which is right for a reply and useless for telling her what she likes.
         internal static string All(string pool)
         {
-            if (!Brain.Uncensored) return null;
+            if (!Brain.SenpaiOn) return null;
             try
             {
                 System.Collections.Generic.List<string> found = new System.Collections.Generic.List<string>();
@@ -580,7 +591,7 @@ namespace CapriDesktop
                         string one = (raw ?? "").Trim();
                         if (one.StartsWith("#"))
                         {
-                            // A single # is the file's title, not a section. Her_Kinks.md is titled "What she
+                            // A single # is the file's title, not a section. Her senpai interests file is titled "What she
                             // is into" and has a "## what she is into" under it, so counting the title as a
                             // section put everything between the two into her list, the reset marker with it.
                             // She offered "Reset to stock: 0 is on the table."
@@ -608,7 +619,7 @@ namespace CapriDesktop
         internal static void ListCheck(System.Collections.Generic.List<string> checks)
         {
             string keptWas = Kept, hersWas = HersKept, yoursWas = YoursKept;
-            bool senpaiWas = Brain.Uncensored;
+            bool senpaiWas = Brain.SenpaiOn;
             string folder = Path.Combine(Path.GetTempPath(), "capri-interests-" + Guid.NewGuid().ToString("N").Substring(0, 8));
             try
             {
@@ -620,8 +631,8 @@ namespace CapriDesktop
                 {
                     "# What she is into",
                     "",
-                    "> Her list, and the lines that go with each one.",
-                    "> Only read with Uncensored on.",
+                    ">! Her list, and the lines that go with each one.",
+                    ">! Only read with the switch at the bottom of sys.md on.",
                     "",
                     Notes.ResetKey + ": 0",
                     "",
@@ -635,7 +646,7 @@ namespace CapriDesktop
                 Kept = Path.Combine(folder, WasFileName ?? FileName);
                 HersKept = hers;
                 YoursKept = Path.Combine(folder, "your_interests");
-                Brain.Uncensored = true;
+                Brain.SenpaiOn = true;
                 System.Collections.Generic.List<string> wrong = new System.Collections.Generic.List<string>();
                 bool sawMine = false;
                 // Her own shipped list is topped up into this file, so what comes back is hers plus the two
@@ -658,7 +669,7 @@ namespace CapriDesktop
                 Kept = keptWas;
                 HersKept = hersWas;
                 YoursKept = yoursWas;
-                Brain.Uncensored = senpaiWas;
+                Brain.SenpaiOn = senpaiWas;
                 try { if (Directory.Exists(folder)) Directory.Delete(folder, true); }
                 catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
@@ -669,7 +680,7 @@ namespace CapriDesktop
         // tone picks between the "+" and "-" lines inside a pack. A pack with neither marker is used for both.
         internal static string For(string pool, string tone)
         {
-            if (!Brain.Uncensored) return null;
+            if (!Brain.SenpaiOn) return null;
             try
             {
                 Write(false);
@@ -683,7 +694,7 @@ namespace CapriDesktop
                         string one = (raw ?? "").Trim();
                         if (one.StartsWith("#"))
                         {
-                            // A single # is the file's title, not a section of it. Her_Kinks.md is titled "What she is
+                            // A single # is the file's title, not a section of it. Her senpai interests file is titled "What she is
                             // into" and has a "## what she is into" under it, so counting the title as a section put
                             // everything between the two into her list. She offered "Reset to stock: 0 is on the table."
                             under = one.StartsWith("##", StringComparison.Ordinal) ? one.TrimStart('#').Trim() : null;
@@ -739,7 +750,7 @@ namespace CapriDesktop
             get
             {
                 StringBuilder made = new StringBuilder();
-                if (BodyFor != null) { try { made.Append(BodyFor()); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
+                if (BodyFor != null) { try { made.Append(Legacy.Modern(BodyFor())); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
                 return made.ToString();
             }
         }

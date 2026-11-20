@@ -1,0 +1,206 @@
+# Her menus and labels in Korean: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe 열기
+Her folder	그녀의 폴더
+Play	재생
+Music	음악
+Chess	체스
+Connect four	Connect Four
+Tic-tac-toe	틱택토
+Rock, paper, scissors	가위바위보
+Hide Capri	Capri 숨기기
+Hologram	홀로그램
+Normal	보통
+Small	작게
+Medium	중간
+Large	큼
+Huge	거대
+Giant	거대함
+Move	이동
+Wander around	주변 배회
+Dance to music	음악에 맞춰 춤추기
+Dance	춤추기
+Ride cursor	커서 타기
+Sit on windows	창 위에 앉기
+Sit here	여기 있기
+Hang here	여기 머물기
+Lie down	눕기
+Go to sleep	잠자기
+Bring to this screen	이 화면으로 가져오기
+Go to the next screen	다음 화면으로 이동
+Black	검정
+White	흰색
+Test	테스트
+Stop	중지
+Help	도움말
+Commands	명령
+Help page	도움말 페이지
+Join the Discord	Discord 참여
+Copy error details	오류 세부 정보 복사
+Check for updates	업데이트 확인
+Quit Capri	Capri 종료
+MAINFRAME	MAINFRAME
+Settings	설정
+Mods	모드
+BRAIN	뇌
+Provider	제공자
+Using your server with no key	키 없이 서버를 사용 중
+Refresh	새로 고침
+Set up her brain	그녀의 뇌 설정
+Have Ollama? Open it, then press Refresh.	Ollama 있어? 열고 새로 고침을 누르세요.
+Pick one. Only one brain runs at a time.	하나 고르세요. 한 번에 한 뇌만 실행돼.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	끔
+Free key	무료 키
+Connect	연결
+Free keys can be rate limited and slow.	무료 키는 속도 제한이 있고 느릴 수 있어.
+That's a paid key: it goes under MAX INTELLIGENCE.	그건 유료 키: MAX INTELLIGENCE 아래로 가.
+Move to MAX	MAX로 이동
+VOICE	음성
+Ctrl + Alt + V to talk	Ctrl + Alt + V로 말하기
+PREBUILT LOCAL	사전 구성된 로컬
+CUSTOM LOCAL	사용자 지정 로컬
+CLOUD VOICE	클라우드 음성
+Set up	설정
+Setup guide	설정 가이드
+Fish Audio	Fish Audio
+Default model	기본 모델
+Pick a voice model	음성 모델을 고르세요
+Get free voice	무료 음성 받기
+Mic: default	마이크: 기본
+Her speaker: Default	그녀의 스피커: 기본
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N은 마이크를 음소거
+CAPRI	CAPRI
+Support	지원
+Remote	원격
+Bring here	여기로 가져오기
+Advanced Settings	고급 설정
+YOU	너
+Your personality	네 성격
+Language	언어
+English	영어
+What should she call you?	그녀가 너를 뭐라고 부르면 좋을까?
+Save	저장
+Volume	음량
+Pitch	피치
+Speed	속도
+Robot	로봇
+Glitch	Glitch
+Sounds	소리
+Typing sound	타이핑 소리
+Listen for Capri	Capri 듣기
+Hearing	청취
+Auto	자동
+Free voice in games	게임 중 무료 음성
+Call mode (beta)	통화 모드 (베타)
+Her voice in your mic	마이크의 그녀 목소리
+Get VB-CABLE	VB-CABLE 받기
+How to	방법
+Her voice in your mic: loudness	마이크의 그녀 목소리: 음량
+MOVES	움직임
+Pop-in times	방문 시간
+Mini player	미니 플레이어
+Wander	배회
+Sleep	잠자기
+Pop-ins	방문
+Glitch in at startup	시작 시 글리치
+KEYS	키
+Talk: Ctrl + Alt + V	말하기: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	마이크 음소거: Ctrl + Alt + N
+Type: Ctrl + Alt + T	입력: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	숨기기/보이기: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	조용히: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	게이밍 모드: Ctrl + Alt + G
+Confirm	확인
+Cancel	취소
+Size	크기
+Check in on me	안부 묻기
+Edit check-in lines	체크인 대사 편집
+Always on top	항상 위에 표시
+Mainframe size	Mainframe 크기
+Mainframe colours	Mainframe 색상
+Head pats	머리 쓰다듬기
+Pat stroke	쓰다듬기
+Chaos when upset	화나면 혼돈
+Legacy stand	낡은 받침대
+Jealous of other AIs	다른 AI를 질투함
+Teases when another AI comes to the front.	다른 AI가 앞에 나올 때 놀림.
+Close other AIs for me	다른 AI 나 대신 닫기
+Asks before closing only the apps you choose.	선택한 앱만 닫기 전에 물어봐.
+Apps she may close	닫아도 되는 앱
+Choose apps	앱 선택
+WATCH	지켜보기
+Watch my screen	내 화면 보기
+Screens	화면
+All screens	모든 화면
+Remember what she sees	그녀가 보는 것 기억하기
+Every	매
+Watch-along memory	함께 보는 기억
+Code/Husk Mode	Code/Husk 모드
+Thinking	생각 중
+Default	기본
+Extra request JSON	추가 요청 JSON
+Add	추가
+Verbosity	장황함
+Replies	답변
+Memory	메모리
+Memory size	메모리 크기
+Max reply	최대 답변
+Bubble	말풍선
+Follow-up messages	후속 메시지
+Use	사용
+A model in Ollama, on your local server or on your key.	Ollama의 모델, 로컬 서버 또는 내 키로 사용.
+HABITS	습관
+Open her memories	그녀의 기억 열기
+Start with Windows	Windows와 함께 시작
+Show on Discord	Discord에 표시
+Use her cursor	그녀의 커서 사용
+Remember our chats	우리 대화 기억하기
+Power saver	절전
+Music app	음악 앱
+Perch	앉는 자리
+Keep PC awake for jobs	작업을 위해 PC 깨워두기
+Hide in full screen	전체 화면에서 숨기기
+Mini player over full screen	전체 화면 위의 미니 플레이어
+Explore while I'm away	내가 없을 때 탐색
+Explore after	나중에 탐색
+GAMES	게임
+Controls	컨트롤
+Comments	댓글
+Live reactions	실시간 반응
+Game sounds	게임 소리
+Gaming Mode	게이밍 모드
+She reacts to your game until you close it.	네가 게임을 닫을 때까지 게임에 반응해.
+Works best on MAX INTELLIGENCE.	MAX INTELLIGENCE에서 가장 잘 작동해.
+Fast hands in games	게임에서 빠른 손
+Mute her	그녀 음소거
+CLIPS	클립
+Clip my games	내 게임 클립 저장
+Save big moments	큰 순간 저장
+Save folder	저장 폴더
+Choose folder	폴더 선택
+Open clips folder	클립 폴더 열기
+Default length	기본 길이
+Frame rate	프레임 속도
+Resolution	해상도
+Video bitrate	비디오 비트레이트
+Weather	날씨
+Code mods can reach your whole PC. Only trusted ones.	코드 모드는 PC 전체에 접근할 수 있음. 신뢰하는 것만.
+Import mod	모드 가져오기
+Browse mods	모드 찾아보기
+Mods folder	모드 폴더
+INSTALLED	설치됨
+Update mods	모드 업데이트
+No mods match.	일치하는 모드가 없어.
+On	켬
+Remove	제거
+Publish	게시
+Options	옵션
+Back	뒤로
+Next	다음
+COLORS	색상
+Reset colors	색상 재설정
+Running on this PC	이 PC에서 실행 중
+NORMAL	보통
+OFF	꺼짐
+Local server address	로컬 서버 주소

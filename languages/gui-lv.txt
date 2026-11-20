@@ -1,0 +1,206 @@
+# Her menus and labels in Latvian: the English, a tab, then the translation.
+Open Capri Mainframe	Atvērt Capri Mainframe
+Her folder	Viņas mape
+Play	Atskaņot
+Music	Mūzika
+Chess	Šahs
+Connect four	Četri savienojumā
+Tic-tac-toe	Krustiņi un nullītes
+Rock, paper, scissors	Akmens, papīrs, šķēres
+Hide Capri	Paslēpt Capri
+Hologram	Hologramma
+Normal	Parasts
+Small	Mazs
+Medium	Vidējs
+Large	Liels
+Huge	Milzīgs
+Giant	Milzīgs
+Move	Pārvietot
+Wander around	Klaiņot apkārt
+Dance to music	Dejot pie mūzikas
+Dance	Dejot
+Ride cursor	Jāt kursoru
+Sit on windows	Sēdēt uz logiem
+Sit here	Sēdēt šeit
+Hang here	Palikt šeit
+Lie down	Nogulties
+Go to sleep	Iet gulēt
+Bring to this screen	Atnest uz šo ekrānu
+Go to the next screen	Iet uz nākamo ekrānu
+Black	Melns
+White	Balts
+Test	Pārbaudīt
+Stop	Apturēt
+Help	Palīdzība
+Commands	Komandas
+Help page	Palīdzības lapa
+Join the Discord	Pievienoties Discord
+Copy error details	Kopēt kļūdas detaļas
+Check for updates	Pārbaudīt atjauninājumus
+Quit Capri	Iziet no Capri
+MAINFRAME	MAINFRAME
+Settings	Iestatījumi
+Mods	Modifikācijas
+BRAIN	SMADZENES
+Provider	Pakalpojumu sniedzējs
+Using your server with no key	Izmanto tavu serveri bez atslēgas
+Refresh	Atsvaidzināt
+Set up her brain	Iestatīt viņas smadzenes
+Have Ollama? Open it, then press Refresh.	Vai tev ir Ollama? Atver to un pēc tam nospied Atsvaidzināt.
+Pick one. Only one brain runs at a time.	Izvēlies vienu. Vienlaikus darbojas tikai viena smadzenes.
+MEDIUM INTELLIGENCE	VIDĒJĀ INTELIĢENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Izslēgts
+Free key	Bezmaksas atslēga
+Connect	Savienot
+Free keys can be rate limited and slow.	Bezmaksas atslēgām var būt pieprasījumu ierobežojumi un tās var būt lēnas.
+That's a paid key: it goes under MAX INTELLIGENCE.	Tā ir maksas atslēga: tā iet zem MAX INTELLIGENCE.
+Move to MAX	Pārvietot uz MAX
+VOICE	BALSS
+Ctrl + Alt + V to talk	Ctrl + Alt + V runāšanai
+PREBUILT LOCAL	IEPRIEKŠ IZVEIDOTS LOKĀLS
+CUSTOM LOCAL	PIELĀGOTS LOKĀLS
+CLOUD VOICE	MĀKOŅA BALSS
+Set up	Iestatīt
+Setup guide	Iestatīšanas ceļvedis
+Fish Audio	Fish Audio
+Default model	Noklusējuma modelis
+Pick a voice model	Izvēlies balss modeli
+Get free voice	Iegūt bezmaksas balsi
+Mic: default	Mikrofons: noklusējums
+Her speaker: Default	Viņas skaļrunis: Noklusējums
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N izslēdz mikrofonu
+CAPRI	CAPRI
+Support	Atbalsts
+Remote	Tālvadība
+Bring here	Atnest šeit
+Advanced Settings	Papildu iestatījumi
+YOU	TU
+Your personality	Tava personība
+Language	Valoda
+English	Angļu
+What should she call you?	Kā viņai tevi saukt?
+Save	Saglabāt
+Volume	Skaļums
+Pitch	Augstums
+Speed	Ātrums
+Robot	Robots
+Glitch	Kļūme
+Sounds	Skaņas
+Typing sound	Rakstīšanas skaņa
+Listen for Capri	Klausīties Capri
+Hearing	Dzirde
+Auto	Auto
+Free voice in games	Bezmaksas balss spēlēs
+Call mode (beta)	Zvana režīms (beta)
+Her voice in your mic	Viņas balss tavā mikrofonā
+Get VB-CABLE	Iegūt VB-CABLE
+How to	Kā
+Her voice in your mic: loudness	Viņas balss tavā mikrofonā: skaļums
+MOVES	KUSTĪBAS
+Pop-in times	Parādīšanās laiki
+Mini player	Mini atskaņotājs
+Wander	Klaiņot
+Sleep	Gulēt
+Pop-ins	Parādīšanās
+Glitch in at startup	Kļūme startējot
+KEYS	TASTIŅI
+Talk: Ctrl + Alt + V	Runāt: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Izslēgt mikrofonu: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Rakstīt: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Paslēpt/rādīt: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Kluss: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Spēles režīms: Ctrl + Alt + G
+Confirm	Apstiprināt
+Cancel	Atcelt
+Size	Izmērs
+Check in on me	Pārbaudi mani
+Edit check-in lines	Rediģēt pārbaudes frāzes
+Always on top	Vienmēr virspusē
+Mainframe size	Mainframe izmērs
+Mainframe colours	Mainframe krāsas
+Head pats	Pieskārieni galvai
+Pat stroke	Paglaudīšanas kustība
+Chaos when upset	Haoss, kad satraukta
+Legacy stand	Vecais statīvs
+Jealous of other AIs	Greizsirdīga uz citiem AI
+Teases when another AI comes to the front.	Ķircina, kad priekšplānā nonāk cits AI.
+Close other AIs for me	Aizver citus AI manā vietā
+Asks before closing only the apps you choose.	Pirms aizvēršanas jautā tikai par tavu izvēlēto lietotņu aizvēršanu.
+Apps she may close	Lietotnes, ko viņa drīkst aizvērt
+Choose apps	Izvēlēties lietotnes
+WATCH	SKATĪTIES
+Watch my screen	Skatīties manu ekrānu
+Screens	Ekrāni
+All screens	Visi ekrāni
+Remember what she sees	Atceries, ko viņa redz
+Every	Katrs
+Watch-along memory	Skatīšanās kopā atmiņa
+Code/Husk Mode	Koda/Husk režīms
+Thinking	Domā
+Default	Noklusējums
+Extra request JSON	Papildu pieprasījuma JSON
+Add	Pievienot
+Verbosity	Vārdainība
+Replies	Atbildes
+Memory	Atmiņa
+Memory size	Atmiņas izmērs
+Max reply	Maksimālā atbilde
+Bubble	Burbulis
+Follow-up messages	Turpmākie ziņojumi
+Use	Izmantot
+A model in Ollama, on your local server or on your key.	Modelis Ollama, tavā lokālajā serverī vai ar tavu atslēgu.
+HABITS	PARADUMI
+Open her memories	Atvērt viņas atmiņas
+Start with Windows	Startēt kopā ar Windows
+Show on Discord	Rādīt Discord
+Use her cursor	Izmantot viņas kursoru
+Remember our chats	Atceries mūsu tērzēšanas
+Power saver	Enerģijas taupīšana
+Music app	Mūzikas lietotne
+Perch	Poleiņš
+Keep PC awake for jobs	Turēt PC modinātu darbiem
+Hide in full screen	Paslēpt pilnekrāna režīmā
+Mini player over full screen	Mini atskaņotājs pār pilnekrāna režīmu
+Explore while I'm away	Izpētīt, kamēr esmu prom
+Explore after	Izpētīt pēc
+GAMES	SPĒLES
+Controls	Vadība
+Comments	Komentāri
+Live reactions	Reakcijas tiešraidē
+Game sounds	Spēles skaņas
+Gaming Mode	Spēles režīms
+She reacts to your game until you close it.	Viņa reaģē uz tavu spēli, līdz tu to aizver.
+Works best on MAX INTELLIGENCE.	Vislabāk darbojas ar MAX INTELLIGENCE.
+Fast hands in games	Ātras rokas spēlēs
+Mute her	Izslēgt viņu
+CLIPS	KLIPI
+Clip my games	Ieraksti manas spēles
+Save big moments	Saglabāt lielus brīžus
+Save folder	Saglabāšanas mape
+Choose folder	Izvēlēties mapi
+Open clips folder	Atvērt klipu mapi
+Default length	Noklusējuma garums
+Frame rate	Kadru ātrums
+Resolution	Izšķirtspēja
+Video bitrate	Video bitrāte
+Weather	Laika apstākļi
+Code mods can reach your whole PC. Only trusted ones.	Koda modifikācijas var piekļūt visam tavam PC. Tikai uzticamas.
+Import mod	Importēt modifikāciju
+Browse mods	Pārlūkot modifikācijas
+Mods folder	Modifikāciju mape
+INSTALLED	INSTALĒTS
+Update mods	Atjaunināt modifikācijas
+No mods match.	Nav atbilstošu modifikāciju.
+On	Ieslēgts
+Remove	Noņemt
+Publish	Publicēt
+Options	Opcijas
+Back	Atpakaļ
+Next	Nākamais
+COLORS	KRĀSAS
+Reset colors	Atiestatīt krāsas
+Running on this PC	Darbojas šajā PC
+NORMAL	NORMĀLS
+OFF	IZSLĒGTS
+Local server address	Lokālā servera adrese

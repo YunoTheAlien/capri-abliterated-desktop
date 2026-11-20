@@ -1,0 +1,206 @@
+# Her menus and labels in Irish: the English, a tab, then the translation.
+Open Capri Mainframe	Oscail Capri Mainframe
+Her folder	A fillteán
+Play	Seinn
+Music	Ceol
+Chess	Ficheall
+Connect four	Ceithre i líne
+Tic-tac-toe	Cluiche X agus O
+Rock, paper, scissors	Carraig, páipéar, siosúr
+Hide Capri	Folaigh Capri
+Hologram	Holagram
+Normal	Gnáthach
+Small	Beag
+Medium	Meánach
+Large	Mór
+Huge	Ollmhór
+Giant	Ollmhór
+Move	Bog
+Wander around	Fánaigh timpeall
+Dance to music	Rince le ceol
+Dance	Rince
+Ride cursor	Marcaigh an cúrsóir
+Sit on windows	Suigh ar fhuinneoga
+Sit here	Suigh anseo
+Hang here	Fan anseo
+Lie down	Luigh síos
+Go to sleep	Téigh a chodladh
+Bring to this screen	Tabhair chuig an scáileán seo
+Go to the next screen	Téigh chuig an chéad scáileán eile
+Black	Dubh
+White	Bán
+Test	Tástáil
+Stop	Stop
+Help	Cabhair
+Commands	Orduithe
+Help page	Leathanach cabhrach
+Join the Discord	Téigh isteach sa Discord
+Copy error details	Cóipeáil sonraí earráide
+Check for updates	Lorg nuashonruithe
+Quit Capri	Scoir de Capri
+MAINFRAME	MAINFRAME
+Settings	Socruithe
+Mods	Modanna
+BRAIN	INTINN
+Provider	Soláthraí
+Using your server with no key	Ag úsáid do fhreastalaí gan eochair
+Refresh	Athnuaigh
+Set up her brain	Socraigh a hintinn
+Have Ollama? Open it, then press Refresh.	An bhfuil Ollama agat? Oscail é, ansin brúigh Athnuaigh.
+Pick one. Only one brain runs at a time.	Roghnaigh ceann amháin. Ní rithfidh ach intinn amháin ag an am.
+MEDIUM INTELLIGENCE	MEÁN INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	As
+Free key	Eochair shaor in aisce
+Connect	Nasc
+Free keys can be rate limited and slow.	Féadfaidh eochracha saora a bheith teoranta agus mall.
+That's a paid key: it goes under MAX INTELLIGENCE.	Eochair íoctha is ea sin: téann sí faoi MAX INTELLIGENCE.
+Move to MAX	Bog go MAX
+VOICE	GUTH
+Ctrl + Alt + V to talk	Ctrl + Alt + V chun labhairt
+PREBUILT LOCAL	ÁITIÚIL RÉAMHDHÉANTA
+CUSTOM LOCAL	LOGH ÁITIÚIL SAINORDAITHE
+CLOUD VOICE	GUTH SCÝTHE
+Set up	Socraigh
+Setup guide	Treoir socraithe
+Fish Audio	Fish Audio
+Default model	Samhail réamhshocraithe
+Pick a voice model	Roghnaigh samhail gutha
+Get free voice	Faigh guth saor
+Mic: default	Micreafón: réamhshocrú
+Her speaker: Default	A cainteoir: Réamhshocrú
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N balbhaíonn an micreafón
+CAPRI	CAPRI
+Support	Tacaíocht
+Remote	Cianrialú
+Bring here	Tabhair anseo
+Advanced Settings	Socruithe Casta
+YOU	TÚ
+Your personality	Do phearsantacht
+Language	Teanga
+English	Béarla
+What should she call you?	Cad ba cheart di tú a ghlaoch?
+Save	Sábháil
+Volume	Toirt
+Pitch	Airde
+Speed	Luas
+Robot	Róbat
+Glitch	Glitch
+Sounds	Fuaimeanna
+Typing sound	Fuaim clóscríobha
+Listen for Capri	Éist le Capri
+Hearing	Éisteacht
+Auto	Uathoibríoch
+Free voice in games	Guth saor sna cluichí
+Call mode (beta)	Mód glaoch (béite)
+Her voice in your mic	A guth i do mhicreafón
+Get VB-CABLE	Faigh VB-CABLE
+How to	Conas
+Her voice in your mic: loudness	A guth i do mhicreafón: airde
+MOVES	GLUAISEACHTAÍ
+Pop-in times	Amanna teacht isteach
+Mini player	Miniseinnteoir
+Wander	Fánaíocht
+Sleep	Codladh
+Pop-ins	Teachtaí isteach
+Glitch in at startup	Glitch ag tosú
+KEYS	EOCHRACHA
+Talk: Ctrl + Alt + V	Labhair: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Balbhaigh micreafón: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Clóscríobh: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Folaigh/taispeáin: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Ciúin: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Mód Cluichíochta: Ctrl + Alt + G
+Confirm	Deimhnigh
+Cancel	Cealaigh
+Size	Méid
+Check in on me	Seiceáil orm
+Edit check-in lines	Cuir línte seiceála in eagar
+Always on top	I gcónaí ar barr
+Mainframe size	Méid Mainframe
+Mainframe colours	Dathanna Mainframe
+Head pats	Cuimilt ar an gceann
+Pat stroke	Stróc cuimilte
+Chaos when upset	Caos nuair a bhíonn sí feargach
+Legacy stand	Seasamh oidhreachta
+Jealous of other AIs	Éad ar AInna eile
+Teases when another AI comes to the front.	Cuireann sí greann nuair a thagann AI eile chun tosaigh.
+Close other AIs for me	Dún AInna eile chugam
+Asks before closing only the apps you choose.	Fiafraíonn sé sula ndúnfaidh sé na haipeanna a roghnaíonn tú amháin.
+Apps she may close	Aipeanna a d'fhéadfadh sí a dhúnadh
+Choose apps	Roghnaigh aipeanna
+WATCH	FÉACH
+Watch my screen	Féach ar mo scáileán
+Screens	Scáileáin
+All screens	Gach scáileán
+Remember what she sees	Cuimhnigh cad a fheiceann sí
+Every	Gach
+Watch-along memory	Cuimhne féachana le chéile
+Code/Husk Mode	Mód Cód/Husk
+Thinking	Ag smaoineamh
+Default	Réamhshocrú
+Extra request JSON	JSON iarratais bhreise
+Add	Cuir leis
+Verbosity	Briathrachas
+Replies	Freagraí
+Memory	Cuimhne
+Memory size	Méid cuimhne
+Max reply	Freagra uasta
+Bubble	Bolgán
+Follow-up messages	Teachtaireachtaí leantacha
+Use	Úsáid
+A model in Ollama, on your local server or on your key.	Samhail in Ollama, ar do fhreastalaí áitiúil nó ar d'eochair.
+HABITS	NÓSANNA
+Open her memories	Oscail a cuimhní
+Start with Windows	Tosaigh le Windows
+Show on Discord	Taispeáin ar Discord
+Use her cursor	Úsáid a cúrsóir
+Remember our chats	Cuimhnigh ar ár gcomhráite
+Power saver	Sábhálaí fuinnimh
+Music app	Aip ceoil
+Perch	Suíochán
+Keep PC awake for jobs	Coinnigh an PC múscailte le haghaidh jabanna
+Hide in full screen	Folaigh i lánscáileán
+Mini player over full screen	Miniseinnteoir thar lánscáileán
+Explore while I'm away	Taiscéal agus mé ar shiúl
+Explore after	Taiscéal ina dhiaidh sin
+GAMES	CLUICHÍ
+Controls	Rialuithe
+Comments	Tráchtanna
+Live reactions	Freagraí beo
+Game sounds	Fuaimeanna cluiche
+Gaming Mode	Mód Cluichíochta
+She reacts to your game until you close it.	Freagraíonn sí do chluiche go dtí go ndúnann tú é.
+Works best on MAX INTELLIGENCE.	Is fearr a oibríonn sé ar MAX INTELLIGENCE.
+Fast hands in games	Lámha tapa sna cluichí
+Mute her	Balbhaigh í
+CLIPS	CLIPEANNA
+Clip my games	Clipeáil mo chluichí
+Save big moments	Sábháil na mothúcháin mhóra
+Save folder	Fillteán sábhála
+Choose folder	Roghnaigh fillteán
+Open clips folder	Oscail fillteán clipeanna
+Default length	Fad réamhshocraithe
+Frame rate	Ráta fráma
+Resolution	Taifeach
+Video bitrate	Ráta bit físe
+Weather	Aimsir
+Code mods can reach your whole PC. Only trusted ones.	Is féidir le modanna cóid do ríomhaire ar fad a bhaint amach. Ach iad siúd atá iontaofa amháin.
+Import mod	Iompórtáil modh
+Browse mods	Brabhsáil modanna
+Mods folder	Fillteán modanna
+INSTALLED	SUITEÁLTA
+Update mods	Nuashonraigh modanna
+No mods match.	Níl aon mhodanna comhoiriúnach.
+On	Ar
+Remove	Bain
+Publish	Foilsigh
+Options	Roghanna
+Back	Ar ais
+Next	Ar aghaidh
+COLORS	DATHANNA
+Reset colors	Athshocraigh dathanna
+Running on this PC	Ag rith ar an PC seo
+NORMAL	GNÁTHACH
+OFF	AS
+Local server address	Seoladh freastalaí áitiúil

@@ -1,0 +1,206 @@
+# Her menus and labels in Hebrew: the English, a tab, then the translation.
+Open Capri Mainframe	פתח את Capri Mainframe
+Her folder	התיקייה שלה
+Play	נגן
+Music	מוזיקה
+Chess	שחמט
+Connect four	ארבע בשורה
+Tic-tac-toe	איקס עיגול
+Rock, paper, scissors	אבן, נייר, מספריים
+Hide Capri	הסתר את Capri
+Hologram	הולוגרמה
+Normal	רגיל
+Small	קטן
+Medium	בינוני
+Large	גדול
+Huge	ענק
+Giant	ענק
+Move	הזז
+Wander around	שוטט
+Dance to music	רקוד לפי מוזיקה
+Dance	ריקוד
+Ride cursor	רכוב על הסמן
+Sit on windows	שב על חלונות
+Sit here	שב כאן
+Hang here	תישאר כאן
+Lie down	שכב
+Go to sleep	לך לישון
+Bring to this screen	הבא למסך הזה
+Go to the next screen	עבור למסך הבא
+Black	שחור
+White	לבן
+Test	בדיקה
+Stop	עצור
+Help	עזרה
+Commands	פקודות
+Help page	דף עזרה
+Join the Discord	הצטרף ל-Discord
+Copy error details	העתק פרטי שגיאה
+Check for updates	בדוק עדכונים
+Quit Capri	צא מ-Capri
+MAINFRAME	MAINFRAME
+Settings	הגדרות
+Mods	מודים
+BRAIN	מוח
+Provider	ספק
+Using your server with no key	משתמש בשרת שלך בלי מפתח
+Refresh	רענן
+Set up her brain	הגדר את המוח שלה
+Have Ollama? Open it, then press Refresh.	יש לך Ollama? פתח אותה, ואז לחץ רענן.
+Pick one. Only one brain runs at a time.	בחר אחד. רק מוח אחד רץ בכל פעם.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	כבוי
+Free key	מפתח חינמי
+Connect	התחבר
+Free keys can be rate limited and slow.	מפתחות חינמיים יכולים להיות מוגבלים ואיטיים.
+That's a paid key: it goes under MAX INTELLIGENCE.	זה מפתח בתשלום: הוא ייכנס תחת MAX INTELLIGENCE.
+Move to MAX	הזז ל-MAX
+VOICE	VOICE
+Ctrl + Alt + V to talk	Ctrl + Alt + V לדיבור
+PREBUILT LOCAL	מקומי מובנה מראש
+CUSTOM LOCAL	מקומי מותאם
+CLOUD VOICE	קול ענן
+Set up	הגדר
+Setup guide	מדריך הגדרה
+Fish Audio	Fish Audio
+Default model	מודל ברירת מחדל
+Pick a voice model	בחר מודל קול
+Get free voice	קבל קול חינמי
+Mic: default	מיקרופון: ברירת מחדל
+Her speaker: Default	הרמקול שלה: ברירת מחדל
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N משתיק את המיקרופון
+CAPRI	CAPRI
+Support	תמיכה
+Remote	Remote
+Bring here	הבא לכאן
+Advanced Settings	הגדרות מתקדמות
+YOU	אתה
+Your personality	האישיות שלך
+Language	שפה
+English	אנגלית
+What should she call you?	איך היא צריכה לקרוא לך?
+Save	שמור
+Volume	עוצמה
+Pitch	גובה צליל
+Speed	מהירות
+Robot	רובוט
+Glitch	Glitch
+Sounds	צלילים
+Typing sound	צליל הקלדה
+Listen for Capri	האזן ל-Capri
+Hearing	שמיעה
+Auto	אוטומטי
+Free voice in games	קול חינמי במשחקים
+Call mode (beta)	מצב שיחה (בטא)
+Her voice in your mic	הקול שלה במיקרופון שלך
+Get VB-CABLE	קבל VB-CABLE
+How to	איך
+Her voice in your mic: loudness	הקול שלה במיקרופון שלך: עוצמה
+MOVES	MOVES
+Pop-in times	זמני pop-in
+Mini player	נגן מיני
+Wander	שיטוט
+Sleep	שינה
+Pop-ins	Pop-ins
+Glitch in at startup	Glitch בהפעלה
+KEYS	מקשים
+Talk: Ctrl + Alt + V	דיבור: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	השתקת מיקרופון: Ctrl + Alt + N
+Type: Ctrl + Alt + T	הקלדה: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	הסתר/הצג: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	שקט: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	מצב גיימינג: Ctrl + Alt + G
+Confirm	אשר
+Cancel	ביטול
+Size	גודל
+Check in on me	בדוק אותי
+Edit check-in lines	ערוך שורות check-in
+Always on top	תמיד למעלה
+Mainframe size	גודל Mainframe
+Mainframe colours	צבעי Mainframe
+Head pats	ליטוף על הראש
+Pat stroke	שבץ ליטוף
+Chaos when upset	כאוס כשהיא מתעצבנת
+Legacy stand	עמדה ישנה
+Jealous of other AIs	מקנאה ב-AI אחרים
+Teases when another AI comes to the front.	מציקה כש-AI אחר מגיע לחזית.
+Close other AIs for me	סגור בשבילי AI אחרים
+Asks before closing only the apps you choose.	שואלת לפני סגירה רק של האפליקציות שתבחר.
+Apps she may close	אפליקציות שהיא עשויה לסגור
+Choose apps	בחר אפליקציות
+WATCH	WATCH
+Watch my screen	צפה במסך שלי
+Screens	מסכים
+All screens	כל המסכים
+Remember what she sees	זכור מה שהיא רואה
+Every	כל
+Watch-along memory	זיכרון צפייה משותפת
+Code/Husk Mode	מצב Code/Husk
+Thinking	חושבת
+Default	ברירת מחדל
+Extra request JSON	Extra request JSON
+Add	הוסף
+Verbosity	שפעתיות
+Replies	תשובות
+Memory	זיכרון
+Memory size	גודל זיכרון
+Max reply	תשובה מקסימלית
+Bubble	בועה
+Follow-up messages	הודעות המשך
+Use	השתמש
+A model in Ollama, on your local server or on your key.	מודל ב-Ollama, בשרת המקומי שלך או במפתח שלך.
+HABITS	הרגלים
+Open her memories	פתח את הזיכרונות שלה
+Start with Windows	התחל עם Windows
+Show on Discord	הצג ב-Discord
+Use her cursor	השתמש בסמן שלה
+Remember our chats	זכור את השיחות שלנו
+Power saver	חיסכון בחשמל
+Music app	אפליקציית מוזיקה
+Perch	כן ישיבה
+Keep PC awake for jobs	השאר את המחשב ער למשימות
+Hide in full screen	הסתר במסך מלא
+Mini player over full screen	נגן מיני מעל מסך מלא
+Explore while I'm away	חקור כשאני לא פה
+Explore after	חקור אחר כך
+GAMES	GAMES
+Controls	בקרה
+Comments	הערות
+Live reactions	תגובות חיות
+Game sounds	צלילי משחק
+Gaming Mode	מצב גיימינג
+She reacts to your game until you close it.	היא מגיבה למשחק שלך עד שתסגור אותו.
+Works best on MAX INTELLIGENCE.	עובד הכי טוב על MAX INTELLIGENCE.
+Fast hands in games	ידיים מהירות במשחקים
+Mute her	השתק אותה
+CLIPS	קליפים
+Clip my games	הקלט את המשחקים שלי
+Save big moments	שמור רגעים גדולים
+Save folder	תיקיית שמירה
+Choose folder	בחר תיקייה
+Open clips folder	פתח תיקיית קליפים
+Default length	אורך ברירת מחדל
+Frame rate	קצב פריימים
+Resolution	רזולוציה
+Video bitrate	bitrate וידאו
+Weather	מזג אוויר
+Code mods can reach your whole PC. Only trusted ones.	מודים של קוד יכולים להגיע לכל המחשב שלך. רק מהימנים.
+Import mod	ייבא מוד
+Browse mods	עיון במודים
+Mods folder	תיקיית מודים
+INSTALLED	מותקן
+Update mods	עדכן מודים
+No mods match.	אין מודים תואמים.
+On	פעיל
+Remove	הסר
+Publish	פרסם
+Options	אפשרויות
+Back	חזרה
+Next	הבא
+COLORS	צבעים
+Reset colors	אפס צבעים
+Running on this PC	רץ במחשב הזה
+NORMAL	רגיל
+OFF	כבוי
+Local server address	כתובת שרת מקומי

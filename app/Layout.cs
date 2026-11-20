@@ -154,11 +154,11 @@ namespace CapriDesktop
                 StringBuilder made = new StringBuilder();
                 made.AppendLine("# Her colours");
                 made.AppendLine();
-                made.AppendLine("> Every colour of her interface. Set one and it is used wherever that part of her is drawn;");
-                made.AppendLine("> leave it blank and it follows Mainframe colours, which swaps the whole set at once.");
-                made.AppendLine("> A name like blue, or a hex code like #1affd5, with or without the hash. Three digits work");
-                made.AppendLine("> too, and eight set how solid it is. The value after each one is hers, for reference.");
-                made.AppendLine("> Saved and she repaints: no restart.");
+                made.AppendLine(">! Every colour of her interface. Set one and it is used wherever that part of her is drawn;");
+                made.AppendLine(">! leave it blank and it follows Mainframe colours, which swaps the whole set at once.");
+                made.AppendLine(">! A name like blue, or a hex code like #1affd5, with or without the hash. Three digits work");
+                made.AppendLine(">! too, and eight set how solid it is. The value after each one is hers, for reference.");
+                made.AppendLine(">! Saved and she repaints: no restart.");
                 made.AppendLine();
                 made.AppendLine("## Her windows");
                 made.AppendLine();
@@ -182,7 +182,7 @@ namespace CapriDesktop
                 made.AppendLine();
                 made.AppendLine("## Her speech bubble");
                 made.AppendLine();
-                made.AppendLine("> Her speech bubble, set here and nowhere else.");
+                made.AppendLine(">! Her speech bubble, set here and nowhere else.");
                 made.AppendLine();
                 foreach (string name in new[] { "bubble outline", "bubble title", "bubble text", "bubble accent", "bubble background" })
                     made.AppendLine(Line(name));

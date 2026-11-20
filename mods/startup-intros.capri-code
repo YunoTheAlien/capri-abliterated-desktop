@@ -720,8 +720,8 @@ public class StartupIntros : ICapriMod, ICapriIntro
             PointF root = Polar(middle, angle, unit * 16);
             PointF tip = Polar(middle, angle, length);
             PointF across = new PointF(-(float)Math.Sin(angle) * wide, (float)Math.Cos(angle) * wide);
-            PointF kink = Polar(middle, angle + 0.05, length * 0.62f);
-            PointF[] spike = { new PointF(root.X + across.X, root.Y + across.Y), kink, tip, new PointF(root.X - across.X, root.Y - across.Y) };
+            PointF bend = Polar(middle, angle + 0.05, length * 0.62f);
+            PointF[] spike = { new PointF(root.X + across.X, root.Y + across.Y), bend, tip, new PointF(root.X - across.X, root.Y - across.Y) };
             using (Brush rim = new SolidBrush(Violet)) g.FillPolygon(rim, Offset(spike, unit * 1.3f, unit * 1.1f));
             using (Brush fill = new SolidBrush(colours[(int)spikes[i, 3]])) g.FillPolygon(fill, spike);
         }

@@ -1,0 +1,206 @@
+# Her menus and labels in Belarusian: the English, a tab, then the translation.
+Open Capri Mainframe	Адкрыць Capri Mainframe
+Her folder	Яе папка
+Play	Прайграць
+Music	Музыка
+Chess	Шахматы
+Connect four	Чатыры ў радок
+Tic-tac-toe	Крыжыкі-нулікі
+Rock, paper, scissors	Камень, папера, нажніцы
+Hide Capri	Схаваць Capri
+Hologram	Голаграма
+Normal	Звычайны
+Small	Маленькі
+Medium	Сярэдні
+Large	Вялікі
+Huge	Велізарныя
+Giant	Велізарная
+Move	Перамясціць
+Wander around	Бадзяцца
+Dance to music	Танцаваць пад музыку
+Dance	Танцаваць
+Ride cursor	Ехаць на курсоры
+Sit on windows	Сядзець на вокнах
+Sit here	Сядзь тут
+Hang here	Затрымацца тут
+Lie down	Легчы
+Go to sleep	Ісці спаць
+Bring to this screen	Перанесці на гэты экран
+Go to the next screen	Перайсці да наступнага экрана
+Black	Чорны
+White	Белы
+Test	Тэст
+Stop	Спыніць
+Help	Даведка
+Commands	Каманды
+Help page	Старонка даведкі
+Join the Discord	Далучыцца да Discord
+Copy error details	Скапіяваць дэталі памылкі
+Check for updates	Праверыць абнаўленні
+Quit Capri	Выйсці з Capri
+MAINFRAME	MAINFRAME
+Settings	Налады
+Mods	Моды
+BRAIN	МОЗГ
+Provider	Правайдэр
+Using your server with no key	Выкарыстоўваем ваш сервер без ключа
+Refresh	Абнавіць
+Set up her brain	Наладзіць яе мозг
+Have Ollama? Open it, then press Refresh.	Ёсць Ollama? Адкрыйце яго, потым націсніце Абнавіць.
+Pick one. Only one brain runs at a time.	Выберыце адзін. Адначасова працуе толькі адзін мозг.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Выкл.
+Free key	Бясплатны ключ
+Connect	Падключыць
+Free keys can be rate limited and slow.	Бясплатныя ключы могуць мець абмежаванні і быць павольнымі.
+That's a paid key: it goes under MAX INTELLIGENCE.	Гэта платны ключ: ён ідзе ў MAX INTELLIGENCE.
+Move to MAX	Перамясціць у MAX
+VOICE	ГОЛАС
+Ctrl + Alt + V to talk	Ctrl + Alt + V для размовы
+PREBUILT LOCAL	ЛАКАЛЬНЫ ПАПЯРОДНАЎ
+CUSTOM LOCAL	СВАЁ ЛАКАЛЬНАЕ
+CLOUD VOICE	ХМАРНЫ ГОЛАС
+Set up	Наладзіць
+Setup guide	Даведнік налады
+Fish Audio	Fish Audio
+Default model	Стандартная мадэль
+Pick a voice model	Выберыце мадэль голасу
+Get free voice	Атрымаць бясплатны голас
+Mic: default	Мікрафон: стандартны
+Her speaker: Default	Яе дынамік: Стандартны
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N выключае мікрафон
+CAPRI	CAPRI
+Support	Падтрымка
+Remote	Выдаленне
+Bring here	Перанесці сюды
+Advanced Settings	Пашыраныя налады
+YOU	ВЫ
+Your personality	Ваша асоба
+Language	Мова
+English	Англійская
+What should she call you?	Як яна павінна вас называць?
+Save	Захаваць
+Volume	Гучнасць
+Pitch	Вышыня
+Speed	Хуткасць
+Robot	Робат
+Glitch	Глюк
+Sounds	Гукі
+Typing sound	Гук набору
+Listen for Capri	Слухаць Capri
+Hearing	Слых
+Auto	Аўтаматычна
+Free voice in games	Бясплатны голас у гульнях
+Call mode (beta)	Рэжым выкліку (бэта)
+Her voice in your mic	Яе голас у вашым мікрафоне
+Get VB-CABLE	Атрымаць VB-CABLE
+How to	Як
+Her voice in your mic: loudness	Яе голас у вашым мікрафоне: гучнасць
+MOVES	РУХІ
+Pop-in times	Часы заходаў
+Mini player	Міні-плэер
+Wander	Блукаць
+Sleep	Сон
+Pop-ins	Заходы
+Glitch in at startup	Глюк пры запуску
+KEYS	КЛАВІШЫ
+Talk: Ctrl + Alt + V	Казаць: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Адключыць мікрафон: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Набор: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Схаваць/паказаць: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Ціха: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Гульнявы рэжым: Ctrl + Alt + G
+Confirm	Пацвердзіць
+Cancel	Скасаваць
+Size	Памер
+Check in on me	Праверыць мяне
+Edit check-in lines	Рэдагаваць радкі праверкі
+Always on top	Заўсёды зверху
+Mainframe size	Памер Mainframe
+Mainframe colours	Колеры Mainframe
+Head pats	Пагладжванне па галаве
+Pat stroke	Пагладжванне
+Chaos when upset	Хаос, калі раззлаваная
+Legacy stand	Састарэлая падстаўка
+Jealous of other AIs	Зайздрасць іншым ШІ
+Teases when another AI comes to the front.	Дражніць, калі іншы ШІ выходзіць на першы план.
+Close other AIs for me	Закрыць за мяне іншыя ШІ
+Asks before closing only the apps you choose.	Пытаецца перад закрыццём толькі выбраных вамі праграм.
+Apps she may close	Праграмы, якія яна можа закрыць
+Choose apps	Выбраць праграмы
+WATCH	ГЛЯДЗЕЦЬ
+Watch my screen	Глядзець мой экран
+Screens	Экраны
+All screens	Усе экраны
+Remember what she sees	Памятаць, што яна бачыць
+Every	Кожны
+Watch-along memory	Памяць сумеснага прагляду
+Code/Husk Mode	Рэжым Code/Husk
+Thinking	Думаю
+Default	Стандартна
+Extra request JSON	Дадатковы JSON запыту
+Add	Дадаць
+Verbosity	Празмернасць
+Replies	Адказы
+Memory	Памяць
+Memory size	Памер памяці
+Max reply	Максімум адказу
+Bubble	Бурбалка
+Follow-up messages	Паведамленні пасля
+Use	Выкарыстоўваць
+A model in Ollama, on your local server or on your key.	Мадэль у Ollama, на вашым лакальным серверы або з вашым ключом.
+HABITS	ЗВЫЧКІ
+Open her memories	Адкрыць яе ўспаміны
+Start with Windows	Запускаць разам з Windows
+Show on Discord	Паказаць у Discord
+Use her cursor	Выкарыстоўваць яе курсор
+Remember our chats	Памятаць нашы размовы
+Power saver	Эканомія энергіі
+Music app	Праграма музыкі
+Perch	Месца
+Keep PC awake for jobs	Не даваць ПК засынаць для задач
+Hide in full screen	Схаваць у поўнаэкранным рэжыме
+Mini player over full screen	Міні-плэер паверх поўнага экрана
+Explore while I'm away	Даследаваць, пакуль мяне няма
+Explore after	Даследаваць пасля
+GAMES	ГУЛЬНІ
+Controls	Кіраванне
+Comments	Каментарыі
+Live reactions	Жывыя рэакцыі
+Game sounds	Гукі гульні
+Gaming Mode	Гульнявы рэжым
+She reacts to your game until you close it.	Яна рэагуе на вашу гульню, пакуль вы не закрыеце яе.
+Works best on MAX INTELLIGENCE.	Лепш за ўсё працуе на MAX INTELLIGENCE.
+Fast hands in games	Спрытныя рукі ў гульнях
+Mute her	Адключыць яе
+CLIPS	КЛІПЫ
+Clip my games	Кліпаваць мае гульні
+Save big moments	Захаваць вялікія моманты
+Save folder	Папка захавання
+Choose folder	Выбраць папку
+Open clips folder	Адкрыць папку кліпаў
+Default length	Стандартная даўжыня
+Frame rate	Частата кадраў
+Resolution	Раздзяленне
+Video bitrate	Бітрэйт відэа
+Weather	Надвор'е
+Code mods can reach your whole PC. Only trusted ones.	Моды з кодам могуць дацягнуцца да ўсяго ПК. Толькі давераныя.
+Import mod	Імпартаваць мод
+Browse mods	Агляд модаў
+Mods folder	Папка модаў
+INSTALLED	УСТАЛЯВАНЫЯ
+Update mods	Абнавіць модыі
+No mods match.	Ніводны мод не адпавядае.
+On	Укл.
+Remove	Выдаліць
+Publish	Публікаваць
+Options	Параметры
+Back	Назад
+Next	Далей
+COLORS	КОЛЕРЫ
+Reset colors	Скінуць колеры
+Running on this PC	Працуе на гэтым ПК
+NORMAL	ЗВЫЧАЙНЫ
+OFF	ВЫКЛ.
+Local server address	Лакальны адрас сервера

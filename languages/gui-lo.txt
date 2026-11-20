@@ -1,0 +1,206 @@
+# Her menus and labels in Lao: the English, a tab, then the translation.
+Open Capri Mainframe	ເປີດ Capri Mainframe
+Her folder	ໂຟນເດີຂອງນາງ
+Play	ຫຼິ້ນ
+Music	ດົນຕີ
+Chess	ໝາກຮຸກ
+Connect four	ສີ່ຢູ່ແຖວດຽວ
+Tic-tac-toe	Tic-tac-toe
+Rock, paper, scissors	ກ້ອນຫີນ, ເຈ້ຍ, ກັນຕັດ
+Hide Capri	ເຊື່ອງ Capri
+Hologram	ໂຮໂລແກຣມ
+Normal	ປົກກະຕິ
+Small	ນ້ອຍ
+Medium	ປານກາງ
+Large	ໃຫຍ່
+Huge	ໃຫຍ່ຫຼາຍ
+Giant	ໃຫຍ່ຫຼາຍ
+Move	ຍ້າຍ
+Wander around	ເດີນເລ່
+Dance to music	ເຕັ້ນຕາມເພງ
+Dance	ເຕັ້ນ
+Ride cursor	ຂີ່ cursor
+Sit on windows	ນັ່ງເທິງໜ້າຕ່າງ
+Sit here	ນັ່ງບ່ອນນີ້
+Hang here	ຢູ່ບ່ອນນີ້
+Lie down	ນອນລົງ
+Go to sleep	ໄປນອນ
+Bring to this screen	ພາມາໜ້າຈໍນີ້
+Go to the next screen	ໄປໜ້າຈໍຕໍ່ໄປ
+Black	ດຳ
+White	ຂາວ
+Test	ທົດສອບ
+Stop	ຢຸດ
+Help	ຊ່ວຍເຫຼືອ
+Commands	ຄຳສັ່ງ
+Help page	ໜ້າຊ່ວຍເຫຼືອ
+Join the Discord	ເຂົ້າຮ່ວມ Discord
+Copy error details	ສຳເນົາລາຍລະອຽດ error
+Check for updates	ກວດສອບອັບເດດ
+Quit Capri	ອອກຈາກ Capri
+MAINFRAME	MAINFRAME
+Settings	ການຕັ້ງຄ່າ
+Mods	Mods
+BRAIN	ສະໝອງ
+Provider	ຜູ້ໃຫ້ບໍລິການ
+Using your server with no key	ໃຊ້ server ຂອງເຈົ້າໂດຍບໍ່ມີກະແຈ
+Refresh	Refresh
+Set up her brain	ຕັ້ງຄ່າສະໝອງຂອງນາງ
+Have Ollama? Open it, then press Refresh.	ມີ Ollama ບໍ? ເປີດມັນ ແລ້ວກົດ Refresh.
+Pick one. Only one brain runs at a time.	ເລືອກອັນໜຶ່ງ. ມີສະໝອງເຮັດວຽກພຽງອັນດຽວໃນເວລາດຽວກັນ.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	ປິດ
+Free key	ກະແຈຟຣີ
+Connect	ເຊື່ອມຕໍ່
+Free keys can be rate limited and slow.	ກະແຈຟຣີອາດຖືກຈຳກັດອັດຕາ ແລະ ຊ້າ.
+That's a paid key: it goes under MAX INTELLIGENCE.	ນັ້ນເປັນກະແຈເສຍເງິນ: ມັນຈະໄປຢູ່ໃຕ້ MAX INTELLIGENCE.
+Move to MAX	ຍ້າຍໄປ MAX
+VOICE	VOICE
+Ctrl + Alt + V to talk	Ctrl + Alt + V ເພື່ອເວົ້າ
+PREBUILT LOCAL	ໃນເຄື່ອງທີ່ສ້າງໄວ້ລ່ວງໜ້າ
+CUSTOM LOCAL	ກຳນົດເອງໃນເຄື່ອງ
+CLOUD VOICE	ສຽງຄລາວ
+Set up	ຕັ້ງຄ່າ
+Setup guide	ຄູ່ມືການຕັ້ງຄ່າ
+Fish Audio	Fish Audio
+Default model	ໂມເດວເລີ່ມຕົ້ນ
+Pick a voice model	ເລືອກໂມເດວສຽງ
+Get free voice	ເອົາສຽງຟຣີ
+Mic: default	ໄມໂຄຣໂຟນ: ຄ່າເລີ່ມຕົ້ນ
+Her speaker: Default	ລຳໂພງຂອງນາງ: ຄ່າເລີ່ມຕົ້ນ
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N ປິດສຽງໄມໂຄຣໂຟນ
+CAPRI	CAPRI
+Support	ການສະໜັບສະໜູນ
+Remote	Remote
+Bring here	ພາມາບ່ອນນີ້
+Advanced Settings	ການຕັ້ງຄ່າຂັ້ນສູງ
+YOU	ເຈົ້າ
+Your personality	ບຸກຄະລິກຂອງເຈົ້າ
+Language	ພາສາ
+English	ອັງກິດ
+What should she call you?	ນາງຄວນເອີ້ນເຈົ້າວ່າຫຍັງ?
+Save	ບັນທຶກ
+Volume	ລະດັບສຽງ
+Pitch	Pitch
+Speed	ຄວາມໄວ
+Robot	ຫຸ່ນຍົນ
+Glitch	Glitch
+Sounds	ສຽງ
+Typing sound	ສຽງພິມ
+Listen for Capri	ຟັງ Capri
+Hearing	Hearing
+Auto	ອັດຕະໂນມັດ
+Free voice in games	ສຽງຟຣີໃນເກມ
+Call mode (beta)	ໂໝດໂທ (beta)
+Her voice in your mic	ສຽງຂອງນາງໃນໄມໂຄຣໂຟນຂອງເຈົ້າ
+Get VB-CABLE	ເອົາ VB-CABLE
+How to	ວິທີ
+Her voice in your mic: loudness	ສຽງຂອງນາງໃນໄມໂຄຣໂຟນຂອງເຈົ້າ: ຄວາມດັງ
+MOVES	MOVES
+Pop-in times	ເວລາ pop-in
+Mini player	Mini player
+Wander	Wander
+Sleep	ນອນ
+Pop-ins	Pop-ins
+Glitch in at startup	Glitch ຕອນເລີ່ມ
+KEYS	ປຸ່ມ
+Talk: Ctrl + Alt + V	ເວົ້າ: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	ປິດສຽງໄມໂຄຣໂຟນ: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Type: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	ເຊື່ອງ/ສະແດງ: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	ງຽບ: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Gaming Mode: Ctrl + Alt + G
+Confirm	ຢືນຢັນ
+Cancel	ຍົກເລີກ
+Size	ຂະໜາດ
+Check in on me	ມາທັກທາຍຂ້ອຍ
+Edit check-in lines	ແກ້ໄຂແຖວ check-in
+Always on top	ຢູ່ເທິງສຸດສະເໝີ
+Mainframe size	ຂະໜາດ Mainframe
+Mainframe colours	ສີ Mainframe
+Head pats	ລູບຫົວ
+Pat stroke	ການລູບ
+Chaos when upset	ວຸ່ນວາຍເມື່ອນາງໃຈຮ້າຍ
+Legacy stand	ຂາຕັ້ງແບບເກົ່າ
+Jealous of other AIs	ອິດສາ AI ອື່ນ
+Teases when another AI comes to the front.	ແຫຍ່ໃສ່ເມື່ອ AI ອື່ນມາຢູ່ໜ້າ.
+Close other AIs for me	ປິດ AI ອື່ນໃຫ້ຂ້ອຍ
+Asks before closing only the apps you choose.	ຖາມກ່ອນປິດສະເພາະແອັບທີ່ເຈົ້າເລືອກເທົ່ານັ້ນ.
+Apps she may close	ແອັບທີ່ນາງອາດປິດໄດ້
+Choose apps	ເລືອກແອັບ
+WATCH	ເບິ່ງ
+Watch my screen	ເບິ່ງໜ້າຈໍຂອງຂ້ອຍ
+Screens	ໜ້າຈໍ
+All screens	ທຸກໜ້າຈໍ
+Remember what she sees	ຈື່ສິ່ງທີ່ນາງເຫັນ
+Every	ທຸກ
+Watch-along memory	ຄວາມຈຳການເບິ່ງນຳກັນ
+Code/Husk Mode	ໂໝດ Code/Husk
+Thinking	ກຳລັງຄິດ
+Default	ຄ່າເລີ່ມຕົ້ນ
+Extra request JSON	Extra request JSON
+Add	ເພີ່ມ
+Verbosity	Verbosity
+Replies	ຄຳຕອບ
+Memory	ຄວາມຈຳ
+Memory size	ຂະໜາດຄວາມຈຳ
+Max reply	ຄຳຕອບສູງສຸດ
+Bubble	ຟອງ
+Follow-up messages	ຂໍ້ຄວາມຕິດຕາມ
+Use	ໃຊ້
+A model in Ollama, on your local server or on your key.	ໂມເດວໃນ Ollama, ເທິງ server ໃນເຄື່ອງຂອງເຈົ້າ ຫຼື ດ້ວຍກະແຈຂອງເຈົ້າ.
+HABITS	HABITS
+Open her memories	ເປີດຄວາມຈຳຂອງນາງ
+Start with Windows	ເລີ່ມພ້ອມ Windows
+Show on Discord	ສະແດງໃນ Discord
+Use her cursor	ໃຊ້ cursor ຂອງນາງ
+Remember our chats	ຈື່ການສົນທະນາຂອງພວກເຮົາ
+Power saver	ຕົວປະຢັດພະລັງງານ
+Music app	ແອັບດົນຕີ
+Perch	Perch
+Keep PC awake for jobs	ເຮັດໃຫ້ PC ຕື່ນຢູ່ສຳລັບວຽກ
+Hide in full screen	ເຊື່ອງໃນເຕັມຈໍ
+Mini player over full screen	Mini player ທັບເຕັມຈໍ
+Explore while I'm away	ສຳຫຼວດຕອນທີ່ຂ້ອຍບໍ່ຢູ່
+Explore after	ສຳຫຼວດຫຼັງຈາກ
+GAMES	GAMES
+Controls	ການຄວບຄຸມ
+Comments	ຄຳເຫັນ
+Live reactions	ປະຕິກິລິຍາສົດ
+Game sounds	ສຽງເກມ
+Gaming Mode	Gaming Mode
+She reacts to your game until you close it.	ນາງຕອບສະໜອງຕໍ່ເກມຂອງເຈົ້າຈົນກວ່າເຈົ້າຈະປິດມັນ.
+Works best on MAX INTELLIGENCE.	ເຮັດວຽກດີທີ່ສຸດກັບ MAX INTELLIGENCE.
+Fast hands in games	ມືວ່ອງໄວໃນເກມ
+Mute her	ປິດສຽງນາງ
+CLIPS	CLIPS
+Clip my games	ຕັດ clip ເກມຂອງຂ້ອຍ
+Save big moments	ບັນທຶກຊ່ວງເວລາສຳຄັນ
+Save folder	ໂຟນເດີບັນທຶກ
+Choose folder	ເລືອກໂຟນເດີ
+Open clips folder	ເປີດໂຟນເດີ clips
+Default length	ຄວາມຍາວເລີ່ມຕົ້ນ
+Frame rate	Frame rate
+Resolution	ຄວາມລະອຽດ
+Video bitrate	Video bitrate
+Weather	Weather
+Code mods can reach your whole PC. Only trusted ones.	Mods ແບບ code ສາມາດເຂົ້າເຖິງ PC ທັງໝົດຂອງເຈົ້າໄດ້. ໃຫ້ໃຊ້ສະເພາະທີ່ໄວ້ໃຈເທົ່ານັ້ນ.
+Import mod	ນຳເຂົ້າ mod
+Browse mods	ເລືອກ mods
+Mods folder	ໂຟນເດີ mods
+INSTALLED	ຕິດຕັ້ງແລ້ວ
+Update mods	ອັບເດດ mods
+No mods match.	ບໍ່ມີ mods ທີ່ກົງກັນ.
+On	ເປີດ
+Remove	ລຶບ
+Publish	ເຜີຍແຜ່
+Options	ຕົວເລືອກ
+Back	ກັບ
+Next	ຖັດໄປ
+COLORS	ສີ
+Reset colors	ຣີເຊັດສີ
+Running on this PC	ກຳລັງເຮັດວຽກຢູ່ PC ນີ້
+NORMAL	ປົກກະຕິ
+OFF	ປິດ
+Local server address	ທີ່ຢູ່ server ໃນເຄື່ອງ

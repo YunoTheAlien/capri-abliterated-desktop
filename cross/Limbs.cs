@@ -46,7 +46,8 @@ namespace CapriDesktop
 
         private static string Player()
         {
-            if (soundPlayer == null) soundPlayer = OnMac ? "afplay" : Music.Run("sh", new[] { "-c", "command -v paplay" }) != null ? "paplay" : "aplay";
+            // paplay, else PipeWire's pw-play (a stock Ubuntu 26.04 has PipeWire but not pulseaudio-utils), else ALSA's aplay.
+            if (soundPlayer == null) soundPlayer = OnMac ? "afplay" : Music.Run("sh", new[] { "-c", "command -v paplay" }) != null ? "paplay" : Music.Run("sh", new[] { "-c", "command -v pw-play" }) != null ? "pw-play" : "aplay";
             return soundPlayer;
         }
 
@@ -377,6 +378,16 @@ namespace CapriDesktop
         // How long since they last touched the mouse or keyboard: macOS's own count (ioreg's HID idle time if that fails), GNOME's
         // idle monitor (X11 and Wayland), or xprintidle on other X11 desktops. XWayland can't see Wayland input, so xprintidle
         // isn't asked there. -1 when unknown. On Mac it's read every second while she sleeps, so it's no longer a process each time.
+        // logind's IdleHint and LockedHint for this session (upstream 8907fe7): true when either is set, null when it can't say.
+        internal static bool? SessionAway()
+        {
+            if (OnMac || !OperatingSystem.IsLinux()) return null;
+            string hints = Music.Run("busctl", new[] { "get-property", "org.freedesktop.login1", "/org/freedesktop/login1/session/auto", "org.freedesktop.login1.Session", "IdleHint", "LockedHint" });
+            MatchCollection found = hints == null ? null : Regex.Matches(hints, @"^b (true|false)\s*$", RegexOptions.Multiline);
+            if (found == null || found.Count != 2) return null;
+            return found[0].Groups[1].Value == "true" || found[1].Groups[1].Value == "true";
+        }
+
         internal static double IdleSeconds()
         {
             if (OnMac)
@@ -423,7 +434,10 @@ namespace CapriDesktop
             }
             if (!mac && Environment.GetEnvironmentVariable("WAYLAND_DISPLAY") != null)
             {
-                Blind = "This Wayland compositor does not expose a supported native window-control backend.";
+                // GNOME: through her own window helper extension (cross/Gnome.cs), once GNOME has loaded it.
+                if (!GnomeBridge.Live && GnomeBridge.Wanted && Program.Smoke == null) GnomeBridge.Start();
+                if (GnomeBridge.Live) { Blind = GnomeBridge.Why; return GnomeBridge.Windows(); }
+                Blind = GnomeBridge.Wanted && GnomeBridge.Why != null ? GnomeBridge.Why : "This Wayland compositor does not expose a supported native window-control backend.";
                 return found;
             }
             if (mac)
@@ -478,6 +492,7 @@ namespace CapriDesktop
         internal static IntPtr Front(bool mac)
         {
             if (mac) return IntPtr.Zero;
+            if (GnomeBridge.Live) return GnomeBridge.Front();
             if (KWinBridge.Live)
             {
                 foreach (KWinWindow window in KWinBridge.Stack()) if (window.Active) return new IntPtr(window.Id);
@@ -493,7 +508,7 @@ namespace CapriDesktop
         {
             if (!mac && HyprlandDesktop.Current != null)
                 return action == "close_tab" ? ComputerJobs.CloseTab(window) : HyprlandDesktop.Current.Steer(window, action);
-            if (!mac && Environment.GetEnvironmentVariable("WAYLAND_DISPLAY") != null) return false;
+            if (!mac && Environment.GetEnvironmentVariable("WAYLAND_DISPLAY") != null) return GnomeBridge.Live && GnomeBridge.Steer(window, action);
             if (mac)
             {
                 string name = Quoted(window.Program), bundle;
@@ -724,10 +739,52 @@ namespace CapriDesktop
 
         private static void StartTool(string file, string[] args)
         {
+            if (file == "xdg-open" && OperatingSystem.IsLinux()) { OpenLink(args); return; }
             ProcessStartInfo start = new ProcessStartInfo(file) { UseShellExecute = false, CreateNoWindow = true };
             foreach (string arg in args) start.ArgumentList.Add(arg);
             using Process process = Process.Start(start) ?? throw new IOException("Couldn't start " + file + ".");
             if (file == "gio" && (!process.WaitForExit(5000) || process.ExitCode != 0)) throw new IOException("GIO couldn't launch that desktop entry.");
+        }
+
+        // Links and files: xdg-open, then gio open (the owner's order, 12:10, 19 Nov). A missing xdg-open goes straight to
+        // gio; one that ends with an error (no handler it knows, a broken desktop file) is tried again with gio in the
+        // background, so a click never waits on it. Both missing is said, as a missing xdg-open was before.
+        internal static Func<string, string[], Process> Spawn = delegate(string file, string[] args)
+        {
+            ProcessStartInfo start = new ProcessStartInfo(file) { UseShellExecute = false, CreateNoWindow = true };
+            foreach (string arg in args) start.ArgumentList.Add(arg);
+            return Process.Start(start);
+        };
+
+        private static string[] GioOpen(string[] args) { string[] made = new string[args.Length + 1]; made[0] = "open"; Array.Copy(args, 0, made, 1, args.Length); return made; }
+
+        internal static void OpenLink(string[] args)
+        {
+            Process opener;
+            try { opener = Spawn("xdg-open", args); }
+            catch (System.ComponentModel.Win32Exception) { opener = null; }
+            if (opener == null)
+            {
+                Process gio;
+                try { gio = Spawn("gio", GioOpen(args)); }
+                catch (System.ComponentModel.Win32Exception) { gio = null; }
+                if (gio == null) throw new IOException("Couldn't open that: neither xdg-open nor gio is installed.");
+                gio.Dispose();
+                return;
+            }
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                using (opener)
+                {
+                    try
+                    {
+                        if (!opener.WaitForExit(10000) || opener.ExitCode == 0) return;
+                        Brain.Log("open", -1, "xdg-open ended with " + opener.ExitCode + "; trying gio open.");
+                        using (Process gio = Spawn("gio", GioOpen(args))) { }
+                    }
+                    catch (Exception error) { Brain.Log("open", -1, "gio open: " + error.Message); }
+                }
+            });
         }
     }
 }

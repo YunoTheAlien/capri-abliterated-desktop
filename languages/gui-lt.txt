@@ -1,0 +1,206 @@
+# Her menus and labels in Lithuanian: the English, a tab, then the translation.
+Open Capri Mainframe	Atidaryti Capri Mainframe
+Her folder	Jos aplankas
+Play	Groti
+Music	Muzika
+Chess	Šachmatai
+Connect four	Keturi iš eilės
+Tic-tac-toe	Kryžiukai nuliukai
+Rock, paper, scissors	Akmuo, popierius, žirklės
+Hide Capri	Slėpti Capri
+Hologram	Holograma
+Normal	Normalus
+Small	Mažas
+Medium	Vidutinis
+Large	Didelis
+Huge	Didžiulis
+Giant	Milžiniškas
+Move	Perkelti
+Wander around	Klaidžioti aplinkui
+Dance to music	Šokti pagal muziką
+Dance	Šokti
+Ride cursor	Važiuoti žymeklį
+Sit on windows	Sėdėti ant langų
+Sit here	Sėdėti čia
+Hang here	Pakabinti čia
+Lie down	Atsigulti
+Go to sleep	Eiti miegoti
+Bring to this screen	Atnešti į šį ekraną
+Go to the next screen	Eiti į kitą ekraną
+Black	Juoda
+White	Balta
+Test	Testas
+Stop	Stabdyti
+Help	Pagalba
+Commands	Komandos
+Help page	Pagalbos puslapis
+Join the Discord	Prisijunkite prie Discord
+Copy error details	Kopijuoti klaidos detales
+Check for updates	Tikrinti atnaujinimus
+Quit Capri	Išjungti Capri
+MAINFRAME	MAINFRAME
+Settings	Nustatymai
+Mods	Modifikacijos
+BRAIN	SMEGENYS
+Provider	Tiekėjas
+Using your server with no key	Naudojamas jūsų serveris be rakto
+Refresh	Atnaujinti
+Set up her brain	Nustatyti jos smegenis
+Have Ollama? Open it, then press Refresh.	Turite Ollama? Atidarykite ją, tada paspauskite Atnaujinti.
+Pick one. Only one brain runs at a time.	Pasirinkite vieną. Vienu metu veikia tik viena smegenys.
+MEDIUM INTELLIGENCE	VIDUTINIS INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Išjungta
+Free key	Nemokamas raktas
+Connect	Prisijungti
+Free keys can be rate limited and slow.	Nemokamų raktų užklausos gali būti ribojamos ir lėtos.
+That's a paid key: it goes under MAX INTELLIGENCE.	Tai mokamas raktas: jis patenka po MAX INTELLIGENCE.
+Move to MAX	Perkelti į MAX
+VOICE	BALSAS
+Ctrl + Alt + V to talk	Ctrl + Alt + V kalbėti
+PREBUILT LOCAL	IŠ ANKSTO SUKURTAS VIETINIS
+CUSTOM LOCAL	PERSONALIZUOTAS VIETINIS
+CLOUD VOICE	DEBESIJOS BALSAS
+Set up	Nustatyti
+Setup guide	Sąrankos vadovas
+Fish Audio	Fish Audio
+Default model	Numatytasis modelis
+Pick a voice model	Pasirinkite balso modelį
+Get free voice	Gauti nemokamą balsą
+Mic: default	Mikrofonas: numatytasis
+Her speaker: Default	Jos garsiakalbis: Numatytasis
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N nutildo mikrofoną
+CAPRI	CAPRI
+Support	Palaikymas
+Remote	Nuotolinis
+Bring here	Atnešti čia
+Advanced Settings	Išplėstiniai nustatymai
+YOU	JŪS
+Your personality	Jūsų asmenybė
+Language	Kalba
+English	Anglų
+What should she call you?	Kaip ji turėtų jus vadinti?
+Save	Išsaugoti
+Volume	Garsumas
+Pitch	Tonas
+Speed	Greitis
+Robot	Robotas
+Glitch	Gedimas
+Sounds	Garsai
+Typing sound	Rašymo garsas
+Listen for Capri	Klausytis Capri
+Hearing	Klausa
+Auto	Auto
+Free voice in games	Nemokamas balsas žaidimuose
+Call mode (beta)	Skambučio režimas (beta)
+Her voice in your mic	Jos balsas jūsų mikrofone
+Get VB-CABLE	Gauti VB-CABLE
+How to	Kaip
+Her voice in your mic: loudness	Jos balsas jūsų mikrofone: garsumas
+MOVES	JUDESIAI
+Pop-in times	Atsiradimo laikai
+Mini player	Mini grotuvas
+Wander	Klaidžioti
+Sleep	Miegoti
+Pop-ins	Atsiradimai
+Glitch in at startup	Gedimas paleidžiant
+KEYS	KLAVIŠAI
+Talk: Ctrl + Alt + V	Kalbėti: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Nutildyti mikrofoną: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Rašyti: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Slėpti/rodyti: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Tyla: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Žaidimų režimas: Ctrl + Alt + G
+Confirm	Patvirtinti
+Cancel	Atšaukti
+Size	Dydis
+Check in on me	Patikrink, kaip aš
+Edit check-in lines	Redaguoti patikrinimo eilutes
+Always on top	Visada viršuje
+Mainframe size	Mainframe dydis
+Mainframe colours	Mainframe spalvos
+Head pats	Galvos glostymai
+Pat stroke	Glostymo brūkštis
+Chaos when upset	Chaosas, kai supykusi
+Legacy stand	Senas stovas
+Jealous of other AIs	Pavydi kitiems AI
+Teases when another AI comes to the front.	Erzina, kai į priekį išeina kitas AI.
+Close other AIs for me	Uždaryk kitus AI už mane
+Asks before closing only the apps you choose.	Klausia prieš uždarant tik jūsų pasirinktas programas.
+Apps she may close	Programos, kurias ji gali uždaryti
+Choose apps	Pasirinkti programas
+WATCH	ŽIŪRĖTI
+Watch my screen	Stebėti mano ekraną
+Screens	Ekranai
+All screens	Visi ekranai
+Remember what she sees	Prisiminti, ką ji mato
+Every	Kiekvienas
+Watch-along memory	Bendro žiūrėjimo atmintis
+Code/Husk Mode	Kodas/Husk režimas
+Thinking	Mąstoma
+Default	Numatytasis
+Extra request JSON	Papildoma užklausos JSON
+Add	Pridėti
+Verbosity	Žodingumas
+Replies	Atsakymai
+Memory	Atmintis
+Memory size	Atminties dydis
+Max reply	Maks. atsakymas
+Bubble	Burbulas
+Follow-up messages	Tolesnės žinutės
+Use	Naudoti
+A model in Ollama, on your local server or on your key.	Modelis Ollama, jūsų vietiniame serveryje arba su jūsų raktu.
+HABITS	ĮPROČIAI
+Open her memories	Atidaryti jos prisiminimus
+Start with Windows	Paleisti kartu su Windows
+Show on Discord	Rodyti Discord
+Use her cursor	Naudoti jos žymeklį
+Remember our chats	Prisiminti mūsų pokalbius
+Power saver	Energijos taupymas
+Music app	Muzikos programa
+Perch	Tupėjimas
+Keep PC awake for jobs	Laikyti kompiuterį budintį darbams
+Hide in full screen	Slėpti viso ekrano režime
+Mini player over full screen	Mini grotuvas virš viso ekrano
+Explore while I'm away	Tyrinėti, kol manęs nėra
+Explore after	Tyrinėti po
+GAMES	ŽAIDIMAI
+Controls	Valdymas
+Comments	Komentarai
+Live reactions	Tiesioginės reakcijos
+Game sounds	Žaidimų garsai
+Gaming Mode	Žaidimų režimas
+She reacts to your game until you close it.	Ji reaguoja į jūsų žaidimą, kol jį uždarysite.
+Works best on MAX INTELLIGENCE.	Geriausiai veikia su MAX INTELLIGENCE.
+Fast hands in games	Greitos rankos žaidimuose
+Mute her	Nutildyti ją
+CLIPS	KLIPAI
+Clip my games	Įrašyti mano žaidimus
+Save big moments	Išsaugoti didelius momentus
+Save folder	Išsaugojimo aplankas
+Choose folder	Pasirinkti aplanką
+Open clips folder	Atidaryti klipų aplanką
+Default length	Numatytasis ilgis
+Frame rate	Kadrų dažnis
+Resolution	Skiriamoji geba
+Video bitrate	Vaizdo bitų srautas
+Weather	Oras
+Code mods can reach your whole PC. Only trusted ones.	Kodo modifikacijos gali pasiekti visą jūsų kompiuterį. Tik patikimos.
+Import mod	Importuoti modifikaciją
+Browse mods	Naršyti modifikacijas
+Mods folder	Modifikacijų aplankas
+INSTALLED	ĮDIEGTA
+Update mods	Atnaujinti modifikacijas
+No mods match.	Nėra atitinkančių modifikacijų.
+On	Įjungta
+Remove	Pašalinti
+Publish	Publikuoti
+Options	Parinktys
+Back	Atgal
+Next	Kitas
+COLORS	SPALVOS
+Reset colors	Atstatyti spalvas
+Running on this PC	Veikia šiame PC
+NORMAL	NORMALUS
+OFF	IŠJUNGTA
+Local server address	Vietinio serverio adresas

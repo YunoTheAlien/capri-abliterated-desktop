@@ -1,0 +1,206 @@
+# Her menus and labels in Turkish: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe'i aç
+Her folder	Onun klasörü
+Play	Oynat
+Music	Müzik
+Chess	Satranç
+Connect four	Dört sırada
+Tic-tac-toe	XOX
+Rock, paper, scissors	Taş, kağıt, makas
+Hide Capri	Capri'yi gizle
+Hologram	Hologram
+Normal	Normal
+Small	Küçük
+Medium	Orta
+Large	Büyük
+Huge	Devasa
+Giant	Dev
+Move	Taşı
+Wander around	Etrafta dolaş
+Dance to music	Müziğe dans et
+Dance	Dans
+Ride cursor	İmleç ile gezin
+Sit on windows	Pencerelerin üstünde otur
+Sit here	Buraya otur
+Hang here	Burada takıl
+Lie down	Yat
+Go to sleep	Uyumaya git
+Bring to this screen	Bu ekrana getir
+Go to the next screen	Sonraki ekrana geç
+Black	Siyah
+White	Beyaz
+Test	Test
+Stop	Dur
+Help	Yardım
+Commands	Komutlar
+Help page	Yardım sayfası
+Join the Discord	Discord'a katıl
+Copy error details	Hata ayrıntılarını kopyala
+Check for updates	Güncellemeleri denetle
+Quit Capri	Capri'den çık
+MAINFRAME	MAINFRAME
+Settings	Ayarlar
+Mods	Modlar
+BRAIN	BEYİN
+Provider	Sağlayıcı
+Using your server with no key	Anahtarsız kendi sunucunu kullan
+Refresh	Yenile
+Set up her brain	Beynini kur
+Have Ollama? Open it, then press Refresh.	Ollama'n var mı? Aç, sonra Yenile'ye bas.
+Pick one. Only one brain runs at a time.	Birini seç. Aynı anda yalnızca bir beyin çalışır.
+MEDIUM INTELLIGENCE	ORTA INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Kapalı
+Free key	Ücretsiz anahtar
+Connect	Bağlan
+Free keys can be rate limited and slow.	Ücretsiz anahtarlarda hız sınırı olabilir ve yavaş olabilir.
+That's a paid key: it goes under MAX INTELLIGENCE.	Bu ücretli bir anahtar: MAX INTELLIGENCE altına gider.
+Move to MAX	MAX'e taşı
+VOICE	SES
+Ctrl + Alt + V to talk	Konuşmak için Ctrl + Alt + V
+PREBUILT LOCAL	ÖNCEDEN HAZIRLANMIŞ YEREL
+CUSTOM LOCAL	ÖZEL YEREL
+CLOUD VOICE	BULUT SES
+Set up	Kur
+Setup guide	Kurulum rehberi
+Fish Audio	Fish Audio
+Default model	Varsayılan model
+Pick a voice model	Bir ses modeli seç
+Get free voice	Ücretsiz ses al
+Mic: default	Mikrofon: varsayılan
+Her speaker: Default	Hoparlör: Varsayılan
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N mikrofonu sessize alır
+CAPRI	CAPRI
+Support	Destek
+Remote	Uzaktan
+Bring here	Buraya getir
+Advanced Settings	Gelişmiş Ayarlar
+YOU	SEN
+Your personality	Kişiliğin
+Language	Dil
+English	İngilizce
+What should she call you?	Sana ne diye seslensin?
+Save	Kaydet
+Volume	Ses
+Pitch	Perde
+Speed	Hız
+Robot	Robot
+Glitch	Glitch
+Sounds	Sesler
+Typing sound	Yazma sesi
+Listen for Capri	Capri'yi dinle
+Hearing	Duyma
+Auto	Otomatik
+Free voice in games	Oyunlarda ücretsiz ses
+Call mode (beta)	Arama modu (beta)
+Her voice in your mic	Sesi mikrofonunda
+Get VB-CABLE	VB-CABLE al
+How to	Nasıl yapılır
+Her voice in your mic: loudness	Mikrofonundaki ses: ses seviyesi
+MOVES	HAREKETLER
+Pop-in times	Ortaya çıkma süreleri
+Mini player	Mini oynatıcı
+Wander	Dolaş
+Sleep	Uyku
+Pop-ins	Ortaya çıkmalar
+Glitch in at startup	Başlangıçta glitch
+KEYS	TUŞLAR
+Talk: Ctrl + Alt + V	Konuş: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Mikrofonu sessize al: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Yaz: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Gizle/göster: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Sessiz: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Oyun Modu: Ctrl + Alt + G
+Confirm	Onayla
+Cancel	İptal
+Size	Boyut
+Check in on me	Bana bir bak
+Edit check-in lines	Bana bakma satırlarını düzenle
+Always on top	Her zaman üstte
+Mainframe size	Mainframe boyutu
+Mainframe colours	Mainframe renkleri
+Head pats	Kafa okşamaları
+Pat stroke	Kafa okşaması
+Chaos when upset	Kızınca kaos
+Legacy stand	Eski ayak
+Jealous of other AIs	Diğer yapay zekalara kıskanç
+Teases when another AI comes to the front.	Başka bir yapay zeka öne geçtiğinde dalga geçer.
+Close other AIs for me	Benim yerime diğer yapay zekaları kapat
+Asks before closing only the apps you choose.	Yalnızca seçtiğin uygulamaları kapatmadan önce sorar.
+Apps she may close	Kapatabileceği uygulamalar
+Choose apps	Uygulama seç
+WATCH	İZLE
+Watch my screen	Ekranımı izle
+Screens	Ekranlar
+All screens	Tüm ekranlar
+Remember what she sees	Gördüklerini hatırla
+Every	Her
+Watch-along memory	Birlikte izlerken hafıza
+Code/Husk Mode	Kod/Husk Modu
+Thinking	Düşünüyor
+Default	Varsayılan
+Extra request JSON	Ek istek JSON
+Add	Ekle
+Verbosity	Ayrıntı
+Replies	Yanıtlar
+Memory	Bellek
+Memory size	Bellek boyutu
+Max reply	En fazla yanıt
+Bubble	Balon
+Follow-up messages	Takip mesajları
+Use	Kullan
+A model in Ollama, on your local server or on your key.	Ollama'da bir model, yerel sunucunda ya da kendi anahtarınla.
+HABITS	ALIŞKANLIKLAR
+Open her memories	Anılarını aç
+Start with Windows	Windows ile başlat
+Show on Discord	Discord'da göster
+Use her cursor	İmlecini kullan
+Remember our chats	Sohbetlerimizi hatırla
+Power saver	Güç tasarrufu
+Music app	Müzik uygulaması
+Perch	Perch
+Keep PC awake for jobs	İşler için PC'yi uyanık tut
+Hide in full screen	Tam ekranda gizle
+Mini player over full screen	Tam ekranın üstünde mini oynatıcı
+Explore while I'm away	Uzaktayken keşfet
+Explore after	Sonra keşfet
+GAMES	OYUNLAR
+Controls	Denetimler
+Comments	Yorumlar
+Live reactions	Canlı tepkiler
+Game sounds	Oyun sesleri
+Gaming Mode	Oyun Modu
+She reacts to your game until you close it.	Oyunu kapatana kadar oyununa tepki verir.
+Works best on MAX INTELLIGENCE.	En iyi MAX INTELLIGENCE'da çalışır.
+Fast hands in games	Oyunlarda hızlı eller
+Mute her	Onu sessize al
+CLIPS	KLİPLER
+Clip my games	Oyunlarımı kliple
+Save big moments	Büyük anları kaydet
+Save folder	Kayıt klasörü
+Choose folder	Klasör seç
+Open clips folder	Klipler klasörünü aç
+Default length	Varsayılan uzunluk
+Frame rate	Kare hızı
+Resolution	Çözünürlük
+Video bitrate	Video bit hızı
+Weather	Hava durumu
+Code mods can reach your whole PC. Only trusted ones.	Kod modları tüm PC'ne erişebilir. Yalnızca güvendiklerini kullan.
+Import mod	Mod içe aktar
+Browse mods	Modlara göz at
+Mods folder	Modlar klasörü
+INSTALLED	YÜKLÜ
+Update mods	Modları güncelle
+No mods match.	Eşleşen mod yok.
+On	Açık
+Remove	Kaldır
+Publish	Yayınla
+Options	Seçenekler
+Back	Geri
+Next	Sonraki
+COLORS	RENKLER
+Reset colors	Renkleri sıfırla
+Running on this PC	Bu PC'de çalışıyor
+NORMAL	NORMAL
+OFF	KAPALI
+Local server address	Yerel sunucu adresi

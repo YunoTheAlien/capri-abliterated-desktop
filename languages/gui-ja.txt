@@ -1,0 +1,206 @@
+# Her menus and labels in Japanese: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe を開く
+Her folder	彼女のフォルダー
+Play	再生
+Music	音楽
+Chess	チェス
+Connect four	コネクトフォー
+Tic-tac-toe	三目並べ
+Rock, paper, scissors	じゃんけん
+Hide Capri	Capri を隠す
+Hologram	ホログラム
+Normal	通常
+Small	小
+Medium	中
+Large	大
+Huge	巨大
+Giant	巨大
+Move	移動
+Wander around	うろうろする
+Dance to music	音楽に合わせて踊る
+Dance	踊る
+Ride cursor	カーソルに乗る
+Sit on windows	窓に座る
+Sit here	ここに座る
+Hang here	ここにいる
+Lie down	横になる
+Go to sleep	おやすみ
+Bring to this screen	この画面に呼ぶ
+Go to the next screen	次の画面へ
+Black	黒
+White	白
+Test	テスト
+Stop	停止
+Help	ヘルプ
+Commands	コマンド
+Help page	ヘルプページ
+Join the Discord	Discord に参加
+Copy error details	エラーの詳細をコピー
+Check for updates	アップデートを確認
+Quit Capri	Capri を終了
+MAINFRAME	MAINFRAME
+Settings	設定
+Mods	Mod
+BRAIN	ブレイン
+Provider	プロバイダー
+Using your server with no key	キーなしでサーバーを使用中
+Refresh	更新
+Set up her brain	彼女のブレインをセットアップ
+Have Ollama? Open it, then press Refresh.	Ollama ある？開いてから更新を押してね。
+Pick one. Only one brain runs at a time.	1つ選んでね。同時に動くブレインは1つだけです。
+MEDIUM INTELLIGENCE	中くらいの知性
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	オフ
+Free key	無料キー
+Connect	接続
+Free keys can be rate limited and slow.	無料キーはレート制限があり、遅いことがあります。
+That's a paid key: it goes under MAX INTELLIGENCE.	それは有料キーです: MAX INTELLIGENCE に入ります。
+Move to MAX	MAX に移動
+VOICE	音声
+Ctrl + Alt + V to talk	Ctrl + Alt + V で話す
+PREBUILT LOCAL	プリセットのローカル
+CUSTOM LOCAL	カスタムローカル
+CLOUD VOICE	クラウド音声
+Set up	セットアップ
+Setup guide	セットアップガイド
+Fish Audio	Fish Audio
+Default model	既定のモデル
+Pick a voice model	音声モデルを選んで
+Get free voice	無料音声を入手
+Mic: default	マイク: デフォルト
+Her speaker: Default	彼女のスピーカー: デフォルト
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N でマイクをミュート
+CAPRI	CAPRI
+Support	サポート
+Remote	Remote
+Bring here	ここに呼ぶ
+Advanced Settings	詳細設定
+YOU	あなた
+Your personality	あなたの性格
+Language	言語
+English	英語
+What should she call you?	なんて呼べばいい？
+Save	保存
+Volume	音量
+Pitch	ピッチ
+Speed	速さ
+Robot	ロボット
+Glitch	Glitch
+Sounds	サウンド
+Typing sound	タイピング音
+Listen for Capri	Capri の声を待つ
+Hearing	聞き取り
+Auto	自動
+Free voice in games	ゲーム中の無料音声
+Call mode (beta)	通話モード（ベータ）
+Her voice in your mic	あなたのマイクに入る彼女の声
+Get VB-CABLE	VB-CABLE を入手
+How to	使い方
+Her voice in your mic: loudness	あなたのマイクに入る彼女の声: 音量
+MOVES	動き
+Pop-in times	出現時間
+Mini player	ミニプレイヤー
+Wander	うろうろ
+Sleep	寝る
+Pop-ins	出現
+Glitch in at startup	起動時にグリッチ
+KEYS	キー
+Talk: Ctrl + Alt + V	話す: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	マイクミュート: Ctrl + Alt + N
+Type: Ctrl + Alt + T	入力: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	隠す/表示: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	静か: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	ゲームモード: Ctrl + Alt + G
+Confirm	確認
+Cancel	キャンセル
+Size	サイズ
+Check in on me	様子を見に来る
+Edit check-in lines	チェックインのセリフを編集
+Always on top	常に最前面
+Mainframe size	Mainframe のサイズ
+Mainframe colours	Mainframe の色
+Head pats	頭なでなで
+Pat stroke	撫で
+Chaos when upset	怒るとカオスになる
+Legacy stand	旧スタンド
+Jealous of other AIs	他の AI に嫉妬
+Teases when another AI comes to the front.	別の AI が前に出てくると、からかいます。
+Close other AIs for me	他の AI を閉じる
+Asks before closing only the apps you choose.	選んだアプリだけ、閉じる前に確認します。
+Apps she may close	閉じてもいいアプリ
+Choose apps	アプリを選択
+WATCH	見る
+Watch my screen	画面を見る
+Screens	画面
+All screens	すべての画面
+Remember what she sees	見ているものを覚える
+Every	毎回
+Watch-along memory	一緒に見た時の記憶
+Code/Husk Mode	Code/Husk モード
+Thinking	考え中
+Default	デフォルト
+Extra request JSON	追加リクエスト JSON
+Add	追加
+Verbosity	冗長さ
+Replies	返答
+Memory	メモリ
+Memory size	メモリサイズ
+Max reply	最大の返答
+Bubble	吹き出し
+Follow-up messages	フォローアップメッセージ
+Use	使う
+A model in Ollama, on your local server or on your key.	Ollama のモデル。ローカルサーバーまたは自分のキーで。
+HABITS	習慣
+Open her memories	彼女の思い出を開く
+Start with Windows	Windows と一緒に起動
+Show on Discord	Discord で表示
+Use her cursor	彼女のカーソルを使う
+Remember our chats	チャットを覚える
+Power saver	省電力
+Music app	音楽アプリ
+Perch	止まり木
+Keep PC awake for jobs	作業のために PC を起こしておく
+Hide in full screen	フルスクリーンでは隠す
+Mini player over full screen	フルスクリーンの上にミニプレイヤー
+Explore while I'm away	離れている間に探索
+Explore after	後で探索
+GAMES	ゲーム
+Controls	操作
+Comments	コメント
+Live reactions	リアルタイムのリアクション
+Game sounds	ゲーム音
+Gaming Mode	ゲームモード
+She reacts to your game until you close it.	ゲームを閉じるまで、ゲームに反応します。
+Works best on MAX INTELLIGENCE.	MAX INTELLIGENCE で一番よく動きます。
+Fast hands in games	ゲームでの器用な手
+Mute her	彼女をミュート
+CLIPS	クリップ
+Clip my games	ゲームを録画
+Save big moments	大事な瞬間を保存
+Save folder	保存先フォルダー
+Choose folder	フォルダーを選択
+Open clips folder	クリップフォルダーを開く
+Default length	既定の長さ
+Frame rate	フレームレート
+Resolution	解像度
+Video bitrate	映像ビットレート
+Weather	天気
+Code mods can reach your whole PC. Only trusted ones.	コード Mod は PC 全体にアクセスできます。信頼できるものだけ使ってください。
+Import mod	Mod をインポート
+Browse mods	Mod を参照
+Mods folder	Mod フォルダー
+INSTALLED	インストール済み
+Update mods	Mod を更新
+No mods match.	Mod が一致しません。
+On	オン
+Remove	削除
+Publish	公開
+Options	オプション
+Back	戻る
+Next	次へ
+COLORS	カラー
+Reset colors	色をリセット
+Running on this PC	この PC で実行中
+NORMAL	通常
+OFF	オフ
+Local server address	ローカルサーバーのアドレス

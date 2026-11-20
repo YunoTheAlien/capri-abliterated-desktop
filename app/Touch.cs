@@ -4,12 +4,10 @@ namespace CapriDesktop
 {
     // Where on her you put your hand, and what she says about it.
     //
-    // A stroke anywhere on her read as the same head pat, and a slap landed the same wherever it hit, so her
+    // A stroke anywhere on her read as the same head pat, and the other ctrl click landed the same wherever it hit, so her
     // head and her hip were the same place as far as she was concerned.
     //
-    // The ordinary zones are hers at any time. The senpai ones exist only with the adult switch on: the sections
-    // are not written into a censored install, not read there, and the bands they cover simply read as nothing,
-    // so touching her there is the plain pat it always was and nothing anywhere says there is more to find.
+    // Some zones are named by what attached, and are read and written only with the switch on.
     //
     // Whether she wants it is her forwardness, the same number her brain is told about: five or more and she is
     // pleased, under that and she moves your hand, whatever the toggle says. On air it is zero by that number's
@@ -29,17 +27,15 @@ namespace CapriDesktop
         // high five is a ctrl click rather than a zone, and has its own lines.
         internal const string Tickled = "When you tickle her";
         // The senpai ones, and what she says when she is not in the mood for them.
-        internal const string Chest = "When you touch her chest";
-        internal const string Hips = "When you touch her hips";
-        internal const string Slapped = "When you slap her hips";
+        internal static string Upper { get { return Extended.Get("upper"); } }
+        internal static string Lower { get { return Extended.Get("lower"); } }
+        internal static string ClickZone { get { return Extended.Get("click.zone"); } }
         internal const string NotNow = "When she is not in the mood";
 
         // The forwardness at which she welcomes a senpai zone rather than moving your hand.
         internal const int Willing = 5;
 
-        // This file was written for the senpai side first, so her censored lines carried that register even
-        // where the zone was an ordinary one: a shoulder rub that reads as something else in a bubble with
-        // nothing around it. Swapped in files already written as well as in the one she ships.
+        // Lines replaced in her ordinary zones, in files already written as well as in the one she ships.
         private static readonly string[,] Reworded =
         {
             { "Right there, yeah.", "Right behind the ear, yeah." },
@@ -72,7 +68,7 @@ namespace CapriDesktop
 
         internal static bool Senpai(string zone)
         {
-            return zone == Chest || zone == Hips || zone == Slapped;
+            return !string.IsNullOrEmpty(zone) && (zone == Upper || zone == Lower || zone == ClickZone);
         }
 
         // Her line for a zone, or null to leave her saying what she always said. A senpai zone with the switch
@@ -81,7 +77,7 @@ namespace CapriDesktop
         {
             if (string.IsNullOrEmpty(zone)) return null;
             if (!Senpai(zone)) return file.Pick(zone, null);
-            if (!Brain.Adult) return null;
+            if (!Brain.SenpaiLive) return null;
             if (forward < Willing) return file.Pick(LineFile.Senpai(NotNow), null);
             return file.Pick(LineFile.Senpai(zone), null);
         }
@@ -93,10 +89,10 @@ namespace CapriDesktop
         internal static string Defaults { get { return
             "# Where you touch her\n" +
             "\n" +
-            "> What she says for a hand in one place rather than another. A zone with nothing under it falls\n" +
-            "> back to her ordinary lines for being petted, so emptying a section is how you switch one off.\n" +
-            "> Her personality and her mood still colour everything else she says; these are the words themselves.\n" +
-            "> Tokens: %petname% %name%\n" +
+            ">! What she says for a hand in one place rather than another. A zone with nothing under it falls\n" +
+            ">! back to her ordinary lines for being petted, so emptying a section is how you switch one off.\n" +
+            ">! Her personality and her mood still colour everything else she says; these are the words themselves.\n" +
+            ">! Tokens: %petname% %name%\n" +
             "\n" +
             "## When you touch her head\n" +
             "\n" +
@@ -208,6 +204,6 @@ namespace CapriDesktop
             "Hands off, gonk.\n" +
             "I don't even know why that works.\n" +
             "\n" +
-            SenpaiTouch; } }
+            Legacy.Modern(SenpaiTouch); } }
     }
 }

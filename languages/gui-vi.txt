@@ -1,0 +1,206 @@
+# Her menus and labels in Vietnamese: the English, a tab, then the translation.
+Open Capri Mainframe	Mở Capri Mainframe
+Her folder	Thư mục của cô ấy
+Play	Phát
+Music	Nhạc
+Chess	Cờ vua
+Connect four	Connect Four
+Tic-tac-toe	Cờ caro
+Rock, paper, scissors	Kéo, búa, bao
+Hide Capri	Ẩn Capri
+Hologram	Hình ảnh ba chiều
+Normal	Bình thường
+Small	Nhỏ
+Medium	Vừa
+Large	Lớn
+Huge	Khổng lồ
+Giant	Khổng lồ
+Move	Di chuyển
+Wander around	Đi lang thang
+Dance to music	Nhảy theo nhạc
+Dance	Nhảy
+Ride cursor	Cưỡi con trỏ
+Sit on windows	Ngồi trên cửa sổ
+Sit here	Ngồi đây
+Hang here	Ở lại đây
+Lie down	Nằm xuống
+Go to sleep	Đi ngủ
+Bring to this screen	Đưa đến màn hình này
+Go to the next screen	Chuyển sang màn hình kế tiếp
+Black	Đen
+White	Trắng
+Test	Thử
+Stop	Dừng
+Help	Trợ giúp
+Commands	Lệnh
+Help page	Trang trợ giúp
+Join the Discord	Tham gia Discord
+Copy error details	Sao chép chi tiết lỗi
+Check for updates	Kiểm tra cập nhật
+Quit Capri	Thoát Capri
+MAINFRAME	MAINFRAME
+Settings	Cài đặt
+Mods	Mod
+BRAIN	NÃO
+Provider	Nhà cung cấp
+Using your server with no key	Đang dùng máy chủ của bạn không có khóa
+Refresh	Làm mới
+Set up her brain	Thiết lập não của cô ấy
+Have Ollama? Open it, then press Refresh.	Có Ollama? Mở nó lên, rồi nhấn Làm mới.
+Pick one. Only one brain runs at a time.	Chọn một cái. Chỉ một não chạy cùng lúc.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Tắt
+Free key	Khóa miễn phí
+Connect	Kết nối
+Free keys can be rate limited and slow.	Khóa miễn phí có thể bị giới hạn tốc độ và chậm.
+That's a paid key: it goes under MAX INTELLIGENCE.	Đó là khóa trả phí: nó vào MAX INTELLIGENCE.
+Move to MAX	Chuyển sang MAX
+VOICE	GIỌNG
+Ctrl + Alt + V to talk	Ctrl + Alt + V để nói
+PREBUILT LOCAL	MÁY CỤC BỘ ĐÓNG SẴN
+CUSTOM LOCAL	CỤC BỘ TÙY CHỈNH
+CLOUD VOICE	GIỌNG ĐÁM MÂY
+Set up	Thiết lập
+Setup guide	Hướng dẫn thiết lập
+Fish Audio	Fish Audio
+Default model	Mô hình mặc định
+Pick a voice model	Chọn mô hình giọng nói
+Get free voice	Lấy giọng miễn phí
+Mic: default	Mic: mặc định
+Her speaker: Default	Loa của cô ấy: Mặc định
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N tắt mic
+CAPRI	CAPRI
+Support	Hỗ trợ
+Remote	Từ xa
+Bring here	Đưa đến đây
+Advanced Settings	Cài đặt nâng cao
+YOU	BẠN
+Your personality	Tính cách của bạn
+Language	Ngôn ngữ
+English	Tiếng Anh
+What should she call you?	Cô ấy nên gọi bạn là gì?
+Save	Lưu
+Volume	Âm lượng
+Pitch	Cao độ
+Speed	Tốc độ
+Robot	Robot
+Glitch	Glitch
+Sounds	Âm thanh
+Typing sound	Âm thanh gõ phím
+Listen for Capri	Nghe Capri
+Hearing	Nghe
+Auto	Tự động
+Free voice in games	Giọng miễn phí trong game
+Call mode (beta)	Chế độ gọi (beta)
+Her voice in your mic	Giọng cô ấy trong mic của bạn
+Get VB-CABLE	Tải VB-CABLE
+How to	Cách dùng
+Her voice in your mic: loudness	Giọng cô ấy trong mic của bạn: âm lượng
+MOVES	CHIÊU
+Pop-in times	Thời gian ghé thăm
+Mini player	Trình phát nhỏ
+Wander	Lang thang
+Sleep	Ngủ
+Pop-ins	Lần ghé thăm
+Glitch in at startup	Glitch khi khởi động
+KEYS	PHÍM
+Talk: Ctrl + Alt + V	Nói: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Tắt tiếng mic: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Gõ: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Ẩn/hiện: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Im lặng: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Chế độ Game: Ctrl + Alt + G
+Confirm	Xác nhận
+Cancel	Hủy
+Size	Kích thước
+Check in on me	Hỏi thăm mình
+Edit check-in lines	Sửa các câu chào hỏi
+Always on top	Luôn ở trên cùng
+Mainframe size	Kích thước Mainframe
+Mainframe colours	Màu Mainframe
+Head pats	Xoa đầu
+Pat stroke	Vuốt đầu
+Chaos when upset	Hỗn loạn khi bực
+Legacy stand	Giá đỡ cũ
+Jealous of other AIs	Ghen với các AI khác
+Teases when another AI comes to the front.	Trêu chọc khi một AI khác xuất hiện phía trước.
+Close other AIs for me	Đóng các AI khác giúp mình
+Asks before closing only the apps you choose.	Chỉ hỏi trước khi đóng các ứng dụng bạn chọn.
+Apps she may close	Ứng dụng cô ấy có thể đóng
+Choose apps	Chọn ứng dụng
+WATCH	XEM
+Watch my screen	Xem màn hình của tôi
+Screens	Màn hình
+All screens	Tất cả màn hình
+Remember what she sees	Nhớ những gì cô ấy thấy
+Every	Mỗi
+Watch-along memory	Bộ nhớ xem cùng nhau
+Code/Husk Mode	Chế độ Code/Husk
+Thinking	Đang nghĩ
+Default	Mặc định
+Extra request JSON	JSON yêu cầu thêm
+Add	Thêm
+Verbosity	Mức độ nói nhiều
+Replies	Trả lời
+Memory	Bộ nhớ
+Memory size	Kích thước bộ nhớ
+Max reply	Trả lời tối đa
+Bubble	Bong bóng
+Follow-up messages	Tin nhắn tiếp theo
+Use	Dùng
+A model in Ollama, on your local server or on your key.	Một mô hình trong Ollama, trên máy chủ cục bộ hoặc bằng khóa của bạn.
+HABITS	THÓI QUEN
+Open her memories	Mở kỷ niệm của cô ấy
+Start with Windows	Khởi động cùng Windows
+Show on Discord	Hiện trên Discord
+Use her cursor	Dùng con trỏ của cô ấy
+Remember our chats	Nhớ các cuộc trò chuyện của chúng mình
+Power saver	Tiết kiệm pin
+Music app	Ứng dụng nhạc
+Perch	Ghế đậu
+Keep PC awake for jobs	Giữ PC thức để làm việc
+Hide in full screen	Ẩn khi toàn màn hình
+Mini player over full screen	Trình phát nhỏ trên toàn màn hình
+Explore while I'm away	Khám phá khi mình vắng mặt
+Explore after	Khám phá sau
+GAMES	GAME
+Controls	Điều khiển
+Comments	Bình luận
+Live reactions	Phản ứng trực tiếp
+Game sounds	Âm thanh game
+Gaming Mode	Chế độ Game
+She reacts to your game until you close it.	Cô ấy phản ứng với game của bạn cho đến khi bạn đóng nó.
+Works best on MAX INTELLIGENCE.	Hoạt động tốt nhất với MAX INTELLIGENCE.
+Fast hands in games	Tay nhanh trong game
+Mute her	Tắt tiếng cô ấy
+CLIPS	CLIP
+Clip my games	Ghi lại các trận game của tôi
+Save big moments	Lưu khoảnh khắc quan trọng
+Save folder	Thư mục lưu
+Choose folder	Chọn thư mục
+Open clips folder	Mở thư mục clip
+Default length	Độ dài mặc định
+Frame rate	Tốc độ khung hình
+Resolution	Độ phân giải
+Video bitrate	Bitrate video
+Weather	Thời tiết
+Code mods can reach your whole PC. Only trusted ones.	Mod mã có thể truy cập toàn bộ PC của bạn. Chỉ dùng mod đáng tin.
+Import mod	Nhập mod
+Browse mods	Duyệt mod
+Mods folder	Thư mục mod
+INSTALLED	ĐÃ CÀI
+Update mods	Cập nhật mod
+No mods match.	Không có mod nào khớp.
+On	Bật
+Remove	Gỡ
+Publish	Đăng
+Options	Tùy chọn
+Back	Quay lại
+Next	Tiếp
+COLORS	MÀU SẮC
+Reset colors	Đặt lại màu
+Running on this PC	Đang chạy trên PC này
+NORMAL	BÌNH THƯỜNG
+OFF	TẮT
+Local server address	Địa chỉ máy chủ cục bộ

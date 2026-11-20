@@ -1,0 +1,206 @@
+# Her menus and labels in Dutch: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe openen
+Her folder	Haar map
+Play	Afspelen
+Music	Muziek
+Chess	Schaken
+Connect four	Vier op een rij
+Tic-tac-toe	Boter, kaas en eieren
+Rock, paper, scissors	Steen, papier, schaar
+Hide Capri	Capri verbergen
+Hologram	Hologram
+Normal	Normaal
+Small	Klein
+Medium	Gemiddeld
+Large	Groot
+Huge	Enorm
+Giant	Reusachtig
+Move	Verplaatsen
+Wander around	Rondlopen
+Dance to music	Dansen op muziek
+Dance	Dansen
+Ride cursor	Cursor berijden
+Sit on windows	Op vensters zitten
+Sit here	Hier zitten
+Hang here	Hang hier
+Lie down	Gaan liggen
+Go to sleep	Gaan slapen
+Bring to this screen	Naar dit scherm brengen
+Go to the next screen	Naar het volgende scherm gaan
+Black	Zwart
+White	Wit
+Test	Testen
+Stop	Stoppen
+Help	Help
+Commands	Opdrachten
+Help page	Helppagina
+Join the Discord	Word lid van de Discord
+Copy error details	Foutdetails kopiëren
+Check for updates	Controleren op updates
+Quit Capri	Capri afsluiten
+MAINFRAME	MAINFRAME
+Settings	Instellingen
+Mods	Mods
+BRAIN	BREIN
+Provider	Aanbieder
+Using your server with no key	Je server gebruiken zonder sleutel
+Refresh	Vernieuwen
+Set up her brain	Haar brein instellen
+Have Ollama? Open it, then press Refresh.	Heb je Ollama? Open het en druk dan op Vernieuwen.
+Pick one. Only one brain runs at a time.	Kies er een. Er draait maar één brein tegelijk.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENTIE
+MAX INTELLIGENCE	MAX INTELLIGENTIE
+Off	Uit
+Free key	Gratis sleutel
+Connect	Verbinden
+Free keys can be rate limited and slow.	Gratis sleutels kunnen beperkt en traag zijn.
+That's a paid key: it goes under MAX INTELLIGENCE.	Dat is een betaalde sleutel: die gaat onder MAX INTELLIGENTIE.
+Move to MAX	Naar MAX verplaatsen
+VOICE	STEM
+Ctrl + Alt + V to talk	Ctrl + Alt + V om te praten
+PREBUILT LOCAL	VOORGEBOUWD LOKAAL
+CUSTOM LOCAL	EIGEN LOKAAL
+CLOUD VOICE	CLOUDSTEM
+Set up	Instellen
+Setup guide	Installatiegids
+Fish Audio	Fish Audio
+Default model	Standaardmodel
+Pick a voice model	Kies een stemmodel
+Get free voice	Gratis stem ophalen
+Mic: default	Microfoon: standaard
+Her speaker: Default	Haar luidspreker: Standaard
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N dempt de microfoon
+CAPRI	CAPRI
+Support	Ondersteuning
+Remote	Remote
+Bring here	Hierheen brengen
+Advanced Settings	Geavanceerde instellingen
+YOU	JIJ
+Your personality	Je persoonlijkheid
+Language	Taal
+English	Engels
+What should she call you?	Hoe moet ze je noemen?
+Save	Opslaan
+Volume	Volume
+Pitch	Toonhoogte
+Speed	Snelheid
+Robot	Robot
+Glitch	Glitch
+Sounds	Geluiden
+Typing sound	Typgeluid
+Listen for Capri	Luisteren naar Capri
+Hearing	Gehoor
+Auto	Auto
+Free voice in games	Gratis stem in games
+Call mode (beta)	Belmodus (beta)
+Her voice in your mic	Haar stem in je microfoon
+Get VB-CABLE	VB-CABLE ophalen
+How to	Uitleg
+Her voice in your mic: loudness	Haar stem in je microfoon: luidheid
+MOVES	BEWEGINGEN
+Pop-in times	Langskomtijden
+Mini player	Mini-speler
+Wander	Rondzwerven
+Sleep	Slapen
+Pop-ins	Langskomers
+Glitch in at startup	Glitch bij opstarten
+KEYS	TOETSEN
+Talk: Ctrl + Alt + V	Praten: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Microfoon dempen: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Typen: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Verbergen/tonen: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Stil: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Gamemodus: Ctrl + Alt + G
+Confirm	Bevestigen
+Cancel	Annuleren
+Size	Grootte
+Check in on me	Even bij me checken
+Edit check-in lines	Check-inregels bewerken
+Always on top	Altijd bovenaan
+Mainframe size	Mainframe-grootte
+Mainframe colours	Mainframe-kleuren
+Head pats	Hoofdaaitjes
+Pat stroke	Aaibeweging
+Chaos when upset	Chaos als ze boos is
+Legacy stand	Oude stand
+Jealous of other AIs	Jaloers op andere AI's
+Teases when another AI comes to the front.	Plaagt wanneer een andere AI naar voren komt.
+Close other AIs for me	Andere AI's voor me sluiten
+Asks before closing only the apps you choose.	Vraagt alleen voor het sluiten van de apps die je kiest.
+Apps she may close	Apps die ze mag sluiten
+Choose apps	Kies apps
+WATCH	KIJKEN
+Watch my screen	Kijk mee op mijn scherm
+Screens	Schermen
+All screens	Alle schermen
+Remember what she sees	Onthoud wat ze ziet
+Every	Elke
+Watch-along memory	Geheugen van samen kijken
+Code/Husk Mode	Code/Husk-modus
+Thinking	Denken
+Default	Standaard
+Extra request JSON	Extra aanvraag-JSON
+Add	Toevoegen
+Verbosity	Uitgebreidheid
+Replies	Antwoorden
+Memory	Geheugen
+Memory size	Geheugengrootte
+Max reply	Maximaal antwoord
+Bubble	Bubbel
+Follow-up messages	Vervolgberichten
+Use	Gebruiken
+A model in Ollama, on your local server or on your key.	Een model in Ollama, op je lokale server of met je eigen sleutel.
+HABITS	GEWOONTEN
+Open her memories	Haar herinneringen openen
+Start with Windows	Starten met Windows
+Show on Discord	Tonen op Discord
+Use her cursor	Haar cursor gebruiken
+Remember our chats	Onthoud onze chats
+Power saver	Energiebesparing
+Music app	Muziekapp
+Perch	Zitplaats
+Keep PC awake for jobs	Pc wakker houden voor klussen
+Hide in full screen	Verbergen in volledig scherm
+Mini player over full screen	Mini-speler over volledig scherm
+Explore while I'm away	Verkennen als ik weg ben
+Explore after	Verkennen na
+GAMES	GAMES
+Controls	Bediening
+Comments	Commentaar
+Live reactions	Live reacties
+Game sounds	Gamegeluiden
+Gaming Mode	Gamemodus
+She reacts to your game until you close it.	Ze reageert op je game tot je hem sluit.
+Works best on MAX INTELLIGENCE.	Werkt het best op MAX INTELLIGENTIE.
+Fast hands in games	Snelle handen in games
+Mute her	Haar dempen
+CLIPS	CLIPS
+Clip my games	Clip mijn games
+Save big moments	Grote momenten opslaan
+Save folder	Opslagmap
+Choose folder	Kies map
+Open clips folder	Clipsmap openen
+Default length	Standaardlengte
+Frame rate	Framerate
+Resolution	Resolutie
+Video bitrate	Videobitrate
+Weather	Weer
+Code mods can reach your whole PC. Only trusted ones.	Code-mods kunnen je hele pc bereiken. Alleen vertrouwde gebruiken.
+Import mod	Mod importeren
+Browse mods	Mods bekijken
+Mods folder	Modsmap
+INSTALLED	GEÏNSTALLEERD
+Update mods	Mods bijwerken
+No mods match.	Geen mods gevonden.
+On	Aan
+Remove	Verwijderen
+Publish	Publiceren
+Options	Opties
+Back	Terug
+Next	Volgende
+COLORS	KLEUREN
+Reset colors	Kleuren resetten
+Running on this PC	Draait op deze pc
+NORMAL	NORMAAL
+OFF	UIT
+Local server address	Lokaal serveradres

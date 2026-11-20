@@ -1,0 +1,206 @@
+# Her menus and labels in Burmese: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe ဖွင့်
+Her folder	သူမ၏ ဖိုဒါ
+Play	Play
+Music	Music
+Chess	ချက်စ်
+Connect four	Connect four
+Tic-tac-toe	Tic-tac-toe
+Rock, paper, scissors	ကျောက်ခဲ၊ စက္ကူ၊ ကတ်ကြေး
+Hide Capri	Capri ဖျောက်
+Hologram	Hologram
+Normal	ပုံမှန်
+Small	သေး
+Medium	အလယ်အလတ်
+Large	ကြီး
+Huge	ကြီးလွန်း
+Giant	ကြီးမား
+Move	Move
+Wander around	ပတ်ပတ်လည် လှည့်
+Dance to music	သီချင်းအတွက် ကခုန်
+Dance	ကခုန်
+Ride cursor	Cursor ကို စီးပါ
+Sit on windows	ပြတင်းပေါက်များ ပေါ်ထိုင်
+Sit here	ဒီမှာ ထိုင်
+Hang here	ဒီမှာ နေပါ
+Lie down	ခွေနေပါ
+Go to sleep	အိပ်ရန် သွား
+Bring to this screen	ဤမျက်နှာပြင်သို့ ခေါ်
+Go to the next screen	နောက် မျက်နှာပြင်သို့ သွား
+Black	အနက်
+White	ဖြူ
+Test	Test
+Stop	ရပ်
+Help	အကူအညီ
+Commands	ညွှန်ကြားချက်များ
+Help page	အကူအညီ စာမျက်နှာ
+Join the Discord	Discord သို့ ဝင်ပါ
+Copy error details	Error အသေးစိတ် ကူးယူ
+Check for updates	အပ်ဒိတ်များ စစ်ဆေးရန်
+Quit Capri	Capri ထွက်
+MAINFRAME	MAINFRAME
+Settings	Settings
+Mods	Mods
+BRAIN	ဦးနှောက်
+Provider	Provider
+Using your server with no key	key မပါဘဲ သင့် server ကို သုံးနေသည်
+Refresh	Refresh
+Set up her brain	သူမ၏ ဦးနှောက် ထည့်သွင်း
+Have Ollama? Open it, then press Refresh.	Ollama ရှိလား? ဖွင့်ပြီး Refresh နှိပ်ပါ။
+Pick one. Only one brain runs at a time.	တစ်ခု ရွေးပါ။ ဦးနှောက် တစ်ခုသာ တစ်ချိန်တည်း လည်ပတ်သည်။
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Off
+Free key	အခမဲ့ key
+Connect	ချိတ်ဆက်
+Free keys can be rate limited and slow.	အခမဲ့ key များသည် နှုန်းကန့်သတ်ခံရနိုင်ပြီး နှေးနိုင်သည်။
+That's a paid key: it goes under MAX INTELLIGENCE.	ထိုသည် ပေးချေထားသော key ဖြစ်သည်: MAX INTELLIGENCE အောက်သို့ သွားသည်။
+Move to MAX	MAX သို့ ရွှေ့ပါ
+VOICE	VOICE
+Ctrl + Alt + V to talk	Ctrl + Alt + V ပြောရန်
+PREBUILT LOCAL	PREBUILT LOCAL
+CUSTOM LOCAL	စိတ်ကြိုက် LOCAL
+CLOUD VOICE	CLOUD အသံ
+Set up	Set up
+Setup guide	Setup guide
+Fish Audio	Fish Audio
+Default model	Default မော်ဒယ်
+Pick a voice model	အသံ model ရွေးပါ
+Get free voice	အခမဲ့ အသံ ရယူ
+Mic: default	Mic: default
+Her speaker: Default	သူမ၏ speaker: Default
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N သည် မိုက်ကို အသံပိတ်သည်
+CAPRI	CAPRI
+Support	Support
+Remote	Remote
+Bring here	ဤနေရာသို့ ခေါ်
+Advanced Settings	အဆင့်မြင့် ဆက်တင်များ
+YOU	သင်
+Your personality	သင့် personality
+Language	ဘာသာစကား
+English	အင်္ဂလိပ်
+What should she call you?	သူမ သင့်ကို ဘာခေါ်ရမလဲ?
+Save	သိမ်း
+Volume	Volume
+Pitch	Pitch
+Speed	Speed
+Robot	Robot
+Glitch	Glitch
+Sounds	Sounds
+Typing sound	Typing sound
+Listen for Capri	Capri ကို နားထောင်ပါ
+Hearing	နားထောင်ခြင်း
+Auto	Auto
+Free voice in games	ဂိမ်းထဲရှိ အခမဲ့ အသံ
+Call mode (beta)	ခေါ်ဆိုမှုမုဒ် (beta)
+Her voice in your mic	သင့် mic ထဲရှိ သူမ၏ အသံ
+Get VB-CABLE	VB-CABLE ရယူ
+How to	နည်းလမ်း
+Her voice in your mic: loudness	သင့် mic ထဲရှိ သူမ၏ အသံ: အသံကျယ်
+MOVES	ရွှေ့ခြင်းများ
+Pop-in times	Pop-in အချိန်များ
+Mini player	Mini player
+Wander	Wander
+Sleep	Sleep
+Pop-ins	Pop-ins
+Glitch in at startup	စတင်ချိန် Glitch
+KEYS	KEYS
+Talk: Ctrl + Alt + V	Talk: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Mute mic: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Type: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	ဖျောက်/ပြ: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Quiet: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Gaming Mode: Ctrl + Alt + G
+Confirm	အတည်ပြု
+Cancel	မလုပ်တော့ပါ
+Size	Size
+Check in on me	ငါ့ကို စစ်ဆေးပါ
+Edit check-in lines	check-in စာကြောင်းများ ပြင်ဆင်
+Always on top	အမြဲ အပေါ်ဆုံး
+Mainframe size	Mainframe အရွယ်အစား
+Mainframe colours	Mainframe အရောင်များ
+Head pats	ခေါင်းပုတ်ခြင်း
+Pat stroke	ခေါင်းပွတ်ခြင်း
+Chaos when upset	စိတ်ဆိုးလျှင် ရှုပ်ထွေးမှု
+Legacy stand	Legacy stand
+Jealous of other AIs	အခြား AI များကို မနာလိုဖြစ်
+Teases when another AI comes to the front.	အခြား AI ရှေ့ထွက်လာသောအခါ နောက်ပြောင်သည်။
+Close other AIs for me	ကျွန်ုပ်အတွက် အခြား AI များကို ပိတ်
+Asks before closing only the apps you choose.	သင်ရွေးထားသော app များကိုသာ ပိတ်ခင် မေးပါမည်။
+Apps she may close	ပိတ်ခွင့်ရှိသော app များ
+Choose apps	app များ ရွေးပါ
+WATCH	WATCH
+Watch my screen	ကျွန်ုပ်၏ စခရင်ကို ကြည့်
+Screens	Screens
+All screens	မျက်နှာပြင်အားလုံး
+Remember what she sees	သူမ မြင်သည်များ မှတ်ထား
+Every	အားလုံး
+Watch-along memory	Watch-along memory
+Code/Husk Mode	Code/Husk မုဒ်
+Thinking	စဉ်းစားနေသည်
+Default	Default
+Extra request JSON	Extra request JSON
+Add	ထည့်
+Verbosity	Verbosity
+Replies	Replies
+Memory	မှတ်ဉာဏ်
+Memory size	မှတ်ဉာဏ် အရွယ်အစား
+Max reply	အမြင့်ဆုံး တုံ့ပြန်ချက်
+Bubble	ပူဖောင်းကွင်း
+Follow-up messages	Follow-up မက်ဆေ့ချ်များ
+Use	Use
+A model in Ollama, on your local server or on your key.	Ollama ရှိ မော်ဒယ်၊ သင့်ဒေသဆာဗာ သို့မဟုတ် သင့် key ဖြင့်။
+HABITS	အလေ့အထများ
+Open her memories	သူမ၏ မှတ်ဉာဏ်များ ဖွင့်
+Start with Windows	Windows နှင့် စတင်
+Show on Discord	Discord တွင် ပြ
+Use her cursor	သူမ၏ cursor ကို သုံး
+Remember our chats	ကျွန်ုပ်တို့ စကားဝိုင်းများ မှတ်ထား
+Power saver	Power saver
+Music app	Music app
+Perch	Perch
+Keep PC awake for jobs	အလုပ်များအတွက် PC ကို နိုးထားပါ
+Hide in full screen	full screen တွင် ဖျောက်
+Mini player over full screen	Mini player full screen အပေါ်တွင်
+Explore while I'm away	ငါမရှိချိန် စူးစမ်း
+Explore after	နောက်မှ စူးစမ်း
+GAMES	ဂိမ်းများ
+Controls	ထိန်းချုပ်မှုများ
+Comments	မှတ်ချက်များ
+Live reactions	တိုက်ရိုက် တုံ့ပြန်မှုများ
+Game sounds	ဂိမ်းအသံများ
+Gaming Mode	Gaming Mode
+She reacts to your game until you close it.	သင်ဂိမ်းကို ပိတ်သည်အထိ သူမ တုံ့ပြန်သည်။
+Works best on MAX INTELLIGENCE.	MAX INTELLIGENCE တွင် အကောင်းဆုံး အလုပ်လုပ်သည်။
+Fast hands in games	ဂိမ်းများတွင် မြန်သော လက်
+Mute her	သူမကို အသံပိတ်
+CLIPS	ခလုတ်များ
+Clip my games	ကျွန်ုပ်၏ဂိမ်းများကို clip ဖတ်ပါ
+Save big moments	အရေးကြီးသောအခိုက်အတန့်များ သိမ်း
+Save folder	သိမ်းဆည်းမည့် ဖိုဒါ
+Choose folder	ဖိုဒါ ရွေးပါ
+Open clips folder	clips ဖိုဒါ ဖွင့်
+Default length	ပုံမှန်ကြာချိန်
+Frame rate	Frame rate
+Resolution	Resolution
+Video bitrate	Video bitrate
+Weather	ရာသီဥတု
+Code mods can reach your whole PC. Only trusted ones.	Code mod များသည် သင့် PC တစ်ခုလုံးသို့ ရောက်နိုင်သည်။ ယုံကြည်ရသည်များသာ။
+Import mod	mod ထည့်သွင်းရန်
+Browse mods	mod များ ရှာဖွေ
+Mods folder	Mods ဖိုင်တွဲ
+INSTALLED	INSTALLED
+Update mods	Mods များ Update လုပ်
+No mods match.	ကိုက်ညီသော mod မရှိပါ။
+On	On
+Remove	ဖယ်ရှား
+Publish	Publish
+Options	ရွေးချယ်ချက်များ
+Back	နောက်သို့
+Next	Next
+COLORS	အရောင်များ
+Reset colors	အရောင်များ ပြန်သတ်မှတ်
+Running on this PC	ဤ PC တွင် လည်ပတ်နေသည်
+NORMAL	ပုံမှန်
+OFF	OFF
+Local server address	ဒေသဆာဗာ လိပ်စာ

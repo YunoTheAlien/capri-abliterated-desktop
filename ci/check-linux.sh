@@ -5,6 +5,8 @@ unset WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE DISPLAY DBUS_SESSION_BUS_ADDRE
 for project in tests/native-surface/NativeSurface.Tests.csproj tests/desktop/Capri.Desktop.Tests.csproj tests/computer/ComputerChecks.csproj tests/game-session/GameSessionChecks.csproj tests/input-cancel/InputCancelChecks.csproj tests/native-bridge/NativeBridgeChecks.csproj; do
     dotnet run --project "$root/$project" -c Release
 done
+# Her GNOME window helper, without a GNOME: tests/gnome-bridge/run.sh and run-other-gnome.sh check it against real ones.
+dotnet run --project "$root/tests/gnome-bridge/GnomeBridgeChecks.csproj" -c Release -- offline
 make -C "$root/cross/native"
 python3 "$root/tests/computer/native_input_checks.py" "$root/cross/native/capri-input"
 python3 "$root/tests/native-bridge/terminal_supervisor_checks.py"

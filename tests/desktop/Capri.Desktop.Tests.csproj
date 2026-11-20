@@ -12,6 +12,8 @@
     <Compile Include="../../cross/Desk.cs" Link="Desk.cs" />
     <Compile Include="../../cross/X11Safety.cs" Link="X11Safety.cs" />
     <Compile Include="../../cross/KWin.cs" Link="KWin.cs" />
+    <Compile Include="../../cross/Gnome.cs" Link="Gnome.cs" />
+    <EmbeddedResource Include="../../cross/gnome/capri-windows.js" LogicalName="Capri.Gnome.capri-windows.js" />
     <Compile Include="../../cross/NativeMotionTrace.cs" Link="NativeMotionTrace.cs" />
     <Compile Include="../../cross/LinuxProcess.cs" Link="LinuxProcess.cs" />
     <Compile Include="../../cross/Hyprland*.cs" Link="%(Filename)%(Extension)" />

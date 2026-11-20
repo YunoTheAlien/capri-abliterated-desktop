@@ -107,12 +107,16 @@ namespace CapriDesktop
         }
 
         // The same addresses the Windows updater takes: https on github.com, under this repo's release downloads.
+        // This fork's releases (the same repo as Windows' Updater.Repo), never upstream's: a build that updated from there would
+        // replace this Capri with the stock one.
+        internal const string Repo = "YunoTheAlien/capri-abliterated-desktop";
+
         internal static bool Official(string address)
         {
             Uri uri;
             return Uri.TryCreate(address, UriKind.Absolute, out uri) && uri.Scheme == Uri.UriSchemeHttps && uri.Host == "github.com" && uri.IsDefaultPort
                 && uri.UserInfo.Length == 0 && uri.Fragment.Length == 0 && uri.Query.Length == 0
-                && uri.AbsolutePath.StartsWith("/lachydotmcg/capri-desktop/releases/download/", StringComparison.Ordinal)
+                && uri.AbsolutePath.StartsWith("/" + Repo + "/releases/download/", StringComparison.Ordinal)
                 && !uri.AbsolutePath.Contains("/../", StringComparison.Ordinal);
         }
 
@@ -395,22 +399,22 @@ exit 1
         internal static void Checks(List<string> checks)
         {
             string[] good = {
-                "https://github.com/lachydotmcg/capri-desktop/releases/download/v0.9.1/Capri-linux-x64.AppImage",
-                "https://github.com/lachydotmcg/capri-desktop/releases/download/v0.9.1/SHA256SUMS.txt",
+                "https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/download/v0.9.1/Capri-linux-x64.AppImage",
+                "https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/download/v0.9.1/SHA256SUMS.txt",
             };
             string[] bad = {
                 null, "", "not a url",
-                "http://github.com/lachydotmcg/capri-desktop/releases/download/v0.9.1/Capri-linux-x64.AppImage",
-                "https://github.com:8443/lachydotmcg/capri-desktop/releases/download/v0.9.1/Capri-linux-x64.AppImage",
-                "https://user@github.com/lachydotmcg/capri-desktop/releases/download/v0.9.1/Capri-linux-x64.AppImage",
-                "https://github.com.evil.example/lachydotmcg/capri-desktop/releases/download/v0.9.1/Capri-linux-x64.AppImage",
-                "https://evil.example/lachydotmcg/capri-desktop/releases/download/v0.9.1/Capri-linux-x64.AppImage",
+                "http://github.com/YunoTheAlien/capri-abliterated-desktop/releases/download/v0.9.1/Capri-linux-x64.AppImage",
+                "https://github.com:8443/YunoTheAlien/capri-abliterated-desktop/releases/download/v0.9.1/Capri-linux-x64.AppImage",
+                "https://user@github.com/YunoTheAlien/capri-abliterated-desktop/releases/download/v0.9.1/Capri-linux-x64.AppImage",
+                "https://github.com.evil.example/YunoTheAlien/capri-abliterated-desktop/releases/download/v0.9.1/Capri-linux-x64.AppImage",
+                "https://evil.example/YunoTheAlien/capri-abliterated-desktop/releases/download/v0.9.1/Capri-linux-x64.AppImage",
                 "https://github.com/someone/capri-desktop/releases/download/v0.9.1/Capri-linux-x64.AppImage",
-                "https://github.com/lachydotmcg/capri-desktop/releases/download/../../someone/x/releases/download/a",
-                "https://github.com/lachydotmcg/capri-desktop/releases/download/v0.9.1/Capri-linux-x64.AppImage#x",
-                "https://github.com/lachydotmcg/capri-desktop/releases/download/v0.9.1/Capri-linux-x64.AppImage?x=1",
-                "https://github.com/lachydotmcg/capri-desktop/archive/v0.9.1.zip",
-                "file:///lachydotmcg/capri-desktop/releases/download/v0.9.1/Capri-linux-x64.AppImage",
+                "https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/download/../../someone/x/releases/download/a",
+                "https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/download/v0.9.1/Capri-linux-x64.AppImage#x",
+                "https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/download/v0.9.1/Capri-linux-x64.AppImage?x=1",
+                "https://github.com/YunoTheAlien/capri-abliterated-desktop/archive/v0.9.1.zip",
+                "file:///YunoTheAlien/capri-abliterated-desktop/releases/download/v0.9.1/Capri-linux-x64.AppImage",
             };
             foreach (string address in good) if (!Official(address)) throw new Exception("A real release address was refused: " + address);
             foreach (string address in bad) if (Official(address)) throw new Exception("An address outside Capri's releases was taken: " + address);
@@ -445,7 +449,7 @@ exit 1
 
             Version mine = new Version(0, 9, 0, 0);
             Func<string, string, string> release = (tag, rest) => "{\"tag_name\":\"" + tag + "\",\"draft\":false,\"prerelease\":false,\"assets\":[" + rest + "]}";
-            Func<string, long, string> file = (name, size) => "{\"name\":\"" + name + "\",\"size\":" + size + ",\"browser_download_url\":\"https://github.com/lachydotmcg/capri-desktop/releases/download/v9/" + name + "\"}";
+            Func<string, long, string> file = (name, size) => "{\"name\":\"" + name + "\",\"size\":" + size + ",\"browser_download_url\":\"https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/download/v9/" + name + "\"}";
             string both = file(AppName, 59394552) + "," + file(SumsName, 596);
             foreach (string tag in new[] { "v0.8.9", "v0.9.0", "0.9.0.0", "v0.1.12" })
                 if (Pick(release(tag, both), mine) != null) throw new Exception("An older or the same release was offered: " + tag);
@@ -465,7 +469,7 @@ exit 1
                 { "checksum list twice", release("v0.9.1", both + "," + file(SumsName, 596)) },
                 { "empty appimage", release("v0.9.1", file(AppName, 0) + "," + file(SumsName, 596)) },
                 { "oversize appimage", release("v0.9.1", file(AppName, Largest + 1) + "," + file(SumsName, 596)) },
-                { "foreign address", release("v0.9.1", both.Replace("https://github.com/lachydotmcg/", "https://github.com/someone/")) },
+                { "foreign address", release("v0.9.1", both.Replace("https://github.com/YunoTheAlien/", "https://github.com/someone/")) },
             };
             foreach (KeyValuePair<string, string> pair in refusals)
             {

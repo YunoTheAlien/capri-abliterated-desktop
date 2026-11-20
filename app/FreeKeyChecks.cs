@@ -35,7 +35,7 @@ namespace CapriDesktop
                         ShowSettings(false);
                         Location = new Point(Screen.FromControl(this).WorkingArea.Left + 16, Screen.FromControl(this).WorkingArea.Top + 16);
                         string crowded = TextFits() ?? Overlap();
-                        if (!TiersFit || crowded != null) throw new Exception("Free key's BRAIN panel does not fit at " + percent + "%: " + crowded);
+                        if (!TiersFit || crowded != null) throw new Exception("Free key's BRAIN panel does not fit at " + percent + "%: " + crowded + " / its note says: " + Status);
                         if (!freeKey.TabStop || !freeKey.Focus()) throw new Exception("The Free key button cannot be reached by keyboard.");
                         if (hints[freeKey].Topic != SelfKnow.Setting("Mainframe.cs", "Free key")) throw new Exception("Free key lost its real help binding.");
                         foreach (string provider in new[] { "NVIDIA", "Google AI Studio", "OpenRouter" })
@@ -153,7 +153,9 @@ namespace CapriDesktop
                         // Only what shows on BRAIN's page counts: Settings' rows wait off to the side, and the setup steps are folded away.
                         if (control == offRung || !control.Visible || control.Left >= ClientSize.Width || !without.TryGetValue(control, out was)) continue;
                         int moved = control.Top - was.Top, should = was.Top >= rowAt ? row : 0;
-                        if (control.Left != was.Left || control.Size != was.Size || Math.Abs(moved - should) > 1)
+                        // Each row reaches down to the next row's top, so a row moved by a part-pixel step can be a pixel
+                        // taller or shorter than before; the same pixel the move is allowed.
+                        if (control.Left != was.Left || control.Width != was.Width || Math.Abs(control.Height - was.Height) > 1 || Math.Abs(moved - should) > 1)
                             moves.Add(percent + "%: " + (control.AccessibleName ?? control.Text) + " moved " + moved + " (" + was + " -> " + control.Bounds + ")");
                     }
                     if (Math.Abs(ClientSize.Height - tallWithout - row) > 1) moves.Add(percent + "%: the page grew " + (ClientSize.Height - tallWithout) + ", not one row (" + row + ")");

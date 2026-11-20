@@ -1,0 +1,206 @@
+# Her menus and labels in Arabic: the English, a tab, then the translation.
+Open Capri Mainframe	افتح Capri Mainframe
+Her folder	مجلدها
+Play	تشغيل
+Music	الموسيقى
+Chess	الشطرنج
+Connect four	أربعة في صف
+Tic-tac-toe	إكس أو
+Rock, paper, scissors	حجر، ورقة، مقص
+Hide Capri	إخفاء Capri
+Hologram	هولوغرام
+Normal	عادي
+Small	صغير
+Medium	متوسط
+Large	كبير
+Huge	ضخم
+Giant	عملاق
+Move	نقل
+Wander around	تجوّل حولي
+Dance to music	ارقص على الموسيقى
+Dance	ارقص
+Ride cursor	امتطِ المؤشر
+Sit on windows	اجلس على النوافذ
+Sit here	اجلس هنا
+Hang here	ابقَ هنا
+Lie down	استلقِ
+Go to sleep	نامي
+Bring to this screen	أحضرها إلى هذه الشاشة
+Go to the next screen	انتقل إلى الشاشة التالية
+Black	أسود
+White	أبيض
+Test	اختبار
+Stop	إيقاف
+Help	مساعدة
+Commands	الأوامر
+Help page	صفحة المساعدة
+Join the Discord	انضم إلى Discord
+Copy error details	نسخ تفاصيل الخطأ
+Check for updates	تحقق من التحديثات
+Quit Capri	إنهاء Capri
+MAINFRAME	MAINFRAME
+Settings	الإعدادات
+Mods	المودات
+BRAIN	الدماغ
+Provider	المزود
+Using your server with no key	تستخدم خادمك بلا مفتاح
+Refresh	تحديث
+Set up her brain	إعداد دماغها
+Have Ollama? Open it, then press Refresh.	هل لديك Ollama؟ افتحه ثم اضغط تحديث.
+Pick one. Only one brain runs at a time.	اختر واحداً. دماغ واحد فقط يعمل في كل مرة.
+MEDIUM INTELLIGENCE	INTELLIGENCE متوسط
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	إيقاف
+Free key	مفتاح مجاني
+Connect	اتصال
+Free keys can be rate limited and slow.	قد تكون المفاتيح المجانية محدودة الطلبات وبطيئة.
+That's a paid key: it goes under MAX INTELLIGENCE.	هذا مفتاح مدفوع: يذهب إلى MAX INTELLIGENCE.
+Move to MAX	انقل إلى MAX
+VOICE	الصوت
+Ctrl + Alt + V to talk	Ctrl + Alt + V للحديث
+PREBUILT LOCAL	محلي جاهز
+CUSTOM LOCAL	محلي مخصص
+CLOUD VOICE	الصوت السحابي
+Set up	إعداد
+Setup guide	دليل الإعداد
+Fish Audio	Fish Audio
+Default model	النموذج الافتراضي
+Pick a voice model	اختر نموذج صوت
+Get free voice	احصل على صوت مجاني
+Mic: default	الميكروفون: افتراضي
+Her speaker: Default	مكبرها: افتراضي
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N يكتم الميكروفون
+CAPRI	CAPRI
+Support	الدعم
+Remote	عن بُعد
+Bring here	أحضرها هنا
+Advanced Settings	الإعدادات المتقدمة
+YOU	أنت
+Your personality	شخصيتك
+Language	اللغة
+English	الإنجليزية
+What should she call you?	بماذا ينبغي أن تناديك؟
+Save	حفظ
+Volume	مستوى الصوت
+Pitch	الطبقة
+Speed	السرعة
+Robot	روبوت
+Glitch	خلل
+Sounds	الأصوات
+Typing sound	صوت الكتابة
+Listen for Capri	استمع إلى Capri
+Hearing	السمع
+Auto	تلقائي
+Free voice in games	صوت مجاني في الألعاب
+Call mode (beta)	وضع المكالمة (تجريبي)
+Her voice in your mic	صوتها في ميكروفونك
+Get VB-CABLE	احصل على VB-CABLE
+How to	كيف
+Her voice in your mic: loudness	صوتها في ميكروفونك: الصوت
+MOVES	الحركات
+Pop-in times	أوقات الظهور
+Mini player	المشغل المصغر
+Wander	تجوّل
+Sleep	النوم
+Pop-ins	مرات الظهور
+Glitch in at startup	خلل عند بدء التشغيل
+KEYS	المفاتيح
+Talk: Ctrl + Alt + V	الحديث: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	كتم الميكروفون: Ctrl + Alt + N
+Type: Ctrl + Alt + T	الكتابة: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	إخفاء/إظهار: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	الصمت: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	وضع الألعاب: Ctrl + Alt + G
+Confirm	تأكيد
+Cancel	إلغاء
+Size	الحجم
+Check in on me	تفقدني
+Edit check-in lines	تحرير أسطر تفقدني
+Always on top	دائماً في الأعلى
+Mainframe size	حجم Mainframe
+Mainframe colours	ألوان Mainframe
+Head pats	مسح الرأس
+Pat stroke	ربتة على الرأس
+Chaos when upset	فوضى عند الانزعاج
+Legacy stand	حامل قديم
+Jealous of other AIs	غيرة من الذكاءات الأخرى
+Teases when another AI comes to the front.	تسخر عندما يأتي ذكاء آخر إلى المقدمة.
+Close other AIs for me	أغلق الذكاءات الأخرى من أجلي
+Asks before closing only the apps you choose.	يسأل قبل إغلاق التطبيقات التي تختارها فقط.
+Apps she may close	التطبيقات التي قد تغلقها
+Choose apps	اختر التطبيقات
+WATCH	مراقبة
+Watch my screen	شاهد شاشتي
+Screens	الشاشات
+All screens	كل الشاشات
+Remember what she sees	تذكر ما تراه
+Every	كل
+Watch-along memory	ذاكرة المشاهدة المشتركة
+Code/Husk Mode	وضع Code/Husk
+Thinking	تفكّر
+Default	افتراضي
+Extra request JSON	JSON للطلب الإضافي
+Add	إضافة
+Verbosity	الإسهاب
+Replies	الردود
+Memory	الذاكرة
+Memory size	حجم الذاكرة
+Max reply	أقصى رد
+Bubble	فقاعة
+Follow-up messages	رسائل المتابعة
+Use	استخدم
+A model in Ollama, on your local server or on your key.	نموذج في Ollama، على خادمك المحلي أو بمفتاحك.
+HABITS	العادات
+Open her memories	افتح ذكرياتها
+Start with Windows	ابدأ مع Windows
+Show on Discord	أظهر على Discord
+Use her cursor	استخدم مؤشرها
+Remember our chats	تذكر دردشاتنا
+Power saver	توفير الطاقة
+Music app	تطبيق الموسيقى
+Perch	المكان
+Keep PC awake for jobs	أبقِ الحاسوب مستيقظاً للمهام
+Hide in full screen	إخفاء في ملء الشاشة
+Mini player over full screen	المشغل المصغر فوق ملء الشاشة
+Explore while I'm away	استكشف عندما أكون بعيدة
+Explore after	استكشف بعد
+GAMES	الألعاب
+Controls	عناصر التحكم
+Comments	التعليقات
+Live reactions	ردود فعل مباشرة
+Game sounds	أصوات اللعبة
+Gaming Mode	وضع الألعاب
+She reacts to your game until you close it.	تتفاعل مع لعبتك حتى تغلقها.
+Works best on MAX INTELLIGENCE.	الأفضل مع MAX INTELLIGENCE.
+Fast hands in games	أيدٍ سريعة في الألعاب
+Mute her	كتمها
+CLIPS	المقاطع
+Clip my games	سجّل ألعابي
+Save big moments	احفظ اللحظات الكبيرة
+Save folder	مجلد الحفظ
+Choose folder	اختر المجلد
+Open clips folder	افتح مجلد المقاطع
+Default length	الطول الافتراضي
+Frame rate	معدل الإطارات
+Resolution	الدقة
+Video bitrate	معدل بت الفيديو
+Weather	الطقس
+Code mods can reach your whole PC. Only trusted ones.	يمكن لمودات الكود الوصول إلى الحاسوب كله. الموثوقة فقط.
+Import mod	استيراد مود
+Browse mods	تصفح المودات
+Mods folder	مجلد المودات
+INSTALLED	مثبّت
+Update mods	تحديث المودات
+No mods match.	لا يطابق أي مود.
+On	تشغيل
+Remove	إزالة
+Publish	نشر
+Options	الخيارات
+Back	رجوع
+Next	التالي
+COLORS	الألوان
+Reset colors	إعادة ضبط الألوان
+Running on this PC	يعمل على هذا الحاسوب
+NORMAL	عادي
+OFF	إيقاف
+Local server address	عنوان الخادم المحلي

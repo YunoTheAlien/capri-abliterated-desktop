@@ -101,8 +101,9 @@ namespace CapriDesktop
                 Load();
                 List<KeyValuePair<string, double>> all = new List<KeyValuePair<string, double>>();
                 foreach (KeyValuePair<string, double> one in counts)
-                    foreach (string name in names)
-                        if (one.Key.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0) { all.Add(one); break; }
+                    if (!one.Key.StartsWith(WebMark, StringComparison.OrdinalIgnoreCase))
+                        foreach (string name in names)
+                            if (one.Key.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0) { all.Add(one); break; }
                 all.Sort(delegate(KeyValuePair<string, double> x, KeyValuePair<string, double> y) { return y.Value.CompareTo(x.Value); });
                 foreach (KeyValuePair<string, double> one in all) found.Add(one.Key);
             }
@@ -191,7 +192,7 @@ namespace CapriDesktop
                 double most = Enough;
                 foreach (KeyValuePair<string, double> one in counts)
                 {
-                    if (one.Value < most) continue;
+                    if (one.Value < most || one.Key.StartsWith(WebMark, StringComparison.OrdinalIgnoreCase)) continue;
                     foreach (string name in names)
                         if (one.Key.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0) { best = one.Key; most = one.Value; break; }
                 }
@@ -216,6 +217,73 @@ namespace CapriDesktop
                 counts[plain] = (counts.TryGetValue(plain, out had) ? had : 0) + 1;
                 if (now - saved >= TimeSpan.FromMinutes(5)) { saved = now; Write(); }
             }
+        }
+
+        // Sites that are also an app on the PC. With a browser in front, the window title says which one is open, so
+        // Spotify in a tab counts for Spotify on the web and Spotify.exe for the app.
+        private static readonly string[] Both = { "spotify", "discord", "slack", "teams", "whatsapp", "telegram", "notion", "figma", "outlook", "deezer", "tidal", "netflix", "steam", "twitch" };
+        private const string WebMark = "web:";
+        private static string webMarked;
+        private static DateTime webMarkedAt = DateTime.MinValue;
+
+        internal static void Seen(string program, string title, DateTime now)
+        {
+            Seen(program, now);
+            string site = WebSite(program, title);
+            if (site == null) return;
+            lock (gate)
+            {
+                if (string.Equals(site, webMarked, StringComparison.OrdinalIgnoreCase) && now - webMarkedAt < Spell) return;
+                webMarked = site;
+                webMarkedAt = now;
+                double had;
+                counts[WebMark + site] = (counts.TryGetValue(WebMark + site, out had) ? had : 0) + 1;
+            }
+        }
+
+        // The site in a browser's title, or null when a browser is not what is in front.
+        internal static string WebSite(string program, string title)
+        {
+            string plain = Plain(program);
+            if (plain.Length == 0 || string.IsNullOrEmpty(title)) return null;
+            bool browser = false;
+            foreach (string name in Kinds["browser"]) if (plain.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0) browser = true;
+            if (!browser) return null;
+            foreach (string site in Both)
+                if (Regex.IsMatch(title, @"\b" + Regex.Escape(site) + @"\b", RegexOptions.IgnoreCase)) return site;
+            return null;
+        }
+
+        // The app or the page for a site that is both: "app" or "web" when they said so or plainly use one, "both" when
+        // they use each about as much, and null when she has not seen enough to say.
+        internal static string Where(string site)
+        {
+            string key = (site ?? "").Trim().ToLowerInvariant();
+            if (key.Length == 0) return null;
+            string told = Picked("where:" + key);
+            if (told != null) return told;
+            double app = 0, web = 0;
+            lock (gate)
+            {
+                Load();
+                foreach (KeyValuePair<string, double> one in counts)
+                {
+                    if (one.Key.StartsWith(WebMark, StringComparison.OrdinalIgnoreCase)) { if (string.Equals(one.Key, WebMark + key, StringComparison.OrdinalIgnoreCase)) web = one.Value; }
+                    else if (one.Key.IndexOf(key, StringComparison.OrdinalIgnoreCase) >= 0) app = Math.Max(app, one.Value);
+                }
+            }
+            if (app < Enough && web < Enough) return null;
+            if (app >= web * 2) return "app";
+            if (web >= app * 2) return "web";
+            return "both";
+        }
+
+        // Their word on it, which becomes the one she uses until they say otherwise.
+        internal static void Tell(string site, string where)
+        {
+            string key = (site ?? "").Trim().ToLowerInvariant();
+            if (key.Length == 0 || string.IsNullOrEmpty(where)) return;
+            lock (gate) { Load(); picks["where:" + key] = where; Write(); }
         }
 
         // Her opening something is one use of it and no more, so her own guess cannot vote for itself.
@@ -306,5 +374,16 @@ namespace CapriDesktop
         }
 
         internal static void Save() { lock (gate) { if (read) Write(); } }
+
+        // Everything let go, so the file at Kept is read afresh. For her checks.
+        internal static void Reload()
+        {
+            lock (gate)
+            {
+                counts.Clear(); picks.Clear(); refused.Clear();
+                read = false; marked = webMarked = null;
+                markedAt = webMarkedAt = faded = saved = DateTime.MinValue;
+            }
+        }
     }
 }

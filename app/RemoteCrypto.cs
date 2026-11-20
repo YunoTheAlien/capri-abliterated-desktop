@@ -251,7 +251,9 @@ namespace CapriDesktop
             }
         }
 
+#if !CROSS
         // The message a phone sent, or null when the frame fails any check. Only a frame that opens moves the count on.
+        // Fenced from the cross build, which links this file only for the codex's seal and has no Remote.
         internal RemoteJson.Map Open(byte[] frame, int offset, int count)
         {
             lock (gate)
@@ -264,5 +266,6 @@ namespace CapriDesktop
                 return message;
             }
         }
+#endif
     }
 }

@@ -1,0 +1,206 @@
+# Her menus and labels in Tamil: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe-ஐத் திற
+Her folder	அவள் கோப்புறை
+Play	இயக்கு
+Music	இசை
+Chess	சதுரங்கம்
+Connect four	நான்கு வரிசை
+Tic-tac-toe	டிக்-டாக்-டோ
+Rock, paper, scissors	கல், காகிதம், கத்தரிக்கோல்
+Hide Capri	Capri-ஐ மறை
+Hologram	ஹோலோகிராம்
+Normal	சாதாரண
+Small	சிறிய
+Medium	நடுத்தரம்
+Large	பெரிய
+Huge	மிகப் பெரிய
+Giant	மிகப் பெரிய
+Move	நகர்த்து
+Wander around	சுற்றி நட
+Dance to music	இசைக்கு நடனமாடு
+Dance	நடனம்
+Ride cursor	கர்சரில் சவாரி செய்
+Sit on windows	ஜன்னல்களின் மேல் அமர்
+Sit here	இங்கே அமர்
+Hang here	இங்கே இரு
+Lie down	படு
+Go to sleep	தூங்கச் செல்
+Bring to this screen	இந்தத் திரைக்குக் கொண்டுவா
+Go to the next screen	அடுத்த திரைக்குச் செல்
+Black	கருப்பு
+White	வெள்ளை
+Test	சோதனை
+Stop	நிறுத்து
+Help	உதவி
+Commands	கட்டளைகள்
+Help page	உதவிப் பக்கம்
+Join the Discord	Discord-இல் சேர்
+Copy error details	பிழை விவரங்களை நகலெடு
+Check for updates	புதுப்பிப்புகளைச் சரிபார்
+Quit Capri	Capri-யிலிருந்து வெளியேறு
+MAINFRAME	MAINFRAME
+Settings	அமைப்புகள்
+Mods	மோட்கள்
+BRAIN	மூளை
+Provider	வழங்குநர்
+Using your server with no key	விசை இல்லாமல் உங்கள் சொந்த சேவையகத்தைப் பயன்படுத்து
+Refresh	புதுப்பி
+Set up her brain	அவள் மூளையை அமை
+Have Ollama? Open it, then press Refresh.	Ollama உள்ளதா? அதைத் திறந்து, பின்னர் புதுப்பி என்பதை அழுத்தவும்.
+Pick one. Only one brain runs at a time.	ஒன்றைத் தேர்ந்தெடுங்கள். ஒரு நேரத்தில் ஒரு மூளை மட்டுமே இயங்கும்.
+MEDIUM INTELLIGENCE	நடுத்தர நுண்ணறிவு
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	முடக்கம்
+Free key	இலவச விசை
+Connect	இணை
+Free keys can be rate limited and slow.	இலவச விசைகளுக்கு வேக வரம்பு இருக்கலாம்; மெதுவாகவும் இருக்கலாம்.
+That's a paid key: it goes under MAX INTELLIGENCE.	அது கட்டண விசை: அது MAX INTELLIGENCE-இன் கீழ் செல்லும்.
+Move to MAX	MAX-க்கு நகர்த்து
+VOICE	குரல்
+Ctrl + Alt + V to talk	Ctrl + Alt + V பேச
+PREBUILT LOCAL	முன்னமைக்கப்பட்ட உள்ளூர்
+CUSTOM LOCAL	தனிப்பயன் உள்ளூர்
+CLOUD VOICE	மேகக் குரல்
+Set up	அமை
+Setup guide	அமைவு வழிகாட்டி
+Fish Audio	Fish Audio
+Default model	இயல்புநிலை மாதிரி
+Pick a voice model	குரல் மாதிரியைத் தேர்ந்தெடுக்கவும்
+Get free voice	இலவசக் குரல் பெறு
+Mic: default	மைக்: இயல்புநிலை
+Her speaker: Default	அவளுடைய ஸ்பீக்கர்: இயல்புநிலை
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N மைக்கை ஒலியடக்கும்
+CAPRI	CAPRI
+Support	ஆதரவு
+Remote	ரிமோட்
+Bring here	இங்கே கொண்டுவா
+Advanced Settings	மேம்பட்ட அமைப்புகள்
+YOU	நீ
+Your personality	உங்கள் ஆளுமை
+Language	மொழி
+English	ஆங்கிலம்
+What should she call you?	அவள் உங்களை எப்படி அழைக்க வேண்டும்?
+Save	சேமி
+Volume	ஒலியளவு
+Pitch	சுருதி
+Speed	வேகம்
+Robot	ரோபோட்
+Glitch	Glitch
+Sounds	ஒலிகள்
+Typing sound	தட்டச்சு ஒலி
+Listen for Capri	Capri-யைக் கேள்
+Hearing	கேட்பு
+Auto	தானியங்கி
+Free voice in games	விளையாட்டுகளில் இலவசக் குரல்
+Call mode (beta)	அழைப்பு முறை (பீட்டா)
+Her voice in your mic	உங்கள் மைக்கில் அவளுடைய குரல்
+Get VB-CABLE	VB-CABLE பெறு
+How to	எப்படி
+Her voice in your mic: loudness	உங்கள் மைக்கில் அவளுடைய குரல்: ஒலியளவு
+MOVES	அசைவுகள்
+Pop-in times	தோன்றும் நேரங்கள்
+Mini player	மினி பிளேயர்
+Wander	அலை
+Sleep	உறக்கம்
+Pop-ins	தோற்றங்கள்
+Glitch in at startup	தொடக்கத்தில் Glitch
+KEYS	விசைகள்
+Talk: Ctrl + Alt + V	பேசு: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	மைக்கை ஒலியடக்கு: Ctrl + Alt + N
+Type: Ctrl + Alt + T	தட்டச்சு: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	மறை/காட்டு: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	அமைதி: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	விளையாட்டு முறை: Ctrl + Alt + G
+Confirm	உறுதிசெய்
+Cancel	ரத்துசெய்
+Size	அளவு
+Check in on me	என்னைப் பார்த்துக்கொள்
+Edit check-in lines	வரவேற்பு வரிகளைத் திருத்து
+Always on top	எப்போதும் மேலே
+Mainframe size	Mainframe அளவு
+Mainframe colours	Mainframe வண்ணங்கள்
+Head pats	தலை தடவல்கள்
+Pat stroke	தலை தடவல்
+Chaos when upset	கோபத்தில் குழப்பம்
+Legacy stand	பழைய நிலைப்படுத்தி
+Jealous of other AIs	மற்ற AI-களின் மீது பொறாமை
+Teases when another AI comes to the front.	வேறு AI முன்னணிக்கு வரும்போது கிண்டல் செய்கிறாள்.
+Close other AIs for me	எனக்காக மற்ற AI-களை மூடு
+Asks before closing only the apps you choose.	நீங்கள் தேர்ந்தெடுத்த செயலிகளை மட்டும் மூடும் முன் கேட்கும்.
+Apps she may close	அவள் மூடக்கூடிய செயலிகள்
+Choose apps	செயலிகளைத் தேர்ந்தெடு
+WATCH	பார்
+Watch my screen	என் திரையைப் பார்
+Screens	திரைகள்
+All screens	எல்லா திரைகளும்
+Remember what she sees	அவள் பார்ப்பதை நினைவில் வை
+Every	ஒவ்வொரு
+Watch-along memory	ஒன்றாகப் பார்க்கும் நினைவு
+Code/Husk Mode	குறியீடு/Husk பயன்முறை
+Thinking	சிந்திக்கிறது
+Default	இயல்புநிலை
+Extra request JSON	கூடுதல் கோரிக்கை JSON
+Add	சேர்
+Verbosity	விவரநிலை
+Replies	பதில்கள்
+Memory	நினைவகம்
+Memory size	நினைவக அளவு
+Max reply	அதிகபட்ச பதில்
+Bubble	குமிழி
+Follow-up messages	தொடர் செய்திகள்
+Use	பயன்படுத்து
+A model in Ollama, on your local server or on your key.	Ollama-வில் ஒரு மாதிரி, உங்கள் உள்ளூர் சேவையகத்தில் அல்லது உங்கள் விசையுடன்.
+HABITS	பழக்கங்கள்
+Open her memories	அவள் நினைவுகளைத் திற
+Start with Windows	Windows உடன் தொடங்கு
+Show on Discord	Discord-இல் காட்டு
+Use her cursor	அவளுடைய கர்சரைப் பயன்படுத்து
+Remember our chats	எங்கள் உரையாடல்களை நினைவில் வை
+Power saver	ஆற்றல் சேமிப்பான்
+Music app	இசை செயலி
+Perch	Perch
+Keep PC awake for jobs	வேலைகளுக்காக PC விழித்திருக்கட்டும்
+Hide in full screen	முழுத்திரையில் மறை
+Mini player over full screen	முழுத்திரைக்கு மேல் மினி பிளேயர்
+Explore while I'm away	நான் இல்லாதபோது ஆராய்
+Explore after	பின்னர் ஆராய்
+GAMES	விளையாட்டுகள்
+Controls	கட்டுப்பாடுகள்
+Comments	கருத்துகள்
+Live reactions	நேரடி எதிர்வினைகள்
+Game sounds	விளையாட்டு ஒலிகள்
+Gaming Mode	விளையாட்டு முறை
+She reacts to your game until you close it.	நீங்கள் மூடும் வரை உங்கள் விளையாட்டுக்கு அவள் எதிர்வினையாற்றுகிறாள்.
+Works best on MAX INTELLIGENCE.	MAX INTELLIGENCE-இல் சிறப்பாக வேலை செய்யும்.
+Fast hands in games	விளையாட்டுகளில் வேகமான கைகள்
+Mute her	அவளை ஒலியடக்கு
+CLIPS	கிளிப்புகள்
+Clip my games	என் விளையாட்டுகளை கிளிப் செய்
+Save big moments	பெரிய தருணங்களைச் சேமி
+Save folder	சேமிப்புக் கோப்புறை
+Choose folder	கோப்புறையைத் தேர்ந்தெடு
+Open clips folder	கிளிப்புகள் கோப்புறையைத் திற
+Default length	இயல்புநிலை நீளம்
+Frame rate	பிரேம் வீதம்
+Resolution	தெளிவுத்திறன்
+Video bitrate	வீடியோ பிட்ரேட்
+Weather	வானிலை
+Code mods can reach your whole PC. Only trusted ones.	குறியீட்டு மோட்கள் உங்கள் முழு PC-யையும் அணுகலாம். நம்பகமானவற்றை மட்டும் பயன்படுத்துங்கள்.
+Import mod	மோடை இறக்குமதி செய்
+Browse mods	மோட்களை உலாவு
+Mods folder	மோட்கள் கோப்புறை
+INSTALLED	நிறுவப்பட்டது
+Update mods	மோட்களைப் புதுப்பி
+No mods match.	பொருந்தும் மோட்கள் இல்லை.
+On	இயக்கம்
+Remove	அகற்று
+Publish	வெளியிடு
+Options	விருப்பங்கள்
+Back	பின்செல்
+Next	அடுத்தது
+COLORS	வண்ணங்கள்
+Reset colors	வண்ணங்களை மீட்டமை
+Running on this PC	இந்த PC-யில் இயங்குகிறது
+NORMAL	சாதாரணம்
+OFF	முடக்கம்
+Local server address	உள்ளூர் சேவையக முகவரி

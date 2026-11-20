@@ -1,0 +1,206 @@
+# Her menus and labels in Greek: the English, a tab, then the translation.
+Open Capri Mainframe	Άνοιξε το Capri Mainframe
+Her folder	Ο φάκελός της
+Play	Αναπαραγωγή
+Music	Μουσική
+Chess	Σκάκι
+Connect four	Τέσσερα στη σειρά
+Tic-tac-toe	Τρίλιζα
+Rock, paper, scissors	Πέτρα, χαρτί, ψαλίδι
+Hide Capri	Απόκρυψη Capri
+Hologram	Ολόγραμμα
+Normal	Κανονικό
+Small	Μικρό
+Medium	Μεσαίο
+Large	Μεγάλο
+Huge	Τεράστια
+Giant	Τεράστιο
+Move	Μετακίνηση
+Wander around	Περιπλανιέται τριγύρω
+Dance to music	Χόρεψε με μουσική
+Dance	Χόρεψε
+Ride cursor	Ιππασία στον δρομέα
+Sit on windows	Κάθισε στα παράθυρα
+Sit here	Κάτσε εδώ
+Hang here	Μείνε εδώ
+Lie down	Ξάπλωσε
+Go to sleep	Πήγαινε για ύπνο
+Bring to this screen	Φέρε σε αυτή την οθόνη
+Go to the next screen	Πήγαινε στην επόμενη οθόνη
+Black	Μαύρο
+White	Λευκό
+Test	Δοκιμή
+Stop	Διακοπή
+Help	Βοήθεια
+Commands	Εντολές
+Help page	Σελίδα βοήθειας
+Join the Discord	Γίνε μέλος του Discord
+Copy error details	Αντιγραφή λεπτομερειών σφάλματος
+Check for updates	Έλεγχος για ενημερώσεις
+Quit Capri	Κλείσε την Capri
+MAINFRAME	MAINFRAME
+Settings	Ρυθμίσεις
+Mods	Mods
+BRAIN	ΕΓΚΕΦΑΛΟΣ
+Provider	Πάροχος
+Using your server with no key	Χρήση του διακομιστή σου χωρίς κλειδί
+Refresh	Ανανέωση
+Set up her brain	Ρύθμισε τον εγκέφαλό της
+Have Ollama? Open it, then press Refresh.	Έχεις Ollama; Άνοιξέ το, μετά πάτα Ανανέωση.
+Pick one. Only one brain runs at a time.	Διάλεξε ένα. Τρέχει μόνο ένας εγκέφαλος τη φορά.
+MEDIUM INTELLIGENCE	ΜΕΣΑΙΑ ΝΟΗΜΟΣΥΝΗ
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Off
+Free key	Δωρεάν κλειδί
+Connect	Σύνδεση
+Free keys can be rate limited and slow.	Τα δωρεάν κλειδιά μπορεί να έχουν όριο ρυθμού και να είναι αργά.
+That's a paid key: it goes under MAX INTELLIGENCE.	Αυτό είναι επί πληρωμή κλειδί: πάει κάτω από το MAX INTELLIGENCE.
+Move to MAX	Μετακίνηση στο MAX
+VOICE	ΦΩΝΗ
+Ctrl + Alt + V to talk	Ctrl + Alt + V για ομιλία
+PREBUILT LOCAL	ΕΤΟΙΜΟ ΤΟΠΙΚΟ
+CUSTOM LOCAL	ΠΡΟΣΑΡΜΟΣΜΕΝΗ ΤΟΠΙΚΗ
+CLOUD VOICE	ΦΩΝΗ CLOUD
+Set up	Ρύθμιση
+Setup guide	Οδηγός ρύθμισης
+Fish Audio	Fish Audio
+Default model	Προεπιλεγμένο μοντέλο
+Pick a voice model	Διάλεξε ένα μοντέλο φωνής
+Get free voice	Πάρε δωρεάν φωνή
+Mic: default	Μικρόφωνο: προεπιλογή
+Her speaker: Default	Το ηχείο της: Προεπιλογή
+Ctrl + Alt + N mutes mic	Το Ctrl + Alt + N σιγάζει το μικρόφωνο
+CAPRI	CAPRI
+Support	Υποστήριξη
+Remote	Remote
+Bring here	Φέρε εδώ
+Advanced Settings	Σύνθετες ρυθμίσεις
+YOU	ΕΣΥ
+Your personality	Η προσωπικότητά σου
+Language	Γλώσσα
+English	Αγγλικά
+What should she call you?	Πώς να σε φωνάζει;
+Save	Αποθήκευση
+Volume	Ένταση
+Pitch	Ύψος
+Speed	Ταχύτητα
+Robot	Ρομπότ
+Glitch	Glitch
+Sounds	Ήχοι
+Typing sound	Ήχος πληκτρολόγησης
+Listen for Capri	Άκου την Capri
+Hearing	Ακοή
+Auto	Αυτόματο
+Free voice in games	Δωρεάν φωνή στα παιχνίδια
+Call mode (beta)	Λειτουργία κλήσης (beta)
+Her voice in your mic	Η φωνή της στο μικρόφωνό σου
+Get VB-CABLE	Λήψη VB-CABLE
+How to	Πώς
+Her voice in your mic: loudness	Η φωνή της στο μικρόφωνό σου: ένταση
+MOVES	ΚΙΝΗΣΕΙΣ
+Pop-in times	Χρόνοι εμφάνισης
+Mini player	Mini player
+Wander	Περιπλανιέται
+Sleep	Ύπνος
+Pop-ins	Εμφανίσεις
+Glitch in at startup	Glitch στην εκκίνηση
+KEYS	ΠΛΗΚΤΡΑ
+Talk: Ctrl + Alt + V	Ομιλία: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Σίγαση μικροφώνου: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Πληκτρολόγηση: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Απόκρυψη/εμφάνιση: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Σιωπή: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Gaming Mode: Ctrl + Alt + G
+Confirm	Επιβεβαίωση
+Cancel	Ακύρωση
+Size	Μέγεθος
+Check in on me	Έλα να με δεις
+Edit check-in lines	Επεξεργασία γραμμών check-in
+Always on top	Πάντα από πάνω
+Mainframe size	Μέγεθος Mainframe
+Mainframe colours	Χρώματα Mainframe
+Head pats	Χάδια στο κεφάλι
+Pat stroke	Χάδι
+Chaos when upset	Χάος όταν θυμώνει
+Legacy stand	Παλιά βάση
+Jealous of other AIs	Ζηλεύει άλλες AI
+Teases when another AI comes to the front.	Πειράζει όταν μια άλλη AI έρχεται μπροστά.
+Close other AIs for me	Κλείσε για μένα τις άλλες AI
+Asks before closing only the apps you choose.	Ρωτά πριν κλείσει μόνο τις εφαρμογές που επιλέγεις.
+Apps she may close	Εφαρμογές που μπορεί να κλείσει
+Choose apps	Επιλογή εφαρμογών
+WATCH	ΠΑΡΑΚΟΛΟΥΘΗΣΗ
+Watch my screen	Παρακολούθησε την οθόνη μου
+Screens	Οθόνες
+All screens	Όλες οι οθόνες
+Remember what she sees	Θυμήσου τι βλέπει
+Every	Κάθε
+Watch-along memory	Μνήμη κοινής παρακολούθησης
+Code/Husk Mode	Λειτουργία Code/Husk
+Thinking	Σκέφτομαι
+Default	Προεπιλογή
+Extra request JSON	Πρόσθετο αίτημα JSON
+Add	Προσθήκη
+Verbosity	Λογοδιάρροια
+Replies	Απαντήσεις
+Memory	Μνήμη
+Memory size	Μέγεθος μνήμης
+Max reply	Μέγιστη απάντηση
+Bubble	Φούσκα
+Follow-up messages	Μηνύματα συνέχειας
+Use	Χρήση
+A model in Ollama, on your local server or on your key.	Ένα μοντέλο στο Ollama, στον τοπικό σου διακομιστή ή με το δικό σου κλειδί.
+HABITS	ΣΥΝΗΘΕΙΕΣ
+Open her memories	Άνοιξε τις αναμνήσεις της
+Start with Windows	Εκκίνηση με τα Windows
+Show on Discord	Εμφάνιση στο Discord
+Use her cursor	Χρήση του δρομέα της
+Remember our chats	Θυμήσου τις συνομιλίες μας
+Power saver	Εξοικονόμηση ενέργειας
+Music app	Εφαρμογή μουσικής
+Perch	Κλαδί
+Keep PC awake for jobs	Κράτα τον υπολογιστή ξύπνιο για δουλειές
+Hide in full screen	Κρύψε σε πλήρη οθόνη
+Mini player over full screen	Mini player πάνω από πλήρη οθόνη
+Explore while I'm away	Εξερεύνησε όσο λείπω
+Explore after	Εξερεύνησε μετά
+GAMES	ΠΑΙΧΝΙΔΙΑ
+Controls	Στοιχεία ελέγχου
+Comments	Σχόλια
+Live reactions	Αντιδράσεις live
+Game sounds	Ήχοι παιχνιδιού
+Gaming Mode	Gaming Mode
+She reacts to your game until you close it.	Αντιδρά στο παιχνίδι σου μέχρι να το κλείσεις.
+Works best on MAX INTELLIGENCE.	Λειτουργεί καλύτερα στο MAX INTELLIGENCE.
+Fast hands in games	Γρήγορα χέρια στα παιχνίδια
+Mute her	Σίγασέ την
+CLIPS	ΚΛΙΠ
+Clip my games	Κατέγραφε τα παιχνίδια μου
+Save big moments	Αποθήκευση μεγάλων στιγμών
+Save folder	Φάκελος αποθήκευσης
+Choose folder	Επιλογή φακέλου
+Open clips folder	Άνοιξε φάκελο κλιπ
+Default length	Προεπιλεγμένο μήκος
+Frame rate	Ρυθμός καρέ
+Resolution	Ανάλυση
+Video bitrate	Bit rate βίντεο
+Weather	Καιρός
+Code mods can reach your whole PC. Only trusted ones.	Τα mods κώδικα μπορούν να φτάσουν σε όλο τον υπολογιστή σου. Μόνο τα έμπιστα.
+Import mod	Εισαγωγή mod
+Browse mods	Αναζήτηση mods
+Mods folder	Φάκελος mods
+INSTALLED	ΕΓΚΑΤΕΣΤΗΜΕΝΑ
+Update mods	Ενημέρωση mods
+No mods match.	Κανένα mod δεν ταιριάζει.
+On	On
+Remove	Αφαίρεση
+Publish	Δημοσίευση
+Options	Επιλογές
+Back	Πίσω
+Next	Επόμενο
+COLORS	ΧΡΩΜΑΤΑ
+Reset colors	Επαναφορά χρωμάτων
+Running on this PC	Τρέχει σε αυτόν τον υπολογιστή
+NORMAL	ΚΑΝΟΝΙΚΟ
+OFF	OFF
+Local server address	Διεύθυνση τοπικού διακομιστή

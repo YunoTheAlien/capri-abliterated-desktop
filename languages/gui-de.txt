@@ -1,0 +1,206 @@
+# Her menus and labels in German: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe öffnen
+Her folder	Ihr Ordner
+Play	Abspielen
+Music	Musik
+Chess	Schach
+Connect four	Vier gewinnt
+Tic-tac-toe	Tic-Tac-Toe
+Rock, paper, scissors	Schere, Stein, Papier
+Hide Capri	Capri ausblenden
+Hologram	Hologramm
+Normal	Normal
+Small	Klein
+Medium	Mittel
+Large	Groß
+Huge	Riesig
+Giant	Riesig
+Move	Verschieben
+Wander around	Herumwandern
+Dance to music	Zu Musik tanzen
+Dance	Tanzen
+Ride cursor	Auf dem Cursor reiten
+Sit on windows	Auf Fenstern sitzen
+Sit here	Hier sitzen
+Hang here	Hier abhängen
+Lie down	Hinlegen
+Go to sleep	Schlafen gehen
+Bring to this screen	Auf diesen Bildschirm holen
+Go to the next screen	Zum nächsten Bildschirm wechseln
+Black	Schwarz
+White	Weiß
+Test	Testen
+Stop	Stopp
+Help	Hilfe
+Commands	Befehle
+Help page	Hilfeseite
+Join the Discord	Tritt dem Discord bei
+Copy error details	Fehlerdetails kopieren
+Check for updates	Nach Updates suchen
+Quit Capri	Capri beenden
+MAINFRAME	MAINFRAME
+Settings	Einstellungen
+Mods	Mods
+BRAIN	GEHIRN
+Provider	Anbieter
+Using your server with no key	Mit deinem Server ohne Schlüssel
+Refresh	Aktualisieren
+Set up her brain	Ihr Gehirn einrichten
+Have Ollama? Open it, then press Refresh.	Hast du Ollama? Öffne es und drück dann Aktualisieren.
+Pick one. Only one brain runs at a time.	Wähl eins. Es läuft immer nur ein Gehirn gleichzeitig.
+MEDIUM INTELLIGENCE	MITTLERE INTELLIGENZ
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Aus
+Free key	Kostenloser Schlüssel
+Connect	Verbinden
+Free keys can be rate limited and slow.	Kostenlose Schlüssel können gedrosselt und langsam sein.
+That's a paid key: it goes under MAX INTELLIGENCE.	Das ist ein bezahlter Schlüssel: Er landet unter MAX INTELLIGENCE.
+Move to MAX	Zu MAX verschieben
+VOICE	STIMME
+Ctrl + Alt + V to talk	Ctrl + Alt + V zum Sprechen
+PREBUILT LOCAL	FERTIG LOKAL
+CUSTOM LOCAL	EIGENE LOKAL
+CLOUD VOICE	CLOUD-STIMME
+Set up	Einrichten
+Setup guide	Einrichtungsanleitung
+Fish Audio	Fish Audio
+Default model	Standardmodell
+Pick a voice model	Wähl ein Stimmmodell
+Get free voice	Kostenlose Stimme holen
+Mic: default	Mikro: Standard
+Her speaker: Default	Ihr Lautsprecher: Standard
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N schaltet das Mikro stumm
+CAPRI	CAPRI
+Support	Support
+Remote	Fernsteuerung
+Bring here	Hierher holen
+Advanced Settings	Erweiterte Einstellungen
+YOU	DU
+Your personality	Deine Persönlichkeit
+Language	Sprache
+English	Englisch
+What should she call you?	Wie soll sie dich nennen?
+Save	Speichern
+Volume	Lautstärke
+Pitch	Tonhöhe
+Speed	Geschwindigkeit
+Robot	Roboter
+Glitch	Glitch
+Sounds	Sounds
+Typing sound	Tippgeräusch
+Listen for Capri	Auf Capri hören
+Hearing	Hören
+Auto	Automatisch
+Free voice in games	Kostenlose Stimme in Spielen
+Call mode (beta)	Anrufmodus (Beta)
+Her voice in your mic	Ihre Stimme in deinem Mikro
+Get VB-CABLE	VB-CABLE holen
+How to	Anleitung
+Her voice in your mic: loudness	Ihre Stimme in deinem Mikro: Lautstärke
+MOVES	BEWEGUNGEN
+Pop-in times	Vorbeischau-Zeiten
+Mini player	Mini-Player
+Wander	Umherwandern
+Sleep	Schlafen
+Pop-ins	Vorbeischauen
+Glitch in at startup	Glitch beim Start
+KEYS	SCHLÜSSEL
+Talk: Ctrl + Alt + V	Sprechen: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Mikro stumm: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Eingeben: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Ausblenden/Einblenden: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Stille: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Gaming-Modus: Ctrl + Alt + G
+Confirm	Bestätigen
+Cancel	Abbrechen
+Size	Größe
+Check in on me	Mich melden
+Edit check-in lines	Melde-Zeilen bearbeiten
+Always on top	Immer im Vordergrund
+Mainframe size	Mainframe-Größe
+Mainframe colours	Mainframe-Farben
+Head pats	Kopfstreicheln
+Pat stroke	Streichen
+Chaos when upset	Chaos bei Ärger
+Legacy stand	Alter Ständer
+Jealous of other AIs	Eifersüchtig auf andere KIs
+Teases when another AI comes to the front.	Zieht sie auf, wenn eine andere KI nach vorn kommt.
+Close other AIs for me	Andere KIs für mich schließen
+Asks before closing only the apps you choose.	Fragt nur vor dem Schließen der Apps, die du auswählst.
+Apps she may close	Apps, die sie schließen darf
+Choose apps	Apps auswählen
+WATCH	BEOBACHTEN
+Watch my screen	Meinen Bildschirm beobachten
+Screens	Bildschirme
+All screens	Alle Bildschirme
+Remember what she sees	Merken, was sie sieht
+Every	Jeden
+Watch-along memory	Gemeinsames Schau-Gedächtnis
+Code/Husk Mode	Code/Husk-Modus
+Thinking	Denkt nach
+Default	Standard
+Extra request JSON	Zusatz-Request-JSON
+Add	Hinzufügen
+Verbosity	Ausführlichkeit
+Replies	Antworten
+Memory	Speicher
+Memory size	Speichergröße
+Max reply	Maximale Antwort
+Bubble	Sprechblase
+Follow-up messages	Folgenachrichten
+Use	Verwenden
+A model in Ollama, on your local server or on your key.	Ein Modell in Ollama, auf deinem lokalen Server oder mit deinem Schlüssel.
+HABITS	GEWOHNHEITEN
+Open her memories	Ihre Erinnerungen öffnen
+Start with Windows	Mit Windows starten
+Show on Discord	Auf Discord zeigen
+Use her cursor	Ihren Cursor verwenden
+Remember our chats	Unsere Chats merken
+Power saver	Energiesparmodus
+Music app	Musik-App
+Perch	Sitzplatz
+Keep PC awake for jobs	PC für Jobs wach halten
+Hide in full screen	Im Vollbild ausblenden
+Mini player over full screen	Mini-Player über Vollbild
+Explore while I'm away	Erkunden, während ich weg bin
+Explore after	Erkunden nach
+GAMES	SPIELE
+Controls	Steuerung
+Comments	Kommentare
+Live reactions	Live-Reaktionen
+Game sounds	Spielsounds
+Gaming Mode	Gaming-Modus
+She reacts to your game until you close it.	Sie reagiert auf dein Spiel, bis du es schließt.
+Works best on MAX INTELLIGENCE.	Funktioniert am besten mit MAX INTELLIGENCE.
+Fast hands in games	Schnelle Hände in Spielen
+Mute her	Sie stummschalten
+CLIPS	CLIPS
+Clip my games	Meine Spiele aufnehmen
+Save big moments	Große Momente speichern
+Save folder	Speicherordner
+Choose folder	Ordner wählen
+Open clips folder	Clip-Ordner öffnen
+Default length	Standardlänge
+Frame rate	Bildrate
+Resolution	Auflösung
+Video bitrate	Videobitrate
+Weather	Wetter
+Code mods can reach your whole PC. Only trusted ones.	Code-Mods können deinen ganzen PC erreichen. Nur vertrauenswürdige nehmen.
+Import mod	Mod importieren
+Browse mods	Mods durchsuchen
+Mods folder	Mod-Ordner
+INSTALLED	INSTALLIERT
+Update mods	Mods aktualisieren
+No mods match.	Keine Mods gefunden.
+On	Ein
+Remove	Entfernen
+Publish	Veröffentlichen
+Options	Optionen
+Back	Zurück
+Next	Weiter
+COLORS	FARBEN
+Reset colors	Farben zurücksetzen
+Running on this PC	Läuft auf diesem PC
+NORMAL	NORMAL
+OFF	AUS
+Local server address	Lokale Server-Adresse

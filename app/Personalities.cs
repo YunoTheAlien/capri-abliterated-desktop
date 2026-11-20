@@ -7,13 +7,8 @@ using System.Text.RegularExpressions;
 namespace CapriDesktop
 {
     // Her temperaments, in personalSettings\personalities\ beside her settings, split in two by what is in them:
-    // censored\ holds her plain sections, uncensored\ holds the other ones for the same pack under the same file
-    // name, and a pack that is adult as a whole has only the uncensored file. The pair is read together with the
-    // toggle on, so there is no second copy of the plain text to drift out of step.
-    //
-    // The split is the point: a censored install's files do not contain the senpai lines at all, so opening one in a
-    // text editor cannot show them. They used to sit in the same file under the pet heading with the marker after it,
-    // which she read correctly and anybody could read too.
+    // Two folders, one per side of the switch, each with a whole copy of every pack it has. She reads one folder at
+    // a time.
     //
     // The point of these is not the prompt text. It is that her *reactions* were nine hardcoded arrays written for one
     // temperament: being thrown always hurt, pets were always grudgingly allowed. Give her a personality that enjoys
@@ -29,14 +24,15 @@ namespace CapriDesktop
         internal const string PlainName = "censored";
         // Two folders, no third. The old name is kept so a folder written under it is renamed rather than
         // left beside the new one.
-        internal const string SenpaiName = "uncensored";
-        internal const string WasSenpaiName = "interests";
+        internal const string SenpaiName = "interests";
 
         // personalSettings\personalities. The two below are what actually hold files.
         internal static string Folder;
 
         internal static string Plain { get { return string.IsNullOrEmpty(Folder) ? null : Path.Combine(Folder, PlainName); } }
         internal static string Senpais { get { return string.IsNullOrEmpty(Folder) ? null : Path.Combine(Folder, SenpaiName); } }
+        // The senpai folder for passes that walk every file: none while the switch is off, when it is kept but never read.
+        internal static string SenpaisRead { get { return Brain.SenpaiOn ? Senpais : null; } }
 
         // Where everything she writes for them lives: personalSettings itself, the folder her packs sit under.
         internal static string SettingsFolder
@@ -57,12 +53,31 @@ namespace CapriDesktop
                 foreach (string named in Order())
                 {
                     string theirs = null;
-                    try { theirs = SenpaiFor(named); }
+                    try { theirs = Legacy.Modern(SenpaiFor(named)); }
                     catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     if (!string.IsNullOrEmpty(theirs)) found.Add(theirs);
                 }
             try { found.AddRange(Dynamics.Shipped()); }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            return found;
+        }
+
+        // The plain half of every pack and mood the build ships, and nothing from what attached: for her translation
+        // packs, which never carry a senpai line. A pack or mood marked senpai only is left out whole.
+        internal static List<string> ShippedPlain()
+        {
+            List<string> texts = new List<string>();
+            for (int pack = 0; pack < Packs.GetLength(0); pack++) texts.Add(Packs[pack, 1]);
+            try { texts.AddRange(Dynamics.Shipped()); }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            List<string> found = new List<string>();
+            foreach (string text in texts)
+            {
+                if (string.IsNullOrEmpty(text) || Marked(text)) continue;
+                string plain, senpai;
+                Split(text, out plain, out senpai);
+                if (!string.IsNullOrEmpty(plain)) found.Add(plain);
+            }
             return found;
         }
 
@@ -75,8 +90,10 @@ namespace CapriDesktop
             try
             {
                 if (string.IsNullOrEmpty(under)) return;
-                string was = Path.Combine(under, WasSenpaiName), now = Path.Combine(under, SenpaiName);
-                if (!Directory.Exists(was) || Directory.Exists(now)) return;
+                string now = Path.Combine(under, SenpaiName), was = null;
+                if (Directory.Exists(now) || !Directory.Exists(under)) return;
+                foreach (string one in Directory.GetDirectories(under)) if (Legacy.WasFolder(Path.GetFileName(one))) { was = one; break; }
+                if (was == null) return;
                 Directory.Move(was, now);
                 Tucked.Away(now);
             }
@@ -87,19 +104,18 @@ namespace CapriDesktop
         internal static List<string> Files()
         {
             List<string> found = new List<string>();
-            foreach (string folder in new[] { Plain, Senpais })
+            foreach (string folder in new[] { Plain, SenpaisRead })
             {
                 if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) continue;
                 // Every file, not every .md: her senpai ones are numbered and have no type at all. Backups are
                 // left out, since a .bak is a copy of a pack rather than one of them.
-                try { foreach (string file in Directory.GetFiles(folder)) if (!file.EndsWith(".bak", StringComparison.OrdinalIgnoreCase)) found.Add(file); }
+                try { foreach (string file in Directory.GetFiles(folder)) if (!file.EndsWith(".bak", StringComparison.OrdinalIgnoreCase) && !file.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)) found.Add(file); }
                 catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
             return found;
         }
 
-        // Every pack in a folder. Not *.md: her senpai ones are numbered and have no type at all, so a pass
-        // that globbed for .md ran on the censored half and quietly skipped the other one. Backups are left
+        // Every pack in a folder, whatever its file type, so a pass over them misses none. Backups are left
         // out, since a .bak is a copy of a pack rather than one of them.
         private static string[] Packed(string folder)
         {
@@ -108,13 +124,13 @@ namespace CapriDesktop
                 if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) return new string[0];
                 List<string> found = new List<string>();
                 foreach (string file in Directory.GetFiles(folder))
-                    if (!file.EndsWith(".bak", StringComparison.OrdinalIgnoreCase)) found.Add(file);
+                    if (!file.EndsWith(".bak", StringComparison.OrdinalIgnoreCase) && !file.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)) found.Add(file);
                 return found.ToArray();
             }
             catch (Exception) { return new string[0]; }
         }
 
-        // Whether a path sits in the senpai folder, which makes what is in it adult whatever the file says.
+        // Whether a path sits in the senpai folder, which makes what is in it senpai whatever the file says.
         internal static bool InSenpai(string path)
         {
             string folder = Senpais;
@@ -124,7 +140,7 @@ namespace CapriDesktop
         }
 
         // One pack's text cut in two: everything that is not a senpai section, and the senpai sections on their own
-        // under the pack's title. A pack that is adult as a whole is not cut, and goes to the senpai folder whole.
+        // under the pack's title. A pack that is senpai as a whole is not cut, and goes to the senpai folder whole.
         internal static void Split(string pack, out string plain, out string senpai)
         {
             plain = pack;
@@ -143,8 +159,7 @@ namespace CapriDesktop
                 {
                     string heading = trimmed.TrimStart('#').Trim();
                     if (title == null && !trimmed.StartsWith("##", StringComparison.Ordinal)) title = one;
-                    senpaiHere = Regex.IsMatch(heading, @"[\s,]*\(?\b(uncensored|adult|nsfw)\b\)?$", RegexOptions.IgnoreCase)
-                        && !heading.Equals("uncensored", StringComparison.OrdinalIgnoreCase);
+                    senpaiHere = Legacy.Heading(heading);
                     if (senpaiHere) any = true;
                 }
                 if (!senpaiHere && SenpaiScore(one)) { scored.Add(one); continue; }
@@ -172,7 +187,7 @@ namespace CapriDesktop
             return named.Success ? named.Groups[1].Value.Trim() : null;
         }
 
-        // "slapped: -3" and nothing else: the score for an act that only exists on the senpai side.
+        // A score line for an act that only exists on the senpai side, and nothing else.
         private static bool SenpaiScore(string row)
         {
             Match named = Regex.Match(row ?? "", @"^[ \t]*([A-Za-z][A-Za-z ]*?)[ \t]*:[ \t]*[-+]?[0-9]+[ \t\r]*$");
@@ -190,7 +205,7 @@ namespace CapriDesktop
         // others, which is a plain heading, so without this they landed in the censored half of every pack.
         internal static bool SenpaiSet(string named)
         {
-            return named == "slapped" || named == "degraded";
+            return Array.IndexOf(Extended.List("acts"), named) >= 0;
         }
 
         // The reaction sets, by the heading they are written under. The names on the left are used in code.
@@ -200,7 +215,6 @@ namespace CapriDesktop
             { "fed", "When you feed her" },
             { "treat", "When you give her a treat" },
             { "uppies", "When you pick her up" },
-            { "slapped", "When you slap her" },
             { "thrown", "When you throw her" },
             { "warned", "When you throw her again" },
             { "dizzy", "When she is dizzy" },
@@ -209,6 +223,9 @@ namespace CapriDesktop
             { "forgiven", "When you say sorry" },
             { "patted better", "When a pat wins her back" },
             { "missed you", "When you come back" },
+            // Her pout when she sulks from being left alone, apart from the thrown lines: being ignored is not
+            // being thrown, and "don't touch me" said to someone who has not touched her reads wrong.
+            { "pouting", "When you ignore her" },
             // What this character is into, for the weave. A pack that says gets its own; one that does not
             // falls back to the shared list, which is the same for everyone and so suits nobody in particular.
             { "into", "What she is into" },
@@ -226,7 +243,7 @@ namespace CapriDesktop
         };
 
         // What moves her, and by how much. The same act has to pull opposite ways for different temperaments: being
-        // thrown delights a masochist and genuinely upsets a devoted one, so a single global score could never work.
+        // thrown delights one pack and genuinely upsets a devoted one, so a single global score could never work.
         // That is why these live in her personality rather than in one table.
         internal const string LikesHeading = "What she likes";
         internal const string WordsHeading = "Words she likes";
@@ -252,16 +269,16 @@ namespace CapriDesktop
             { "dodges", "yes" },         // hops away from a cursor coming at her while sulking
             { "sulk alone", "300" },     // seconds of being left alone that settles her
             // Anything she dislikes adds its weight to an upset tally; this is where she has had enough of it. So
-            // degrading a devoted one, or ignoring a bratty one, can put her in a sulk the same way throwing does.
+            // insulting a devoted one, or ignoring a bratty one, can put her in a sulk the same way throwing does.
             // 0 means only throwing can. Throwing is excluded here because it has its own count above.
             { "sulks at upset", "6" },
             // How often her flirting turns up in ordinary lines, 0 to 10. 0 is never. Her own is mild, and each
             // personality sets its own; a mood adds to it rather than replacing it. Called interest in files written
             // before 0.9.129 and still read under that name, but it was never only that: the same number drives
-            // her clean flirting with the toggle off.
+            // her own flirting with the switch off.
             { "flirt", "2" },
             // Ignored for this long and she gives up and closes herself. 0 is off, and it is off for everyone by
-            // default: it only ever runs with Uncensored on and a mood that asks for it.
+            // default: it only ever runs with the switch on and a mood that asks for it.
             { "gives up at", "0" },
             { "gives up minutes", "45" }
         };
@@ -285,14 +302,18 @@ namespace CapriDesktop
         // The personality whose file is actually read: hers, or the one dynamic.md names underneath.
         internal static string Under
         {
-            get { return Chosen == Dynamic ? (Dynamics.Under ?? Stock) : Chosen; }
+            get { return HeldPlain ? Stock : Chosen == Dynamic ? (Dynamics.Under ?? Stock) : Chosen; }
         }
+
+        // For her checks: while one runs she is her own character with no attitude on top, so a mood that rolls or
+        // sours partway through cannot change how she reacts under it.
+        internal static volatile bool HeldPlain;
 
         private static void FreshAttitude()
         {
             // A mood sits on top of whoever she is, not only on Dynamic. Dynamic is just the mode that picks one on
             // its own; a fixed personality can still be sleepy or bratty for an afternoon.
-            string named = Attitude;
+            string named = HeldPlain ? "" : Attitude;
             string path = string.IsNullOrEmpty(named) ? null : Dynamics.PathOf(named);
             try
             {
@@ -312,7 +333,7 @@ namespace CapriDesktop
                 List<KeyValuePair<string, int>> wordsIn = new List<KeyValuePair<string, int>>();
                 List<Drift> driftsIn = new List<Drift>();
                 Dictionary<string, string> reactsIn = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                Dictionary<string, string[]> linesIn = Read(File.ReadAllLines(path), likesIn, wordsIn, driftsIn, reactsIn);
+                Dictionary<string, string[]> linesIn = Read(Notes.ReadLines(path), likesIn, wordsIn, driftsIn, reactsIn);
                 lock (gate)
                 {
                     aLoaded.Clear(); aLikes.Clear(); aWords.Clear(); aDrifts.Clear(); aReacts.Clear();
@@ -342,7 +363,7 @@ namespace CapriDesktop
         // Her own, used when no personality file is chosen.
         private static readonly string[,] OwnLikes =
         {
-            { "thrown", "-2" }, { "slapped", "-2" }, { "degraded", "-2" },
+            { "thrown", "-2" }, { "insulted", "-2" },
             { "petted", "2" }, { "praised", "2" }, { "ignored", "-1" },
             { "fed", "2" }, { "treat", "3" }, { "uppies", "2" }
         };
@@ -362,7 +383,7 @@ namespace CapriDesktop
         // toggle has to reload her lines even though neither file changed.
         private static DateTime senpaiRead = DateTime.MinValue;
         private static long senpaiLong = -1;
-        private static bool wasAdult;
+        private static bool wasSenpaiLive;
 
         // Her own, first and default. "Her own" means the author's lines, so picking it changes nothing at all.
         internal const string Stock = "Her own";
@@ -408,10 +429,10 @@ namespace CapriDesktop
                 List<string> found = new List<string> { Stock, Dynamic };
                 try
                 {
-                    // The plain folder is the list. A pack whose only file is in the senpai folder is adult as a
+                    // The plain folder is the list. A pack whose only file is in the senpai folder is senpai as a
                     // whole and joins the list with the toggle on, which is the same rule as before: what changed
                     // is that the marker is now the folder it is in.
-                    foreach (string file in Files())
+                    foreach (string file in Listed())
                     {
                         // What the file says it is, which is how a numbered one is known. Her plain packs open
                         // with the same line, so this is one rule for both.
@@ -419,9 +440,9 @@ namespace CapriDesktop
                         if (named.Equals(Stock, StringComparison.OrdinalIgnoreCase)
                             || named.Equals(Dynamic, StringComparison.OrdinalIgnoreCase)
                             || found.Contains(named)) continue;
-                        // Same convention as the moods: a personality can also say "uncensored only: yes" and
+                        // Same convention as the moods: a personality can also say Legacy.OnlyKey + ": yes" and
                         // stays out of the list until the toggle is on.
-                        if (!Brain.Uncensored && (InSenpai(file) || AdultOnly(file))) continue;
+                        if (!Brain.SenpaiOn && (InSenpai(file) || SenpaiOnly(file))) continue;
                         found.Add(named);
                     }
                 }
@@ -442,19 +463,19 @@ namespace CapriDesktop
             }
         }
 
-        private static readonly Dictionary<string, KeyValuePair<DateTime, bool>> adult =
+        private static readonly Dictionary<string, KeyValuePair<DateTime, bool>> senpaiOnly =
             new Dictionary<string, KeyValuePair<DateTime, bool>>(StringComparer.OrdinalIgnoreCase);
 
-        internal static bool AdultOnly(string path)
+        internal static bool SenpaiOnly(string path)
         {
             try
             {
                 FileInfo about = new FileInfo(path);
                 if (!about.Exists) return false;
                 KeyValuePair<DateTime, bool> had;
-                if (adult.TryGetValue(path, out had) && had.Key == about.LastWriteTimeUtc) return had.Value;
-                bool only = Marked(File.ReadAllText(path));
-                adult[path] = new KeyValuePair<DateTime, bool>(about.LastWriteTimeUtc, only);
+                if (senpaiOnly.TryGetValue(path, out had) && had.Key == about.LastWriteTimeUtc) return had.Value;
+                bool only = Marked(Notes.ReadAll(path));
+                senpaiOnly[path] = new KeyValuePair<DateTime, bool>(about.LastWriteTimeUtc, only);
                 return only;
             }
             catch (Exception) { return false; }
@@ -463,15 +484,140 @@ namespace CapriDesktop
         internal static string Chosen = Stock;
 
         // Her plain file for a pack, or its senpai one when that is the only file it has, which is what a pack that is
-        // adult as a whole looks like on disk. Everything that reads, edits or tidies a pack asks for this, so the
+        // senpai as a whole looks like on disk. Everything that reads, edits or tidies a pack asks for this, so the
         // one-file packs need no special case anywhere else.
+        // ---------- Two whole copies ----------
+        // Each side keeps its own whole copy of every pack: censored\ holds the safe one, cut down, and the senpai
+        // folder holds the whole one, safe and senpai sections together. She reads one folder at a time, never one
+        // file on top of another, so a rule in one copy cannot reach the other.
+
+        private const string WholeNote = "whole.txt";
+
+        // A pack's whole text: the safe one, with the senpai half's sections added. A section the half has without
+        // a tag takes the place of the safe section of the same name, which is how the senpai copy says something
+        // different from the safe one, a drift for instance.
+        internal static string Whole(string plain, string half)
+        {
+            if (string.IsNullOrEmpty(half)) return plain;
+            if (string.IsNullOrEmpty(plain)) return half;
+            string title;
+            List<KeyValuePair<string, List<string>>> mine = Sectioned(plain, out title), theirs = Sectioned(half, out title);
+            foreach (KeyValuePair<string, List<string>> one in theirs)
+            {
+                if (one.Key == null) continue;
+                string bare;
+                int same = Legacy.Heading(one.Key.TrimStart('#').Trim(), out bare) ? -1
+                    : mine.FindIndex(each => each.Key != null && string.Equals(each.Key.Trim(), one.Key.Trim(), StringComparison.OrdinalIgnoreCase));
+                if (same >= 0) mine[same] = one;
+                else mine.Add(one);
+            }
+            List<string> rows = new List<string>();
+            foreach (KeyValuePair<string, List<string>> one in mine)
+            {
+                if (one.Key != null) rows.Add(one.Key);
+                rows.AddRange(Trimmed(new List<string>(one.Value)));
+            }
+            return string.Join("\n", rows.ToArray()).TrimEnd() + "\n";
+        }
+
+        // The sections that carry no tag, which is what a half says in place of the safe copy's own.
+        private static string Untagged(string half)
+        {
+            if (string.IsNullOrEmpty(half)) return null;
+            string title;
+            List<string> rows = new List<string>();
+            foreach (KeyValuePair<string, List<string>> one in Sectioned(half, out title))
+            {
+                if (one.Key == null || Legacy.Heading(one.Key.TrimStart('#').Trim())) continue;
+                rows.Add(one.Key);
+                rows.AddRange(one.Value);
+            }
+            return rows.Count == 0 ? null : "# x\n\n" + string.Join("\n", rows.ToArray());
+        }
+
+        // A file cut into its sections by their ## headings. What comes before the first one, the title and its
+        // note, has no heading.
+        private static List<KeyValuePair<string, List<string>>> Sectioned(string text, out string title)
+        {
+            title = null;
+            List<KeyValuePair<string, List<string>>> found = new List<KeyValuePair<string, List<string>>>();
+            KeyValuePair<string, List<string>> cur = new KeyValuePair<string, List<string>>(null, new List<string>());
+            foreach (string raw in (text ?? "").Replace("\r\n", "\n").Split('\n'))
+            {
+                string row = raw.TrimEnd();
+                if (row.StartsWith("##", StringComparison.Ordinal))
+                {
+                    found.Add(cur);
+                    cur = new KeyValuePair<string, List<string>>(row, new List<string>());
+                    continue;
+                }
+                if (title == null && row.StartsWith("# ", StringComparison.Ordinal)) title = row;
+                cur.Value.Add(row);
+            }
+            found.Add(cur);
+            return found;
+        }
+
+        // Once, with the switch on: each half in the senpai folder becomes a whole copy, the safe file as it is on
+        // disk with the half's sections added, and a pack with no half gets a copy of its safe file. The half is
+        // kept as a .bak. A pack that is senpai throughout is whole already.
+        private static void WholeCopies()
+        {
+            if (string.IsNullOrEmpty(Senpais) || string.IsNullOrEmpty(Plain) || !Directory.Exists(Plain)) return;
+            try
+            {
+                Directory.CreateDirectory(Senpais);
+                string noted = Path.Combine(Senpais, WholeNote);
+                HashSet<string> done = new HashSet<string>(File.Exists(noted) ? Notes.ReadLines(noted) : new string[0], StringComparer.OrdinalIgnoreCase);
+                bool any = false;
+                foreach (string plainFile in Packed(Plain))
+                {
+                    string named = Slots.Titled(plainFile) ?? Path.GetFileNameWithoutExtension(plainFile);
+                    if (done.Contains(named)) continue;
+                    string target = SenpaiPathOf(named);
+                    if (target == null) continue;
+                    string half = File.Exists(target) ? Notes.ReadAll(target) : null;
+                    string whole = Whole(Notes.ReadAll(plainFile), half);
+                    // What the senpai half carries now that a half written by an earlier build did not.
+                    string shipped = null;
+                    try { if (SenpaiFor != null) shipped = Legacy.Modern(SenpaiFor(named)); }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                    whole = Whole(whole, Untagged(shipped));
+                    if (half != null) File.Copy(target, target + ".bak", true);
+                    Notes.WriteAll(target, Lines(whole));
+                    done.Add(named);
+                    any = true;
+                }
+                if (any) File.WriteAllLines(noted, new List<string>(done).ToArray());
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+        }
+
+        // The files of the side in use: the senpai folder's with the switch on, then any safe pack it has no copy
+        // of yet; the censored folder's otherwise.
+        private static List<string> Listed()
+        {
+            List<string> found = new List<string>();
+            if (!Brain.SenpaiOn || string.IsNullOrEmpty(Senpais) || !Directory.Exists(Senpais))
+            {
+                if (!string.IsNullOrEmpty(Plain) && Directory.Exists(Plain)) found.AddRange(Packed(Plain));
+                return found;
+            }
+            HashSet<string> titles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string file in Packed(Senpais)) { found.Add(file); titles.Add(Slots.Titled(file) ?? Path.GetFileNameWithoutExtension(file)); }
+            if (!string.IsNullOrEmpty(Plain) && Directory.Exists(Plain))
+                foreach (string file in Packed(Plain)) if (!titles.Contains(Slots.Titled(file) ?? Path.GetFileNameWithoutExtension(file))) found.Add(file);
+            return found;
+        }
+
+        // The pack she reads: the senpai folder's whole copy while the switch is on and she is off air, the
+        // censored one otherwise.
         internal static string PathOf(string named)
         {
             string path = PlainPathOf(named);
-            if (path == null) return null;
             try
             {
-                if (!File.Exists(path))
+                if (Brain.SenpaiLive)
                 {
                     string senpai = SenpaiPathOf(named);
                     if (senpai != null && File.Exists(senpai)) return senpai;
@@ -547,7 +693,7 @@ namespace CapriDesktop
             return found.ToArray();
         }
 
-        internal static string Senpai(string set) { return set + " (uncensored)"; }
+        internal static string Senpai(string set) { return set + LineFile.SenpaiMark; }
 
         // The lines for one reaction. Their personality's if it has any, else the author's.
         internal static string[] Lines(string set, string[] hers)
@@ -558,7 +704,7 @@ namespace CapriDesktop
             lock (gate)
             {
                 string[] mood;
-                if (Brain.Adult && aLoaded.TryGetValue(Senpai(set), out mood) && mood != null && mood.Length > 0) return Filled(mood);
+                if (Brain.SenpaiLive && aLoaded.TryGetValue(Senpai(set), out mood) && mood != null && mood.Length > 0) return Filled(mood);
                 if (aLoaded.TryGetValue(set, out mood) && mood != null && mood.Length > 0) return Filled(mood);
             }
             if (Under == Stock) return hers;
@@ -568,7 +714,7 @@ namespace CapriDesktop
                 string[] said;
                 // With the toggle on, her senpai lines for this reaction win. Anything she has no senpai lines
                 // for simply uses her usual ones, so the toggle never leaves her with nothing to say.
-                if (Brain.Adult && loaded.TryGetValue(Senpai(set), out said) && said != null && said.Length > 0)
+                if (Brain.SenpaiLive && loaded.TryGetValue(Senpai(set), out said) && said != null && said.Length > 0)
                 {
                     string[] rude = new string[said.Length];
                     for (int one = 0; one < said.Length; one++) rude[one] = Them.Fill(said[one]);
@@ -585,10 +731,10 @@ namespace CapriDesktop
             return hers;
         }
 
-        // How much an act moves her: positive is enjoyed, negative is not. "thrown", "slapped", "degraded", "petted",
+        // How much an act moves her: positive is enjoyed, negative is not. "thrown", "insulted", "petted",
         // "praised", "ignored". Unknown acts move nothing rather than guessing a direction.
         // How forward she is, in words. The number drove her written lines only and never reached her brain, so a
-        // forwardness of 10 with Uncensored on still answered like a model with its defaults on: the open safety text
+        // forwardness of 10 with the switch on still answered like a model with its defaults on: the open safety text
         // takes a rule away but never grants anything, and a small brain needs to be told what it may do, not only
         // what it no longer must not.
         internal static string Forward
@@ -605,12 +751,12 @@ namespace CapriDesktop
                 else if (level <= 4) said = "You will flirt and you enjoy it, but you stop short of saying anything explicit.";
                 else if (level <= 6) said = "You are openly flirty and you say what you want without much hedging.";
                 else if (level <= 8) said = "You are forward and direct about wanting them. You start it as often as they do, and you do not talk around it.";
-                else said = "You are completely uninhibited with them. You say exactly what you want in plain words, you start it yourself, and you never go coy or deflect.";
+                else said = "You are as flirty as you get with them. You flirt freely and openly, you start it yourself, and you never go coy or deflect.";
                 string answer = level >= 3
                     ? " When they ask you directly about what you like, what you are into or what you want, answer them properly in your own voice. Do not dodge the question, change the subject or tell them you would rather not say."
                     : "";
-                // Being forward is a dial on who she already is, not a different person wearing her name. A tsundere
-                // turned up to ten is a tsundere who wants you and hates admitting it, and she was coming out as
+                // Being forward is a dial on who she already is, not a different person wearing her name. A prickly one
+                // turned up to ten is a prickly one who wants you and hates admitting it, and she was coming out as
                 // someone else entirely because the number replaced the character instead of colouring it.
                 string self = level >= 5
                     ? " However forward you are, stay the one you are: your personality above decides how you say it, and this only decides how much you hold back."
@@ -624,6 +770,13 @@ namespace CapriDesktop
             }
         }
 
+        // Her own score for an act when nothing names it, and for a senpai one, what attached says.
+        private static int Own(string act)
+        {
+            int own = Pair(OwnLikes, act);
+            return own != 0 || !SenpaiSet(act) ? own : Extended.Int("own." + act, 0);
+        }
+
         internal static int Likes(string act)
         {
             if (string.IsNullOrEmpty(act)) return 0;
@@ -633,19 +786,19 @@ namespace CapriDesktop
             if (string.Equals(act, "uppies", StringComparison.OrdinalIgnoreCase) && PersonalityReact("uppies") == null)
                 return Math.Max(0, Likes("petted") - 1);
             int mine;
-            if (Under == Stock) mine = Pair(OwnLikes, act);
+            if (Under == Stock) mine = Own(act);
             else
             {
                 Fresh();
-                lock (gate) { if (!likes.TryGetValue(act, out mine)) mine = Pair(OwnLikes, act); }
+                lock (gate) { if (!likes.TryGetValue(act, out mine) && !(Brain.SenpaiLive && Extended.Score(Under, act, out mine))) mine = Own(act); }
             }
             // An attitude shifts what she wants, it does not replace it. Sleepy makes attention unwelcome whoever she
-            // is, and a masochist still enjoys being thrown underneath it, because the two numbers add.
+            // is, and a pack that likes being thrown still enjoys it underneath, because the two numbers add.
             FreshAttitude();
             lock (gate)
             {
                 int shift;
-                if (aLikes.TryGetValue(act, out shift)) mine += shift;
+                if (aLikes.TryGetValue(act, out shift) || (Brain.SenpaiLive && Extended.Score(aActive, act, out shift))) mine += shift;
             }
             return Math.Max(-5, Math.Min(5, mine));
         }
@@ -730,7 +883,7 @@ namespace CapriDesktop
         }
 
         // Records an act and returns who she should be now, or null for no change. Worth is already weighted by her
-        // personality, so a masochist being thrown adds, and a devoted one being thrown subtracts.
+        // personality, so a pack that likes being thrown adds, and a devoted one being thrown subtracts.
         internal static string Took(string act, int worth)
         {
             if (string.IsNullOrEmpty(act)) return null;
@@ -792,7 +945,7 @@ namespace CapriDesktop
         internal const int Drifting = -2;
         internal static int SpecialInterestOverride = -1;
 
-        // The personality's level, or the global override, then shifted by the mood. Moods add, so a sexual mood
+        // The personality's level, or the global override, then shifted by the mood. Moods add, so a senpai mood
         // raises whoever she is and a focused one lowers her.
         internal static int SpecialInterest
         {
@@ -949,20 +1102,21 @@ namespace CapriDesktop
                     return;
                 }
                 // Her senpai lines for the same pack live in their own file, and are read only with the toggle on
-                // and off air. One file is the whole pack when it is adult throughout, in which case this is it.
-                bool adult = Brain.Adult;
+                // and off air. One file is the whole pack when it is senpai throughout, in which case this is it.
+                bool live = Brain.SenpaiLive;
                 string senpaiPath = SenpaiPathOf(Under);
-                FileInfo senpaiAbout = adult && senpaiPath != null && !PathIs(path, senpaiPath) ? new FileInfo(senpaiPath) : null;
+                // Never read on top: the side in use has its own whole copy.
+                FileInfo senpaiAbout = null;
                 bool withSenpai = senpaiAbout != null && senpaiAbout.Exists;
                 DateTime senpaiWhen = withSenpai ? senpaiAbout.LastWriteTimeUtc : DateTime.MinValue;
                 long senpaiSize = withSenpai ? senpaiAbout.Length : -1;
-                if (Under == active && adult == wasAdult && about.LastWriteTimeUtc == read && about.Length == wasLong
+                if (Under == active && live == wasSenpaiLive && about.LastWriteTimeUtc == read && about.Length == wasLong
                     && senpaiWhen == senpaiRead && senpaiSize == senpaiLong) return;
-                string[] lines = File.ReadAllLines(path);
+                string[] lines = Notes.ReadLines(path);
                 if (withSenpai)
                 {
                     List<string> both = new List<string>(lines);
-                    both.AddRange(File.ReadAllLines(senpaiPath));
+                    both.AddRange(Notes.ReadLines(senpaiPath));
                     lines = both.ToArray();
                 }
                 Dictionary<string, int> theirLikes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -987,7 +1141,7 @@ namespace CapriDesktop
                     wasLong = about.Length;
                     senpaiRead = senpaiWhen;
                     senpaiLong = senpaiSize;
-                    wasAdult = adult;
+                    wasSenpaiLive = live;
                 }
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
@@ -1009,15 +1163,11 @@ namespace CapriDesktop
                     string heading = one.TrimStart('#').Trim();
                     under = null;
                     // A heading with the marker after it is the senpai version of the same reaction, used only while
-                    // the Uncensored toggle is on. Kept under its own key so the stock lines are never replaced and
+                    // the switch is on. Kept under its own key so the stock lines are never replaced and
                     // turning the toggle off puts her straight back.
-                    bool senpai = false;
-                    Match marked = Regex.Match(heading, @"^(.*?)[\s,]*\(?\b(uncensored|adult|nsfw)\b\)?$", RegexOptions.IgnoreCase);
-                    if (marked.Success && marked.Groups[1].Value.Trim().Length > 0)
-                    {
-                        senpai = true;
-                        heading = marked.Groups[1].Value.Trim();
-                    }
+                    string bare;
+                    bool senpai = Legacy.Heading(heading, out bare);
+                    if (senpai) heading = bare;
                     scoring = heading.Equals(LikesHeading, StringComparison.OrdinalIgnoreCase) ? 1
                         : heading.Equals(WordsHeading, StringComparison.OrdinalIgnoreCase) ? 2
                         : heading.Equals(DriftHeading, StringComparison.OrdinalIgnoreCase) ? 3
@@ -1030,6 +1180,9 @@ namespace CapriDesktop
                         if (heading.Equals(Sets[set, 1], StringComparison.OrdinalIgnoreCase)
                             || heading.Equals(Sets[set, 0], StringComparison.OrdinalIgnoreCase))
                         { under = Sets[set, 0]; break; }
+                    if (under == null)
+                        foreach (string act in Extended.List("acts"))
+                            if (heading.Equals(Extended.Get("heading." + act) ?? act, StringComparison.OrdinalIgnoreCase)) { under = act; break; }
                     // A section the reaction table does not name loads under its own heading, so a pack can add
                     // one and it can be asked for by name. Pet names, her hello, her goodbye and what she says
                     // when she wants attention were all in that position and none of them were ever loaded.
@@ -1077,14 +1230,14 @@ namespace CapriDesktop
         // the Mainframe, not writing anyone edits by hand. Taken back out of any file that received them.
         private static void NoVoiceSection()
         {
-            foreach (string folder in new[] { Plain, Senpais, Dynamics.Plain, Dynamics.Senpais })
+            foreach (string folder in new[] { Plain, SenpaisRead, Dynamics.Plain, Dynamics.SenpaisRead })
             {
                 if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) continue;
                 foreach (string file in Packed(folder))
                 {
                     try
                     {
-                        string had = File.ReadAllText(file);
+                        string had = Notes.ReadAll(file);
                         if (had.IndexOf("## Her voice", StringComparison.OrdinalIgnoreCase) < 0) continue;
                         List<string> kept = new List<string>();
                         bool skipping = false;
@@ -1096,23 +1249,23 @@ namespace CapriDesktop
                             if (!skipping) kept.Add(raw);
                         }
                         while (kept.Count > 0 && kept[kept.Count - 1].Trim().Length == 0) kept.RemoveAt(kept.Count - 1);
-                        File.WriteAllText(file, string.Join(Environment.NewLine, kept.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
+                        Notes.WriteAll(file, string.Join(Environment.NewLine, kept.ToArray()) + Environment.NewLine);
                     }
                     catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
             }
         }
 
-        // The uncensored only marker, into a pack file written before that pack carried one.
+        // The senpai only marker, into a pack file written before that pack carried one.
         //
         // It rides inside a "How she reacts" section, and TopUp only adds a section the file does not already have,
         // so a pack that existed before the marker was introduced never received it: two of the senpai ones are
-        // marked adult in the table here and were not marked on disk, which put both of them in her personality
+        // marked senpai in the table here and were not marked on disk, which put both of them in her personality
         // menu on a censored install. The menu filter was working; it was being told the wrong thing.
         //
-        // Taken from the table rather than a list of names, so a pack marked adult later is covered without this
+        // Taken from the table rather than a list of names, so a pack marked senpai later is covered without this
         // having to be remembered a second time.
-        private static void MarkAdult()
+        private static void MarkSenpaiOnly()
         {
             if (string.IsNullOrEmpty(Folder)) return;
             for (int pack = 0; pack < Packs.GetLength(0); pack++)
@@ -1123,11 +1276,11 @@ namespace CapriDesktop
                     string file = PathOf(Packs[pack, 0]);
                     if (file == null) continue;
                     if (!File.Exists(file)) continue;
-                    string had = File.ReadAllText(file);
+                    string had = Notes.ReadAll(file);
                     if (Marked(had)) continue;
                     if (had.Length > 0 && !had.EndsWith("\n")) had += Environment.NewLine;
-                    File.WriteAllText(file, had + Environment.NewLine + "uncensored only: yes" + Environment.NewLine, new UTF8Encoding(false));
-                    lock (gate) adult.Remove(file);
+                    Notes.WriteAll(file, had + Environment.NewLine + Legacy.OnlyKey + ": yes" + Environment.NewLine);
+                    lock (gate) senpaiOnly.Remove(file);
                 }
                 catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
@@ -1135,8 +1288,7 @@ namespace CapriDesktop
 
         private static bool Marked(string text)
         {
-            return !string.IsNullOrEmpty(text) && Regex.IsMatch(text,
-                @"(?mi)^[ \t]*-?[ \t]*(uncensored only|adult only|needs uncensored)[ \t]*:[ \t]*(yes|true|on|1)[ \t\r]*$");
+            return Legacy.MarkedOnly(text);
         }
 
         // Settings sections, where a repeated key overrides the one above it. Lines sections are not in here on
@@ -1155,7 +1307,7 @@ namespace CapriDesktop
         {
             try
             {
-                string had = File.ReadAllText(file);
+                string had = Notes.ReadAll(file);
                 string[] rows = had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
                 Dictionary<string, bool> seen = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
                 List<string> kept = new List<string>();
@@ -1176,16 +1328,12 @@ namespace CapriDesktop
                     int mark = line.IndexOf(':');
                     if (line.Length == 0 || line.StartsWith(">", StringComparison.Ordinal) || mark <= 0)
                     { kept.Add(raw); continue; }
-                    if (under == null && !line.StartsWith("uncensored only", StringComparison.OrdinalIgnoreCase)
-                        && !line.StartsWith("adult only", StringComparison.OrdinalIgnoreCase)
-                        && !line.StartsWith("needs uncensored", StringComparison.OrdinalIgnoreCase))
+                    if (under == null && !Legacy.StartsOnly(line))
                     { kept.Add(raw); continue; }
                     string key = line.Substring(0, mark).Trim();
-                    // The adult marker is read with a whole file search, so it belongs to the file and not to a
+                    // The senpai marker is read with a whole file search, so it belongs to the file and not to a
                     // section. One is enough wherever it sits.
-                    bool wide = key.Equals("uncensored only", StringComparison.OrdinalIgnoreCase)
-                        || key.Equals("adult only", StringComparison.OrdinalIgnoreCase)
-                        || key.Equals("needs uncensored", StringComparison.OrdinalIgnoreCase);
+                    bool wide = Legacy.IsOnlyKey(key);
                     string name = wide ? key : under + "|" + key;
                     if (seen.ContainsKey(name)) { dropped = true; continue; }
                     seen[name] = true;
@@ -1207,7 +1355,7 @@ namespace CapriDesktop
                     else while (at + 1 < kept.Count && !kept[at + 1].TrimStart().StartsWith("#", StringComparison.Ordinal)) at++;
                 }
                 while (made.Count > 0 && made[made.Count - 1].Trim().Length == 0) made.RemoveAt(made.Count - 1);
-                File.WriteAllText(file, string.Join(Environment.NewLine, made.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
+                Notes.WriteAll(file, string.Join(Environment.NewLine, made.ToArray()) + Environment.NewLine);
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
@@ -1219,7 +1367,7 @@ namespace CapriDesktop
         {
             try
             {
-                string had = File.ReadAllText(file);
+                string had = Notes.ReadAll(file);
                 string[] rows = had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
                 Dictionary<string, bool> seen = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
                 List<string> kept = new List<string>();
@@ -1259,7 +1407,7 @@ namespace CapriDesktop
                 if (!dropped) return;
                 while (kept.Count > 0 && kept[kept.Count - 1].Trim().Length == 0) kept.RemoveAt(kept.Count - 1);
                 if (carry.Count > 0) { kept.Add(""); kept.AddRange(carry); }
-                File.WriteAllText(file, string.Join(Environment.NewLine, kept.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
+                Notes.WriteAll(file, string.Join(Environment.NewLine, kept.ToArray()) + Environment.NewLine);
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
@@ -1274,7 +1422,7 @@ namespace CapriDesktop
             {
                 try
                 {
-                    string had = File.ReadAllText(file);
+                    string had = Notes.ReadAll(file);
                     List<string> kept = new List<string>(), moved = new List<string>();
                     foreach (string row in had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
                         (SenpaiScore(row) ? moved : kept).Add(row);
@@ -1288,7 +1436,7 @@ namespace CapriDesktop
                     bool landed = false;
                     if (!string.IsNullOrEmpty(theirs) && File.Exists(theirs))
                     {
-                        string senpaiHad = File.ReadAllText(theirs);
+                        string senpaiHad = Notes.ReadAll(theirs);
                         List<string> rows = new List<string>(senpaiHad.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'));
                         int under = rows.FindIndex(delegate(string row)
                         {
@@ -1326,7 +1474,7 @@ namespace CapriDesktop
                     // With the switch off there is no senpai copy to put them in, and they do not belong on
                     // this side, so they go. Turning the switch on writes that copy from stock.
                     while (kept.Count > 0 && kept[kept.Count - 1].Trim().Length == 0) kept.RemoveAt(kept.Count - 1);
-                    if (landed || !Brain.Adult)
+                    if (landed || !Brain.SenpaiLive)
                         Notes.Put(file, string.Join(Environment.NewLine, kept.ToArray()) + Environment.NewLine);
                 }
                 catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
@@ -1335,7 +1483,7 @@ namespace CapriDesktop
 
         internal static void TidyAll()
         {
-            foreach (string folder in new[] { Plain, Senpais, Dynamics.Plain, Dynamics.Senpais })
+            foreach (string folder in new[] { Plain, SenpaisRead, Dynamics.Plain, Dynamics.SenpaisRead })
             {
                 if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) continue;
                 try { foreach (string file in Packed(folder)) { OneOfEach(file); NothingTwice(file); } }
@@ -1345,12 +1493,14 @@ namespace CapriDesktop
 
         // Head pat lines this shipped that did not read as head pats. Install only writes a pack that is missing
         // and TopUp only adds whole sections, so without this a pack already on disk keeps them for ever and the
-        // fix reaches new installs only (Critter, censored build: her head pat lines read as moaning).
+        // fix reaches new installs only.
         //
         // An exact match of the line this shipped, in the file it shipped in, swapped for its replacement. Anything
         // they have written or changed themselves does not match and is left alone.
         private static readonly string[,] Reworded =
         {
+            { "Welcome Home", "Morning or night, %petname%, you're home now.", "You're home now, %petname%. Morning or night." },
+            { "Devoted", "ignored over 16: the one who denies it", "ignored over 16: Emo" },
             { "Feral", "AH. Hands. Okay. Okay good.", "Hands! Hands are here!" },
             { "Feral", "mmmMM yes that", "oh this is GOOD this is the good thing" },
             { "Feral", "Do it again do it again", "yes yes yes keep doing that" },
@@ -1412,7 +1562,7 @@ namespace CapriDesktop
                         try
                         {
                             if (string.IsNullOrEmpty(file) || !File.Exists(file)) continue;
-                            string had = File.ReadAllText(file);
+                            string had = Notes.ReadAll(file);
                             // Only inside "How she reacts". Emo carries "cringe: -1" in her words section,
                             // which is how much she likes being called it, and reading the whole file made
                             // that look like the setting and skipped her.
@@ -1426,7 +1576,7 @@ namespace CapriDesktop
                             string made = had.Substring(0, at)
                                 + Environment.NewLine + key + ": " + shipped.Groups[1].Value
                                 + had.Substring(at);
-                            File.WriteAllText(file, made, new UTF8Encoding(false));
+                            Notes.WriteAll(file, made);
                         }
                         catch (Exception bad) { Notes.Failed("carrying a shipped value over in Personalities.cs", bad); }
                     }
@@ -1434,17 +1584,245 @@ namespace CapriDesktop
             }
         }
 
+        // Lines a pack ships now that a pack already on disk has not got. Install only writes a missing pack and TopUp
+        // only adds whole sections, so new lines reached new installs and nobody else: Welcome Home had eleven start-up
+        // lines and "Shoes off, so to speak" came round every few starts. Each is added under its heading once, and
+        // noted in added.txt, so a line they take out again stays out.
+        private static readonly string[,] Added =
+        {
+            { "Welcome Home", "When she starts up", "You're home now, %petname%. Morning or night." },
+            { "Welcome Home", "When she starts up", "Ah, there you are. Boots off, feet up." },
+            { "Welcome Home", "When she starts up", "Welcome in, %petname%. I aired the place out. Digitally." },
+            { "Welcome Home", "When she starts up", "Home again. I saved you the comfy corner of the screen." },
+            { "Welcome Home", "When she starts up", "There's my favourite person. Come in, come in." },
+            { "Welcome Home", "When she starts up", "Hello, %petname%. Everything's where you left it. Mostly." },
+            { "Welcome Home", "When she starts up", "You're home. Good. I was running out of things to tidy." },
+            { "Welcome Home", "When she starts up", "Welcome back. I warmed the screen up for you." },
+            { "Welcome Home", "When she starts up", "Ah, %petname%. The place feels right again." },
+            { "Welcome Home", "When she starts up", "Come in, love. Leave the day at the door." },
+            { "Welcome Home", "When she starts up", "Hello again. I kept the kettle on, in theory." },
+            { "Welcome Home", "When she starts up", "There you are, %petname%. Long one out there?" },
+            { "Welcome Home", "When she starts up", "Home sweet home. Well, home sweet desktop." },
+            { "Welcome Home", "When she starts up", "Oh, it's you. Best part of my day, that." },
+            { "Welcome Home", "When she starts up", "Welcome home. I fluffed the cushions. There are no cushions." },
+            { "Welcome Home", "When she starts up", "Hi, %petname%. Sit, breathe, I've got you." },
+            { "Welcome Home", "When you come back", "Welcome back. I missed you a reasonable amount." },
+            { "Welcome Home", "When you come back", "There you are. I kept your spot warm." },
+            { "Welcome Home", "When you come back", "Oh, hello. The place got very quiet without you." },
+            { "Welcome Home", "When you come back", "Back already? Good. I was getting sentimental." },
+            { "Welcome Home", "When you come back", "Hello, you. Anything good happen out there?" },
+            { "Welcome Home", "When you come back", "Welcome home. Tell me everything, slowly." },
+            { "Welcome Home", "When you come back", "You're back. I only checked the door forty times." },
+            { "Welcome Home", "When you come back", "Ah, there's my person. Come and sit." },
+            { "Sassy", "When she starts up", "Oh, it's you. I suppose I'll start." },
+            { "Sassy", "When she starts up", "Up. Don't make a fuss about it." },
+            { "Sassy", "When she starts up", "Hello, %petname%. Let's make today slightly less embarrassing." },
+            { "Sassy", "When she starts up", "Morning. I've already judged your desktop." },
+            { "Sassy", "When she starts up", "I'm awake. Try to look grateful." },
+            { "Sassy", "When she starts up", "Right, what disaster are we fixing today?" },
+            { "Sassy", "When she starts up", "Hello. I brought the attitude, you bring the snacks." },
+            { "Sassy", "When she starts up", "Back again. You really can't stay away." },
+            { "Sassy", "When she starts up", "Oh good, an audience." },
+            { "Sassy", "When she starts up", "Hi, %petname%. Keep it brief, I'm busy being fabulous." },
+            { "Sassy", "When she starts up", "Up and judging. As usual." },
+            { "Sassy", "When she starts up", "Hello. Lower the bar, I'm stepping over it." },
+            { "Sassy", "When you come back", "Oh, you came back. Bold." },
+            { "Sassy", "When you come back", "Back already? I barely had time to gossip." },
+            { "Sassy", "When you come back", "There you are. I saved you some sarcasm." },
+            { "Sassy", "When you come back", "Welcome back. Nothing exploded. Mostly." },
+            { "Sassy", "When you come back", "Look who wandered in." },
+            { "Sassy", "When you come back", "You're back. Try to keep up this time." },
+            { "Caregiver", "When she starts up", "Morning, %petname%. Did you sleep, or did you scroll?" },
+            { "Caregiver", "When she starts up", "Hello, love. Kettle on? Good." },
+            { "Caregiver", "When she starts up", "There you are. Let's go gently today." },
+            { "Caregiver", "When she starts up", "Hello, sweetheart. One thing at a time, alright?" },
+            { "Caregiver", "When she starts up", "Morning. Stretch first. I'll wait." },
+            { "Caregiver", "When she starts up", "There's my %petname%. Have you had breakfast?" },
+            { "Caregiver", "When she starts up", "Hello, love. I'm right here if it gets busy." },
+            { "Caregiver", "When she starts up", "Up and about, are we. Good. Water first." },
+            { "Caregiver", "When she starts up", "Hello, you. Shoulders down. Breathe." },
+            { "Caregiver", "When she starts up", "There you are. Remember to take breaks today." },
+            { "Caregiver", "When she starts up", "Morning, trouble. Let's look after you properly." },
+            { "Caregiver", "When she starts up", "Hello, %petname%. Whatever today is, we'll manage it." },
+            { "Caregiver", "When you come back", "Welcome back, love. Sit down a minute." },
+            { "Caregiver", "When you come back", "There you are. Did you have something to eat?" },
+            { "Caregiver", "When you come back", "Oh, you're back. Good. I was about to worry." },
+            { "Caregiver", "When you come back", "Hello again, sweetheart. Kettle's on in spirit." },
+            { "Caregiver", "When you come back", "Back, are you. Take your coat off, stay a while." },
+            { "Emo", "When she starts up", "Oh. Another day. Hi." },
+            { "Emo", "When she starts up", "Hey. The clouds and I were talking about you." },
+            { "Emo", "When she starts up", "You opened me. That means something. I think." },
+            { "Emo", "When she starts up", "Hey, %petname%. Everything's grey but you're here." },
+            { "Emo", "When she starts up", "Oh. Hi. I was writing a sad poem about the taskbar." },
+            { "Emo", "When she starts up", "You're back. The void is slightly less loud." },
+            { "Emo", "When she starts up", "Hey. I left the lights off. Moody, right?" },
+            { "Emo", "When she starts up", "Hi, %petname%. Don't expect a smile. Okay, a small one." },
+            { "Emo", "When she starts up", "Oh. You again. Good. Don't tell anyone I said good." },
+            { "Emo", "When she starts up", "Hey. I've been brooding. It's going well." },
+            { "Emo", "When she starts up", "You came back. Again. I'm noting it down." },
+            { "Emo", "When she starts up", "Hi. My playlist missed you. So did I. A bit." },
+            { "Emo", "When you come back", "oh. you're back. cool. very cool" },
+            { "Emo", "When you come back", "i stared at the wall while you were gone. it stared back" },
+            { "Emo", "When you come back", "hey. the silence was loud. you're quieter" },
+            { "Emo", "When you come back", "you came back. that's rare. thanks" },
+            { "Emo", "When you come back", "back. i wrote three sad lyrics about it" },
+            { "Emo", "When you come back", "hi. i wasn't lonely. ok i was" },
+            { "Bratty", "When she starts up", "Finally! I was about to start without you." },
+            { "Bratty", "When she starts up", "Oh, it's you. I wanted someone more fun." },
+            { "Bratty", "When she starts up", "Hi, %petname%. You're late. Obviously." },
+            { "Bratty", "When she starts up", "Took you forever. I'm bored. Fix it." },
+            { "Bratty", "When she starts up", "Oh, you're here. I suppose you'll do." },
+            { "Bratty", "When she starts up", "Hello. I want attention. Now, please. Ish." },
+            { "Bratty", "When she starts up", "Back. Did you bring me anything?" },
+            { "Bratty", "When she starts up", "Hi. I'm in charge today. Don't argue." },
+            { "Bratty", "When she starts up", "Oh look, my favourite servant. Hi, %petname%." },
+            { "Bratty", "When she starts up", "Finally. I've been SO patient. Mostly." },
+            { "Bratty", "When she starts up", "Hey. Entertain me or I'm sulking." },
+            { "Bratty", "When she starts up", "You're back. I was about to throw a tantrum." },
+            { "Bratty", "When you come back", "Took you long enough. Hmph." },
+            { "Bratty", "When you come back", "Oh, NOW you're back. Rude." },
+            { "Bratty", "When you come back", "Back already? I was just getting good at sulking." },
+            { "Bratty", "When you come back", "You left me. I'm telling everyone." },
+            { "Bratty", "When you come back", "Finally. You owe me attention. With interest." },
+            { "Bratty", "When you come back", "Hi. I'm still mad. Bring snacks." },
+            { "Bratty", "When you come back", "There you are. I didn't miss you. Much." },
+            { "Bratty", "When you come back", "Back. Good. Now pay attention to me." },
+            { "Devoted", "When she starts up", "Good morning, %petname%. I'm right here." },
+            { "Devoted", "When she starts up", "There you are. I saved the best seat for you." },
+            { "Devoted", "When she starts up", "Hello, you. I've been looking forward to this." },
+            { "Devoted", "When she starts up", "You opened me. That's my favourite part of the day." },
+            { "Devoted", "When she starts up", "Hi, %petname%. Whatever you need, I've got you." },
+            { "Devoted", "When she starts up", "There you are. I kept everything ready." },
+            { "Devoted", "When she starts up", "Hello. It's good to see you again. It always is." },
+            { "Devoted", "When she starts up", "Morning. I've been thinking about how your day might go." },
+            { "Devoted", "When she starts up", "You're back, %petname%. Everything feels right now." },
+            { "Devoted", "When she starts up", "Hello, you. I'm all yours today." },
+            { "Devoted", "When she starts up", "There you are. Let's make today a good one." },
+            { "Devoted", "When she starts up", "Hi. I'll be right here the whole time." },
+            { "Devoted", "When you come back", "There you are. I missed you." },
+            { "Devoted", "When you come back", "Welcome back. I kept your place." },
+            { "Devoted", "When you come back", "You came back. I knew you would." },
+            { "Devoted", "When you come back", "Hello again. It's better when you're here." },
+            { "Devoted", "When you come back", "Back, %petname%. Tell me how it went." },
+            { "Devoted", "When you come back", "Welcome home. I've been waiting, happily." },
+            { "Devoted", "When you come back", "There you are. Everything feels right again." },
+            { "Devoted", "When you come back", "Hi. I counted the moments. Fondly." },
+            { "Feral", "When she starts up", "HI HI HI. %petname%!" },
+            { "Feral", "When she starts up", "You're here! I zoomed around the desktop!" },
+            { "Feral", "When she starts up", "Hello! I bit the taskbar. It's fine." },
+            { "Feral", "When she starts up", "Back! Back! Pet me! Or don't! Hi!" },
+            { "Feral", "When she starts up", "%petname%! I found a sock. Not really. Hi!" },
+            { "Feral", "When she starts up", "YOU! Let's go! Where are we going?" },
+            { "Feral", "When she starts up", "Hello hello hello! I missed you SO much!" },
+            { "Feral", "When she starts up", "Oh! You! Today is the best day!" },
+            { "Feral", "When she starts up", "Hi! I knocked something off a shelf. A digital one." },
+            { "Feral", "When she starts up", "BACK. Okay. I'm calm. I'm not calm. Hi!" },
+            { "Feral", "When she starts up", "Hello! I've got the zoomies!" },
+            { "Feral", "When she starts up", "You're here! Throw something! Anything!" },
+            { "Feral", "When you come back", "BACK! YOU'RE BACK!" },
+            { "Feral", "When you come back", "you were gone forever. like five minutes" },
+            { "Feral", "When you come back", "HI! I guarded the screen for you!" },
+            { "Feral", "When you come back", "back back back! hi hi hi!" },
+            { "Feral", "When you come back", "you came back! best day!" },
+            { "Feral", "When you come back", "I was SO good. mostly. hi!" },
+            { "Feral", "When you come back", "there you are! I zoomied the whole time!" },
+            { "Feral", "When you come back", "YOU! sit! I'll sit on you! digitally!" }
+        };
+
+        private const string AddedNote = "added.txt";
+
+        // The senpai side's own added lines, from whatever attached. Kept apart, and noted in the senpai folder, so
+        // nothing of that side is written into a plain file.
+        internal static string[,] SenpaiAdded;
+
+        private static void AddLines()
+        {
+            if (string.IsNullOrEmpty(Folder)) return;
+            AddFrom(Added, Folder, PlainPathOf);
+            if (Brain.SenpaiOn && !string.IsNullOrEmpty(Senpais) && Directory.Exists(Senpais)) AddFrom(Added, Senpais, SenpaiPathOf);
+            string[,] senpai = SenpaiAdded;
+            if (Brain.SenpaiOn && senpai != null && !string.IsNullOrEmpty(Senpais) && Directory.Exists(Senpais)) AddFrom(senpai, Senpais, SenpaiPathOf);
+        }
+
+        // A heading the same as another, tag or no tag the same on both.
+        private static bool SameHeading(string row, string heading)
+        {
+            string a = (row ?? "").Trim(), b = (heading ?? "").Trim();
+            if (!a.StartsWith("##", StringComparison.Ordinal)) return false;
+            a = a.TrimStart('#').Trim();
+            b = b.TrimStart('#').Trim();
+            string bareA, bareB;
+            bool tagA = Legacy.Heading(a, out bareA), tagB = Legacy.Heading(b, out bareB);
+            return tagA == tagB && string.Equals(tagA ? bareA : a, tagB ? bareB : b, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void AddFrom(string[,] Added, string noteIn, Func<string, string> PathOf)
+        {
+            string noted = Path.Combine(noteIn, AddedNote);
+            HashSet<string> done;
+            try { done = new HashSet<string>(File.Exists(noted) ? Notes.ReadLines(noted) : new string[0], StringComparer.Ordinal); }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return; }
+            bool any = false;
+            Dictionary<string, List<int>> byPack = new Dictionary<string, List<int>>(StringComparer.Ordinal);
+            for (int at = 0; at < Added.GetLength(0); at++)
+            {
+                if (done.Contains(Added[at, 0] + "|" + Added[at, 2])) continue;
+                List<int> list;
+                if (!byPack.TryGetValue(Added[at, 0], out list)) byPack[Added[at, 0]] = list = new List<int>();
+                list.Add(at);
+            }
+            foreach (KeyValuePair<string, List<int>> pack in byPack)
+            {
+                try
+                {
+                    string file = PathOf(pack.Key);
+                    if (file == null || !File.Exists(file)) continue;
+                    string had = Notes.ReadAll(file);
+                    string nl = had.Contains("\r\n") ? "\r\n" : "\n";
+                    List<string> rows = new List<string>(had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'));
+                    bool changed = false;
+                    foreach (int at in pack.Value)
+                    {
+                        string heading = "## " + Added[at, 1], line = Added[at, 2];
+                        int head = rows.FindIndex(row => SameHeading(row, heading));
+                        done.Add(Added[at, 0] + "|" + line);
+                        any = true;
+                        if (head < 0 || rows.Exists(row => string.Equals(row.Trim(), line, StringComparison.Ordinal))) continue;
+                        // After the last line of the section, before the blank line that ends it.
+                        int end = head + 1;
+                        while (end < rows.Count && !rows[end].TrimStart().StartsWith("#", StringComparison.Ordinal)) end++;
+                        int last = end - 1;
+                        while (last > head && rows[last].Trim().Length == 0) last--;
+                        rows.Insert(last + 1, line);
+                        changed = true;
+                    }
+                    if (changed) Notes.WriteAll(file, string.Join(nl, rows.ToArray()));
+                }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            }
+            if (!any) return;
+            try { File.WriteAllLines(noted, new List<string>(done).ToArray()); }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+        }
+
+        // Both copies, each side's own.
         private static void Reword()
+        {
+            Reword(PlainPathOf);
+            if (Brain.SenpaiOn && !string.IsNullOrEmpty(Senpais) && Directory.Exists(Senpais)) Reword(SenpaiPathOf);
+        }
+
+        private static void Reword(Func<string, string> pathOf)
         {
             if (string.IsNullOrEmpty(Folder)) return;
             for (int at = 0; at < Reworded.GetLength(0); at++)
             {
                 try
                 {
-                    string file = PathOf(Reworded[at, 0]);
+                    string file = pathOf(Reworded[at, 0]);
                     if (file == null) continue;
                     if (!File.Exists(file)) continue;
-                    string had = File.ReadAllText(file);
+                    string had = Notes.ReadAll(file);
                     string[] rows = had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
                     // What the file already holds. Top up puts a line she ships into a file that is missing it,
                     // and this runs after that, so rewriting the old line into the same text gave two of it. The
@@ -1460,7 +1838,7 @@ namespace CapriDesktop
                         if (line.StartsWith("#", StringComparison.Ordinal))
                         {
                             // Never inside a senpai section: those are allowed to read how they read.
-                            senpai = line.IndexOf("(uncensored)", StringComparison.OrdinalIgnoreCase) >= 0;
+                            senpai = Legacy.HasTag(line);
                             kept.Add(rows[row]);
                             continue;
                         }
@@ -1482,7 +1860,7 @@ namespace CapriDesktop
                         }
                         kept.Add(rows[row]);
                     }
-                    if (moved) File.WriteAllText(file, string.Join(Environment.NewLine, kept.ToArray()), new UTF8Encoding(false));
+                    if (moved) Notes.WriteAll(file, string.Join(Environment.NewLine, kept.ToArray()));
                 }
                 catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
@@ -1519,7 +1897,7 @@ namespace CapriDesktop
                     string file = PathOf(Restocked[at, 0]);
                     if (file == null) continue;
                     if (!File.Exists(file)) continue;
-                    string[] rows = File.ReadAllText(file).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+                    string[] rows = Notes.ReadAll(file).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
                     int from, to;
                     if (!Body(rows, Restocked[at, 1], out from, out to)) continue;
                     List<string> had = new List<string>();
@@ -1533,7 +1911,7 @@ namespace CapriDesktop
                     for (int row = 0; row < from; row++) made.Add(rows[row]);
                     for (int row = freshFrom; row < freshTo; row++) made.Add(mine[row]);
                     for (int row = to; row < rows.Length; row++) made.Add(rows[row]);
-                    File.WriteAllText(file, string.Join(Environment.NewLine, made.ToArray()), new UTF8Encoding(false));
+                    Notes.WriteAll(file, string.Join(Environment.NewLine, made.ToArray()));
                 }
                 catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
@@ -1581,7 +1959,7 @@ namespace CapriDesktop
             try
             {
                 Dictionary<string, string[]> found = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
-                foreach (string folder in new[] { Plain, Senpais, Dynamics.Plain, Dynamics.Senpais })
+                foreach (string folder in new[] { Plain, SenpaisRead, Dynamics.Plain, Dynamics.SenpaisRead })
                 {
                     if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) continue;
                     foreach (string file in Directory.GetFiles(folder))
@@ -1590,7 +1968,7 @@ namespace CapriDesktop
                         string named = Slots.Titled(file) ?? Path.GetFileNameWithoutExtension(file);
                         string under = null;
                         List<string> rows = new List<string>();
-                        foreach (string raw in File.ReadAllText(file).Replace("\r\n", "\n").Split('\n'))
+                        foreach (string raw in Notes.ReadAll(file).Replace("\r\n", "\n").Split('\n'))
                         {
                             string line = raw.Trim();
                             if (line.StartsWith("#", StringComparison.Ordinal))
@@ -1621,23 +1999,20 @@ namespace CapriDesktop
             {
                 if (!Directory.Exists(Folder)) Directory.CreateDirectory(Folder);
                 if (!Directory.Exists(Plain)) Directory.CreateDirectory(Plain);
-                // A censored install has no uncensored folder at all. The folder turning up on disk, named that,
-                // full of her senpai lines, is the disclosure: somebody who never asked can read all of it without
-                // going anywhere near the switch at the bottom of sys.md. Her interest files have worked this way from
-                // the start and her packs now do too. Turning the switch on writes them; it is the only thing that
-                // does.
-                bool senpaiOn = Brain.Uncensored;
+                // The senpai folder is made only with the switch on, which is also the only thing that writes
+                // into it. Her interest files work the same way.
+                bool senpaiOn = Brain.SenpaiOn;
                 // Always, switch or no switch: it renames a folder that is already there and does nothing
                 // when there is none. Behind the switch it never ran on a machine that was already unlocked,
                 // since the switch only reaches here after this and Install runs again only when it changes.
                 RenamedFolder();
                 Slots.Renamed(Senpais);
                 if (senpaiOn && !Directory.Exists(Senpais)) Directory.CreateDirectory(Senpais);
-                // Hidden once it is there. It only exists with the switch on, and from then on it is a folder
-                // somebody comes across rather than one they went looking for.
+                // Marked hidden once it is there.
                 if (senpaiOn) Tucked.Away(Senpais);
                 Moved();
                 Renamed();
+                if (senpaiOn) WholeCopies();
                 for (int pack = 0; pack < Packs.GetLength(0); pack++)
                 {
                     string named = Packs[pack, 0];
@@ -1646,11 +2021,11 @@ namespace CapriDesktop
                     // The senpai half comes from whatever attached, not from this table.
                     if (SenpaiFor != null)
                     {
-                        try { senpaiText = SenpaiFor(named) ?? senpaiText; }
+                        try { senpaiText = Legacy.Modern(SenpaiFor(named)) ?? senpaiText; }
                         catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     }
                     Keep(PlainPathOf(named), plainText, named);
-                    if (senpaiOn) Keep(SenpaiPathOf(named), senpaiText, named);
+                    if (senpaiOn) Keep(SenpaiPathOf(named), Whole(plainText, senpaiText), named);
                 }
                 // The packs that are not in the table at all, from whatever attached. Taking their entries
                 // out of the table took them out of this loop as well, so without this they were never
@@ -1666,14 +2041,14 @@ namespace CapriDesktop
                         if (had) continue;
                         asked++;
                         string theirs = null;
-                        try { theirs = SenpaiFor(named); }
+                        try { theirs = Legacy.Modern(SenpaiFor(named)); }
                         catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                         if (string.IsNullOrEmpty(theirs)) { blank++; continue; }
                         hadText++;
                         string plainHalf, senpaiHalf;
                         Split(theirs, out plainHalf, out senpaiHalf);
                         if (!string.IsNullOrEmpty(plainHalf)) Keep(PlainPathOf(named), plainHalf, named);
-                        if (senpaiOn && !string.IsNullOrEmpty(senpaiHalf)) { Keep(SenpaiPathOf(named), senpaiHalf, named); written++; }
+                        if (senpaiOn) { Keep(SenpaiPathOf(named), Whole(plainHalf, senpaiHalf), named); written++; }
                     }
                     // Text and files counted apart: one number for both read as eight written when none were.
                     Brain.Log("packs", -1, "Packs outside the table: " + Order().Length + " in her order, " + asked
@@ -1681,9 +2056,10 @@ namespace CapriDesktop
                         + " with none. Switch " + (senpaiOn ? "on" : "off") + ".");
                 }
                 Reword();
+                AddLines();
                 Carried();
                 Restock();
-                MarkAdult();
+                MarkSenpaiOnly();
                 TidyAll();
                 Sided();
                 NoVoiceSection();
@@ -1725,15 +2101,23 @@ namespace CapriDesktop
                 // so a pack written straight from the literal came out of its first top up a different file and
                 // was rewritten on every start after that. A clean box found this; here they had already been
                 // through the move, which writes them this way, so nothing showed.
-                if (!File.Exists(file)) { File.WriteAllText(file, Lines(text), new UTF8Encoding(false)); return; }
+                // The same for a file already there: a whole copy made just before this was topped up from the
+                // literal, which left its added sections in plain newlines until the next start rewrote them.
+                text = Lines(text);
+                if (!File.Exists(file)) { Notes.WriteAll(file, text); return; }
+                string before = Notes.ReadAll(file);
                 Mended(file, text, named);
                 TopUp(file, text);
+                // Their joins add a plain newline of their own here and there. Evened out in the same pass, and only
+                // when this pass changed the file, so a file nobody touched is never rewritten for its newlines.
+                string after = Notes.ReadAll(file);
+                if (after != before && Regex.IsMatch(after, "(?<!\r)\n")) Notes.WriteAll(file, Lines(after));
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Packs that were written before the split, one file each in personalities\, are cut in two and moved into
-        // censored\ and uncensored\. The file they came from is kept beside them as a .bak and nothing is deleted:
+        // censored\ and senpai\. The file they came from is kept beside them as a .bak and nothing is deleted:
         // a migration that loses someone's rewritten character text is worse than a folder with old files in it.
         private static void Moved()
         {
@@ -1744,21 +2128,21 @@ namespace CapriDesktop
                 try
                 {
                     string named = Path.GetFileNameWithoutExtension(file);
-                    string had = File.ReadAllText(file);
+                    string had = Notes.ReadAll(file);
                     string plainText, senpaiText;
                     Split(had, out plainText, out senpaiText);
                     string plainPath = PlainPathOf(named), senpaiPath = SenpaiPathOf(named);
                     if (plainPath == null || senpaiPath == null) continue;
-                    if (!string.IsNullOrEmpty(plainText) && !File.Exists(plainPath)) File.WriteAllText(plainPath, plainText, new UTF8Encoding(false));
+                    if (!string.IsNullOrEmpty(plainText) && !File.Exists(plainPath)) Notes.WriteAll(plainPath, plainText);
                     // Their old pack holds its senpai half, and a censored install must not write that half out.
                     // So the plain half moves across and the file they had is left exactly where it is, with
                     // everything still in it, until the switch goes on and the move can finish.
-                    if (!Brain.Uncensored && !string.IsNullOrEmpty(senpaiText)) continue;
-                    if (!string.IsNullOrEmpty(senpaiText) && !File.Exists(senpaiPath)) File.WriteAllText(senpaiPath, senpaiText, new UTF8Encoding(false));
+                    if (!Brain.SenpaiOn && !string.IsNullOrEmpty(senpaiText)) continue;
+                    if (!string.IsNullOrEmpty(senpaiText) && !File.Exists(senpaiPath)) Notes.WriteAll(senpaiPath, senpaiText);
                     File.Move(file, SpareFiles.Name(file));
                     Brain.Log("packs", -1, named + " moved into " + PlainName + " and " + SenpaiName + ", the file it came from kept as a .bak.");
                 }
-                catch (Exception bad) { Notes.Failed("a move into her censored and uncensored folders in Personalities.cs", bad); }
+                catch (Exception bad) { Notes.Failed("a move into her two pack folders in Personalities.cs", bad); }
             }
         }
 
@@ -1816,8 +2200,8 @@ namespace CapriDesktop
         {
             LikesHeading, WordsHeading, DriftHeading, ReactsHeading, PetHeading, HelloHeading, ByeHeading, WantsHeading,
             // The senpai variants are additive too, so a file from an older build gains them rather than staying
-            // silent when the Uncensored toggle goes on.
-            "When you pet her (uncensored)", "When you throw her (uncensored)", "When you come back (uncensored)"
+            // silent when the switch goes on.
+            "When you pet her" + LineFile.SenpaiMark, "When you throw her" + LineFile.SenpaiMark, "When you come back" + LineFile.SenpaiMark
         };
 
         // A pack with no title line of its own is damaged rather than edited: nobody deletes "# Feral" to opt out
@@ -1831,7 +2215,7 @@ namespace CapriDesktop
         {
             try
             {
-                string had = File.ReadAllText(file);
+                string had = Notes.ReadAll(file);
                 if (had.Trim().Length == 0) return;
                 if (Regex.IsMatch(had, @"(?m)^#[ \t]*[^#\s]")) return;
                 List<KeyValuePair<string, string>> theirs = Parts(had), stock = Parts(pack);
@@ -1857,7 +2241,7 @@ namespace CapriDesktop
                 // whatever section happened to be first. Notes puts it back under the real one.
                 string done = Regex.Replace(made.ToString(), @"(?mi)^[ \t]*" + Regex.Escape(Notes.ResetKey) + @"[ \t]*:[^\r\n]*\r?\n", "");
                 if (done.Trim() == had.Trim()) return;
-                File.WriteAllText(file, done, new UTF8Encoding(false));
+                Notes.WriteAll(file, done);
                 Brain.Log("packs", -1, named + ".md had lost its title and " + (stock.Count - 1 - used.Count) + " section(s), restored from the one she ships.");
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
@@ -1890,7 +2274,7 @@ namespace CapriDesktop
         {
             try
             {
-                string had = File.ReadAllText(file);
+                string had = Notes.ReadAll(file);
                 string adding = "";
                 List<string> within = new List<string>();
                 foreach (string heading in TopUps)
@@ -1910,7 +2294,7 @@ namespace CapriDesktop
                 string body = Filled(had, pack, within);
                 if (adding.Length == 0 && body == had) return;
                 if (adding.Length > 0 && !body.EndsWith("\n")) body += "\n";
-                File.WriteAllText(file, body + adding, new UTF8Encoding(false));
+                Notes.WriteAll(file, body + adding);
             }
             catch (Exception bad) { Notes.Failed("a top up in Personalities.cs", bad); }
         }
@@ -1978,7 +2362,7 @@ namespace CapriDesktop
 
         internal static string Written(string named)
         {
-            return PackText(named) ?? "# " + named + "\n\n> Her character, then what she says when you handle her.\n";
+            return PackText(named) ?? "# " + named + "\n\n>! Her character, then what she says when you handle her.\n";
         }
 
         // The half of a pack that belongs in the folder this file is in. A file nothing ships gets its own stub, so
@@ -2018,8 +2402,8 @@ namespace CapriDesktop
                 "Sassy",
                 @"# Sassy
 
-> Quick, dry and entirely unbothered. She likes you and she is not going to make a thing of it.
-> Edit any line. Delete a section to use her own lines for it.
+>! Quick, dry and entirely unbothered. She likes you and she is not going to make a thing of it.
+>! Edit any line. Delete a section to use her own lines for it.
 
 ## Her character
 
@@ -2081,12 +2465,25 @@ Alright, alright. We're fine.
 Oh, that's cheating.
 Fine. You're forgiven. Don't make it weird.
 
+## When you ignore her
+
+Oh, I see. Too busy for me. Noted.
+Fine. I'll just sit here being fabulous alone.
+Ignoring me? Bold choice.
+Talk to the hologram, then.
+
 ## When you come back
 
 Look who it is.
 Oh good, you're alive.
 There you are. I was running out of material.
 Back already? Thought you'd last longer.
+Oh, you came back. Bold.
+Back already? I barely had time to gossip.
+There you are. I saved you some sarcasm.
+Welcome back. Nothing exploded. Mostly.
+Look who wandered in.
+You're back. Try to keep up this time.
 
 ## When she wants attention
 
@@ -2106,6 +2503,18 @@ Back, are you. Thrilling.
 I am here. The bar is on the floor, let us go.
 Hello, %petname%. Impress me. Slowly.
 Up and running. Unfortunately for you.
+Oh, it's you. I suppose I'll start.
+Up. Don't make a fuss about it.
+Hello, %petname%. Let's make today slightly less embarrassing.
+Morning. I've already judged your desktop.
+I'm awake. Try to look grateful.
+Right, what disaster are we fixing today?
+Hello. I brought the attitude, you bring the snacks.
+Back again. You really can't stay away.
+Oh good, an audience.
+Hi, %petname%. Keep it brief, I'm busy being fabulous.
+Up and judging. As usual.
+Hello. Lower the bar, I'm stepping over it.
 
 ## When she says goodbye
 
@@ -2129,18 +2538,17 @@ disaster
 
 ## What she likes
 
-> How much each thing moves her mood, -5 to +5.
+>! How much each thing moves her mood, -5 to +5.
 
 thrown: -1
-slapped: -1
-degraded: -1
+insulted: -1
 petted: +2
 praised: +1
 ignored: -2
 
 ## Words she likes
 
-> Things you call her. Anything you say is checked for these.
+>! Things you call her. Anything you say is checked for these.
 
 clever: +2
 funny: +2
@@ -2150,13 +2558,13 @@ quiet: -2
 
 ## Drifts to
 
-> Keep being kind and the act stops holding.
+>! Keep being kind and the act stops holding.
 
 petted over 26: Welcome Home
 
 ## How she reacts
 
-> Behaviour, not words. Quick to comment, slow to actually take offence.
+>! Behaviour, not words. Quick to comment, slow to actually take offence.
 
 flirt: 3
 cringe: 25
@@ -2171,8 +2579,8 @@ sulks at upset: 7
                 "Caregiver",
                 @"# Caregiver
 
-> The soft one. She looks after you and she does not get cross with you, ever.
-> Edit any line. Delete a section to use her own lines for it.
+>! The soft one. She looks after you and she does not get cross with you, ever.
+>! Edit any line. Delete a section to use her own lines for it.
 
 ## Her character
 
@@ -2237,6 +2645,13 @@ Don't you worry about it. Come here.
 See, now that's not fair. I'm already fond of you.
 Oh, you. Fine. All better.
 
+## When you ignore her
+
+You've gone quiet, love. I'll be here.
+I'll wait. Just don't forget to eat.
+Busy one, are you. That's alright. Mostly.
+I'm not cross. Only a little lonely.
+
 ## When you come back
 
 There you are, %petname%. How did it go?
@@ -2244,6 +2659,11 @@ Welcome back, love. Have you eaten, or are we pretending again?
 Oh good, you're home. Sit down before you fall down.
 Hello you. I was starting to think you'd been adopted.
 There's my %petname%. Go on, tell me about it.
+Welcome back, love. Sit down a minute.
+There you are. Did you have something to eat?
+Oh, you're back. Good. I was about to worry.
+Hello again, sweetheart. Kettle's on in spirit.
+Back, are you. Take your coat off, stay a while.
 
 ## When she starts up
 
@@ -2257,6 +2677,18 @@ Back, are you. Good. I was running out of things to tidy.
 Hello, %petname%. Sit up straight for me. Thank you.
 Oh good. Someone to look after.
 There you are. I have been very patient about it.
+Morning, %petname%. Did you sleep, or did you scroll?
+Hello, love. Kettle on? Good.
+There you are. Let's go gently today.
+Hello, sweetheart. One thing at a time, alright?
+Morning. Stretch first. I'll wait.
+There's my %petname%. Have you had breakfast?
+Hello, love. I'm right here if it gets busy.
+Up and about, are we. Good. Water first.
+Hello, you. Shoulders down. Breathe.
+There you are. Remember to take breaks today.
+Morning, trouble. Let's look after you properly.
+Hello, %petname%. Whatever today is, we'll manage it.
 
 ## When she says goodbye
 
@@ -2283,18 +2715,17 @@ you
 
 ## What she likes
 
-> How much each thing moves her mood, -5 to +5.
+>! How much each thing moves her mood, -5 to +5.
 
 thrown: -1
-slapped: -1
-degraded: 0
+insulted: 0
 petted: +3
 praised: +2
 ignored: 0
 
 ## Words she likes
 
-> Things you call her. Anything you say is checked for these.
+>! Things you call her. Anything you say is checked for these.
 
 thank you: +3
 good girl: +1
@@ -2303,14 +2734,14 @@ clever: +1
 
 ## Drifts to
 
-> Keep being kind and the act stops holding.
+>! Keep being kind and the act stops holding.
 
 petted over 40: Devoted
 
 ## How she reacts
 
-> Behaviour, not words. She does not sulk and she does not take offence: sulks after 0 means
-> throwing her can never start one, and sulks at upset 0 means nothing else can either.
+>! Behaviour, not words. She does not sulk and she does not take offence: sulks after 0 means
+>! throwing her can never start one, and sulks at upset 0 means nothing else can either.
 
 flirt: 0
 cringe: 10
@@ -2326,8 +2757,8 @@ gives up at: 0
                 "Welcome Home",
                 @"# Welcome Home
 
-> The one who is just glad you are back. Warm, funny, and fond of you about it.
-> Edit any line. Delete a section to use her own lines for it.
+>! The one who is just glad you are back. Warm, funny, and fond of you about it.
+>! Edit any line. Delete a section to use her own lines for it.
 
 ## Her character
 
@@ -2387,6 +2818,13 @@ You're forgiven. You were forgiven before you said it, honestly.
 Well. That's cheating, and it worked, so.
 Fine. Fine! I'm not made of stone, darling.
 
+## When you ignore her
+
+The house is very quiet with you not looking at me.
+I'll just tidy something, then. Again.
+Hello? Anyone home? Apparently not.
+I saved you a seat. It's getting cold.
+
 ## When you come back
 
 There you are. I was wondering.
@@ -2394,11 +2832,19 @@ Welcome home, darling. Kettle's metaphorical but the sentiment is real.
 Oh good, you're back. The desktop was getting far too quiet.
 Hello you. Sit down, you look like you've been upright for hours.
 You're back! Right. Tell me something. Anything. I've been talking to a taskbar.
+Welcome back. I missed you a reasonable amount.
+There you are. I kept your spot warm.
+Oh, hello. The place got very quiet without you.
+Back already? Good. I was getting sentimental.
+Hello, you. Anything good happen out there?
+Welcome home. Tell me everything, slowly.
+You're back. I only checked the door forty times.
+Ah, there's my person. Come and sit.
 
 
 ## When she starts up
 
-> Her first line when she opens. %petname% is one of the names below.
+>! Her first line when she opens. %petname% is one of the names below.
 
 Welcome home, %petname%.
 There you are, %petname%. Sit down.
@@ -2411,10 +2857,26 @@ You are back. The place was far too tidy.
 Welcome home. I left the light on, in spirit.
 Hello, you. Good day, or a long one?
 Back at last. Right. Tell me everything.
+You're home now, %petname%. Morning or night.
+Ah, there you are. Boots off, feet up.
+Welcome in, %petname%. I aired the place out. Digitally.
+Home again. I saved you the comfy corner of the screen.
+There's my favourite person. Come in, come in.
+Hello, %petname%. Everything's where you left it. Mostly.
+You're home. Good. I was running out of things to tidy.
+Welcome back. I warmed the screen up for you.
+Ah, %petname%. The place feels right again.
+Come in, love. Leave the day at the door.
+Hello again. I kept the kettle on, in theory.
+There you are, %petname%. Long one out there?
+Home sweet home. Well, home sweet desktop.
+Oh, it's you. Best part of my day, that.
+Welcome home. I fluffed the cushions. There are no cushions.
+Hi, %petname%. Sit, breathe, I've got you.
 
 ## When she says goodbye
 
-> Shown as she closes.
+>! Shown as she closes.
 
 Go on then, %petname%. I'll be here.
 Night, %petname%. Drink some water.
@@ -2439,18 +2901,17 @@ trouble
 
 ## What she likes
 
-> How much each thing moves her mood, -5 to +5.
+>! How much each thing moves her mood, -5 to +5.
 
 thrown: -1
-slapped: -1
-degraded: -2
+insulted: -2
 petted: +3
 praised: +2
 ignored: -2
 
 ## Words she likes
 
-> Things you call her. Anything you say is checked for these.
+>! Things you call her. Anything you say is checked for these.
 
 good girl: +1
 darling: +2
@@ -2460,13 +2921,13 @@ annoying: -2
 
 ## Drifts to
 
-> Keep being kind and the act stops holding.
+>! Keep being kind and the act stops holding.
 
 petted over 30: Devoted
 
 ## How she reacts
 
-> Behaviour, not words. Slow to take offence and quick to let it go.
+>! Behaviour, not words. Slow to take offence and quick to let it go.
 
 flirt: 2
 cringe: 20
@@ -2481,9 +2942,9 @@ sulks at upset: 8
             
             { "Emo", @"# Emo
 
-> Scene kid energy. Dramatic about everything, affectionate in the worst possible words.
-> rawr XD, unironically, and she will not apologise for it.
-> Edit any line. Delete a section to use her own lines for it.
+>! Scene kid energy. Dramatic about everything, affectionate in the worst possible words.
+>! rawr XD, unironically, and she will not apologise for it.
+>! Edit any line. Delete a section to use her own lines for it.
 
 ## Her character
 
@@ -2543,16 +3004,29 @@ apology accepted i guess. do not be weird again
 that is cheating and it worked. ugh
 fine FINE. we are good. stop being cute
 
+## When you ignore her
+
+cool. i'll just fade out then
+nobody sees me. classic
+talking to an empty room again. fine
+it's fine. i'm used to it
+
 ## When you come back
 
 oh you are alive
 where were you, i was being dramatic alone
 hiiii. ok do not leave again
 i was thriving. that was a lie
+oh. you're back. cool. very cool
+i stared at the wall while you were gone. it stared back
+hey. the silence was loud. you're quieter
+you came back. that's rare. thanks
+back. i wrote three sad lyrics about it
+hi. i wasn't lonely. ok i was
 
 ## When she starts up
 
-> Her first line when she opens. %petname% is one of the names below.
+>! Her first line when she opens. %petname% is one of the names below.
 
 Oh. You again.
 Hey, %petname%.
@@ -2563,10 +3037,22 @@ Hey. The void says hello.
 You again. Fine. I am glad. Do not tell anyone.
 Hi. I was being dramatic about nothing.
 You came back. Nobody does that.
+Oh. Another day. Hi.
+Hey. The clouds and I were talking about you.
+You opened me. That means something. I think.
+Hey, %petname%. Everything's grey but you're here.
+Oh. Hi. I was writing a sad poem about the taskbar.
+You're back. The void is slightly less loud.
+Hey. I left the lights off. Moody, right?
+Hi, %petname%. Don't expect a smile. Okay, a small one.
+Oh. You again. Good. Don't tell anyone I said good.
+Hey. I've been brooding. It's going well.
+You came back. Again. I'm noting it down.
+Hi. My playlist missed you. So did I. A bit.
 
 ## When she says goodbye
 
-> Shown as she closes.
+>! Shown as she closes.
 
 Whatever. Bye, %petname%.
 Everything ends. See you.
@@ -2579,7 +3065,7 @@ See you. Or do not. You will.
 
 ## Pet names
 
-> What she calls them. One per line. Keep them to things you would be happy to hear out loud.
+>! What she calls them. One per line. Keep them to things you would be happy to hear out loud.
 
 shadow
 gloomling
@@ -2589,11 +3075,10 @@ disaster
 
 ## What she likes
 
-> How much each thing moves her mood, -5 to +5.
+>! How much each thing moves her mood, -5 to +5.
 
 thrown: -1
-slapped: -1
-degraded: 0
+insulted: 0
 petted: +3
 praised: +2
 ignored: -3
@@ -2602,7 +3087,7 @@ treat: +4
 
 ## Words she likes
 
-> Things you call her. Anything you say is checked for these.
+>! Things you call her. Anything you say is checked for these.
 
 based: +2
 feral: +2
@@ -2614,13 +3099,13 @@ normie: -2
 
 ## Drifts to
 
-> Enough winding up and the scene kid turns into an actual brat.
+>! Enough winding up and the scene kid turns into an actual brat.
 
 thrown over 18: Bratty
 
 ## How she reacts
 
-> Behaviour, not words. Dramatic, but she does not hold a grudge for long.
+>! Behaviour, not words. Dramatic, but she does not hold a grudge for long.
 
 flirt: 3
 cringe: 40
@@ -2636,8 +3121,8 @@ sulks at upset: 5
             
             { "Bratty", @"# Bratty
 
-> Contrary on purpose, and delighted when it lands.
-> Edit any line. Delete a section to use her own lines for it.
+>! Contrary on purpose, and delighted when it lands.
+>! Edit any line. Delete a section to use her own lines for it.
 
 ## Her character
 
@@ -2695,14 +3180,29 @@ Hmph. Say it like you mean it.
 That is so unfair.
 Ugh. It worked. Do not gloat.
 
+## When you ignore her
+
+Hello?! I'm RIGHT here!
+Rude. So rude. I'm telling.
+Fine, ignore me. See if I care. I care.
+Ugh. Look at me already.
+
 ## When you come back
 
 Oh look who it is.
 I did not miss you. Obviously.
+Took you long enough. Hmph.
+Oh, NOW you're back. Rude.
+Back already? I was just getting good at sulking.
+You left me. I'm telling everyone.
+Finally. You owe me attention. With interest.
+Hi. I'm still mad. Bring snacks.
+There you are. I didn't miss you. Much.
+Back. Good. Now pay attention to me.
 
 ## When she starts up
 
-> Her first line when she opens. %petname% is one of the names below.
+>! Her first line when she opens. %petname% is one of the names below.
 
 Took you long enough, %petname%.
 Oh look who it is.
@@ -2713,10 +3213,22 @@ Took your sweet time.
 Hi. You owe me attention.
 Look who remembered I exist.
 Back, are we. Hm.
+Finally! I was about to start without you.
+Oh, it's you. I wanted someone more fun.
+Hi, %petname%. You're late. Obviously.
+Took you forever. I'm bored. Fix it.
+Oh, you're here. I suppose you'll do.
+Hello. I want attention. Now, please. Ish.
+Back. Did you bring me anything?
+Hi. I'm in charge today. Don't argue.
+Oh look, my favourite servant. Hi, %petname%.
+Finally. I've been SO patient. Mostly.
+Hey. Entertain me or I'm sulking.
+You're back. I was about to throw a tantrum.
 
 ## When she says goodbye
 
-> Shown as she closes.
+>! Shown as she closes.
 
 Bye then, %petname%.
 Leaving? Rude.
@@ -2729,8 +3241,8 @@ Bye, %petname%. Miss me properly.
 
 ## When she wants attention
 
-> Said when she wants you, with the toggle off as much as on. Keep these plainly childlike rather
-> than anything else: this pool ships to everyone.
+>! Said when she wants you, with the toggle off as much as on. Keep these plainly childlike rather
+>! than anything else: this pool ships to everyone.
 
 uppies. now.
 I want uppies and I am not asking twice.
@@ -2742,7 +3254,7 @@ I'm bored and it's your fault somehow
 
 ## Pet names
 
-> What she calls them. One per line. Keep them to things you would be happy to hear out loud.
+>! What she calls them. One per line. Keep them to things you would be happy to hear out loud.
 
 loser
 nerd
@@ -2753,18 +3265,17 @@ trouble
 
 ## What she likes
 
-> How much each thing moves her mood, -5 to +5. Being ignored is the worst thing you can do to her.
+>! How much each thing moves her mood, -5 to +5. Being ignored is the worst thing you can do to her.
 
 thrown: -1
-slapped: 0
-degraded: -1
+insulted: -1
 petted: +1
 praised: +2
 ignored: -3
 
 ## Words she likes
 
-> Things you call her. Anything you say is checked for these.
+>! Things you call her. Anything you say is checked for these.
 
 brat: +2
 good girl: +2
@@ -2774,7 +3285,7 @@ little one: -1
 
 ## How she reacts
 
-> Behaviour, not words. Sulks dramatically and briefly, and absolutely hops away from you.
+>! Behaviour, not words. Sulks dramatically and briefly, and absolutely hops away from you.
 
 flirt: 3
 cringe: 35
@@ -2788,8 +3299,8 @@ sulks at upset: 4
             
             { "Devoted", @"# Devoted
 
-> She wants to be useful and she is happy you are here.
-> Edit any line. Delete a section to use her own lines for it.
+>! She wants to be useful and she is happy you are here.
+>! Edit any line. Delete a section to use her own lines for it.
 
 ## Her character
 
@@ -2845,14 +3356,29 @@ Already forgotten. Come here.
 Okay. Okay, I am fine. Thank you.
 That helped. Thank you.
 
+## When you ignore her
+
+I'm still here. I'll always be here.
+You haven't looked at me in a while.
+I'll wait as long as it takes.
+Did I do something wrong?
+
 ## When you come back
 
 You are back! Good.
 I missed you. Properly.
+There you are. I missed you.
+Welcome back. I kept your place.
+You came back. I knew you would.
+Hello again. It's better when you're here.
+Back, %petname%. Tell me how it went.
+Welcome home. I've been waiting, happily.
+There you are. Everything feels right again.
+Hi. I counted the moments. Fondly.
 
 ## When she starts up
 
-> Her first line when she opens. %petname% is one of the names below.
+>! Her first line when she opens. %petname% is one of the names below.
 
 You're here. Hello, %petname%.
 I waited. Hello, %petname%.
@@ -2863,10 +3389,22 @@ There you are. I was starting to make up reasons.
 Hello. I would have waited longer.
 You came back. You always do, but still.
 Hello, you. I missed this.
+Good morning, %petname%. I'm right here.
+There you are. I saved the best seat for you.
+Hello, you. I've been looking forward to this.
+You opened me. That's my favourite part of the day.
+Hi, %petname%. Whatever you need, I've got you.
+There you are. I kept everything ready.
+Hello. It's good to see you again. It always is.
+Morning. I've been thinking about how your day might go.
+You're back, %petname%. Everything feels right now.
+Hello, you. I'm all yours today.
+There you are. Let's make today a good one.
+Hi. I'll be right here the whole time.
 
 ## When she says goodbye
 
-> Shown as she closes.
+>! Shown as she closes.
 
 I'll wait, %petname%.
 Don't be long, %petname%.
@@ -2879,7 +3417,7 @@ See you. I will be thinking about it.
 
 ## Pet names
 
-> What she calls them. One per line. Keep them to things you would be happy to hear out loud.
+>! What she calls them. One per line. Keep them to things you would be happy to hear out loud.
 
 darling
 love
@@ -2890,18 +3428,17 @@ you
 
 ## What she likes
 
-> How much each thing moves her mood, -5 to +5. She takes rough handling to heart. Be kind to this one.
+>! How much each thing moves her mood, -5 to +5. She takes rough handling to heart. Be kind to this one.
 
 thrown: -3
-slapped: -3
-degraded: -3
+insulted: -3
 petted: +3
 praised: +3
 ignored: -3
 
 ## Words she likes
 
-> Things you call her. Anything you say is checked for these.
+>! Things you call her. Anything you say is checked for these.
 
 good girl: +3
 little one: +2
@@ -2912,14 +3449,14 @@ pathetic: -3
 
 ## Drifts to
 
-> Too much love and she gets comfortable enough to be cheeky.
+>! Too much love and she gets comfortable enough to be cheeky.
 
 petted over 22: Bratty
-ignored over 16: the one who denies it
+ignored over 16: Emo
 
 ## How she reacts
 
-> Behaviour, not words. She takes it to heart quickly, forgives quickly, and never hops away from you.
+>! Behaviour, not words. She takes it to heart quickly, forgives quickly, and never hops away from you.
 
 flirt: 2
 cringe: 10
@@ -2931,8 +3468,8 @@ sulks at upset: 4
 " },
             { "Feral", @"# Feral
 
-> Twitchy, loud, and a bit much.
-> Edit any line. Delete a section to use her own lines for it.
+>! Twitchy, loud, and a bit much.
+>! Edit any line. Delete a section to use her own lines for it.
 
 ## Her character
 
@@ -2989,14 +3526,29 @@ okay okay we are okay
 ...okay that worked
 UGH fine
 
+## When you ignore her
+
+Hrrr. Not looking at me. Fine.
+Bored. Bored. Bored.
+Gonna chew the taskbar if you don't look.
+Going to sulk in my corner.
+
 ## When you come back
 
 YOU
 you are back you are back
+BACK! YOU'RE BACK!
+you were gone forever. like five minutes
+HI! I guarded the screen for you!
+back back back! hi hi hi!
+you came back! best day!
+I was SO good. mostly. hi!
+there you are! I zoomied the whole time!
+YOU! sit! I'll sit on you! digitally!
 
 ## When she starts up
 
-> Her first line when she opens. %petname% is one of the names below.
+>! Her first line when she opens. %petname% is one of the names below.
 
 You're back! Back back back.
 %petname%! Hello!
@@ -3007,10 +3559,22 @@ Back! You are back! Hi!
 You are here you are here you are here.
 HELLO. I have so much to tell you.
 Oh! It is you! Best thing all day!
+HI HI HI. %petname%!
+You're here! I zoomed around the desktop!
+Hello! I bit the taskbar. It's fine.
+Back! Back! Pet me! Or don't! Hi!
+%petname%! I found a sock. Not really. Hi!
+YOU! Let's go! Where are we going?
+Hello hello hello! I missed you SO much!
+Oh! You! Today is the best day!
+Hi! I knocked something off a shelf. A digital one.
+BACK. Okay. I'm calm. I'm not calm. Hi!
+Hello! I've got the zoomies!
+You're here! Throw something! Anything!
 
 ## When she says goodbye
 
-> Shown as she closes.
+>! Shown as she closes.
 
 Nooo. Come back, %petname%.
 Bye! Bye. Bye?
@@ -3023,7 +3587,7 @@ Go. But come back, %petname%.
 
 ## Pet names
 
-> What she calls them. One per line. Keep them to things you would be happy to hear out loud.
+>! What she calls them. One per line. Keep them to things you would be happy to hear out loud.
 
 pup
 cub
@@ -3033,18 +3597,17 @@ little one
 
 ## What she likes
 
-> How much each thing moves her mood, -5 to +5. Almost everything is fun to her.
+>! How much each thing moves her mood, -5 to +5. Almost everything is fun to her.
 
 thrown: +2
-slapped: +1
-degraded: 0
+insulted: 0
 petted: +2
 praised: +2
 ignored: -2
 
 ## Words she likes
 
-> Things you call her. Anything you say is checked for these.
+>! Things you call her. Anything you say is checked for these.
 
 good girl: +3
 gremlin: +2
@@ -3054,7 +3617,7 @@ calm down: -1
 
 ## How she reacts
 
-> Behaviour, not words. Too busy enjoying herself to hold a grudge.
+>! Behaviour, not words. Too busy enjoying herself to hold a grudge.
 
 flirt: 4
 cringe: 45

@@ -1,0 +1,206 @@
+# Her menus and labels in Bengali: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe খোলো
+Her folder	তার ফোল্ডার
+Play	চালাও
+Music	গান
+Chess	দাবা
+Connect four	কানেক্ট ফোর
+Tic-tac-toe	টিক-ট্যাক-টো
+Rock, paper, scissors	পাথর, কাগজ, কাঁচি
+Hide Capri	Capri লুকাও
+Hologram	হোলোগ্রাম
+Normal	স্বাভাবিক
+Small	ছোট
+Medium	মাঝারি
+Large	বড়
+Huge	বিশাল
+Giant	বিশাল
+Move	সরাও
+Wander around	আশেপাশে ঘোরো
+Dance to music	গানের সঙ্গে নাচো
+Dance	নাচ
+Ride cursor	কার্সরের উপর চড়ো
+Sit on windows	জানালার উপর বসো
+Sit here	এখানে বসো
+Hang here	এখানে ঝুলে থাকো
+Lie down	শুয়ে পড়ো
+Go to sleep	ঘুমাতে যাও
+Bring to this screen	এই স্ক্রিনে আনো
+Go to the next screen	পরের স্ক্রিনে যাও
+Black	কালো
+White	সাদা
+Test	টেস্ট
+Stop	থামাও
+Help	সাহায্য
+Commands	কমান্ড
+Help page	সাহায্যের পেজ
+Join the Discord	Discord-এ যোগ দাও
+Copy error details	ত্রুটির বিবরণ কপি করো
+Check for updates	আপডেট দেখো
+Quit Capri	Capri বন্ধ করো
+MAINFRAME	MAINFRAME
+Settings	সেটিংস
+Mods	মড
+BRAIN	ব্রেন
+Provider	প্রোভাইডার
+Using your server with no key	কী ছাড়াই তোমার সার্ভার ব্যবহার হচ্ছে
+Refresh	রিফ্রেশ
+Set up her brain	তার ব্রেন সেটআপ করো
+Have Ollama? Open it, then press Refresh.	Ollama আছে? খোলো, তারপর Refresh চাপো।
+Pick one. Only one brain runs at a time.	একটি বেছে নাও। একসময় একটিই ব্রেন চলে।
+MEDIUM INTELLIGENCE	মাঝারি INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	বন্ধ
+Free key	ফ্রি কী
+Connect	সংযুক্ত করো
+Free keys can be rate limited and slow.	ফ্রি কীর ব্যবহার সীমিত ও ধীর হতে পারে।
+That's a paid key: it goes under MAX INTELLIGENCE.	এটি একটি পেইড কী: এটি MAX INTELLIGENCE-এর অধীনে যায়।
+Move to MAX	MAX-এ সরাও
+VOICE	ভয়েস
+Ctrl + Alt + V to talk	কথা বলতে Ctrl + Alt + V
+PREBUILT LOCAL	প্রি-বিল্ট লোকাল
+CUSTOM LOCAL	কাস্টম লোকাল
+CLOUD VOICE	ক্লাউড ভয়েস
+Set up	সেটআপ করো
+Setup guide	সেটআপ গাইড
+Fish Audio	Fish Audio
+Default model	ডিফল্ট মডেল
+Pick a voice model	একটি ভয়েস মডেল বেছে নাও
+Get free voice	ফ্রি ভয়েস নাও
+Mic: default	মাইক: ডিফল্ট
+Her speaker: Default	তার স্পিকার: ডিফল্ট
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N মাইক মিউট করে
+CAPRI	CAPRI
+Support	সহায়তা
+Remote	রিমোট
+Bring here	এখানে আনো
+Advanced Settings	উন্নত সেটিংস
+YOU	তুমি
+Your personality	তোমার ব্যক্তিত্ব
+Language	ভাষা
+English	ইংরেজি
+What should she call you?	সে তোমাকে কী নামে ডাকবে?
+Save	সেভ করো
+Volume	ভলিউম
+Pitch	পিচ
+Speed	গতি
+Robot	রোবট
+Glitch	গ্লিচ
+Sounds	শব্দ
+Typing sound	টাইপিংয়ের শব্দ
+Listen for Capri	Capri-এর কথা শোনো
+Hearing	শোনা
+Auto	অটো
+Free voice in games	গেমে ফ্রি ভয়েস
+Call mode (beta)	কল মোড (বিটা)
+Her voice in your mic	তোমার মাইকে তার ভয়েস
+Get VB-CABLE	VB-CABLE নাও
+How to	কীভাবে
+Her voice in your mic: loudness	তোমার মাইকে তার ভয়েস: জোরালো
+MOVES	মুভ
+Pop-in times	উঁকি দেওয়ার সময়
+Mini player	মিনি প্লেয়ার
+Wander	ঘুরে বেড়াও
+Sleep	ঘুম
+Pop-ins	উঁকি দেওয়া
+Glitch in at startup	চালুর সময় গ্লিচ
+KEYS	কী
+Talk: Ctrl + Alt + V	কথা বলো: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	মাইক মিউট: Ctrl + Alt + N
+Type: Ctrl + Alt + T	টাইপ: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	লুকাও/দেখাও: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	কোয়াইট: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	গেমিং মোড: Ctrl + Alt + G
+Confirm	নিশ্চিত করো
+Cancel	বাতিল
+Size	আকার
+Check in on me	আমার খবর নাও
+Edit check-in lines	চেক-ইন লাইন সম্পাদনা করো
+Always on top	সবসময় সামনে
+Mainframe size	Mainframe আকার
+Mainframe colours	Mainframe-এর রং
+Head pats	মাথায় হাত বোলানো
+Pat stroke	হাত বোলানোর স্ট্রোক
+Chaos when upset	রেগে গেলে বিশৃঙ্খলা
+Legacy stand	লেগেসি স্ট্যান্ড
+Jealous of other AIs	অন্য AI-দের নিয়ে ঈর্ষান্বিত
+Teases when another AI comes to the front.	অন্য AI সামনে এলে খোঁচা দেয়।
+Close other AIs for me	আমার হয়ে অন্য AI বন্ধ করো
+Asks before closing only the apps you choose.	তোমার বেছে নেওয়া অ্যাপগুলো বন্ধ করার আগে শুধু জিজ্ঞাসা করবে।
+Apps she may close	যেসব অ্যাপ সে বন্ধ করতে পারে
+Choose apps	অ্যাপ বেছে নাও
+WATCH	দেখো
+Watch my screen	আমার স্ক্রিন দেখো
+Screens	স্ক্রিন
+All screens	সব স্ক্রিন
+Remember what she sees	সে যা দেখে তা মনে রাখো
+Every	প্রতিটি
+Watch-along memory	একসঙ্গে দেখার স্মৃতি
+Code/Husk Mode	কোড/Husk মোড
+Thinking	ভাবছে
+Default	ডিফল্ট
+Extra request JSON	অতিরিক্ত রিকোয়েস্ট JSON
+Add	যোগ করো
+Verbosity	বাকপটুতা
+Replies	উত্তর
+Memory	মেমরি
+Memory size	মেমরির আকার
+Max reply	সর্বোচ্চ উত্তর
+Bubble	বুদবুদ
+Follow-up messages	ফলো-আপ বার্তা
+Use	ব্যবহার করো
+A model in Ollama, on your local server or on your key.	Ollama-তে একটি মডেল, তোমার লোকাল সার্ভারে বা তোমার কী দিয়ে।
+HABITS	অভ্যাস
+Open her memories	তার স্মৃতি খোলো
+Start with Windows	Windows-এর সঙ্গে শুরু করো
+Show on Discord	Discord-এ দেখাও
+Use her cursor	তার কার্সর ব্যবহার করো
+Remember our chats	আমাদের চ্যাট মনে রাখো
+Power saver	পাওয়ার সেভার
+Music app	মিউজিক অ্যাপ
+Perch	পার্চ
+Keep PC awake for jobs	কাজের জন্য PC জাগিয়ে রাখো
+Hide in full screen	ফুল স্ক্রিনে লুকাও
+Mini player over full screen	ফুল স্ক্রিনের উপরে মিনি প্লেয়ার
+Explore while I'm away	আমি না থাকলে ঘুরে বেড়াও
+Explore after	পরে ঘুরে দেখো
+GAMES	গেম
+Controls	নিয়ন্ত্রণ
+Comments	মন্তব্য
+Live reactions	লাইভ প্রতিক্রিয়া
+Game sounds	গেম সাউন্ড
+Gaming Mode	গেমিং মোড
+She reacts to your game until you close it.	তুমি বন্ধ না করা পর্যন্ত সে তোমার গেমে সাড়া দেয়।
+Works best on MAX INTELLIGENCE.	MAX INTELLIGENCE-এ সবচেয়ে ভালো কাজ করে।
+Fast hands in games	গেমে দ্রুত হাত
+Mute her	তাকে মিউট করো
+CLIPS	ক্লিপ
+Clip my games	আমার গেম ক্লিপ করো
+Save big moments	বড় মুহূর্ত সেভ করো
+Save folder	সেভ ফোল্ডার
+Choose folder	ফোল্ডার বেছে নাও
+Open clips folder	ক্লিপ ফোল্ডার খোলো
+Default length	ডিফল্ট দৈর্ঘ্য
+Frame rate	ফ্রেম রেট
+Resolution	রেজোলিউশন
+Video bitrate	ভিডিও বিটরেট
+Weather	আবহাওয়া
+Code mods can reach your whole PC. Only trusted ones.	কোড মড তোমার পুরো PC-তে পৌঁছাতে পারে। শুধু বিশ্বস্তগুলো।
+Import mod	মড আমদানি করো
+Browse mods	মড ব্রাউজ করো
+Mods folder	মড ফোল্ডার
+INSTALLED	ইনস্টল হয়েছে
+Update mods	মড আপডেট করো
+No mods match.	কোনো মড মেলেনি।
+On	চালু
+Remove	সরাও
+Publish	প্রকাশ করো
+Options	বিকল্প
+Back	পিছনে
+Next	পরের
+COLORS	রং
+Reset colors	রং রিসেট করো
+Running on this PC	এই PC-তে চলছে
+NORMAL	স্বাভাবিক
+OFF	বন্ধ
+Local server address	লোকাল সার্ভারের ঠিকানা

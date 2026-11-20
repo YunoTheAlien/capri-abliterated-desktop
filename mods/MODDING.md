@@ -1,6 +1,8 @@
 # Making Capri mods
 
-Capri reads four kinds of mod. Import any of them from **Mainframe > CAPRI > Mods > Import mod**.
+Capri reads four kinds of mod. Import any of them from **Mainframe > CAPRI > Mods > Import mod**, or drop the
+file into her mods folder (**Mods > Mods folder**) while she runs: she takes it in the same way, a code mod
+after her own check and your yes. Take a file out of that folder and its mod comes out of her.
 
 | File | What it does |
 |---|---|
@@ -27,6 +29,26 @@ top as it is:
 - It's drawn over whatever is under it in the stack, or her own look.
 - The Mods list shows each skin's layer. Turn one off and on again to move it to the top.
 - Her colours go on after, so anything drawn in her hair colour follows My Colors.
+
+## Personalities and moods
+
+A `.capri-mod` can bring whole personalities and moods. Each one is a name and the text of its `.md` file, written
+the same way as hers (open a personality in her editor to see the layout):
+
+```json
+{ "format": 1, "id": "night-owl", "name": "Night Owl", "author": "You", "description": "A sleepy night-shift personality.",
+  "personalities": [ { "name": "Night Owl", "text": ">! Wide awake at 3am and proud of it.\n\n## Her character\n\nDrowsy, dry and fond of you." } ],
+  "moods": [ { "name": "Wired", "text": ">! Too much coffee.\n\n## How it changes her\n\nShe talks faster." } ] }
+```
+
+- A line starting `>!` is a note for whoever reads the file; she skips it. A line starting `>` alone is a line
+  switched off, the way she reads it in every file of hers.
+- Turn the mod on and they appear in her personality and mood lists. Turn it off or remove it and they go again.
+- A file you have edited since stays. A personality or mood she already has with that name is never written over.
+- `"senpai": true` on one marks it for abliterated mode, the switch at the bottom of her `sys.md`. It is only
+  written while that mode is on, and switching back off leaves it where it is. Abliterated mode lowers her
+  guardrails, and it stays behind that switch and the terms beside it: the person turning it on accepts those
+  terms and takes responsibility for doing so.
 
 ## Code mods
 

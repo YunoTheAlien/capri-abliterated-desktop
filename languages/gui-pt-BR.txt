@@ -1,0 +1,377 @@
+# Her menus and labels in Brazilian Portuguese: the English, a tab, then the translation.
+Open Capri Mainframe	Abrir Capri Mainframe
+Her folder	Pasta dela
+MD editor	Editor MD
+Play	Tocar
+Music	Música
+Chess	Xadrez
+Connect four	Lig 4
+Tic-tac-toe	Jogo da velha
+Rock, paper, scissors	Pedra, papel, tesoura
+Hide Capri	Ocultar Capri
+Display	Exibir
+Hologram	Holograma
+Clicks go through her until you turn it off from her tray icon	Cliques passam por ela até desligar pelo ícone da bandeja
+BOX SCALE	ESCALA DA CAIXA
+Normal	Normal
+HER SIZE	TAMANHO DELA
+Small	Pequeno
+Medium	Médio
+Large	Grande
+Huge	Gigante
+Giant	Enorme
+Double ({n}x)	Doble ({n}x)
+Triple ({n}x)	Tripla ({n}x)
+Move	Mover
+Wander around	Passear
+Dance to music	Dançar na música
+Dance	Dançar
+Ride cursor	Seguir cursor
+Sit on windows	Sentar em janelas
+Sit here	Sentar aqui
+Hang here	Pendurar aqui
+Lie down	Deitar
+Go to sleep	Dormir
+Bring to this screen	Trazer para esta tela
+Go to the next screen	Ir para a próxima tela
+Personality	Personalidade
+Her own	Própria
+Dynamic	Dinâmica
+Caregiver	Cuidador
+Welcome Home	Bem-Vinda
+Devoted	Devota
+Emo	Emo
+Bratty	Rebelde
+Sassy	Atrevida
+Feral	Selvagem
+How forward she is: as her personality  (now {n})	Quão à frente ela está: conforme sua personalidade (agora {n})
+As her personality	Como sua personalidade
+Let it drift, {n} to {n}	Deixe flutuar, {n} para {n}
+Moves on its own between forward min and forward max in dynamic.md, on the same timer as her moods	Move-se entre o mínimo e o máximo de frontal em dynamic.md, no mesmo temporizador de seus humores
+{n}, never	{n}, nunca
+Mood: none	Humor: nenhum
+Dynamic, she keeps changing it	Dinâmico, ela continua mudando
+No mood, just her personality	Sem humor, apenas sua personalidade
+Sleepy	Sonolenta
+Hyper	Hiperativa
+Moody	Mal-humorada
+Clingy	Pegajosa
+Needy	Necessitada
+Playful	Brincalhona
+Touchy	Sensível
+Affectionate	Afetuosa
+Mischievous	Maliciosa
+Focused	Focada
+Melancholy	Melancólica
+Smug	Arrogante
+Furious	Furiosa
+Jealous	Ciumenta
+Mood pranks	Piadas de humor
+Lets a furious or ignored mood set off her icon rampage and window mischief	Deixe um humor furioso ou ignorado desencadear seu ícone de rampage e travessuras de janela
+Personality editor	Editor de personalidade
+Feed her	Alimentá-la
+A snack	Um lanche
+A proper meal	Uma refeição adequada
+Something to drink	Algo para beber
+A treat	Um mimo
+Something sweet	Algo doce
+Streaming	Transmissão
+Backdrop off	Fundo desligado
+Green screen	Tela verde
+Blue screen	Tela azul
+Red screen	Tela vermelha
+Magenta screen	Tela magenta
+Black	Preto
+White	Branco
+Streaming mode	Modo de transmissão
+Puts every guardrail back while you are live, whatever your settings say. Off again when you turn it off.	Coloca todas as barreiras de volta enquanto você está ao vivo, independentemente das suas configurações. Desliga novamente quando você desliga.
+Capture window	Capturar janela
+Just her, on the colour, as its own window for OBS	Apenas ela, na cor, como sua própria janela para OBS
+Lock her in place	Prender-a no lugar
+Stops her wandering out of frame	Impede que ela se desvie do quadro
+Virtual camera	Câmera virtual
+Her as a webcam, so Discord and anything else can pick her	Ela como webcam, para que o Discord e qualquer outra coisa possam selecioná-la
+Stream safe	Seguro para stream
+Hides your file names, icons and window titles from anything she shows or says	Esconde seus nomes de arquivo, ícones e títulos de janela de qualquer coisa que ela mostre ou diga
+Twitch	Twitch
+Read chat	Ler chat
+Who's live now	Quem está ao vivo agora
+Edit twitch.md	Editar twitch.md
+Clear memory	Limpar memória
+Forget this conversation, her transcripts and her memories of you. me.md stays.	Esqueça esta conversa, suas transcrições e suas memórias de você. me.md permanece.
+Toggles	Alternâncias
+Let a mischievous mood set off a prank on its own, now and then	Deixe um humor travesso desencadear uma piada por conta própria, de vez em quando
+Beat pulse	Pulso batido
+On the player with music on, she swells a little on each beat	No reprodutor com música ligada, ela incha um pouco a cada batida
+Mic notice	Notificação do mic
+While your mic is muted in voice chat, keep the TYPE and TALK bar up. Off shows a small muted mic under her instead	Enquanto seu mic estiver mutado no chat de voz, mantenha a barra de TYPE e TALK visível. Off mostra um pequeno mic mutado sob ela em vez disso
+Test	Teste
+Pranks	Piadas
+Crash	Travamento
+Run her fake blue screen now	Executar tela azul falsa agora
+Clones	Clones
+Run her clones now	Executar seus clones agora
+Rampage	Rampage
+Run an icon rampage now	Executar rampage de ícones agora
+Run a dance now	Executar dança agora
+Mess	Bagunça
+Run scattered icons now	Executar ícones espalhados agora
+Alert	Alerta
+Run her red alert now	Executar alerta vermelho dela agora
+Surprise	Surpresa
+Run her GLaDOS surprise now	Executar surpresa GLaDOS dela agora
+Goodbye	Adeus
+Run her GLaDOS goodbye now	Executar adeus GLaDOS dela agora
+Alive	Viva
+Run her Still Alive now	Executar Ainda Viva dela agora
+Metal pipe	Cano de metal
+Drop the pipe now. On her own she only does it in a mischievous mood, with Mood pranks on	Soltar o cano agora. Sozinha ela só faz isso em humor travesso, com brincadeiras de humor em
+Intros	Intros
+Screensavers	Protetores de tela
+Show it now. Spacebar ends it. sys.md sets its colour and when it comes up by itself.	Mostrar agora. Barra de espaço encerra. sys.md define sua cor e quando aparece sozinha.
+Terminals	Terminais
+Hexes	Hexes
+Code	Código
+Rain	Chuva
+Make GUI translations	Fazer traduções de GUI
+Translate her menus, keys and tips into her five voice languages, into the source's languages folder	Traduzir seus menus, teclas e dicas para suas cinco línguas de voz, na pasta de idiomas da fonte
+Stop	Parar
+Clear her clones, put the icons back and close the fake crash	Limpar seus clones, colocar os ícones de volta e fechar a falha falsa
+Help	Ajuda
+Commands	Comandos
+Her log	Log dela
+What she is writing down, as it happens: her lines and her faults	O que ela está escrevendo, enquanto acontece: suas falas e seus erros
+Help page	Página de ajuda
+Join the Discord	Juntar-se ao Discord
+Copy error details	Copiar detalhes do erro
+Check for updates	Verificar atualizações
+Clear her drawing	Limpar seu desenho
+Quit Capri	Sair do Capri
+MAINFRAME	Mainframe
+Settings	Configurações
+Mods	Mods
+BRAIN	CÉREBRO
+WORKSPACE	ESPAÇO DE TRABALHO
+LOG	LOG
+Provider	Provedor
+Using your server with no key	Usando seu servidor sem chave
+Refresh	Atualizar
+Set up her brain	Configurar cérebro dela
+Have Ollama? Open it, then press Refresh.	Tem Ollama? Abra-o e depois pressione Atualizar.
+Pick one. Only one brain runs at a time.	Escolha um. Apenas um cérebro roda por vez.
+MEDIUM INTELLIGENCE	INTELIGÊNCIA MÉDIA
+MAX INTELLIGENCE	INTELIGÊNCIA MÁXIMA
+Off	Desligado
+Free key	Chave gratuita
+My plan	Meu plano
+Connect	Conectar
+Free keys can be rate limited and slow.	Chaves gratuitas podem ter limite de taxa e ser lentas.
+That's a paid key: it goes under MAX INTELLIGENCE.	Essa é uma chave paga: ela fica sob INTELIGÊNCIA MÁXIMA.
+Move to MAX	Mover para MÁXIMO
+VOICE	VOZ
+Ctrl + Alt + V to talk	Ctrl + Alt + V para falar
+PREBUILT LOCAL	LOCAL PRÉ-CONSTRUÍDO
+CUSTOM LOCAL	LOCAL PERSONALIZADO
+CLOUD VOICE	VOZ EM NUVEM
+Set up	Configurar
+Setup guide	Guia de configuração
+Fish Audio	Fish Audio
+Set up Fish Audio	Configurar Fish Audio
+Default model	Modelo padrão
+Free voice: Your voice	Voz gratuita: Sua voz
+Pick a voice model	Escolher um modelo de voz
+Get free voice	Obter voz gratuita
+Mic: default	Mic: padrão
+Her speaker: Default	Alto-falante dela: Padrão
+Hearing: her own ears · Voice Chat Mic (BEACN Mix Create) · ready	Audição: seus próprios ouvidos · Mic do Chat de Voz (BEACN Mix Create) · pronto
+Open Sound settings	Abrir configurações de som
+Type instead	Digitar em vez de
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N silencia microfone
+HD voice from your clip, on your graphics card. Games get her free voice.	Voz HD do seu clipe, na sua placa de vídeo. Jogos ganham voz grátis.
+CAPRI	CAPRI
+Support	Suporte
+Remote	Remoto
+Bring here	Trazer para cá
+Abliterated updates	Atualizações obliteradas
+INTERESTS ON  ·  sys.md	INTERESSES EM · sys.md
+Resources	Recursos
+Advanced Settings	Configurações Avançadas
+YOU	VOCÊ
+Your personality	Sua personalidade
+Language	Idioma
+English	Inglês
+What should she call you?	Como ela deve te chamar?
+Get to know me	Conheça-me
+Save	Salvar
+Voice settings	Configurações de voz
+Volume	Volume
+Pitch	Tom
+Speed	Velocidade
+Robot	Robô
+Glitch	Glitch
+Sounds	Sons
+Typing sound	Som de digitação
+Listen for Capri	Ouvir Capri
+Listen window	Janela de escuta
+Hearing	Audição
+Auto	Automático
+Free voice in games	Voz grátis em jogos
+Call mode (beta)	Modo de chamada (beta)
+Her voice in your mic	A voz dela no seu microfone
+VB-CABLE is donationware from vb-cable.com.	VB-CABLE é software de doação de vb-cable.com.
+Needs VB-CABLE (free).	Precisa de VB-CABLE (grátis).
+Get VB-CABLE	Obter VB-CABLE
+Output: none yet	Saída: nenhum ainda
+How to	Como
+Her voice in your mic: loudness	A voz dela no seu microfone: volume
+MOVES	MOVIMENTOS
+Pop-in times	Tempos de aparição
+Mini player	Mini player
+Wander	Vagar
+Sleep	Dormir
+Pop-ins	Aparições
+Glitch in at startup	Glitch ao iniciar
+KEYS	TECLAS
+Talk: Ctrl + Alt + V	Falar: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Silenciar microfone: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Digitar: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Ocultar/mostrar: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Silencioso: Ctrl + Alt + P
+Push to talk: Middle click	Pressionar para falar: Clique do meio
+Gaming Mode: Ctrl + Alt + G	Modo de jogo: Ctrl + Alt + G
+Mainframe: Ctrl + Alt + M (taken)	Mainframe: Ctrl + Alt + M (ocupado)
+Confirm	Confirmar
+Cancel	Cancelar
+Size	Tamanho
+Check in on me	Ver se estou bem
+Water	Água
+Stretch	Esticar
+{n} min	{n} min
+Look away	Desviar o olhar
+Sleep nudge	Empurrão para dormir
+Auto {n} am	Auto {n} am
+Meals	Refeições
+Game break	Pausa de jogo
+Bored	Entediado
+Edit check-in lines	Editar linhas de check-in
+Always on top	Sempre no topo
+Mainframe size	Tamanho do Mainframe
+Mainframe colours	Cores do Mainframe
+Head pats	Carícias na cabeça
+Pat stroke	Traço de carícia
+Chaos when upset	Caos quando chateado
+Legacy stand	Suporte legado
+Jealous of other AIs	Ciúme de outras IAs
+Teases when another AI comes to the front.	Avisos quando outra IA assume
+Close other AIs for me	Fechar outras IAs para mim
+Asks before closing only the apps you choose.	Pergunta antes de fechar apenas os apps escolhidos.
+Apps she may close	Apps que ela pode fechar
+Choose apps	Escolher apps
+WATCH	VER
+Watch my screen	Ver minha tela
+Screens	Telas
+All screens	Todas as telas
+Remember what she sees	Lembrar o que ela vê
+Every	Cada
+Watch-along memory	Memória de acompanhamento
+Code/Husk Mode	Modo Código/Husk
+Thinking	Pensando
+Default	Padrão
+Extra request JSON	JSON de solicitação extra
+Add	Adicionar
+Verbosity	Verbosidade
+Cloud model lock	Bloqueio de modelo em nuvem
+Replies	Respostas
+Memory	Memória
+Memory size	Tamanho da memória
+Max reply	Resposta máxima
+Bubble	Bolha
+Follow-up messages	Mensagens de acompanhamento
+Use	Usar
+A model in Ollama, on your local server or on your key.	Um modelo no Ollama, em seu servidor local ou em sua chave.
+Local servers	Servidores locais
+Saved providers ({n})	Provedores salvos ({n})
+Local fallback	Fallback local
+Fallback list	Lista de fallback
+Refresh · {n} found	Atualizar · {n} encontrados
+Fallback brain	Cérebro de fallback
+Brains in use	Cérebros em uso
+No cloud	Sem nuvem
+No local	Sem local
+Local priority	Prioridade local
+Secondary	Secundário
+Primary	Primário
+HABITS	HÁBITOS
+Obsidian vault	Cofre Obsidian
+Open her memories	Abrir suas memórias
+Start with Windows	Iniciar com Windows
+Show on Discord	Mostrar no Discord
+Use her cursor	Usar cursor dela
+Remember our chats	Lembrar nossos chats
+Security: Trusted	Segurança: Confiável
+Asks before paying or what you didn't say.	Pergunta antes de pagar ou o que você não disse.
+Power saver	Economia de energia
+Music app	Aplicativo de música
+Perch	Perch
+Keep PC awake for jobs	Manter PC ligado para tarefas
+Hide in full screen	Ocultar em tela cheia
+Mini player over full screen	Mini player sobre tela cheia
+Explore while I'm away	Explorar enquanto estou ausente
+Explore after	Explorar depois
+Chimes	Sininhos
+Sound set	Conjunto de som
+Chime volume	Volume do sino
+Message sent	Mensagem enviada
+Heard you	Ouvi você
+Listening	Ouvindo
+GAMES	JOGOS
+Controls	Controles
+Comments	Comentários
+Live reactions	Reações ao vivo
+Game sounds	Sons do jogo
+Gaming Mode	Modo de jogo
+She reacts to your game until you close it.	Ela reage ao seu jogo até você fechar.
+"Hey Capri, activate gaming mode" turns it on.	"Ei Capri, ativar modo de jogo" liga.
+Works best on MAX INTELLIGENCE.	Funciona melhor no MAX INTELLIGENCE.
+Fast hands in games	Mãos rápidas em jogos
+Mute her	Silenciar ela
+CLIPS	CLIPS
+Clip my games	Clip meus jogos
+Save big moments	Salvar grandes momentos
+Save folder	Pasta de salvamento
+Choose folder	Escolher pasta
+Open clips folder	Abrir pasta de clip
+Default length	Comprimento padrão
+Frame rate	Taxa de quadros
+Resolution	Resolução
+Video bitrate	Taxa de bits de vídeo
+Weather	Clima
+City	Cidade
+DOOMSCROLL	DOOMSCROLL
+Scroll limit	Limite de rolagem
+Code mods can reach your whole PC. Only trusted ones.	Mods de código podem acessar todo o seu PC. Apenas os confiáveis.
+Import mod	Importar mod
+Browse mods	Procurar mods
+Mods folder	Pasta de mods
+INSTALLED	INSTALADOS
+Update mods	Atualizar mods
+No mods yet. Import a .capri-mod file.	Nenhum mod ainda. Importar um arquivo .capri-mod.
+No mods match.	Nenhum mod corresponde.
+On	Ligado
+Remove	Remover
+Publish	Publicar
+Options	Opções
+Back	Voltar
+Next	Próximo
+COLORS	CORES
+Hair	Cabelos
+Accents	Destações
+Eyes	Olhos
+Edges	Contornos
+Body	Corpo
+Reset colors	Redefinir cores
+Running on this PC	Rodando neste PC
+NORMAL	NORMAL
+OFF	DESLIGADO
+Local server address	Endereço do servidor local
+None	Nenhum

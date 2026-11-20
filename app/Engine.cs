@@ -143,12 +143,16 @@ namespace CapriDesktop
         private bool serverEyes;
         private bool serverCpu;
         private int serverWindow;
+        private int serverLimit;
         internal volatile bool Cancel;
         internal volatile bool CpuOnly;
         // The window an ask is growing her to past 16K, or 0. A load of that size that stops on the graphics card throws without
         // marking her for the CPU, so Brain can put back the size that worked.
         internal volatile int Careful;
         private int loading;
+        // Asks in flight, and how long since the last one finished, for her idle stop.
+        private int busy;
+        private readonly Stopwatch quiet = Stopwatch.StartNew();
         private bool retryGpu;
 
         internal bool Loading { get { return Interlocked.CompareExchange(ref loading, 0, 0) > 0; } }
@@ -342,10 +346,46 @@ namespace CapriDesktop
 
         internal static int Threads(int processors) { return Math.Max(1, Math.Min(4, processors / 2)); }
 
-        internal ProcessStartInfo StartInfo(Pick pick, bool eyes, bool cpu, int number, int window = 4096)
+        // How much of the graphics card she leaves for everything else, in MiB. llama-server fits as many of the
+        // model's layers on the card as leave this much free and runs the rest on the processor, so a bigger
+        // margin makes her slower and never stops her. Scaled to the card: a fifth of it, at least 1 GiB and at
+        // most 4, so a game or a stream beside her keeps room on a small card and a big one is not held back
+        // for nothing. Her eyes load onto the card after the fit is worked out, so their file is added on top.
+        // Zero when the card is not known, which leaves llama-server's own margin.
+        internal static int FreeOnCard(long vram, long eyes)
+        {
+            if (vram <= 0) return 0;
+            const long Mib = 1L << 20;
+            long free = Math.Max(1024 * Mib, Math.Min(4096 * Mib, vram / 5)) + Math.Max(0, eyes);
+            return (int)((free / Mib + 255) / 256 * 256);
+        }
+
+        private static Machine card;
+
+        // limit: Brain VRAM from her Resources panel, in GB. Auto (0) leaves the margin scaled to the card; a cap
+        // leaves everything above it free instead, with her eyes on top as before.
+        private string Margin(Pick pick, bool eyes, int limit)
+        {
+            try
+            {
+                if (card == null) card = Machine.Read();
+                long eyesSize = 0;
+                if (eyes) { FileInfo file = new FileInfo(EyesPath(pick)); if (file.Exists) eyesSize = file.Length; }
+                if (limit > 0 && card.Vram >= (1L << 30))
+                {
+                    long capped = (card.Vram >> 20) - ((long)limit << 10) + (eyesSize >> 20);
+                    if (capped > 1024) return " -fitt " + capped.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                }
+                int free = FreeOnCard(card.Vram, eyesSize);
+                return free <= 0 ? "" : " -fitt " + free.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+            catch (Exception caughtOne) { Brain.Caught(caughtOne); return ""; }
+        }
+
+        internal ProcessStartInfo StartInfo(Pick pick, bool eyes, bool cpu, int number, int window = 4096, int limit = 0)
         {
             int threads = Threads(Environment.ProcessorCount);
-            ProcessStartInfo info = new ProcessStartInfo(Server, "-m \"" + ModelPath(pick) + "\"" + (eyes ? " --mmproj \"" + EyesPath(pick) + "\"" : "") + " --host 127.0.0.1 --port " + number + " -c " + window + " -np 1 -a capri --jinja --reasoning off --no-webui --sleep-idle-seconds 900 --log-disable -t " + threads + " -tb " + threads + " -b 256 -ub 128 --poll 0 --poll-batch 0" + (cpu ? " --device none -ngl 0 --no-mmproj-offload" : ""));
+            ProcessStartInfo info = new ProcessStartInfo(Server, "-m \"" + ModelPath(pick) + "\"" + (eyes ? " --mmproj \"" + EyesPath(pick) + "\"" : "") + " --host 127.0.0.1 --port " + number + " -c " + window + " -np 1 -a capri --jinja --reasoning off --no-webui --sleep-idle-seconds 900 --log-disable -t " + threads + " -tb " + threads + " -b 256 -ub 128 --poll 0 --poll-batch 0" + (cpu ? " --device none -ngl 0 --no-mmproj-offload" : Margin(pick, eyes, limit)));
             info.UseShellExecute = false;
             info.CreateNoWindow = true;
             info.WorkingDirectory = Folder;
@@ -371,7 +411,44 @@ namespace CapriDesktop
         {
             Interlocked.Increment(ref loading);
             try { Load(pick); }
-            finally { Interlocked.Decrement(ref loading); }
+            finally { lock (gate) quiet.Restart(); Interlocked.Decrement(ref loading); }
+        }
+
+        internal void Begin() { Interlocked.Increment(ref busy); }
+
+        internal void End()
+        {
+            lock (gate) quiet.Restart();
+            Interlocked.Decrement(ref busy);
+        }
+
+        internal bool Running { get { lock (gate) return server != null && !server.HasExited; } }
+
+        // The server's process, for her Resources panel to tell her own use apart from everything else's.
+        internal int ServerId
+        {
+            get
+            {
+                lock (gate)
+                {
+                    try { return server != null && !server.HasExited ? server.Id : 0; }
+                    catch (InvalidOperationException) { return 0; }
+                }
+            }
+        }
+
+        internal double Unused { get { lock (gate) return quiet.Elapsed.TotalSeconds; } }
+
+        // Stops the server when nothing has asked it anything for that many seconds, it is not loading, and no ask
+        // is in flight. True when it stopped. The next ask starts it again.
+        internal bool Rest(double seconds)
+        {
+            lock (gate)
+            {
+                if (server == null || Loading || Interlocked.CompareExchange(ref busy, 0, 0) > 0 || quiet.Elapsed.TotalSeconds < seconds) return false;
+                Stop();
+                return true;
+            }
         }
 
         private void Load(Pick pick)
@@ -383,17 +460,21 @@ namespace CapriDesktop
                 bool eyes = HasEyes(pick);
                 window = Brain.Window;
                 careful = window == Careful;
-                if (server != null && !server.HasExited && serverEyes == eyes && serverCpu == CpuOnly && serverWindow == window) return;
+                // RAM only in Brain VRAM is the processor too, and a changed cap reloads her under the new one.
+                int limit = Brain.GpuLimit;
+                bool cpu = CpuOnly || limit < 0;
+                if (server != null && !server.HasExited && serverEyes == eyes && serverCpu == cpu && serverWindow == window && serverLimit == limit) return;
                 if (server != null) Stop();
                 if (!File.Exists(Server) || !File.Exists(ModelPath(pick))) throw new BrainException("Brain not downloaded. Press Set up her brain.");
                 port = FreePort();
                 serverEyes = eyes;
-                serverCpu = CpuOnly;
+                serverCpu = cpu;
                 serverWindow = window;
+                serverLimit = limit;
                 // The try is marked before it starts, so a load that takes Capri or the PC down with it leaves her on the CPU for
                 // this version.
                 if (retryGpu && !serverCpu) KeepCpu("trying the graphics card again");
-                server = Spawn(StartInfo(pick, eyes, serverCpu, port, window));
+                server = Spawn(StartInfo(pick, eyes, serverCpu, port, window, limit));
                 Lower(server);
                 Bind(server);
             }

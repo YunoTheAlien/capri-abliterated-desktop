@@ -20,7 +20,11 @@ namespace CapriDesktop
         private const uint SpeechWindow = (1u << 15) - 1;
         private const uint CloseOnExec = 1;
         private const string Model = "parakeet-tdt-0.6b-v2-int8";
-        private const string Recorder = "parec";
+        // parec when PulseAudio's tools are installed, else PipeWire's own pw-record. Ubuntu 26.04 ships PipeWire without
+        // pulseaudio-utils, so parec alone meant TALK couldn't hear anyone on a stock install.
+        private const string Recorder = "parec", PipeRecorder = "pw-record";
+        // The PipeWire node name of the mic picked under VOICE (Saved.MicrophoneNode), or null for the system's default.
+        internal static string Device;
         private const string Recognizer = "sherpa-onnx-offline";
         private readonly string folder;
 
@@ -29,8 +33,8 @@ namespace CapriDesktop
         internal async Task<string> Listen(Action decoding, CancellationToken stop)
         {
             stop.ThrowIfCancellationRequested();
-            string mic = Find(Recorder), engine = Find(Recognizer, Path.GetDirectoryName(folder));
-            if (mic == null) throw new IOException("Install parec (PulseAudio tools) so I can hear your mic.");
+            string mic = Find(Recorder) ?? Find(PipeRecorder), engine = Find(Recognizer, Path.GetDirectoryName(folder));
+            if (mic == null) throw new IOException("Install parec (PulseAudio tools) or pw-record (PipeWire) so I can hear your mic.");
             if (engine == null) throw new IOException("Extract sherpa-onnx into Capri/ears under your config folder, or put sherpa-onnx-offline on PATH, so I can hear your words.");
             string encoder = Path.Combine(folder, "encoder.int8.onnx"), decoder = Path.Combine(folder, "decoder.int8.onnx");
             string joiner = Path.Combine(folder, "joiner.int8.onnx"), tokens = Path.Combine(folder, "tokens.txt");
@@ -82,7 +86,7 @@ namespace CapriDesktop
             limit.CancelAfter(TimeSpan.FromSeconds(15));
             try
             {
-                using Process run = Start(mic, "--raw", "--format=s16le", "--rate=16000", "--channels=1", "--latency-msec=50", "--client-name=Capri");
+                using Process run = Start(mic, RecordArguments(mic, Device));
                 using var kill = limit.Token.Register(() => Stop(run));
                 Task errors = run.StandardError.BaseStream.CopyToAsync(Stream.Null, limit.Token);
                 try { return await Words(run.StandardOutput.BaseStream, limit.Token).ConfigureAwait(false); }
@@ -95,7 +99,7 @@ namespace CapriDesktop
             catch (Exception error) when (error is IOException || error is Win32Exception || error is OperationCanceledException)
             {
                 stop.ThrowIfCancellationRequested();
-                throw new IOException("I couldn't hear your default mic. Check your sound settings and try TALK again.");
+                throw new IOException(string.IsNullOrEmpty(Device) ? "I couldn't hear your default mic. Check your sound settings and try TALK again." : "I couldn't hear the mic picked under VOICE. Pick another, or Default, and try TALK again.");
             }
         }
 
@@ -131,7 +135,21 @@ namespace CapriDesktop
 
         // Opened from the app menu she doesn't get the PATH a shell's .bashrc sets, so she also looks in the bin folder of a build
         // extracted into her ears folder, then ~/.local/bin, /usr/local/bin and /usr/bin.
-        private static string Find(string name, string ears = null)
+        // 16 kHz mono 16-bit raw on stdout, from parec or pw-record, from the picked mic or the default.
+        internal static string[] RecordArguments(string tool, string device)
+        {
+            bool pipe = Path.GetFileName(tool) == PipeRecorder;
+            var args = pipe ? new List<string> { "--raw", "--format=s16", "--rate=16000", "--channels=1" }
+                : new List<string> { "--raw", "--format=s16le", "--rate=16000", "--channels=1", "--latency-msec=50", "--client-name=Capri" };
+            if (!string.IsNullOrEmpty(device)) args.Add((pipe ? "--target=" : "--device=") + device);
+            if (pipe) args.Add("-");
+            return args.ToArray();
+        }
+
+        // The recorder TALK uses, for the mic test under VOICE.
+        internal static string RecorderTool() { return Find(Recorder) ?? Find(PipeRecorder); }
+
+        internal static string Find(string name, string ears = null)
         {
             var places = new List<string>((Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator));
             try { if (ears != null && Directory.Exists(ears)) foreach (string build in Directory.GetDirectories(ears)) places.Add(Path.Combine(build, "bin")); }

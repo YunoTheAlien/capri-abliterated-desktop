@@ -1,0 +1,206 @@
+# Her menus and labels in Azerbaijani: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe-i aç
+Her folder	Onun qovluğu
+Play	Oynat
+Music	Musiqi
+Chess	Şahmat
+Connect four	Dörd-dörd
+Tic-tac-toe	Tik-tak-to
+Rock, paper, scissors	Daş, kağız, qayçı
+Hide Capri	Capri-ni gizlət
+Hologram	Hologram
+Normal	Normal
+Small	Kiçik
+Medium	Orta
+Large	Böyük
+Huge	Nəhəng
+Giant	Nəhəng
+Move	Köçür
+Wander around	Ətrafda gəz
+Dance to music	Musiqiyə rəqs et
+Dance	Rəqs
+Ride cursor	Kursora min
+Sit on windows	Pəncərələrdə otur
+Sit here	Burada otur
+Hang here	Burada asıl
+Lie down	Uzan
+Go to sleep	Yatmağa get
+Bring to this screen	Bu ekrana gətir
+Go to the next screen	Növbəti ekrana keç
+Black	Qara
+White	Ağ
+Test	Sına
+Stop	Dayandır
+Help	Kömək
+Commands	Əmrlər
+Help page	Kömək səhifəsi
+Join the Discord	Discord-a qoşul
+Copy error details	Xəta təfərrüatlarını kopyala
+Check for updates	Yeniləmələri yoxla
+Quit Capri	Capri-dən çıx
+MAINFRAME	MAINFRAME
+Settings	Parametrlər
+Mods	Modlar
+BRAIN	BEYİN
+Provider	Provayder
+Using your server with no key	Serverinizi açarsız istifadə edirəm
+Refresh	Yenilə
+Set up her brain	Onun beynini quraşdır
+Have Ollama? Open it, then press Refresh.	Ollama-n var? Aç, sonra Yenilə bas.
+Pick one. Only one brain runs at a time.	Birini seç. Eyni anda yalnız bir beyin işləyir.
+MEDIUM INTELLIGENCE	ORTA INTELLEKT
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Söndür
+Free key	Pulsuz açar
+Connect	Qoş
+Free keys can be rate limited and slow.	Pulsuz açarların sorğu limiti ola və yavaş işləyə bilər.
+That's a paid key: it goes under MAX INTELLIGENCE.	Bu ödənişli açardır: MAX INTELLIGENCE altına düşür.
+Move to MAX	MAX-a köçür
+VOICE	SƏS
+Ctrl + Alt + V to talk	Danışmaq üçün Ctrl + Alt + V
+PREBUILT LOCAL	HAZIR YERLİ
+CUSTOM LOCAL	FƏRDİ YERLİ
+CLOUD VOICE	BULUD SƏSİ
+Set up	Quraşdır
+Setup guide	Quraşdırma təlimatı
+Fish Audio	Fish Audio
+Default model	Standart model
+Pick a voice model	Səs modeli seç
+Get free voice	Pulsuz səs al
+Mic: default	Mikrofon: standart
+Her speaker: Default	Onun dinamiki: Standart
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N mikrofonu səssizləşdirir
+CAPRI	CAPRI
+Support	Dəstək
+Remote	Uzaqdan
+Bring here	Buraya gətir
+Advanced Settings	Qabaqcıl parametrlər
+YOU	SƏN
+Your personality	Sənin xarakterin
+Language	Dil
+English	İngilis
+What should she call you?	Səni necə çağırsın?
+Save	Yadda saxla
+Volume	Səs həcmi
+Pitch	Ton
+Speed	Sürət
+Robot	Robot
+Glitch	Nasazlıq
+Sounds	Səslər
+Typing sound	Yazma səsi
+Listen for Capri	Capri üçün dinlə
+Hearing	Eşitmə
+Auto	Avtomatik
+Free voice in games	Oyunlarda pulsuz səs
+Call mode (beta)	Zəng rejimi (beta)
+Her voice in your mic	Onun səsi mikrofonunda
+Get VB-CABLE	VB-CABLE al
+How to	Necə
+Her voice in your mic: loudness	Onun səsi mikrofonunda: yüksəklik
+MOVES	HƏRƏKƏTLƏR
+Pop-in times	Görünmə vaxtları
+Mini player	Mini pleyer
+Wander	Gəz
+Sleep	Yuxu
+Pop-ins	Görünmələr
+Glitch in at startup	Başlanğıcda nasazlıq
+KEYS	AÇARLAR
+Talk: Ctrl + Alt + V	Danış: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Mikrofonu səssiz et: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Yaz: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Gizlət/göstər: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Səssiz: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Oyun rejimi: Ctrl + Alt + G
+Confirm	Təsdiqlə
+Cancel	Ləğv et
+Size	Ölçü
+Check in on me	Məni yoxla
+Edit check-in lines	Yoxlama sətirlərini redaktə et
+Always on top	Həmişə üstdə
+Mainframe size	Mainframe ölçüsü
+Mainframe colours	Mainframe rəngləri
+Head pats	Başa sığal
+Pat stroke	Sığal
+Chaos when upset	Əsəbiləşəndə xaos
+Legacy stand	Köhnə dayaq
+Jealous of other AIs	Digər AI-lərə qısqanır
+Teases when another AI comes to the front.	Başqa AI önə çıxanda zarafat edir.
+Close other AIs for me	Mənim üçün digər AI-ləri bağla
+Asks before closing only the apps you choose.	Yalnız seçdiyin tətbiqləri bağlamazdan əvvəl soruşur.
+Apps she may close	Bağlaya biləcəyi tətbiqlər
+Choose apps	Tətbiqləri seç
+WATCH	BAX
+Watch my screen	Ekranıma bax
+Screens	Ekranlar
+All screens	Bütün ekranlar
+Remember what she sees	Onun gördüklərini xatırla
+Every	Hər
+Watch-along memory	Birlikdə izləmə yaddaşı
+Code/Husk Mode	Kod/Husk rejimi
+Thinking	Düşünür
+Default	Standart
+Extra request JSON	Əlavə sorğu JSON
+Add	Əlavə et
+Verbosity	Ətraflılıq
+Replies	Cavablar
+Memory	Yaddaş
+Memory size	Yaddaş ölçüsü
+Max reply	Maksimum cavab
+Bubble	Baloncuq
+Follow-up messages	Davam mesajları
+Use	İstifadə et
+A model in Ollama, on your local server or on your key.	Ollama-da model, yerli serverində və ya öz açarınla.
+HABITS	ADƏTLƏR
+Open her memories	Onun xatirələrini aç
+Start with Windows	Windows ilə başla
+Show on Discord	Discord-da göstər
+Use her cursor	Onun kursorundan istifadə et
+Remember our chats	Söhbətlərimizi xatırla
+Power saver	Enerji qənaəti
+Music app	Musiqi tətbiqi
+Perch	Oturacaq
+Keep PC awake for jobs	İşlər üçün kompüteri oyaq saxla
+Hide in full screen	Tam ekranda gizlət
+Mini player over full screen	Mini pleyer tam ekranın üstündə
+Explore while I'm away	Mən yoxdur ikən araşdır
+Explore after	Sonra araşdır
+GAMES	OYUNLAR
+Controls	İdarəetmə
+Comments	Şərhlər
+Live reactions	Canlı reaksiyalar
+Game sounds	Oyun səsləri
+Gaming Mode	Oyun rejimi
+She reacts to your game until you close it.	Bağlayana qədər oyununa reaksiya verir.
+Works best on MAX INTELLIGENCE.	MAX INTELLIGENCE ilə ən yaxşı işləyir.
+Fast hands in games	Oyunlarda sürətli əllər
+Mute her	Onu səssiz et
+CLIPS	KLİPLƏR
+Clip my games	Oyunlarımı klipə al
+Save big moments	Böyük anları yadda saxla
+Save folder	Yaddaş qovluğu
+Choose folder	Qovluq seç
+Open clips folder	Kliplər qovluğunu aç
+Default length	Standart uzunluq
+Frame rate	Kadr sürəti
+Resolution	Ayırdetmə
+Video bitrate	Video bit sürəti
+Weather	Hava
+Code mods can reach your whole PC. Only trusted ones.	Kod modları bütün kompüterinə çata bilər. Yalnız etibarlı olanları.
+Import mod	Modu idxal et
+Browse mods	Modlara bax
+Mods folder	Modlar qovluğu
+INSTALLED	QURAŞDIRILIB
+Update mods	Modları yenilə
+No mods match.	Uyğun modlar yoxdur.
+On	Yandır
+Remove	Sil
+Publish	Nəşr et
+Options	Seçimlər
+Back	Geri
+Next	Növbəti
+COLORS	RƏNGLƏR
+Reset colors	Rəngləri sıfırla
+Running on this PC	Bu kompüterdə işləyir
+NORMAL	NORMAL
+OFF	SÖNÜK
+Local server address	Yerli server ünvanı

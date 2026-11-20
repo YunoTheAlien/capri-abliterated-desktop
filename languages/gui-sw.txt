@@ -1,0 +1,206 @@
+# Her menus and labels in Swahili: the English, a tab, then the translation.
+Open Capri Mainframe	Fungua Capri Mainframe
+Her folder	Folda yake
+Play	Cheza
+Music	Muziki
+Chess	Chesi
+Connect four	Nne mfululizo
+Tic-tac-toe	Tic-tac-toe
+Rock, paper, scissors	Jiwe, karatasi, mkasi
+Hide Capri	Ficha Capri
+Hologram	Hologramu
+Normal	Kawaida
+Small	Ndogo
+Medium	Wastani
+Large	Kubwa
+Huge	Kubwa sana
+Giant	Kubwa mno
+Move	Sogeza
+Wander around	Zurura huku na kule
+Dance to music	Cheza kwa muziki
+Dance	Cheza
+Ride cursor	Panda kiashiria
+Sit on windows	Keti juu ya madirisha
+Sit here	Kaa hapa
+Hang here	Kaa hapa
+Lie down	Lala chini
+Go to sleep	Nenda kulala
+Bring to this screen	Leta kwenye skrini hii
+Go to the next screen	Nenda skrini inayofuata
+Black	Nyeusi
+White	Nyeupe
+Test	Jaribu
+Stop	Simamisha
+Help	Msaada
+Commands	Amri
+Help page	Ukurasa wa msaada
+Join the Discord	Jiunge na Discord
+Copy error details	Nakili maelezo ya hitilafu
+Check for updates	Angalia masasisho
+Quit Capri	Funga Capri
+MAINFRAME	MAINFRAME
+Settings	Mipangilio
+Mods	Moduli
+BRAIN	UBONGO
+Provider	Mtoaji
+Using your server with no key	Kutumia seva yako bila ufunguo
+Refresh	Onyesha upya
+Set up her brain	Sanidi ubongo wake
+Have Ollama? Open it, then press Refresh.	Una Ollama? Ifungue, kisha bonyeza Onyesha upya.
+Pick one. Only one brain runs at a time.	Chagua moja. Ubongo mmoja tu unaendeshwa kwa wakati mmoja.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Zima
+Free key	Ufunguo wa bure
+Connect	Unganisha
+Free keys can be rate limited and slow.	Funguo za bure zinaweza kuwekewa kikomo cha kasi na kuwa polepole.
+That's a paid key: it goes under MAX INTELLIGENCE.	Huo ni ufunguo wa kulipia: unaenda chini ya MAX INTELLIGENCE.
+Move to MAX	Sogeza hadi MAX
+VOICE	SAUTI
+Ctrl + Alt + V to talk	Ctrl + Alt + V kuzungumza
+PREBUILT LOCAL	MAANDALIZI YA NDANI
+CUSTOM LOCAL	MAALUM YA NDANI
+CLOUD VOICE	SAUTI YA WINGU
+Set up	Sanidi
+Setup guide	Mwongozo wa usanidi
+Fish Audio	Fish Audio
+Default model	Modeli chaguo-msingi
+Pick a voice model	Chagua modeli ya sauti
+Get free voice	Pata sauti ya bure
+Mic: default	Maikrofoni: chaguo-msingi
+Her speaker: Default	Spika yake: Chaguo-msingi
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N inanyamazisha maikrofoni
+CAPRI	CAPRI
+Support	Msaada
+Remote	Mbali
+Bring here	Leta hapa
+Advanced Settings	Mipangilio ya Kina
+YOU	WEWE
+Your personality	Utu wako
+Language	Lugha
+English	Kiingereza
+What should she call you?	Anapaswa kukuita nini?
+Save	Hifadhi
+Volume	Sauti kubwa
+Pitch	Mwinuko
+Speed	Kasi
+Robot	Roboti
+Glitch	Glitch
+Sounds	Sauti
+Typing sound	Sauti ya kuandika
+Listen for Capri	Sikiliza Capri
+Hearing	Kusikia
+Auto	Otomatiki
+Free voice in games	Sauti ya bure kwenye michezo
+Call mode (beta)	Hali ya simu (beta)
+Her voice in your mic	Sauti yake kwenye maikrofoni yako
+Get VB-CABLE	Pata VB-CABLE
+How to	Jinsi ya
+Her voice in your mic: loudness	Sauti yake kwenye maikrofoni yako: sauti kubwa
+MOVES	MIENDO
+Pop-in times	Nyakati za kuingia
+Mini player	Kicheza kidogo
+Wander	Zurura
+Sleep	Lala
+Pop-ins	Kuingia
+Glitch in at startup	Glitch wakati wa kuanza
+KEYS	VITUFE
+Talk: Ctrl + Alt + V	Zungumza: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Nyamazisha maikrofoni: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Andika: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Ficha/onyesha: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Kimya: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Hali ya Michezo: Ctrl + Alt + G
+Confirm	Thibitisha
+Cancel	Ghairi
+Size	Ukubwa
+Check in on me	Niangalie
+Edit check-in lines	Hariri mistari ya kuingia
+Always on top	Daima juu
+Mainframe size	Ukubwa wa Mainframe
+Mainframe colours	Rangi za Mainframe
+Head pats	Kupapasa kichwa
+Pat stroke	Mwendo wa kupapasa
+Chaos when upset	Fujo anapokasirika
+Legacy stand	Stendi ya zamani
+Jealous of other AIs	Ana wivu na AI nyingine
+Teases when another AI comes to the front.	Hutania AI nyingine inapokuja mbele.
+Close other AIs for me	Zifunge AI nyingine kwa ajili yangu
+Asks before closing only the apps you choose.	Huuliza kabla ya kufunga programu ulizochagua pekee.
+Apps she may close	Programu anazoweza kufunga
+Choose apps	Chagua programu
+WATCH	TAZAMA
+Watch my screen	Tazama skrini yangu
+Screens	Skrini
+All screens	Skrini zote
+Remember what she sees	Kumbuka anachokiona
+Every	Kila
+Watch-along memory	Kumbukumbu ya kutazama pamoja
+Code/Husk Mode	Hali ya Code/Husk
+Thinking	Nafikiri
+Default	Chaguo-msingi
+Extra request JSON	Ombi la ziada la JSON
+Add	Ongeza
+Verbosity	Umaridadi wa maneno
+Replies	Majibu
+Memory	Kumbukumbu
+Memory size	Ukubwa wa kumbukumbu
+Max reply	Jibu la juu zaidi
+Bubble	Kiputo
+Follow-up messages	Ujumbe wa kufuatilia
+Use	Tumia
+A model in Ollama, on your local server or on your key.	Modeli katika Ollama, kwenye seva yako ya ndani au kwa ufunguo wako.
+HABITS	TABIA
+Open her memories	Fungua kumbukumbu zake
+Start with Windows	Anza na Windows
+Show on Discord	Onyesha kwenye Discord
+Use her cursor	Tumia kiashiria chake
+Remember our chats	Kumbuka mazungumzo yetu
+Power saver	Kiokoa nguvu
+Music app	Programu ya muziki
+Perch	Kiti
+Keep PC awake for jobs	Weka Kompyuta macho kwa kazi
+Hide in full screen	Ficha kwenye skrini nzima
+Mini player over full screen	Kicheza kidogo juu ya skrini nzima
+Explore while I'm away	Chunguza nisipokuwepo
+Explore after	Chunguza baadaye
+GAMES	MICHEZO
+Controls	Vidhibiti
+Comments	Maoni
+Live reactions	Miitikio ya moja kwa moja
+Game sounds	Sauti za mchezo
+Gaming Mode	Hali ya Michezo
+She reacts to your game until you close it.	Anaitikia mchezo wako hadi uufunge.
+Works best on MAX INTELLIGENCE.	Hufanya kazi vizuri zaidi kwenye MAX INTELLIGENCE.
+Fast hands in games	Mikono ya haraka kwenye michezo
+Mute her	Nyamazisha yeye
+CLIPS	KLIPU
+Clip my games	Nirekodie michezo yangu
+Save big moments	Hifadhi nyakati kubwa
+Save folder	Folda ya kuhifadhi
+Choose folder	Chagua folda
+Open clips folder	Fungua folda ya klipu
+Default length	Urefu chaguo-msingi
+Frame rate	Kasi ya fremu
+Resolution	Azimio
+Video bitrate	Kasi ya biti ya video
+Weather	Hali ya hewa
+Code mods can reach your whole PC. Only trusted ones.	Moduli za msimbo zinaweza kufikia Kompyuta yako yote. Zinazoaminika pekee.
+Import mod	Ingiza moduli
+Browse mods	Vinjari moduli
+Mods folder	Folda ya moduli
+INSTALLED	IMESAKINISHWA
+Update mods	Sasisha moduli
+No mods match.	Hakuna moduli zinazolingana.
+On	Washa
+Remove	Ondoa
+Publish	Chapisha
+Options	Chaguo
+Back	Rudi
+Next	Ijayo
+COLORS	RANGI
+Reset colors	Weka upya rangi
+Running on this PC	Inaendeshwa kwenye Kompyuta hii
+NORMAL	KAWAIDA
+OFF	IMEZIMWA
+Local server address	Anwani ya seva ya ndani

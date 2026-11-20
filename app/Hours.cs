@@ -152,6 +152,26 @@ namespace CapriDesktop
             }
         }
 
+        // The hour on their own day's clock: the clock moved so their usual start reads as seven in the morning, the
+        // way a day that starts at seven does. Someone whose day starts at two in the afternoon gets their morning
+        // small talk then, and their late night at what the wall calls the next morning. The plain clock until she
+        // has learnt their hours, or when the day she learnt is too short or too long to be a day.
+        internal const int DayStarts = 7;
+
+        internal static int OwnHour(DateTime now)
+        {
+            int from, to;
+            if (!Usual(out from, out to)) return now.Hour;
+            return OwnHour(now.Hour, from, to);
+        }
+
+        internal static int OwnHour(int hour, int from, int to)
+        {
+            int span = (to - from + 24) % 24 + 1;
+            if (from < 0 || span < 8 || span > 20) return hour;
+            return (hour - from + DayStarts + 24) % 24;
+        }
+
         // True when they are up outside their usual hours and it is the small hours rather than an early start.
         internal static bool UpLate(DateTime now)
         {
@@ -216,9 +236,9 @@ namespace CapriDesktop
                 StringBuilder made = new StringBuilder();
                 made.AppendLine("# When this PC is on");
                 made.AppendLine();
-                made.AppendLine("> One count an hour, raised while she is running and faded a little each day.");
-                made.AppendLine("> She reads her usual hours out of this. Delete the file to start it again.");
-                made.AppendLine("> Nothing here leaves this PC.");
+                made.AppendLine(">! One count an hour, raised while she is running and faded a little each day.");
+                made.AppendLine(">! She reads her usual hours out of this. Delete the file to start it again.");
+                made.AppendLine(">! Nothing here leaves this PC.");
                 made.AppendLine();
                 for (int each = 0; each < counts.Length; each++)
                     made.AppendLine(each.ToString("00", CultureInfo.InvariantCulture) + ": " + counts[each].ToString("0.##", CultureInfo.InvariantCulture));

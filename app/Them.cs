@@ -14,12 +14,12 @@ namespace CapriDesktop
     //   %boy%    boy / girl / one          %them%   him / her / them
     //   %he%     he / she / they           %their%  his / her / their
     //   %is%     is / is / are             %name%   what she calls them
-    //   %bits%   balls / boob / crotch, or shins while censored
+    //   %bits%   a zone by the pronouns in me.md (top mid, lower mid a or lower mid b), or shins while censored
     //   %mate%   a neutral way to address them, from a shared pool
     //
-    // %bits% exists because she is allowed to threaten to kick you somewhere and not everyone has the same
-    // somewhere. It follows the pronouns in me.md, falls back to the general "crotch" when they have not said, and
-    // stays on "shins" entirely while censored, so the same written line is fine in both modes.
+    // %bits% is where she threatens to kick you. It is a zone by the pronouns in me.md, high, top mid, lower mid a,
+    // lower mid b or bottom, and what each zone is called comes from what attached; with nothing attached, or censored, it is
+    // "shins", so the same written line is fine in both modes.
     //
     // %is% exists because "they" takes a plural verb: "%He% %is% late" has to come out as "They are late", not
     // "They is late".
@@ -31,7 +31,7 @@ namespace CapriDesktop
         private static string path;
         private static DateTime read = DateTime.MinValue;
         private static long wasLong = -1;
-        private static string he = "they", them = "them", their = "their", boy = "one", isAre = "are", bits = "crotch", name = "", awake = "", pets = "";
+        private static string he = "they", them = "them", their = "their", boy = "one", isAre = "are", bits = "lower mid b", name = "", awake = "", pets = "";
 
         // What they wrote for awakeHours in me.md, or empty. Hours prefers this over what it counted.
         internal static string Awake { get { Fresh(); lock (gate) return awake; } }
@@ -248,9 +248,9 @@ namespace CapriDesktop
             get
             {
                 bool senpai = false;
-                try { senpai = Brain.Uncensored; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                try { senpai = Brain.SenpaiOn; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 if (!senpai) return "shins";
-                return bits;
+                return Extended.Get("bits." + bits) ?? "shins";
             }
         }
 
@@ -299,11 +299,11 @@ namespace CapriDesktop
                     pets = fond;
                     // "any pronouns" and anything unreadable both land on neutral on purpose.
                     if (Regex.IsMatch(said, @"\bhe\b|\bhim\b|\bhis\b"))
-                        { he = "he"; them = "him"; their = "his"; boy = "boy"; isAre = "is"; bits = "balls"; }
+                        { he = "he"; them = "him"; their = "his"; boy = "boy"; isAre = "is"; bits = "lower mid a"; }
                     else if (Regex.IsMatch(said, @"\bshe\b|\bher\b|\bhers\b"))
-                        { he = "she"; them = "her"; their = "her"; boy = "girl"; isAre = "is"; bits = "boob"; }
+                        { he = "she"; them = "her"; their = "her"; boy = "girl"; isAre = "is"; bits = "top mid"; }
                     // "any pronouns", anything unreadable, and nothing at all all land here on purpose.
-                    else { he = "they"; them = "them"; their = "their"; boy = "one"; isAre = "are"; bits = "crotch"; }
+                    else { he = "they"; them = "them"; their = "their"; boy = "one"; isAre = "are"; bits = "lower mid b"; }
                     read = about.LastWriteTimeUtc;
                     wasLong = about.Length;
                 }

@@ -41,7 +41,9 @@ namespace CapriDesktop
             }
             if (TextRenderer.MeasureText(workspaceKey.Text, workspaceKey.Font).Width + Scaled(12) > workspaceKey.Width) return "Workspace key text is clipped.";
             if (logKey != null && TextRenderer.MeasureText(logKey.Text, logKey.Font).Width + Scaled(12) > logKey.Width) return "Log key text is clipped.";
-            if (logKey != null && logKey.Visible && logKey.Right > ClientSize.Width) return "Log key runs off her right edge.";
+            // A minimized Mainframe reads 0 wide, so its laid-out width stands in.
+            int wide = ClientSize.Width > 0 ? ClientSize.Width : Scaled(Wide);
+            if (logKey != null && logKey.Visible && logKey.Right > wide) return "Log key runs off her right edge: " + logKey.Bounds + " in " + wide + ", workspace key " + workspaceKey.Bounds + ".";
             return null;
         }
     }
@@ -70,18 +72,30 @@ namespace CapriDesktop
 
         private void ShowWorkspace(Action ready)
         {
-            LoadWorkspace();
-            if (workspaceWindow == null || workspaceWindow.IsDisposed)
-            {
-                Rectangle area = Screen.FromControl(mainframe).WorkingArea;
-                float fit = Math.Max(0.75f, Math.Min(mainframe.WorkspaceScale, Math.Min(area.Width / 900f, area.Height / 600f)));
-                workspaceWindow = new WorkspaceWindow(workspace, delegate { return Security.Preset == Security.Blackwall; }, fit, true);
-                workspaceWindow.Icon = mainframe.Icon;
-            }
+            MakeWorkspaceWindow();
             if (ready != null) ready();
             if (!workspaceWindow.Visible) workspaceWindow.Show();
             if (workspaceWindow.WindowState == FormWindowState.Minimized) workspaceWindow.WindowState = FormWindowState.Normal;
             workspaceWindow.Activate();
+        }
+
+        // Made once, and ahead of time while she is idle: closing it only hides it, so the first open was the only
+        // slow one.
+        private void MakeWorkspaceWindow()
+        {
+            LoadWorkspace();
+            if (workspaceWindow != null && !workspaceWindow.IsDisposed) return;
+            Rectangle area = Screen.FromControl(mainframe).WorkingArea;
+            float fit = Math.Max(0.75f, Math.Min(mainframe.WorkspaceScale, Math.Min(area.Width / 900f, area.Height / 600f)));
+            workspaceWindow = new WorkspaceWindow(workspace, delegate { return Security.Preset == Security.Blackwall; }, fit, true);
+            workspaceWindow.Icon = mainframe.Icon;
+        }
+
+        internal void WarmWorkspace()
+        {
+            if (quitting || testing) return;
+            try { MakeWorkspaceWindow(); IntPtr made = workspaceWindow.Handle; }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         internal void OpenWorkspace()

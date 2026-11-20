@@ -1,0 +1,206 @@
+# Her menus and labels in Finnish: the English, a tab, then the translation.
+Open Capri Mainframe	Avaa Capri Mainframe
+Her folder	Hänen kansionsa
+Play	Toista
+Music	Musiikki
+Chess	Shakki
+Connect four	Neljä riviin
+Tic-tac-toe	Ristinolla
+Rock, paper, scissors	Kivi, paperi, sakset
+Hide Capri	Piilota Capri
+Hologram	Hologrammi
+Normal	Normaali
+Small	Pieni
+Medium	Keskikokoinen
+Large	Iso
+Huge	Valtava
+Giant	Jättiläinen
+Move	Siirrä
+Wander around	Vaeltele ympäriinsä
+Dance to music	Tanssi musiikin tahtiin
+Dance	Tanssi
+Ride cursor	Kursorikyyti
+Sit on windows	Istu ikkunoilla
+Sit here	Istu tässä
+Hang here	Jää tänne
+Lie down	Makaa
+Go to sleep	Mene nukkumaan
+Bring to this screen	Tuo tähän näkymään
+Go to the next screen	Siirry seuraavalle näytölle
+Black	Musta
+White	Valkoinen
+Test	Testaa
+Stop	Pysäytä
+Help	Ohje
+Commands	Komennot
+Help page	Ohjesivu
+Join the Discord	Liity Discordiin
+Copy error details	Kopioi virhetiedot
+Check for updates	Tarkista päivitykset
+Quit Capri	Lopeta Capri
+MAINFRAME	MAINFRAME
+Settings	Asetukset
+Mods	Modit
+BRAIN	AIVOT
+Provider	Palveluntarjoaja
+Using your server with no key	Käytetään palvelintasi ilman avainta
+Refresh	Päivitä
+Set up her brain	Määritä hänen aivonsa
+Have Ollama? Open it, then press Refresh.	Onko Ollama? Avaa se ja paina Päivitä.
+Pick one. Only one brain runs at a time.	Valitse yksi. Vain yksi aivot toimii kerrallaan.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Pois
+Free key	Ilmainen avain
+Connect	Yhdistä
+Free keys can be rate limited and slow.	Ilmaisten avainten käyttöä voidaan rajoittaa ja ne voivat olla hitaita.
+That's a paid key: it goes under MAX INTELLIGENCE.	Tuo on maksullinen avain: se menee MAX INTELLIGENCEen.
+Move to MAX	Siirrä MAXiin
+VOICE	ÄÄNI
+Ctrl + Alt + V to talk	Ctrl + Alt + V puhumiseen
+PREBUILT LOCAL	VALMIIKSI ASENNETTU PAIKALLINEN
+CUSTOM LOCAL	MUKAUTETTU PAIKALLINEN
+CLOUD VOICE	PILVIÄÄNI
+Set up	Määritä
+Setup guide	Asennusopas
+Fish Audio	Fish Audio
+Default model	Oletusmalli
+Pick a voice model	Valitse äänimalli
+Get free voice	Hanki ilmainen ääni
+Mic: default	Mikki: oletus
+Her speaker: Default	Hänen kaiuttimensa: Oletus
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N mykistää mikin
+CAPRI	CAPRI
+Support	Tuki
+Remote	Etä
+Bring here	Tuo tänne
+Advanced Settings	Lisäasetukset
+YOU	SINÄ
+Your personality	Persoonallisuutesi
+Language	Kieli
+English	Englanti
+What should she call you?	Mitä hänen pitäisi kutsua sinua?
+Save	Tallenna
+Volume	Voimakkuus
+Pitch	Sävelkorkeus
+Speed	Nopeus
+Robot	Robotti
+Glitch	Glitch
+Sounds	Äänet
+Typing sound	Kirjoitusääni
+Listen for Capri	Kuuntele Capria
+Hearing	Kuulo
+Auto	Auto
+Free voice in games	Ilmainen ääni peleissä
+Call mode (beta)	Puhelutila (beta)
+Her voice in your mic	Hänen äänensä mikissäsi
+Get VB-CABLE	Hanki VB-CABLE
+How to	Miten
+Her voice in your mic: loudness	Hänen äänensä mikissäsi: voimakkuus
+MOVES	LIIKKEET
+Pop-in times	Ilmestymisajat
+Mini player	Minisoitin
+Wander	Vaeltele
+Sleep	Nukkumaan
+Pop-ins	Ilmestymiset
+Glitch in at startup	Glitch käynnistyksessä
+KEYS	NÄPPÄIMET
+Talk: Ctrl + Alt + V	Puhu: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Mykistä mikki: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Kirjoita: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Piilota/näytä: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Hiljainen: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Pelitila: Ctrl + Alt + G
+Confirm	Vahvista
+Cancel	Peruuta
+Size	Koko
+Check in on me	Kysele kuulumisia
+Edit check-in lines	Muokkaa kirjautumisrivejä
+Always on top	Aina päällimmäisenä
+Mainframe size	Mainframen koko
+Mainframe colours	Mainframen värit
+Head pats	Päähän taputukset
+Pat stroke	Silitys
+Chaos when upset	Kaaos kun harmittaa
+Legacy stand	Vanha teline
+Jealous of other AIs	Kateellinen muille tekoälyille
+Teases when another AI comes to the front.	Kiusaa, kun toinen tekoäly tulee etualalle.
+Close other AIs for me	Sulje muut tekoälyt puolestani
+Asks before closing only the apps you choose.	Kysyy ennen sulkemista vain valitsemiasi sovelluksia.
+Apps she may close	Sovellukset, jotka hän saa sulkea
+Choose apps	Valitse sovellukset
+WATCH	KATSO
+Watch my screen	Katso näyttöäni
+Screens	Näytöt
+All screens	Kaikki näytöt
+Remember what she sees	Muista mitä hän näkee
+Every	Joka
+Watch-along memory	Katselumuisti
+Code/Husk Mode	Koodi/Husk-tila
+Thinking	Mietin
+Default	Oletus
+Extra request JSON	Lisäpyynnön JSON
+Add	Lisää
+Verbosity	Sanallisuus
+Replies	Vastaukset
+Memory	Muisti
+Memory size	Muistin koko
+Max reply	Enimmäisvastaus
+Bubble	Kupla
+Follow-up messages	Jatkoviestit
+Use	Käytä
+A model in Ollama, on your local server or on your key.	Malli Ollamassa, paikallisella palvelimellasi tai avaimellasi.
+HABITS	TAVAT
+Open her memories	Avaa hänen muistonsa
+Start with Windows	Käynnistä Windowsin mukana
+Show on Discord	Näytä Discordissa
+Use her cursor	Käytä hänen kursoriaan
+Remember our chats	Muista keskustelumme
+Power saver	Virransäästö
+Music app	Musiikkisovellus
+Perch	Istuin
+Keep PC awake for jobs	Pidä PC hereillä töitä varten
+Hide in full screen	Piilota koko näytöllä
+Mini player over full screen	Minisoitin koko näytön päällä
+Explore while I'm away	Tutki kun olen poissa
+Explore after	Tutki sen jälkeen
+GAMES	PELIT
+Controls	Ohjaimet
+Comments	Kommentit
+Live reactions	Reaktiot livenä
+Game sounds	Pelin äänet
+Gaming Mode	Pelitila
+She reacts to your game until you close it.	Hän reagoi peliisi, kunnes suljet sen.
+Works best on MAX INTELLIGENCE.	Toimii parhaiten MAX INTELLIGENCEllä.
+Fast hands in games	Nopeat kädet peleissä
+Mute her	Mykistä hänet
+CLIPS	KLIPIT
+Clip my games	Klippaa pelini
+Save big moments	Tallenna isot hetket
+Save folder	Tallennuskansio
+Choose folder	Valitse kansio
+Open clips folder	Avaa klippikansio
+Default length	Oletuspituus
+Frame rate	Kuvataajuus
+Resolution	Resoluutio
+Video bitrate	Videon bittinopeus
+Weather	Sää
+Code mods can reach your whole PC. Only trusted ones.	Koodimodit pääsevät koko tietokoneellesi. Vain luotetut.
+Import mod	Tuo modi
+Browse mods	Selaa modeja
+Mods folder	Modikansio
+INSTALLED	ASENNETTU
+Update mods	Päivitä modit
+No mods match.	Mikään modi ei vastaa.
+On	Päällä
+Remove	Poista
+Publish	Julkaise
+Options	Asetukset
+Back	Takaisin
+Next	Seuraava
+COLORS	VÄRIT
+Reset colors	Nollaa värit
+Running on this PC	Käynnissä tällä PC:llä
+NORMAL	NORMAALI
+OFF	POIS
+Local server address	Paikallisen palvelimen osoite

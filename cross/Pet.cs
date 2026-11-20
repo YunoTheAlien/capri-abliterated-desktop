@@ -83,6 +83,8 @@ namespace CapriDesktop
         [DataMember] internal int MemorySize;
         [DataMember] internal int ReplyLength;
         [DataMember] internal int? BrainTier;
+        // No AI, as on Windows: Mainframe > BRAIN > OFF runs her with no brain at all until they pick one.
+        [DataMember(EmitDefaultValue = false)] internal bool NoAi;
         [DataMember] internal string FreeModel;
         [DataMember] internal string PaidModel;
         [DataMember] internal string SpeechModel;
@@ -339,8 +341,8 @@ namespace CapriDesktop
         internal const string HelpPage = "https://capriai.app/help/";
         // She checks GitHub's latest release now and then. Started from the Linux AppImage she downloads it and offers a
         // restart (LinuxAppImageUpdater); a Mac, a tarball or a package gets its page.
-        private const string LatestRelease = "https://api.github.com/repos/lachydotmcg/capri-desktop/releases/latest";
-        private const string ReleasesPage = "https://github.com/lachydotmcg/capri-desktop/releases/latest";
+        private const string LatestRelease = "https://api.github.com/repos/" + LinuxAppImageUpdater.Repo + "/releases/latest";
+        private const string ReleasesPage = "https://github.com/" + LinuxAppImageUpdater.Repo + "/releases/latest";
         internal static readonly double[] Sizes = { 140, 170, 240, 320, 440, 560 };
         internal static readonly string[] SizeNames = { "Tiny", "Small", "Medium", "Large", "Huge", "Giant" };
         internal readonly Brain Brain = new Brain();
@@ -538,6 +540,7 @@ namespace CapriDesktop
         // Her brain's look at a glance, and how long they've been away from the computer. The smoke test hands in its own.
         internal Func<byte[], string, string> Seeing;
         internal Func<double> Idle = Limbs.IdleSeconds;
+        internal Func<bool?> Absent = Limbs.SessionAway;
         // Tells the tray menu whether to offer Hide her or Show her, since a pop-in or Talk to her brings her out too.
         internal Action AwayChanged;
         private bool shushed;
@@ -646,7 +649,7 @@ namespace CapriDesktop
         internal Pet(IClassicDesktopStyleApplicationLifetime desktop)
         {
             this.desktop = desktop;
-            folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Capri");
+            folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.Create), "Capri");
             if (OperatingSystem.IsLinux() && Program.Smoke == null) Listen = new Ears(folder).Listen;
             fresh = Program.Smoke == null && !File.Exists(Path.Combine(folder, "cross.json"));
             Saved = Program.Smoke != null ? new Settings() : Load();
@@ -671,6 +674,10 @@ namespace CapriDesktop
             Brain.BrainMenu = "under BRAIN in Capri Mainframe";
             Brain.FreeKeyHow = "Capri Mainframe > BRAIN > Free key";
             Brain.Bin = OperatingSystem.IsMacOS() ? "Trash" : "trash";
+            // Old folder names and tags in her settings, written the way they are now, before anything reads them, as
+            // Windows does at start. Linux has no personalSettings folder until her packs are wired (17:00 job), so
+            // this does nothing until then.
+            if (Program.Smoke == null) Legacy.Migrate(Path.Combine(folder, Personalities.SettingsName));
             Brain.MemoryPath = Path.Combine(Program.Smoke ?? folder, "me.md");
             StartVault();
             // Their personality.md, made only when they pick Edit (back in 0.8.0). Her safety lines stay in her code after it.
@@ -748,6 +755,9 @@ namespace CapriDesktop
                 Brain.Remote = new Cloud(brainKey, Saved.CloudModel);
                 Brain.Model = Saved.CloudModel;
             }
+            // No AI: shared Brain turns every request away while Off is set; the cloud brain isn't even made.
+            Brain.Off = Saved.NoAi;
+            if (Saved.NoAi) Brain.Remote = null;
             string savedServer = Brain.ServerAddress(Saved.BrainServer);
             string savedServerKey = null;
             string pairServer, pairKey;
@@ -762,7 +772,13 @@ namespace CapriDesktop
             RestoreBrainTier();
             voice.Key = ReadVoiceKey();
             // Her keys, for Brain.Scrubbed to keep out of errors.txt. It can run on any thread.
-            Brain.Secrets = delegate { Cloud remote = Brain.Remote; return new[] { remote == null ? null : remote.Key, Brain.ServerKey, voice.Key }; };
+            Brain.Secrets = delegate
+            {
+                Cloud remote = Brain.Remote;
+                var keys = new List<string> { remote == null ? null : remote.Key, Brain.ServerKey, voice.Key };
+                keys.AddRange(BookKeys());
+                return keys.ToArray();
+            };
             voice.VoiceId = string.IsNullOrEmpty(Saved.VoiceId) ? null : Saved.VoiceId;
             voice.Model = Saved.SpeechModel;
             elevenLabs = new ElevenLabsSpeaker(voice);
@@ -823,6 +839,8 @@ namespace CapriDesktop
             {
                 if (opened) return;
                 opened = true;
+                // Typed symbols go through her own clipboard first (Fingers.Copy).
+                Fingers.Board = () => Clipboard;
                 Screens.Changed += BindDesktopScreens;
                 BindDesktopScreens(this, EventArgs.Empty);
                 try
@@ -1251,7 +1269,7 @@ namespace CapriDesktop
                 }
                 return null;
             }
-            updatePage = found.Page != null && found.Page.StartsWith("https://github.com/lachydotmcg/capri-desktop/releases/", StringComparison.Ordinal) ? found.Page : ReleasesPage;
+            updatePage = found.Page != null && found.Page.StartsWith("https://github.com/" + LinuxAppImageUpdater.Repo + "/releases/", StringComparison.Ordinal) ? found.Page : ReleasesPage;
             if (updateItem == null)
             {
                 updateItem = new MenuItem();
@@ -1571,6 +1589,8 @@ namespace CapriDesktop
         {
             if (pressed) Unhold();
             Desk.BindScreens(Screens.All);
+            // A monitor plugged in or out: Screens' list and a missing pick follow at once, as on Windows.
+            if (sender != this) RefreshWatchScreens();
         }
 
         internal List<Spot> Windows()
@@ -2117,8 +2137,9 @@ namespace CapriDesktop
             }
             if (clip == grin) Play(idle);
             string line = PetLines[petLine++ % PetLines.Length];
-            Talk.Answer("pets you", line);
-            TypeAlong(line, ticket);
+            // Said through Reply, so her voice says it when it's on (upstream 82d84bd, from Zak6571), as Windows does;
+            // Reply already counts "pets you" as a remark for mods.
+            Reply(asking, "pets you", line);
         }
 
         internal void ForgetPets()
@@ -2547,7 +2568,10 @@ namespace CapriDesktop
             MenuItem title = new MenuItem { Header = "CAPRI / v" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString(), IsEnabled = false, Foreground = MainframeTheme.Rose };
             MenuItem frame = new MenuItem { Header = "Open Capri Mainframe" };
             frame.Click += Guarded(delegate { OpenMainframe(); });
-            MenuItem nativeFilesMenu = new MenuItem { Header = "File editor" };
+            // Her folder, then MD editor (her file editor), in Windows' menu order and names.
+            MenuItem herFolder = new MenuItem { Header = "Her folder" };
+            herFolder.Click += Guarded(delegate { OpenHerFolder(); });
+            MenuItem nativeFilesMenu = new MenuItem { Header = "MD editor" };
             nativeFilesMenu.Click += Guarded(delegate { OpenFiles(0); });
             hideItem = new MenuItem { Header = "Hide Capri" };
             hideItem.Click += Guarded(delegate { if (Away) ComeBack(); else HideAway(); });
@@ -2556,6 +2580,7 @@ namespace CapriDesktop
             menu.Items.Add(title);
             menu.Items.Add(new Separator());
             menu.Items.Add(frame);
+            menu.Items.Add(herFolder);
             menu.Items.Add(nativeFilesMenu);
             menu.Items.Add(hideItem);
             menu.Items.Add(sizes);
@@ -3468,6 +3493,8 @@ namespace CapriDesktop
 
         private void RefreshBrains()
         {
+            // No AI: nothing is asked of a server or provider, not even its model list (Windows' ShowTiers stops here too).
+            if (Saved.NoAi) { NotifySettings(); return; }
             if (Brain.Provider != null) { ShowPlanModel(); return; }
             if (MainframeTier > 0 && Brain.Remote == null) { NotifySettings(); return; }
             if (Brain.Remote != null) { ShowCloud(); ListCloud(); return; }
@@ -3640,12 +3667,17 @@ namespace CapriDesktop
             }
             Brain.SetServer(server, null);
             WriteSecret(ServerKeyFile, null, "provider key");
+            // A forgotten key is gone from its saved provider too, so picking it again doesn't bring the key back.
+            UnkeyBook(server);
             RefreshBrains();
         }
 
         internal void UseServer(string typed) { UseServer(typed, null); }
 
-        internal void UseServer(string typed, string key)
+        internal void UseServer(string typed, string key) { UseServer(typed, key, null); }
+
+        // wanted: the model to go back to, when a saved provider is picked again and still lists it.
+        internal void UseServer(string typed, string key, string wanted)
         {
             string server = Brain.ServerAddress(typed);
             if (server == null) { Talk.Answer("(brain server)", "That address doesn't work. Try http://localhost:8080."); return; }
@@ -3685,9 +3717,13 @@ namespace CapriDesktop
                     Saved.BrainServer = server;
                     WriteSecret(ServerKeyFile, null, "provider key");
                     string model = Array.IndexOf(found, Saved.ServerModel) >= 0 ? Saved.ServerModel : found[0];
+                    if (wanted != null && Array.IndexOf(found, wanted) >= 0) model = wanted;
                     if (Brain.Remote == null) Brain.Model = model;
                     Saved.ServerModel = model;
                     Save();
+                    // Saved providers: every provider that connects is kept, with its key and model.
+                    Booked(server, key, model);
+                    NotifySettings();
                     if (MainframeTier == 0) ShowServer(found);
                     if (ticket == asking) Talk.Answer("(brain server)", key == null ? "I'm thinking with " + model + " on your server now." + (Brain.Remote != null ? " Your cloud key still comes first until you forget it." : "") : "I'm thinking with " + model + " on " + server + " with your key now." + (Brain.Remote != null ? " Your cloud key still comes first until you forget it." : ""));
                 });
@@ -3705,11 +3741,15 @@ namespace CapriDesktop
             Brain.Model = model;
             Saved.ServerModel = model;
             Save();
+            if (Brain.Server != null && Brain.Remote == null) Booked(Brain.Server, Brain.ServerKey, model);
         }
 
         internal void LeaveServer()
         {
             ++asking;
+            // Stop using it takes the provider in use out of the saved providers too, so nothing of it is kept.
+            string leaving, leavingKey;
+            if (ReadServerPair(ServerPairFile, out leaving, out leavingKey)) Unbook(Brain.ServerAddress(leaving));
             if (!WriteServerPair(ServerPairFile, null, null))
             {
                 Talk.Answer("(brain server)", "Couldn't remove the saved provider.");
@@ -4343,6 +4383,8 @@ namespace CapriDesktop
         internal void SetWatch(bool on, bool say = true)
         {
             Saved.Watch = on;
+            // Turning Watch on again lets the desktop's screenshot question be asked again after a no.
+            if (on) ScreenshotPortal.Refused = false;
             watchTicket++;
             nextGlance = -1;
             lastGlance = -1;
@@ -4399,6 +4441,9 @@ namespace CapriDesktop
             string ask = Glances.Ask(RecentGlances(now));
             Func<byte[], string, string> seeing = Seeing ?? delegate(byte[] shot, string question) { return Brain.See(shot, Brain.Persona + Brain.Speech(), question, 140); };
             Func<double> idle = Idle;
+            // Screens: the picked monitor is cut out of the whole-desktop picture, as Windows captures only that monitor.
+            WatchArea(out Avalonia.PixelRect desk, out Avalonia.PixelRect? area);
+            watch = watchTicket;
             ThreadPool.QueueUserWorkItem(delegate
             {
                 string said = null, saw = null, problem = null;
@@ -4409,7 +4454,7 @@ namespace CapriDesktop
                     // Not while they've been away from the computer for 10 minutes, like on Windows.
                     if (idle() <= 600)
                     {
-                        byte[] picture = Eyes.Peek();
+                        byte[] picture = CropToScreen(Eyes.Peek(), desk, area);
                         print = Eyes.Print(picture);
                         if (print == null) blind = true;
                         else if (force || Glances.Moved(print, before))
@@ -4536,7 +4581,7 @@ namespace CapriDesktop
 
         internal void FindBrain()
         {
-            if (Brain.Provider != null || MainframeTier != 0) return;
+            if (Saved.NoAi || Brain.Provider != null || MainframeTier != 0) return;
             string saved = Saved.Model;
             string server;
             string serverKey;
@@ -4636,9 +4681,22 @@ namespace CapriDesktop
         }
 
         // Her brain answers on the thread pool. A stuck NVIDIA model hands the message to the next one, twice at most, like on Windows.
+        // No AI, as Windows' NoAiLine: something that needs a brain gets her line the first time, then at most once in ten
+        // minutes, never a nag. Nothing is sent: shared Brain would turn the request away anyway, with a vaguer line.
+        private double noAiSaid = -1;
+        internal const double NoAiGap = 600;
+
         private void Ask(int ticket, string text, int switches, long voiceTicket = 0)
         {
             Func<string, string> think = Think;
+            if (Saved.NoAi && think == null && ticket != newsTicket)
+            {
+                double now = clock.Elapsed.TotalSeconds;
+                if (noAiSaid >= 0 && now - noAiSaid < NoAiGap) { Talk.Dismiss(); return; }
+                noAiSaid = now;
+                Reply(ticket, text, Brain.OffLine, null);
+                return;
+            }
             bool follows = FollowUps;
             int input = inputTurn;
             Cloud remote = Brain.Remote;

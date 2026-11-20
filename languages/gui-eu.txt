@@ -1,0 +1,206 @@
+# Her menus and labels in Basque: the English, a tab, then the translation.
+Open Capri Mainframe	Ireki Capri Mainframe
+Her folder	Bere karpeta
+Play	Erreproduzitu
+Music	Musika
+Chess	Xakea
+Connect four	Lau ondo konektatu
+Tic-tac-toe	Tic-tac-toe
+Rock, paper, scissors	Harria, papera, makila
+Hide Capri	Ezkutatu Capri
+Hologram	Hologramak
+Normal	Arrunta
+Small	Txikia
+Medium	Ertaina
+Large	Handia
+Huge	Erraldoia
+Giant	Erraldoia
+Move	Mugitu
+Wander around	Inguruan ibili
+Dance to music	Dantzatu musikara
+Dance	Dantzatu
+Ride cursor	Gurpilaren kurtsorea
+Sit on windows	Eseri leihoen gainean
+Sit here	Eseri hemen
+Hang here	Hemen egon
+Lie down	Etzan
+Go to sleep	Lo egin
+Bring to this screen	Ekarri pantaila honetara
+Go to the next screen	Joan hurrengo pantailara
+Black	Beltza
+White	Zuria
+Test	Probatu
+Stop	Gelditu
+Help	Laguntza
+Commands	Aginduak
+Help page	Laguntza orria
+Join the Discord	Sartu Discord-era
+Copy error details	Kopiatu errorearen xehetasunak
+Check for updates	Bilatu eguneraketak
+Quit Capri	Itxi Capri
+MAINFRAME	MAINFRAME
+Settings	Ezarpenak
+Mods	Modak
+BRAIN	BURUA
+Provider	Hornitzailea
+Using your server with no key	Zure zerbitzaria gakorik gabe erabiltzen
+Refresh	Freskatu
+Set up her brain	Konfiguratu bere burua
+Have Ollama? Open it, then press Refresh.	Ollama duzu? Ireki, eta gero sakatu Freskatu.
+Pick one. Only one brain runs at a time.	Aukeratu bat. Burua bakar bat exekutatzen da aldi berean.
+MEDIUM INTELLIGENCE	ERDI MAILAKO INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Off
+Free key	Doako gakoa
+Connect	Konektatu
+Free keys can be rate limited and slow.	Doako gakoen eskaerak mugatuak eta motelak izan daitezke.
+That's a paid key: it goes under MAX INTELLIGENCE.	Ordaindutako gakoa da: MAX INTELLIGENCE azpian sartzen da.
+Move to MAX	Mugitu MAX-era
+VOICE	AHOTSA
+Ctrl + Alt + V to talk	Ctrl + Alt + V hitz egiteko
+PREBUILT LOCAL	AURREKONFIGURATUTA LOKALA
+CUSTOM LOCAL	PERTSONALIZATUA LOKALA
+CLOUD VOICE	HODEI AHOTSA
+Set up	Konfiguratu
+Setup guide	Konfigurazio gida
+Fish Audio	Fish Audio
+Default model	Modelo lehenetsia
+Pick a voice model	Aukeratu ahots modelo bat
+Get free voice	Lortu doako ahotsa
+Mic: default	Mikrofonoa: lehenetsia
+Her speaker: Default	Bere bozgorailua: Lehenetsia
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N mikrofonoa isilarazten du
+CAPRI	CAPRI
+Support	Laguntza
+Remote	Urrunekoa
+Bring here	Ekarri hona
+Advanced Settings	Ezarpen aurreratuak
+YOU	ZU
+Your personality	Zure izaera
+Language	Hizkuntza
+English	Ingelesa
+What should she call you?	Nola deitu behar zaio?
+Save	Gorde
+Volume	Bolumena
+Pitch	Tonua
+Speed	Abiadura
+Robot	Robota
+Glitch	Akatsa
+Sounds	Soinuak
+Typing sound	Idazte soinua
+Listen for Capri	Entzun Capri-ri
+Hearing	Entzumena
+Auto	Automatikoa
+Free voice in games	Doako ahotsa jokoetan
+Call mode (beta)	Deia modua (beta)
+Her voice in your mic	Bere ahotsa zure mikrofonoan
+Get VB-CABLE	Lortu VB-CABLE
+How to	Nola
+Her voice in your mic: loudness	Bere ahotsa zure mikrofonoan: bolumena
+MOVES	MUGIMENDUAK
+Pop-in times	Agerpen orduak
+Mini player	Mini erreproduktorea
+Wander	Ibili
+Sleep	Lo
+Pop-ins	Agerpenak
+Glitch in at startup	Akatsa abiaraztean
+KEYS	GAKOAK
+Talk: Ctrl + Alt + V	Hitz egin: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Mikrofonoa isildu: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Idatzi: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Ezkutatu/erakutsi: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Isila: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Jokoen modua: Ctrl + Alt + G
+Confirm	Berretsi
+Cancel	Utzi
+Size	Tamaina
+Check in on me	Begiratu nola nagoen
+Edit check-in lines	Editatu begiratze lerroak
+Always on top	Beti goian
+Mainframe size	Mainframe tamaina
+Mainframe colours	Mainframe koloreak
+Head pats	Burua laztanak
+Pat stroke	Burua laztanaren marra
+Chaos when upset	Kaosa haserretzen denean
+Legacy stand	Legado oinarria
+Jealous of other AIs	Beste AIen gainean jeloskor
+Teases when another AI comes to the front.	Beste AI bat aurrealdera datorrenean txantxetan ari da.
+Close other AIs for me	Itxi beste AIak nire ordez
+Asks before closing only the apps you choose.	Zuk aukeratutako aplikazioak bakarrik itxi aurretik galdetuko du.
+Apps she may close	Itxi ditzakeen aplikazioak
+Choose apps	Aukeratu aplikazioak
+WATCH	BEGIRATU
+Watch my screen	Begiratu nire pantaila
+Screens	Pantailak
+All screens	Pantaila guztiak
+Remember what she sees	Gogoratu zer ikusten duen
+Every	Bakoitza
+Watch-along memory	Batera ikusteko oroitzapena
+Code/Husk Mode	Kodea/Husk modua
+Thinking	Pentsatzen
+Default	Lehenetsia
+Extra request JSON	JSON eskaera gehigarria
+Add	Gehitu
+Verbosity	Hitz-kopurua
+Replies	Erantzunak
+Memory	Memoria
+Memory size	Memoria tamaina
+Max reply	Erantzun maximoa
+Bubble	Burbuila
+Follow-up messages	Jarraipen mezuak
+Use	Erabili
+A model in Ollama, on your local server or on your key.	Modelo bat Ollama-n, zure tokiko zerbitzarian edo zure gakoarekin.
+HABITS	OHITURAK
+Open her memories	Ireki bere oroitzapenak
+Start with Windows	Hasi Windows-ekin
+Show on Discord	Erakutsi Discord-en
+Use her cursor	Erabili bere kurtsorea
+Remember our chats	Gogoratu gure txatak
+Power saver	Energia aurrezlea
+Music app	Musika aplikazioa
+Perch	Perch
+Keep PC awake for jobs	Mantendu PC esna lanetarako
+Hide in full screen	Ezkutatu pantaila osoan
+Mini player over full screen	Mini erreproduktorea pantaila osoan gainean
+Explore while I'm away	Arakatu ni kanpoan nagoen bitartean
+Explore after	Arakatu ondoren
+GAMES	JOKOAK
+Controls	Kontrolak
+Comments	Iruzkinak
+Live reactions	Zuzeneko erreakzioak
+Game sounds	Joko soinuak
+Gaming Mode	Jokoen modua
+She reacts to your game until you close it.	Zure jokoari erreakzionatzen dio itxi arte.
+Works best on MAX INTELLIGENCE.	MAX INTELLIGENCE-n funtzionatzen du hobeto.
+Fast hands in games	Eskuak azkar jokoetan
+Mute her	Isildu bera
+CLIPS	KLIPAK
+Clip my games	Klipatu nire jokoak
+Save big moments	Gorde une handiak
+Save folder	Gorde karpeta
+Choose folder	Aukeratu karpeta
+Open clips folder	Ireki klipen karpeta
+Default length	Iraupen lehenetsia
+Frame rate	Fotograma tasa
+Resolution	Bereizmena
+Video bitrate	Bideo bit-tasa
+Weather	Eguraldia
+Code mods can reach your whole PC. Only trusted ones.	Kode modek zure PC osora iritsi daitezke. Fidagarriak bakarrik.
+Import mod	Inportatu modua
+Browse mods	Arakatu modak
+Mods folder	Modak karpeta
+INSTALLED	INSTALATUTA
+Update mods	Eguneratu modak
+No mods match.	Ez dago bat datorren modarik.
+On	On
+Remove	Kendu
+Publish	Argitaratu
+Options	Aukerak
+Back	Atzera
+Next	Hurrengoa
+COLORS	KOLOREAK
+Reset colors	Berrezarri koloreak
+Running on this PC	PC honetan exekutatzen
+NORMAL	ARRUNTA
+OFF	OFF
+Local server address	Tokiko zerbitzariaren helbidea

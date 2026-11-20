@@ -1,0 +1,206 @@
+# Her menus and labels in Gujarati: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe ખોલો
+Her folder	તેનું ફોલ્ડર
+Play	ચલાવો
+Music	સંગીત
+Chess	ચેસ
+Connect four	ચાર-ઇન-એ-રો
+Tic-tac-toe	ટિક-ટેક-ટો
+Rock, paper, scissors	પથ્થર, કાગળ, કાતર
+Hide Capri	Capri છુપાવો
+Hologram	હોલોગ્રામ
+Normal	સામાન્ય
+Small	નાનું
+Medium	મધ્યમ
+Large	મોટું
+Huge	વિશાળ
+Giant	વિશાળ
+Move	ખસેડો
+Wander around	આસપાસ ભટકો
+Dance to music	સંગીત પર નૃત્ય કરો
+Dance	નૃત્ય
+Ride cursor	કર્સર પર સવારી
+Sit on windows	બારીઓ પર બેસો
+Sit here	અહીં બેસો
+Hang here	અહીં રહો
+Lie down	સૂઈ જા
+Go to sleep	સૂઈ જા
+Bring to this screen	આ સ્ક્રીન પર લાવો
+Go to the next screen	આગલી સ્ક્રીન પર જાઓ
+Black	કાળો
+White	સફેદ
+Test	ટેસ્ટ
+Stop	બંધ કરો
+Help	મદદ
+Commands	આદેશો
+Help page	મદદ પેજ
+Join the Discord	Discord માં જોડાઓ
+Copy error details	ભૂલની વિગતો કૉપી કરો
+Check for updates	અપડેટ તપાસો
+Quit Capri	Capri બંધ કરો
+MAINFRAME	MAINFRAME
+Settings	સેટિંગ્સ
+Mods	મોડ્સ
+BRAIN	બ્રેન
+Provider	પ્રદાતા
+Using your server with no key	કી વગર તમારો સર્વર વાપરી રહી છું
+Refresh	Refresh
+Set up her brain	તેનું બ્રેન સેટ કરો
+Have Ollama? Open it, then press Refresh.	Ollama છે? તેને ખોલો, પછી Refresh દબાવો.
+Pick one. Only one brain runs at a time.	એક પસંદ કરો. એક સમયે ફક્ત એક બ્રેન ચાલે છે.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	બંધ
+Free key	મફત કી
+Connect	જોડો
+Free keys can be rate limited and slow.	મફત કીઓ પર દર-મર્યાદા હોઈ શકે અને તે ધીમી હોઈ શકે.
+That's a paid key: it goes under MAX INTELLIGENCE.	તે પેઇડ કી છે: તે MAX INTELLIGENCE હેઠળ જાય છે.
+Move to MAX	MAX પર ખસેડો
+VOICE	VOICE
+Ctrl + Alt + V to talk	વાત કરવા માટે Ctrl + Alt + V
+PREBUILT LOCAL	પ્રીબિલ્ટ લોકલ
+CUSTOM LOCAL	કસ્ટમ લોકલ
+CLOUD VOICE	ક્લાઉડ વૉઇસ
+Set up	સેટ કરો
+Setup guide	સેટઅપ ગાઇડ
+Fish Audio	Fish Audio
+Default model	ડિફોલ્ટ મોડેલ
+Pick a voice model	વૉઇસ મોડેલ પસંદ કરો
+Get free voice	મફત અવાજ મેળવો
+Mic: default	માઇક: ડિફોલ્ટ
+Her speaker: Default	તેનું સ્પીકર: ડિફોલ્ટ
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N માઇક મ્યૂટ કરે છે
+CAPRI	CAPRI
+Support	સપોર્ટ
+Remote	રિમોટ
+Bring here	અહીં લાવો
+Advanced Settings	અદ્યતન સેટિંગ્સ
+YOU	તમે
+Your personality	તમારો સ્વભાવ
+Language	ભાષા
+English	અંગ્રેજી
+What should she call you?	તેણે તમને શું કહીને બોલાવવા જોઈએ?
+Save	સાચવો
+Volume	વૉલ્યૂમ
+Pitch	પિચ
+Speed	ઝડપ
+Robot	રોબોટ
+Glitch	Glitch
+Sounds	અવાજો
+Typing sound	ટાઇપિંગ સાઉન્ડ
+Listen for Capri	Capri ને સાંભળો
+Hearing	સાંભળવું
+Auto	ઑટો
+Free voice in games	ગેમ્સમાં મફત અવાજ
+Call mode (beta)	કૉલ મોડ (બીટા)
+Her voice in your mic	તમારા માઇકમાં તેનો અવાજ
+Get VB-CABLE	VB-CABLE મેળવો
+How to	કેવી રીતે
+Her voice in your mic: loudness	તમારા માઇકમાં તેનો અવાજ: લાઉડનેસ
+MOVES	મૂવ્સ
+Pop-in times	પૉપ-ઇન સમય
+Mini player	મિની પ્લેયર
+Wander	ભટકો
+Sleep	સ્લીપ
+Pop-ins	પૉપ-ઇન્સ
+Glitch in at startup	શરૂઆતમાં Glitch
+KEYS	કીઓ
+Talk: Ctrl + Alt + V	વાત કરો: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	માઇક મ્યૂટ: Ctrl + Alt + N
+Type: Ctrl + Alt + T	ટાઇપ: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	છુપાવો/બતાવો: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	શાંત: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	ગેમિંગ મોડ: Ctrl + Alt + G
+Confirm	પુષ્ટિ કરો
+Cancel	રદ કરો
+Size	કદ
+Check in on me	મારી ખબર લો
+Edit check-in lines	ચેક-ઇન લાઇન્સ સંપાદિત કરો
+Always on top	હંમેશાં ટોચ પર
+Mainframe size	Mainframe કદ
+Mainframe colours	Mainframe રંગો
+Head pats	માથા પર થપથપાવવું
+Pat stroke	માથા પર થપથપાવવાનો સ્ટ્રોક
+Chaos when upset	ગુસ્સે થાય ત્યારે અરાજકતા
+Legacy stand	જૂનું સ્ટૅન્ડ
+Jealous of other AIs	બીજી AI ની ઈર્ષ્યા
+Teases when another AI comes to the front.	બીજી AI આગળ આવે ત્યારે ચિડવે છે.
+Close other AIs for me	મારા માટે બીજી AI બંધ કરો
+Asks before closing only the apps you choose.	ફક્ત તમે પસંદ કરેલી એપ્સ બંધ કરતાં પહેલાં પૂછે છે.
+Apps she may close	એપ્સ જે તે બંધ કરી શકે
+Choose apps	એપ્સ પસંદ કરો
+WATCH	WATCH
+Watch my screen	મારી સ્ક્રીન જુઓ
+Screens	સ્ક્રીન
+All screens	બધી સ્ક્રીન
+Remember what she sees	તે જે જુએ છે તે યાદ રાખો
+Every	દર
+Watch-along memory	સાથે જોવાની મેમરી
+Code/Husk Mode	Code/Husk મોડ
+Thinking	વિચારી રહી છું
+Default	ડિફોલ્ટ
+Extra request JSON	વધારાની વિનંતી JSON
+Add	ઉમેરો
+Verbosity	વર્બોસિટી
+Replies	જવાબો
+Memory	મેમરી
+Memory size	મેમરીનું કદ
+Max reply	મહત્તમ જવાબ
+Bubble	બબલ
+Follow-up messages	ફોલો-અપ સંદેશા
+Use	ઉપયોગ કરો
+A model in Ollama, on your local server or on your key.	Ollama માં એક મોડેલ, તમારા લોકલ સર્વર પર અથવા તમારી કી પર.
+HABITS	ટેવો
+Open her memories	તેની યાદો ખોલો
+Start with Windows	Windows સાથે શરૂ કરો
+Show on Discord	Discord પર બતાવો
+Use her cursor	તેનું કર્સર વાપરો
+Remember our chats	અમારી ચેટ યાદ રાખો
+Power saver	પાવર સેવર
+Music app	મ્યુઝિક એપ
+Perch	પર્ચ
+Keep PC awake for jobs	કામ માટે PC જાગતું રાખો
+Hide in full screen	ફુલ સ્ક્રીનમાં છુપાવો
+Mini player over full screen	ફુલ સ્ક્રીન પર મિની પ્લેયર
+Explore while I'm away	હું દૂર હોઉં ત્યારે શોધો
+Explore after	પછી શોધો
+GAMES	GAMES
+Controls	નિયંત્રણો
+Comments	ટિપ્પણીઓ
+Live reactions	લાઇવ પ્રતિક્રિયાઓ
+Game sounds	ગેમ અવાજો
+Gaming Mode	ગેમિંગ મોડ
+She reacts to your game until you close it.	તમે બંધ ન કરો ત્યાં સુધી તે તમારી ગેમ પર પ્રતિક્રિયા આપે છે.
+Works best on MAX INTELLIGENCE.	MAX INTELLIGENCE પર શ્રેષ્ઠ ચાલે છે.
+Fast hands in games	ગેમ્સમાં ઝડપી હાથ
+Mute her	તેને મ્યૂટ કરો
+CLIPS	ક્લિપ્સ
+Clip my games	મારી ગેમ્સ ક્લિપ કરો
+Save big moments	મોટી ક્ષણો સાચવો
+Save folder	સાચવવાનું ફોલ્ડર
+Choose folder	ફોલ્ડર પસંદ કરો
+Open clips folder	ક્લિપ્સ ફોલ્ડર ખોલો
+Default length	ડિફોલ્ટ લંબાઈ
+Frame rate	ફ્રેમ રેટ
+Resolution	રિઝોલ્યુશન
+Video bitrate	વિડિયો બિટરેટ
+Weather	હવામાન
+Code mods can reach your whole PC. Only trusted ones.	કોડ મોડ્સ તમારા આખા PC સુધી પહોંચી શકે. ફક્ત વિશ્વસનીય.
+Import mod	મોડ આયાત કરો
+Browse mods	મોડ્સ બ્રાઉઝ કરો
+Mods folder	મોડ્સ ફોલ્ડર
+INSTALLED	ઇન્સ્ટોલ થયેલ
+Update mods	મોડ્સ અપડેટ કરો
+No mods match.	કોઈ મોડ મેળ ખાતા નથી.
+On	ચાલુ
+Remove	દૂર કરો
+Publish	પ્રકાશિત કરો
+Options	વિકલ્પો
+Back	પાછા
+Next	આગળ
+COLORS	રંગો
+Reset colors	રંગો રીસેટ કરો
+Running on this PC	આ PC પર ચાલે છે
+NORMAL	સામાન્ય
+OFF	બંધ
+Local server address	લોકલ સર્વરનું સરનામું

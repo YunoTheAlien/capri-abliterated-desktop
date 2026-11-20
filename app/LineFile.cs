@@ -13,11 +13,11 @@ namespace CapriDesktop
     // sections and lines a later build adds without touching a word of theirs, and falls back to the lines in
     // the build when a section is emptied, so nothing anyone deletes can leave her with nothing to say.
     //
-    // A section whose heading ends in "(uncensored)" is read only with the adult switch on, the same rule her
-    // packs and lines.md follow, and it is written only then as well, so a censored install has no trace of it.
+    // A section whose heading ends in "(senpai)" is read only with the switch on, the same rule her
+    // packs and lines.md follow, and it is written only then as well.
     internal sealed class LineFile
     {
-        internal const string SenpaiMark = " (uncensored)";
+        internal const string SenpaiMark = " (" + Legacy.Mark + ")";
 
         private readonly string shipped;
         // Lines she shipped that were wrong, and what they say now: an exact match of what was written, so a
@@ -101,7 +101,7 @@ namespace CapriDesktop
             // while the switch is off. See Zones.
             if (Zoned && !string.IsNullOrEmpty(Kept))
             {
-                if (Brain.Adult)
+                if (Brain.SenpaiLive)
                 {
                     string deep = Zones.Name(Kept, Senpai(section));
                     Zones.Offers(deep);
@@ -117,7 +117,7 @@ namespace CapriDesktop
             lock (gate)
             {
                 string[] found;
-                if (Brain.Adult && loaded.TryGetValue(Senpai(section), out found) && found != null && found.Length > 0) return found;
+                if (Brain.SenpaiLive && loaded.TryGetValue(Senpai(section), out found) && found != null && found.Length > 0) return found;
                 return loaded.TryGetValue(section, out found) ? found : null;
             }
         }
@@ -137,7 +137,7 @@ namespace CapriDesktop
                     if (!one.StartsWith("##", StringComparison.Ordinal)) continue;
                     string named = one.TrimStart('#').Trim();
                     if (named.Length == 0) continue;
-                    if (!Brain.Adult && named.IndexOf(SenpaiMark, StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    if (!Brain.SenpaiLive && named.IndexOf(SenpaiMark, StringComparison.OrdinalIgnoreCase) >= 0) continue;
                     found.Add(named);
                 }
             }
@@ -201,11 +201,10 @@ namespace CapriDesktop
             return found;
         }
 
-        // The senpai sections, out of the text, while the switch is off. Absent rather than empty: a censored
-        // install should show no sign that there is anything to unlock.
+        // The senpai sections, out of the text, while the switch is off: left out rather than empty.
         private static string Fit(string body)
         {
-            if (Brain.Adult) return Ended(body);
+            if (Brain.SenpaiLive) return Ended(body);
             List<string> kept = new List<string>();
             bool skipping = false;
             foreach (string raw in body.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
@@ -259,7 +258,7 @@ namespace CapriDesktop
             {
                 // A senpai section is not put into a censored install at all, and not taken out of one that has it:
                 // turning the switch off leaves what is already written where it is, as everywhere else.
-                if (!Brain.Adult && section.Key.IndexOf(SenpaiMark, StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                if (!Brain.SenpaiLive && section.Key.IndexOf(SenpaiMark, StringComparison.OrdinalIgnoreCase) >= 0) continue;
                 int from = -1, to = rows.Count;
                 for (int row = 0; row < rows.Count; row++)
                 {

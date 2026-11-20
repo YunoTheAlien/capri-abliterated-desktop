@@ -1188,7 +1188,7 @@ namespace CapriDesktop
             }
         }
 
-        private static void DrawMic(Graphics graphics, PointF centre, float s, Color colour, bool muted, Color back)
+        internal static void DrawMic(Graphics graphics, PointF centre, float s, Color colour, bool muted, Color back)
         {
             float x = centre.X;
             float y = centre.Y + 0.5f * s;
@@ -1366,6 +1366,36 @@ namespace CapriDesktop
                 for (int x = Math.Max(0, box.Left); x < Math.Min(image.Width, box.Right); x++)
                     if (test(image.GetPixel(x, y))) count++;
             return count;
+        }
+    }
+
+    // A small muted mic under her while voice chat is muted, in place of the whole pill, for anyone who switched
+    // the mic notice off. Clicks go through it to whatever is underneath.
+    internal sealed class MuteMark : Overlay
+    {
+        private float drawnAt;
+
+        internal MuteMark() : base("Mic muted") { ClickThrough = true; }
+
+        internal static int Side(float s) { return (int)Math.Round(24 * s); }
+
+        // Placed by its top centre, the same point the pill uses, so it sits where the pill would.
+        internal void Place(Point topCentre, float s)
+        {
+            int side = Side(s);
+            Point at = new Point(topCentre.X - side / 2, topCentre.Y);
+            if (Visible && drawnAt == s && Location == at) return;
+            Bitmap image = new Bitmap(side, side, PixelFormat.Format32bppPArgb);
+            using (Graphics graphics = Graphics.FromImage(image))
+            {
+                graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                graphics.Clear(Color.Transparent);
+                using (Brush plate = new SolidBrush(TalkPill.Fill)) graphics.FillEllipse(plate, 1, 1, side - 2, side - 2);
+                using (Pen edge = new Pen(Look.Red, Math.Max(1, s))) graphics.DrawEllipse(edge, 1, 1, side - 2, side - 2);
+                TalkPill.DrawMic(graphics, new PointF(side / 2f, side / 2f - 0.5f * s), s * 0.8f, TalkPill.Caption, true, TalkPill.Fill);
+            }
+            drawnAt = s;
+            Present(image, at);
         }
     }
 
@@ -3336,7 +3366,15 @@ namespace CapriDesktop
         internal event Action Dismissed;
         internal TalkState State;
         internal string Heard;
-        internal string Prompt = "> you: ";
+        private string prompt = "> you: ";
+        // Setting a new prompt clears where the last reply came from, so the mark only ever sits on a reply
+        // her brain gave.
+        internal string Prompt { get { return prompt; } set { prompt = value; Source = null; } }
+        // Which brain gave the reply on screen, drawn as a small mark in front of the prompt line rather than
+        // written into it, since that line is theirs to reword in sys.md. Cloud, a local server, or this PC.
+        internal const string FromCloud = "cloud", FromServer = "server", FromPc = "pc";
+        internal string Source;
+        private string lastSource;
         internal string Reply;
         internal int Revealed;
         internal double Opened = -1;
@@ -3446,7 +3484,7 @@ namespace CapriDesktop
             if (Leaving >= 0) glitch = (float)Math.Min(1, (now - Leaving) / 0.25 + 0.3);
             bool cursor = State == TalkState.Thinking || State == TalkState.Talking ? (State == TalkState.Talking || (int)(now * 2.5) % 2 == 0) : (int)(now * 2) % 2 == 0;
             int revealed = State == TalkState.Thinking || Reply == null ? 0 : Math.Min(Reply.Length, Math.Max(0, Revealed));
-            if (glitch == 0 && clean && Visible && Image != null && cursor == lastCursor && State == lastState && Heard == lastHeard && Prompt == lastPrompt && Reply == lastReply && revealed == lastRevealed && s == lastScale && head == lastHead && feet == lastFeet && area == lastArea) return;
+            if (glitch == 0 && clean && Visible && Image != null && cursor == lastCursor && State == lastState && Heard == lastHeard && Prompt == lastPrompt && Source == lastSource && Reply == lastReply && revealed == lastRevealed && s == lastScale && head == lastHead && feet == lastFeet && area == lastArea) return;
             Point at;
             Bitmap image = Render(s, head, feet, area, cursor, out at);
             if (glitch > 0)
@@ -3469,12 +3507,47 @@ namespace CapriDesktop
             lastState = State;
             lastHeard = Heard;
             lastPrompt = Prompt;
+            lastSource = Source;
             lastReply = Reply;
             lastRevealed = revealed;
             lastScale = s;
             lastHead = head;
             lastFeet = feet;
             lastArea = area;
+        }
+
+        // A cloud, a server rack or a screen, in the prompt line's own dim colour so it follows the palette.
+        private static void SourceMark(Graphics graphics, string source, float x, float y, float cw, float line, float s)
+        {
+            // Centred on the letters rather than the line: her mono sits low in its cell, so the mark goes down with it.
+            float wide = cw * 1.6f, high = line * 0.58f, top = y + (line - high) / 2f + line * 0.1f;
+            System.Drawing.Drawing2D.SmoothingMode was = graphics.SmoothingMode;
+            graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            using (Brush dim = new SolidBrush(Look.Dim))
+            using (Pen pen = new Pen(Look.Dim, Math.Max(1f, 1.2f * s)))
+            {
+                if (source == FromCloud)
+                {
+                    graphics.FillEllipse(dim, x, top + high * 0.35f, wide * 0.5f, high * 0.65f);
+                    graphics.FillEllipse(dim, x + wide * 0.25f, top, wide * 0.55f, high * 0.8f);
+                    graphics.FillEllipse(dim, x + wide * 0.5f, top + high * 0.3f, wide * 0.5f, high * 0.7f);
+                }
+                else if (source == FromServer)
+                {
+                    float row = high / 2f - s;
+                    graphics.DrawRectangle(pen, x, top, wide * 0.8f, row);
+                    graphics.DrawRectangle(pen, x, top + row + 2 * s, wide * 0.8f, row);
+                    graphics.FillEllipse(dim, x + wide * 0.55f, top + row * 0.35f, 2 * s, 2 * s);
+                    graphics.FillEllipse(dim, x + wide * 0.55f, top + row * 1.35f + 2 * s, 2 * s, 2 * s);
+                }
+                else
+                {
+                    graphics.DrawRectangle(pen, x, top, wide * 0.85f, high * 0.68f);
+                    graphics.DrawLine(pen, x + wide * 0.42f, top + high * 0.68f, x + wide * 0.42f, top + high * 0.9f);
+                    graphics.DrawLine(pen, x + wide * 0.2f, top + high, x + wide * 0.65f, top + high);
+                }
+            }
+            graphics.SmoothingMode = was;
         }
 
         internal Bitmap Render(float s, Point head, Point feet, Rectangle area, bool cursorOn, out Point at)
@@ -3546,8 +3619,14 @@ namespace CapriDesktop
                         // The prefix is theirs to change in sys.md; Prompt itself stays the stock marker, since the
                         // code elsewhere tests it to tell a system line from a spoken one.
                         string you = copied ? SysLines.Prefix(SysLines.SysMark) + "copied" : SysLines.Prefix(Prompt) + (Heard ?? "");
-                        if (Look.Cells(you) > columns) you = Look.Cut(you, columns - 3) + "...";
-                        using (Brush dim = new SolidBrush(Look.Dim)) Look.Draw(graphics, you, heard, dim, x, row2);
+                        // Two cells in front of the line for where the reply came from, when that is known.
+                        int marked = !copied && Source != null && columns > 6 ? 2 : 0;
+                        if (Look.Cells(you) > columns - marked) you = Look.Cut(you, columns - marked - 3) + "...";
+                        using (Brush dim = new SolidBrush(Look.Dim))
+                        {
+                            if (marked > 0) SourceMark(graphics, Source, x, row2, cw, line, s);
+                            Look.Draw(graphics, you, heard, dim, x + marked * cw, row2);
+                        }
                         row2 += line;
                     }
                     int[] takes = Look.Takes(lines, Speaker + (Reply ?? ""), Speaker.Length + (State == TalkState.Thinking ? (Reply ?? "").Length : Math.Max(0, Revealed)));

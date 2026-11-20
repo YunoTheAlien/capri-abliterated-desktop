@@ -1,0 +1,206 @@
+# Her menus and labels in Somali: the English, a tab, then the translation.
+Open Capri Mainframe	Fur Capri Mainframe
+Her folder	Fooldarkeeda
+Play	Ciyaar
+Music	Muusik
+Chess	Shaxda
+Connect four	Afar isku xiga
+Tic-tac-toe	Tic-tac-toe
+Rock, paper, scissors	Dhagax, warqad, qalin
+Hide Capri	Qari Capri
+Hologram	Hologram
+Normal	Caadi
+Small	Yar
+Medium	Dhexdhexaad
+Large	Weyn
+Huge	Aad u weyn
+Giant	Weyn
+Move	Dhaqaaq
+Wander around	Dhex-dhex mari
+Dance to music	Ciyaar muusikada ku dhex jira
+Dance	Ciyaar
+Ride cursor	Kursiga cursor-ka saar
+Sit on windows	Daaqadaha saar
+Sit here	Halkan fadhii
+Hang here	Halkan iska joog
+Lie down	Jiifso
+Go to sleep	Seexo
+Bring to this screen	Keen shaashadan
+Go to the next screen	Tag shaashadda xigta
+Black	Madow
+White	Cad
+Test	Tijaabo
+Stop	Jooji
+Help	Caawimaad
+Commands	Amarrada
+Help page	Bogga caawimaadda
+Join the Discord	Ku biir Discord
+Copy error details	Koobiyee faahfaahinta khaladka
+Check for updates	Hubi cusboonaysiinta
+Quit Capri	Ka bax Capri
+MAINFRAME	MAINFRAME
+Settings	Dejinta
+Mods	Modyada
+BRAIN	MASKAX
+Provider	Bixiye
+Using your server with no key	Isticmaalaya server-kaaga furaha la'aan
+Refresh	Cusboonaysii
+Set up her brain	Maskaxdeeda diyaari
+Have Ollama? Open it, then press Refresh.	Ollama ma haysaa? Fur, kadibna riix Cusboonaysii.
+Pick one. Only one brain runs at a time.	Dooro mid. Hal maskax oo keliya ayaa shaqeysa mar kasta.
+MEDIUM INTELLIGENCE	DHEXDHEXAAD INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Demay
+Free key	Furaha bilaashka ah
+Connect	Ku xidh
+Free keys can be rate limited and slow.	Furayaasha bilaashka ahi waxay xaddidan yihiin oo way gaabsadaan.
+That's a paid key: it goes under MAX INTELLIGENCE.	Taasi waa furaha lacagta leh: wuxuu u gali doonaa MAX INTELLIGENCE.
+Move to MAX	Ku wareeji MAX
+VOICE	CODKA
+Ctrl + Alt + V to talk	Ctrl + Alt + V si aad u hadasho
+PREBUILT LOCAL	MAXALLI HORE LOO DHISAY
+CUSTOM LOCAL	MAXALLI GAAR AH
+CLOUD VOICE	CODKA CLOUD
+Set up	Diyaari
+Setup guide	Hagaha diyaarinta
+Fish Audio	Fish Audio
+Default model	Model caadi ah
+Pick a voice model	Dooro model-ka codka
+Get free voice	Hel codka bilaashka ah
+Mic: default	Makarafoonka: caadi
+Her speaker: Default	Hadaladeeda: Caadi
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N wuxuu aamusiyaa makarafoonka
+CAPRI	CAPRI
+Support	Taageero
+Remote	Fogaynta
+Bring here	Keen halkan
+Advanced Settings	Dejinta horumarsan
+YOU	ADIGU
+Your personality	Shakhsiyaddaada
+Language	Luqadda
+English	Ingiriisi
+What should she call you?	Maxaad ii tidhaahdaa?
+Save	Kaydi
+Volume	Mugga
+Pitch	Pitch
+Speed	Xawaaraha
+Robot	Robot
+Glitch	Glitch
+Sounds	Codadka
+Typing sound	Codka qorista
+Listen for Capri	Dhegayso Capri
+Hearing	Maqalka
+Auto	Si toos ah
+Free voice in games	Codka bilaashka ah ciyaaraha
+Call mode (beta)	Habka wicitaanka (beta)
+Her voice in your mic	Codkeeda makarafoonkaaga
+Get VB-CABLE	Hel VB-CABLE
+How to	Sida
+Her voice in your mic: loudness	Codkeeda makarafoonkaaga: sare-dhaw
+MOVES	DHAQDHAQAAQYADA
+Pop-in times	Waqtiyada soo-muuqashada
+Mini player	Mini player
+Wander	Dhex-dhex maraysa
+Sleep	Hurdo
+Pop-ins	Soo-muuqashooyin
+Glitch in at startup	Glitch bilowga
+KEYS	FURAHA
+Talk: Ctrl + Alt + V	Hadal: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Aamusi makarafoonka: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Qorista: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Qari/muuji: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Aamusnaan: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Mode-ka Ciyaaraha: Ctrl + Alt + G
+Confirm	Xaqiiji
+Cancel	Jooji
+Size	Cabbirka
+Check in on me	Iga soo bax
+Edit check-in lines	Wax ka beddel khadadka check-in
+Always on top	Mar walba kor ku jir
+Mainframe size	Cabbirka Mainframe
+Mainframe colours	Midabbada Mainframe
+Head pats	Madax-maasaggu
+Pat stroke	Madax-maasaggu
+Chaos when upset	Fowdo marka ay cadhooto
+Legacy stand	Istaando hore
+Jealous of other AIs	Ka xasuuda AI-yada kale
+Teases when another AI comes to the front.	Wuu cayaarayaa markii AI kale uu hore u yimaado.
+Close other AIs for me	Xir AI-yada kale ii
+Asks before closing only the apps you choose.	Wuxuu weydiiyaa ka hor inta uusan xidhin oo keliya apps-ka aad doorato.
+Apps she may close	Apps ay xidhi karto
+Choose apps	Dooro apps
+WATCH	EEG
+Watch my screen	Shaashaddayda eeg
+Screens	Shaashadaha
+All screens	Dhammaan shaashadaha
+Remember what she sees	Ka xasuuso waxa ay aragto
+Every	Kasta
+Watch-along memory	Xusuusta wada-eegista
+Code/Husk Mode	Habka Code/Husk
+Thinking	Wuu fekeraa
+Default	Caadi
+Extra request JSON	Codka dheeraad ah ee JSON
+Add	Ku dar
+Verbosity	Badnaanta erayada
+Replies	Jawaabaha
+Memory	Xasuus
+Memory size	Cabbirka xasuusta
+Max reply	Jawaabta ugu badan
+Bubble	Buufis
+Follow-up messages	Farriimaha raacida
+Use	Isticmaal
+A model in Ollama, on your local server or on your key.	Model Ollama ku jira, server-kaaga maxalliga ah ama furahaaga.
+HABITS	DABEECADAHA
+Open her memories	Fur xasuustiisa
+Start with Windows	Ku bilow Windows
+Show on Discord	Ku muuji Discord
+Use her cursor	Isticmaal cursor-keeda
+Remember our chats	Ka xasuuso wadahadalladeenna
+Power saver	Badbaadiyaha tamarta
+Music app	App-ka muusikada
+Perch	Meesha fadhiga
+Keep PC awake for jobs	PC-ga toos u ilaali shaqooyinka
+Hide in full screen	Ka qari shaashadda buuxda
+Mini player over full screen	Mini player ka sarreeya shaashadda buuxda
+Explore while I'm away	Baadho intaan maqnaado
+Explore after	Baadho ka dib
+GAMES	CIYAARAHA
+Controls	Xakamaynta
+Comments	Faallooyin
+Live reactions	Falcelinta tooska ah
+Game sounds	Codadka ciyaarta
+Gaming Mode	Mode-ka Ciyaaraha
+She reacts to your game until you close it.	Ciyaarahaaga ayay ka jawaabtaa ilaa aad xirto.
+Works best on MAX INTELLIGENCE.	Ugu wanaagsan MAX INTELLIGENCE.
+Fast hands in games	Gacmo degdeg ah ciyaaraha
+Mute her	Aamusi isaga
+CLIPS	CLIPS
+Clip my games	Ciyaaradayda duub
+Save big moments	Kaydi waqtiyada waaweyn
+Save folder	Fooldarka kaydinta
+Choose folder	Dooro fooldarka
+Open clips folder	Fur fooldarka clips
+Default length	Dherer caadi ah
+Frame rate	Tirada sawirka ee ilbiriqsi
+Resolution	Go'aanka
+Video bitrate	Bitrate-ka fiidiyaha
+Weather	Cimilada
+Code mods can reach your whole PC. Only trusted ones.	Koodka modyada wuxuu gaari karaa PC-kaaga oo dhan. Kuwa la aamini karo oo keliya.
+Import mod	Soo deji mod
+Browse mods	Eeg modyada
+Mods folder	Fooldarka modyada
+INSTALLED	LA RAKIBAY
+Update mods	Cusboonaysii modyada
+No mods match.	Modyo ma waafaqaan.
+On	Shid
+Remove	Ka saar
+Publish	Daabac
+Options	Ikhtiyaarrada
+Back	Dib u noqo
+Next	Xiga
+COLORS	MIDABBADA
+Reset colors	Dib u dejinta midabbada
+Running on this PC	Kan PC-kan ku shaqeynaya
+NORMAL	CAADI
+OFF	DEMAN
+Local server address	Cinwaanka server-ka maxalliga ah

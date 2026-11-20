@@ -1,0 +1,206 @@
+# Her menus and labels in Welsh: the English, a tab, then the translation.
+Open Capri Mainframe	Agor Capri Mainframe
+Her folder	Ei ffolder
+Play	Chwarae
+Music	Cerddoriaeth
+Chess	Gwyddbwyll
+Connect four	Pedwar yn olynol
+Tic-tac-toe	Tic-tac-toe
+Rock, paper, scissors	Carreg, papur, siswrn
+Hide Capri	Cuddio Capri
+Hologram	Holograffeg
+Normal	Arferol
+Small	Bach
+Medium	Canolig
+Large	Mawr
+Huge	Enfawr
+Giant	Anferth
+Move	Symud
+Wander around	Crwydro o gwmpas
+Dance to music	Dawnsio i gerddoriaeth
+Dance	Dawnsio
+Ride cursor	Marchogaeth cyrchwr
+Sit on windows	Eistedd ar ffenestri
+Sit here	Eistedda yma
+Hang here	Aros yma
+Lie down	Gorwedd i lawr
+Go to sleep	Mynd i gysgu
+Bring to this screen	Dod i'r sgrin hon
+Go to the next screen	Mynd i'r sgrin nesaf
+Black	Du
+White	Gwyn
+Test	Prawf
+Stop	Stopio
+Help	Cymorth
+Commands	Gorchmynion
+Help page	Tudalen gymorth
+Join the Discord	Ymuno â'r Discord
+Copy error details	Copïo manylion gwall
+Check for updates	Chwilio am ddiweddariadau
+Quit Capri	Gadael Capri
+MAINFRAME	MAINFRAME
+Settings	Gosodiadau
+Mods	Modiau
+BRAIN	YMENNYDD
+Provider	Darparwr
+Using your server with no key	Defnyddio dy weinydd heb allwedd
+Refresh	Adnewyddu
+Set up her brain	Sefydlu ei hymennydd
+Have Ollama? Open it, then press Refresh.	Oes gen ti Ollama? Agora fe, yna pwyso Adnewyddu.
+Pick one. Only one brain runs at a time.	Dewisa un. Dim ond un ymennydd sy'n rhedeg ar y tro.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	I ffwrdd
+Free key	Allwedd am ddim
+Connect	Cysylltu
+Free keys can be rate limited and slow.	Gall allweddi am ddim fod wedi'u cyfyngu o ran cyflymder ac yn araf.
+That's a paid key: it goes under MAX INTELLIGENCE.	Allwedd dâl yw hon: mae'n mynd o dan MAX INTELLIGENCE.
+Move to MAX	Symud i MAX
+VOICE	LLAIS
+Ctrl + Alt + V to talk	Ctrl + Alt + V i siarad
+PREBUILT LOCAL	LLEOL WEDI'I BERFFEITHIO YMLAEN LLAW
+CUSTOM LOCAL	LLEOL WEDI'I ADDASU
+CLOUD VOICE	LLAIS CWMWL
+Set up	Sefydlu
+Setup guide	Canllaw gosod
+Fish Audio	Fish Audio
+Default model	Model rhagosodedig
+Pick a voice model	Dewisa fodel llais
+Get free voice	Cael llais rhad ac am ddim
+Mic: default	Meic: rhagosodiad
+Her speaker: Default	Ei seinydd: Rhagosodiad
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N yn tawelu'r meic
+CAPRI	CAPRI
+Support	Cymorth
+Remote	O bell
+Bring here	Dod yma
+Advanced Settings	Gosodiadau Uwch
+YOU	TI
+Your personality	Dy bersonoliaeth
+Language	Iaith
+English	Saesneg
+What should she call you?	Beth ddylai hi dy alw di?
+Save	Cadw
+Volume	Cyfaint
+Pitch	Traw
+Speed	Cyflymder
+Robot	Robot
+Glitch	Glitch
+Sounds	Synau
+Typing sound	Sain teipio
+Listen for Capri	Gwrando am Capri
+Hearing	Clywed
+Auto	Auto
+Free voice in games	Llais rhad ac am ddim mewn gemau
+Call mode (beta)	Modd galwad (beta)
+Her voice in your mic	Ei llais yn dy feic
+Get VB-CABLE	Cael VB-CABLE
+How to	Sut i
+Her voice in your mic: loudness	Ei llais yn dy feic: uchder sain
+MOVES	SYMUDIADAU
+Pop-in times	Amserau ymddangos
+Mini player	Mini chwaraewr
+Wander	Crwydro
+Sleep	Cysgu
+Pop-ins	Ymddangosiadau
+Glitch in at startup	Glitch wrth gychwyn
+KEYS	ALLWEDDI
+Talk: Ctrl + Alt + V	Siarad: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Tewi meic: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Teipio: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Cuddio/dangos: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Tawel: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Modd Gemau: Ctrl + Alt + G
+Confirm	Cadarnhau
+Cancel	Canslo
+Size	Maint
+Check in on me	Dw i'n galw heibio
+Edit check-in lines	Golygu llinellau galw heibio
+Always on top	Bob amser ar ei ben
+Mainframe size	Maint Mainframe
+Mainframe colours	Lliwiau Mainframe
+Head pats	Mwythau pen
+Pat stroke	Strôc mwyth pen
+Chaos when upset	Anhrefn pan mae hi'n gynhyrfus
+Legacy stand	Hen stand
+Jealous of other AIs	Eiddigeddus o AIs eraill
+Teases when another AI comes to the front.	Yn tynnu coes pan mae AI arall yn dod i'r blaen.
+Close other AIs for me	Cau AIs eraill ar fy rhan
+Asks before closing only the apps you choose.	Yn gofyn cyn cau dim ond yr apiau dewisi di.
+Apps she may close	Apiau y caiff hi eu cau
+Choose apps	Dewis apiau
+WATCH	WYLIO
+Watch my screen	Gwylia fy sgrin
+Screens	Sgriniau
+All screens	Pob sgrin
+Remember what she sees	Cofia beth mae hi'n ei weld
+Every	Bob
+Watch-along memory	Cof gwylio gyda'n gilydd
+Code/Husk Mode	Modd Cod/Husk
+Thinking	Yn meddwl
+Default	Rhagosodiad
+Extra request JSON	Cais JSON ychwanegol
+Add	Ychwanegu
+Verbosity	Geirioldeb
+Replies	Atebion
+Memory	Cof
+Memory size	Maint cof
+Max reply	Ateb mwyaf
+Bubble	Swigen
+Follow-up messages	Negeseuon dilynol
+Use	Defnyddio
+A model in Ollama, on your local server or on your key.	Model yn Ollama, ar dy weinydd lleol neu ar dy allwedd.
+HABITS	ARFERION
+Open her memories	Agor ei hatgofion
+Start with Windows	Dechrau gyda Windows
+Show on Discord	Dangos ar Discord
+Use her cursor	Defnyddia ei chyrchwr
+Remember our chats	Cofia ein sgyrsiau
+Power saver	Arbedwr pŵer
+Music app	App cerddoriaeth
+Perch	Clwyd
+Keep PC awake for jobs	Cadw'r PC yn effro ar gyfer swyddi
+Hide in full screen	Cuddio mewn sgrin lawn
+Mini player over full screen	Mini chwaraewr dros sgrin lawn
+Explore while I'm away	Archwilio tra dw i i ffwrdd
+Explore after	Archwilio wedyn
+GAMES	GEMAU
+Controls	Rheolyddion
+Comments	Sylwadau
+Live reactions	Adweithiau byw
+Game sounds	Synau gêm
+Gaming Mode	Modd Gemau
+She reacts to your game until you close it.	Mae hi'n ymateb i dy gêm nes i ti ei chau.
+Works best on MAX INTELLIGENCE.	Gweithia orau ar MAX INTELLIGENCE.
+Fast hands in games	Dwylo cyflym mewn gemau
+Mute her	Tewi hi
+CLIPS	CLIPIAU
+Clip my games	Clipio fy ngemau
+Save big moments	Cadw eiliadau mawr
+Save folder	Ffolder cadw
+Choose folder	Dewis ffolder
+Open clips folder	Agor ffolder clipiau
+Default length	Hyd rhagosodedig
+Frame rate	Cyfradd ffrâm
+Resolution	Datrysiad
+Video bitrate	Cyfradd did fideo
+Weather	Tywydd
+Code mods can reach your whole PC. Only trusted ones.	Gall modiau cod gyrraedd dy PC cyfan. Dim ond rhai dibynadwy.
+Import mod	Mewnforio mod
+Browse mods	Pori modiau
+Mods folder	Ffolder modiau
+INSTALLED	WEDI'I GOSOD
+Update mods	Diweddaru modiau
+No mods match.	Dim modiau'n cyfateb.
+On	Ymlaen
+Remove	Tynnu
+Publish	Cyhoeddi
+Options	Opsiynau
+Back	Yn ôl
+Next	Nesaf
+COLORS	LLIWIAU
+Reset colors	Ailosod lliwiau
+Running on this PC	Yn rhedeg ar y PC hwn
+NORMAL	ARFEROL
+OFF	I FFWRDD
+Local server address	Cyfeiriad gweinydd lleol

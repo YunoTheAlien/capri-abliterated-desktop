@@ -1,0 +1,206 @@
+# Her menus and labels in Maltese: the English, a tab, then the translation.
+Open Capri Mainframe	Iftaħ Capri Mainframe
+Her folder	Il-folder tagħha
+Play	Ipplej
+Music	Mużika
+Chess	Taraġ
+Connect four	Erba' f'ringiela
+Tic-tac-toe	Tic-tac-toe
+Rock, paper, scissors	Ġebla, karta, qasab
+Hide Capri	Aħbi lil Capri
+Hologram	Ologramma
+Normal	Normali
+Small	Żgħir
+Medium	Medju
+Large	Kbir
+Huge	Kbir ħafna
+Giant	Gant
+Move	Mexxi
+Wander around	Iġġerra madwar
+Dance to music	Iżfen għall-mużika
+Dance	Iżfen
+Ride cursor	Irkeb il-cursor
+Sit on windows	Oqgħod fuq it-twieqi
+Sit here	Oqgħod hawn
+Hang here	Oqgħod hawn
+Lie down	Istenna
+Go to sleep	Mur torqod
+Bring to this screen	Ġibha f'dan l-iskrin
+Go to the next screen	Mur għall-iskrin li jmiss
+Black	Iswed
+White	Abjad
+Test	Ittestja
+Stop	Waqqaf
+Help	Għajnuna
+Commands	Kmandi
+Help page	Paġna tal-għajnuna
+Join the Discord	Ingħaqad mad-Discord
+Copy error details	Ikkopja d-dettalji tal-iżball
+Check for updates	Iċċekkja għal aġġornamenti
+Quit Capri	Ħalli Capri
+MAINFRAME	MAINFRAME
+Settings	Impostazzjonijiet
+Mods	Mods
+BRAIN	MOĦĦ
+Provider	Fornitur
+Using your server with no key	Qed nuża s-server tiegħek mingħajr ċavetta
+Refresh	Aġġorna
+Set up her brain	Issettja l-moħħ tagħha
+Have Ollama? Open it, then press Refresh.	Għandek Ollama? Iftaħha, imbagħad ipprem Aġġorna.
+Pick one. Only one brain runs at a time.	Agħżel wieħed. Moħħ wieħed biss jaħdem f'daqqa.
+MEDIUM INTELLIGENCE	INTELLIĠENZA MEDJA
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Off
+Free key	Ċavetta bla ħlas
+Connect	Konnettja
+Free keys can be rate limited and slow.	Ċwievet bla ħlas jistgħu jkunu bil-limitu u bil-mod.
+That's a paid key: it goes under MAX INTELLIGENCE.	Dik ċavetta bi ħlas: tmur taħt MAX INTELLIGENCE.
+Move to MAX	Mexxi għal MAX
+VOICE	LEĦEN
+Ctrl + Alt + V to talk	Ctrl + Alt + V biex titkellem
+PREBUILT LOCAL	MODELL LOKALI PREINSTALLAT
+CUSTOM LOCAL	LOKALI PERSONALIZZAT
+CLOUD VOICE	LEĦEN CLOUD
+Set up	Issettja
+Setup guide	Gwida għall-installazzjoni
+Fish Audio	Fish Audio
+Default model	Mudell default
+Pick a voice model	Agħżel mudell tal-leħen
+Get free voice	Ikseb leħen bla ħlas
+Mic: default	Mikrofon: default
+Her speaker: Default	Il-kelliem tagħha: Default
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N jagħmel il-mikrofon mute
+CAPRI	CAPRI
+Support	Appoġġ
+Remote	Remote
+Bring here	Ġibha hawn
+Advanced Settings	Impostazzjonijiet avvanzati
+YOU	INT
+Your personality	Il-personalità tiegħek
+Language	Lingwa
+English	Ingliż
+What should she call you?	X'għandha tsejjaħlek?
+Save	Salva
+Volume	Volum
+Pitch	Pitch
+Speed	Veloċità
+Robot	Robot
+Glitch	Glitch
+Sounds	Ħsejjes
+Typing sound	Ħoss tal-kitba
+Listen for Capri	Isma' lil Capri
+Hearing	Smigħ
+Auto	Awtomatiku
+Free voice in games	Leħen bla ħlas fil-logħob
+Call mode (beta)	Modalità ta' sejħa (beta)
+Her voice in your mic	Il-leħen tagħha fil-mikrofon tiegħek
+Get VB-CABLE	Ikseb VB-CABLE
+How to	Kif
+Her voice in your mic: loudness	Il-leħen tagħha fil-mikrofon tiegħek: il-leħen
+MOVES	MOVIMENTI
+Pop-in times	Ħinijiet tad-dħul
+Mini player	Mini player
+Wander	Iġġerra
+Sleep	Irqad
+Pop-ins	Dħul
+Glitch in at startup	Glitch waqt l-istartjar
+KEYS	ĊWIEVET
+Talk: Ctrl + Alt + V	Kellem: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Mute tal-mikrofon: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Ikteb: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Aħbi/uri: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Kwiet: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Gaming Mode: Ctrl + Alt + G
+Confirm	Ikkonferma
+Cancel	Ikkanċella
+Size	Daqs
+Check in on me	Ara kif inkun
+Edit check-in lines	Editja l-linji tal-check-in
+Always on top	Dejjem fuq nett
+Mainframe size	Daqs tal-Mainframe
+Mainframe colours	Kuluri tal-Mainframe
+Head pats	Bugħi
+Pat stroke	Ħuġ tal-karezzi
+Chaos when upset	Kaos meta tkun imdejqa
+Legacy stand	Stand legacy
+Jealous of other AIs	Għira minn AI oħra
+Teases when another AI comes to the front.	Iqarras meta AI oħra tiġi quddiem.
+Close other AIs for me	Agħlaq AI oħra għalija
+Asks before closing only the apps you choose.	Jistaqsi qabel jagħlaq biss l-applikazzjonijiet li tagħżel.
+Apps she may close	Applikazzjonijiet li tista' tagħlaq
+Choose apps	Agħżel applikazzjonijiet
+WATCH	ARA
+Watch my screen	Ara l-iskrin tiegħi
+Screens	Skrins
+All screens	L-iskrins kollha
+Remember what she sees	Ftakar dak li tara
+Every	Kull
+Watch-along memory	Memorja tat-tfarrik flimkien
+Code/Husk Mode	Modalità Code/Husk
+Thinking	Naħseb
+Default	Default
+Extra request JSON	Talba extra JSON
+Add	Żid
+Verbosity	Verbożità
+Replies	Tweġibiet
+Memory	Memorja
+Memory size	Daqs tal-memorja
+Max reply	Tweġiba massima
+Bubble	Bżieqa
+Follow-up messages	Messaġġi ta' segwitu
+Use	Uża
+A model in Ollama, on your local server or on your key.	Mudell f'Ollama, fuq is-server lokali tiegħek jew bil-ċavetta tiegħek.
+HABITS	ABITUDNIJIET
+Open her memories	Iftaħ il-memorji tagħha
+Start with Windows	Ibda ma' Windows
+Show on Discord	Uri fuq Discord
+Use her cursor	Uża l-cursor tagħha
+Remember our chats	Ftakar iċ-chats tagħna
+Power saver	Power saver
+Music app	App tal-mużika
+Perch	Perch
+Keep PC awake for jobs	Żomm il-PC miftuħ għax-xogħlijiet
+Hide in full screen	Aħbi f'full screen
+Mini player over full screen	Mini player fuq full screen
+Explore while I'm away	Esplora waqt li m'intix hawn
+Explore after	Esplora wara
+GAMES	LOGĦOB
+Controls	Kontrolli
+Comments	Kummenti
+Live reactions	Reazzjonijiet diretti
+Game sounds	Ħsejjes tal-logħba
+Gaming Mode	Gaming Mode
+She reacts to your game until you close it.	Tirreaġixxi għal-logħba tiegħek sakemm tagħlaqha.
+Works best on MAX INTELLIGENCE.	Jaħdem l-aħjar fuq MAX INTELLIGENCE.
+Fast hands in games	Idejn mgħaġġla fil-logħob
+Mute her	Ittaffi lilha
+CLIPS	KLIPS
+Clip my games	Ikklipja l-logħob tiegħi
+Save big moments	Salva l-momenti kbar
+Save folder	Folder tas-salvataġġ
+Choose folder	Agħżel folder
+Open clips folder	Iftaħ il-folder tal-klipps
+Default length	Tul default
+Frame rate	Frame rate
+Resolution	Riżoluzzjoni
+Video bitrate	Bitrate tal-vidjo
+Weather	Temp
+Code mods can reach your whole PC. Only trusted ones.	Mods tal-kodiċi jistgħu jilħqu l-PC kollu tiegħek. Biss dawk fdati.
+Import mod	Importa mod
+Browse mods	Fittex mods
+Mods folder	Folder tal-mods
+INSTALLED	INSTALLAT
+Update mods	Aġġorna mods
+No mods match.	Ebda mod ma jaqbel.
+On	On
+Remove	Neħħi
+Publish	Ippubblika
+Options	Għażliet
+Back	Lura
+Next	Li jmiss
+COLORS	KULURI
+Reset colors	Ħassar il-kuluri
+Running on this PC	Qed jaħdem fuq dan il-PC
+NORMAL	NORMALI
+OFF	OFF
+Local server address	Indirizz tas-server lokali

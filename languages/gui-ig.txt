@@ -1,0 +1,206 @@
+# Her menus and labels in Igbo: the English, a tab, then the translation.
+Open Capri Mainframe	Mepee Capri Mainframe
+Her folder	Folda ya
+Play	Kpọọ egwu
+Music	Egwu
+Chess	Chess
+Connect four	Jikọọ anọ
+Tic-tac-toe	Tic-tac-toe
+Rock, paper, scissors	Okwute, akwụkwọ, mkpịsị ọdụ
+Hide Capri	Zoo Capri
+Hologram	Hologram
+Normal	Nkịtị
+Small	Nta
+Medium	Ọkara
+Large	Nnukwu
+Huge	Nnukwu
+Giant	Nnukwu
+Move	Kpọgabe
+Wander around	Gbanwee ebe gburugburu
+Dance to music	Gbaa egwu na egwu
+Dance	Ịgba egwu
+Ride cursor	Gbaa cursor
+Sit on windows	Nọdụ n'elu windows
+Sit here	Nọdụ ebe a
+Hang here	Kwụọ ebe a
+Lie down	Dina ala
+Go to sleep	Ra ihi ụra
+Bring to this screen	Kpọtara n'ihuenyo a
+Go to the next screen	Gaa ihuenyo ọzọ
+Black	Ojii
+White	Ọcha
+Test	Nwalee
+Stop	Kwụsị
+Help	Enyemaka
+Commands	Iwu
+Help page	Ibe enyemaka
+Join the Discord	Sonyere Discord
+Copy error details	Detuo nkọwa njehie
+Check for updates	Lelee mmelite
+Quit Capri	Pụọ Capri
+MAINFRAME	MAINFRAME
+Settings	Ntọala
+Mods	Mods
+BRAIN	ỤBỤRỤ
+Provider	Onye nnyefe
+Using your server with no key	Na-eji sava gị na-enweghị igodo
+Refresh	Bulite ọzọ
+Set up her brain	Hazie ụbụrụ ya
+Have Ollama? Open it, then press Refresh.	Ị nwere Ollama? Mepee ya, wee pịa Refresh.
+Pick one. Only one brain runs at a time.	Họrọ otu. Naanị otu ụbụrụ na-agba ọsọ n'otu oge.
+MEDIUM INTELLIGENCE	AMỌMA ỌGỤGỤ
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Mapụ
+Free key	Igodo efu
+Connect	Jikọọ
+Free keys can be rate limited and slow.	Igodo efu nwere ike ịnwe oke ọnụọgụ ma dịkwa nwayọ.
+That's a paid key: it goes under MAX INTELLIGENCE.	Nke ahụ bụ igodo a kwụrụ ụgwọ: ọ na-aga n'okpuru MAX INTELLIGENCE.
+Move to MAX	Kpọgabe gaa MAX
+VOICE	OLU
+Ctrl + Alt + V to talk	Ctrl + Alt + V iji kwuo okwu
+PREBUILT LOCAL	ỌDỊ ỌNỤ ỌCHA
+CUSTOM LOCAL	NKE ỌNỤ ỌCHA
+CLOUD VOICE	OLU ICHU
+Set up	Hazie
+Setup guide	Akwụkwọ ntuziaka nhazi
+Fish Audio	Fish Audio
+Default model	Modul ndabere
+Pick a voice model	Họrọ modul olu
+Get free voice	Nweta olu efu
+Mic: default	Mic: ndabere
+Her speaker: Default	Ihe nkwupụta ya: Ndabere
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N na-agbanye mic
+CAPRI	CAPRI
+Support	Nkwado
+Remote	Remote
+Bring here	Kpọtara ebe a
+Advanced Settings	Ntọala dị elu
+YOU	Ị
+Your personality	Àgwà gị
+Language	Asụsụ
+English	Bekee
+What should she call you?	Kedu ka ọ kwesịrị ikpọ gị?
+Save	Chekwaa
+Volume	Ịdị elu olu
+Pitch	Ụda
+Speed	Ọsọ
+Robot	Robot
+Glitch	Njehie
+Sounds	Olu
+Typing sound	Olu mgbe ị na-ede
+Listen for Capri	Gee ntị maka Capri
+Hearing	Ịnụ
+Auto	Akpaaka
+Free voice in games	Olu efu n'egwuregwu
+Call mode (beta)	Ọnọdụ ịkpọ oku (beta)
+Her voice in your mic	Olu ya n'ime mic gị
+Get VB-CABLE	Nweta VB-CABLE
+How to	Otú esi
+Her voice in your mic: loudness	Olu ya n'ime mic gị: ịdị elu
+MOVES	NYOCHAPỤ
+Pop-in times	Oge ịbanye
+Mini player	Onye ọkpụkpọ nta
+Wander	Gbanwee ebe
+Sleep	Ụra
+Pop-ins	Ịbanye
+Glitch in at startup	Njehie mgbe ọ malitere
+KEYS	IGODO
+Talk: Ctrl + Alt + V	Kwuo okwu: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Gbanyụọ mic: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Dee: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Zoo/gosi: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Dara jụụ: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Ọnọdụ egwuregwu: Ctrl + Alt + G
+Confirm	Kwenye
+Cancel	Kagbuo
+Size	Ọnụ ọgụgụ
+Check in on me	Nyochaa m
+Edit check-in lines	Dezie akara nyocha
+Always on top	Mgbe niile n'elu
+Mainframe size	Ịdị elu Mainframe
+Mainframe colours	Agwọ Mainframe
+Head pats	Ịdụ isi
+Pat stroke	Mkpịsị ọdụ ịdụ
+Chaos when upset	Nsogbu mgbe ọ na-enwe iwe
+Legacy stand	Ọnụ ọdụ ochie
+Jealous of other AIs	Na-ekwesị ntụkwasị na AI ndị ọzọ
+Teases when another AI comes to the front.	Na-ekwu okwu nchịkọ mgbe AI ọzọ abịa n'ihu.
+Close other AIs for me	Mechie AI ndị ọzọ maka m
+Asks before closing only the apps you choose.	Na-ajụ naanị tupu imechi ngwa ndị ị họrọ.
+Apps she may close	Ngwa ọ nwere ike imechi
+Choose apps	Họrọ ngwa
+WATCH	LEE
+Watch my screen	Lee ihuenyo m anya
+Screens	Ihuenyo
+All screens	Ihuenyo niile
+Remember what she sees	Cheta ihe ọ na-ahụ
+Every	Ọ bụla
+Watch-along memory	Ncheta nke ile anya ọnụ
+Code/Husk Mode	Ọnọdụ Code/Husk
+Thinking	Na-eche echiche
+Default	Ndabere
+Extra request JSON	JSON arụrụ nke nkịọ
+Add	Tinye
+Verbosity	Ogologo okwu
+Replies	Azịza
+Memory	Ncheta
+Memory size	Ịdị elu ncheta
+Max reply	Azịza kacha
+Bubble	Ụzụ
+Follow-up messages	Ozi na-esote
+Use	Jiri
+A model in Ollama, on your local server or on your key.	Otu ụdịdị modul na Ollama, n'ihe nkesa gị nke ime obodo ma ọ bụ n'igodo gị.
+HABITS	ỤZỤ
+Open her memories	Mepee ncheta ya
+Start with Windows	Malite na Windows
+Show on Discord	Gosi na Discord
+Use her cursor	Jiri cursor ya
+Remember our chats	Cheta mkparịta ụka anyị
+Power saver	Onye chekwa ike
+Music app	Ngwa egwu
+Perch	Ọnọdụ nọdụ
+Keep PC awake for jobs	Debe kọmputa ka ọ nọrọ ntụpọ maka ọrụ
+Hide in full screen	Zoo n'ihuenyo zuru oke
+Mini player over full screen	Onye ọkpụkpọ nta n'elu ihuenyo zuru oke
+Explore while I'm away	Chọpụta mgbe m na-apụ
+Explore after	Chọpụta mgbe
+GAMES	EGWUREGWU
+Controls	Njikwa
+Comments	Nkọwa
+Live reactions	Mmeghachi omume ndụ
+Game sounds	Olu egwuregwu
+Gaming Mode	Ọnọdụ egwuregwu
+She reacts to your game until you close it.	Ọ na-aza egwuregwu gị ruo mgbe ị mechiri ya.
+Works best on MAX INTELLIGENCE.	Na-arụ ọrụ kacha mma na MAX INTELLIGENCE.
+Fast hands in games	Aka ngwa n'egwuregwu
+Mute her	Gbanyụọ olu ya
+CLIPS	KLIP
+Clip my games	Debanye egwuregwu m na klip
+Save big moments	Chekwaa oge buru ibu
+Save folder	Folda nchekwa
+Choose folder	Họrọ folda
+Open clips folder	Mepee folda klip
+Default length	Ogologo ndabere
+Frame rate	Ọnụọgụ fremu
+Resolution	Azụ
+Video bitrate	Bitrate vidiyo
+Weather	Ihu igwe
+Code mods can reach your whole PC. Only trusted ones.	Code mods nwere ike ịru kọmputa gị niile. Naanị ndị a ntụkwasị obi.
+Import mod	Bubata mod
+Browse mods	Lelee mods
+Mods folder	Folda mods
+INSTALLED	EDOZILA
+Update mods	Melite mods
+No mods match.	Enweghị mods dabara.
+On	Mee
+Remove	Wepu
+Publish	Bipụta
+Options	Nhọrọ
+Back	Laghachi
+Next	Ọzọ
+COLORS	AGWỌ
+Reset colors	Tọgharia agwọ
+Running on this PC	Na-agba ọsọ n'ọnụ kọmputa a
+NORMAL	NKỊTỊ
+OFF	MAPỤ
+Local server address	Adreesị sava obodo

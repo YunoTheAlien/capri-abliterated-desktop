@@ -1,0 +1,1132 @@
+// capri-mod: 1
+// id: door2-intro
+// name: Door 2 Intro
+// version: 1.24.0
+// author: Yuno
+// description: Hexagons grow like vines in from her screen's edges and out across every other screen, leaving a solid red circle where she lands; it opens and she wakes in it.
+// intro: yes
+
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.IO;
+using System.Windows.Forms;
+using CapriDesktop;
+
+public class Door2Intro : ICapriMod, ICapriIntro, ICapriIntroNames, ICapriIntroStops
+{
+    // The door's shape: a sideways pill with a larger circle through its middle that bulges above and below it, and an
+    // opening in that circle where she comes through. Sizes are shares of her height.
+    private const float Opening = 0.67f, Circle = 0.90f, PillTall = 0.99f, PillWide = 3.39f;
+    // A hexagon fits in a square no larger than this, in pixels.
+    private const float LargestHex = 60f;
+    // The screensaver's alert red, so the door reads as the same panel.
+    private static readonly Color Alert = Color.FromArgb(255, 30, 38);
+    // Her idle strip sits a little right of the others, the same nudge she draws it with.
+    private const float IdleShift = 11f / 384 * 1.11f;
+    // The screensaver's hexagon words, and danger.
+    private static readonly string[] Alerts =
+    {
+        "DANGER", "EMERGENCY", "WARNING", "ALERT", "LEVEL 1", "LEVEL 2", "LEVEL 3", "CODE RED", "LOCKED",
+        "SEALED", "STANDBY", "SIGNAL", "BREACH", "KEYCODE", "REFUSED", "NO ENTRY", "HOLD",
+        "SECURE", "OVERRIDE", "PRIORITY", "CONTAIN", "SECTOR A", "SECTOR B", "SECTOR C", "GATE 4"
+    };
+
+    // Door 1's seconds, kept for the pop-ups and the opening, which come back in part 2.
+    private const double Built = 8.0, Opened = 9.2, Asleep = 8.6, Fades = 10.4, Wakes = 11.4, Settles = 12.25;
+
+    // Part 1, the settings to tweak. Seconds: on her screen the hexagons grow in from its edges to her middle over
+    // Closing; from SpreadFrom they also grow out from her screen across every other screen, covering it all over
+    // Spreading. Both end together. A cell goes dark as the creeping hexagons reach it, taking
+    // Darkening, DarkLead after its hexagon's time (0 is with it). Each takes Lighting to come on; it holds, then fades.
+    private const double ClosingFrom = 0.3, Closing = 9.7, SpreadFrom = 1.0, Spreading = 9.0, Lighting = 0.25;
+    private const double DarkLead = 0.0, Darkening = 0.25;
+    // Part 2, the way door 1 ends, counted from when the fill is done. The circle's red goes from its middle out,
+    // starting OpenGap after and reaching its rim over OpenTakes, each hexagon taking OpenFade, and leaves its black as
+    // the opening; after a pause she fades in asleep in it at SleepAt; the whole field fades at FadeAt over FadeTakes;
+    // she wakes at WakeAt and stands as she will at SettleAt; it ends at EndAt.
+    private const double Filled = ClosingFrom + Closing;
+    private const double OpenGap = 0.1, OpenTakes = 2.5, OpenFade = 0.8, SleepAt = 3.7, FadeAt = 7.5, FadeTakes = 2.0, WakeAt = 8.5, SettleAt = 9.35, EndAt = 11.6;
+    // Each hexagon starts its fade up to this much later than FadeAt, so they go at their own moments.
+    private const double HexFadeSpread = 0.8;
+    // The door keeps a rim this many hexagons wide, solid red; only inside it opens.
+    private const int Rim = 2;
+    // The warning pop-ups, from WarnFrom. They flash as door 1's do, and each time one flashes back up it shows up in a
+    // new place where the hexagons grew in the last WarnFresh seconds, so they follow the fill without sliding. Each
+    // screen has as many as cover WarnShare of it, and one never lands over another by more than WarnOverlap of its
+    // own area. Once the fill is done they land anywhere it reached. They keep on to the end and each fades out over
+    // WarnFadeOut at its own moment, within WarnLinger after the field has faded.
+    private const double WarnFrom = 6.0, WarnShare = 0.25, WarnFresh = 1.5, WarnOverlap = 0.2, WarnLinger = 1.8, WarnFadeOut = 0.4;
+    // A warning beep as a sign shows up, no closer than BeepGap seconds to the last, at BeepLevel: door 1's alert level
+    // in its mix, scaled the way door2.wav is mixed and played (source/mix-door2.py prints it). The beeps go with the
+    // signs, so they grow quieter from when the field starts to fade until the last sign has gone.
+    private const double BeepGap = 1.4, BeepLevel = 0.059;
+    // The door's own sound is this file; the beeps are the files starting with Beeps.
+    // door2-full.wav carries the beeps in it on the scene's own clock, so with it nothing is fired as a sign shows
+    // and the sound cannot drift from the picture; door2.wav and the beep files are the fallback without it.
+    private const string MainSound = "door2-full.wav", Fallback = "door2.wav", Beeps = "warning-";
+    // How the hexagons grow, like vines over ground: they race along veins first and fill the ground between them
+    // after, so no two parts keep the same pace. VineScale is how far apart the veins are, in hexagons; VineFast how
+    // quick a vein is against open ground (lower is quicker); VineSharp how narrow the veins are; VineRough how
+    // uneven every step is.
+    private const double VineScale = 6.0, VineFast = 0.12, VineSharp = 1.6, VineRough = 0.35;
+    private const double Length = Filled + EndAt;
+    // How dark the screen goes, 0 to 1.
+    private const double Dim = 0.9;
+    // The noise that picks which hexagons are lit: a bigger Blob makes larger shapes, Grain is the finer edge on them,
+    // and a higher Sparse leaves more of the screen black. Each play picks its own pattern.
+    private const double Blob = 2.5, Grain = 1.2, GrainShare = 0.40, Sparse = 0.40;
+    private int pattern;
+    // The noise moves: Drift is how far its shapes travel a second and Evolve how fast they change shape, both in
+    // shapes. Soft is how gently a hexagon fades as the edge of a shape passes over it.
+    private const double Drift = 0.25, Evolve = 0.4, Soft = 0.05;
+    // Pop-ups on each screen while the door builds, more on a bigger desk.
+    private const int PopupsPerScreen = 9;
+    // Written once this door has played, so the first start after it arrives plays it whatever the intro setting says,
+    // ahead of every other intro. Her side reads the same file.
+    private const string ShownFile = "shown";
+
+    private sealed class Hex
+    {
+        internal PointF Centre;
+        internal double Born, Gone;
+        internal bool Inner, Solid;
+        // As the screensaver has them: a word or a triangle on some, and a flash of its own on most.
+        internal string Said;
+        internal bool Arrow, Hard;
+        internal double Rate, Phase;
+        // Its place on the grid, for the noise, and whether it has gone dark since it last lit, so it lights again with
+        // a new word, arrow or fill.
+        internal int Col, Row;
+        // How much later than the rest it starts to fade at the end.
+        internal double FadeLag;
+        internal bool Dark;
+        // On another screen, so it grows out from hers rather than in towards her.
+        internal bool Grown;
+    }
+
+    private ICapriHost capri;
+    // Switched on in sys.md, and the test menu's one-shot play.
+    private bool on, once;
+    private readonly List<Hex> door = new List<Hex>();
+    private float doorReach;
+    private Font tag;
+    private readonly StringFormat middle = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center, FormatFlags = StringFormatFlags.NoWrap };
+    private Bitmap sleepArt, wakeArt, idleArt;
+    private readonly List<Popup> popups = new List<Popup>();
+    private readonly List<Bitmap> popupArt = new List<Bitmap>();
+    private Timer popupBeat;
+    private readonly System.Diagnostics.Stopwatch popupClock = new System.Diagnostics.Stopwatch();
+    // The screen her intro covers, in desk coordinates, and a window of its own on every other screen attached.
+    private Rectangle home;
+    private readonly List<Spill> spills = new List<Spill>();
+    private Timer spillBeat;
+    private readonly System.Diagnostics.Stopwatch spillClock = new System.Diagnostics.Stopwatch();
+
+    public string[] Intros { get { return new[] { "Door2" }; } }
+
+    public void Start(ICapriHost host)
+    {
+        capri = host;
+        on = Switched();
+    }
+
+    // sys.md's start-up intro list, with no ">" in front of door2.
+    private bool Switched()
+    {
+        try
+        {
+            string file = Path.Combine(Home(), "personalSettings", "sys.md");
+            if (!File.Exists(file)) file = Path.Combine(Home(), "sys.md");
+            if (!File.Exists(file)) return false;
+            bool inside = false;
+            foreach (string raw in File.ReadAllLines(file))
+            {
+                string one = (raw ?? "").Trim();
+                if (one.StartsWith("#"))
+                {
+                    inside = one.TrimStart('#').Trim().Equals("Her start-up intro", StringComparison.OrdinalIgnoreCase);
+                    continue;
+                }
+                if (!inside || one.Length == 0 || one.StartsWith(">")) continue;
+                if (one.StartsWith("intros:", StringComparison.OrdinalIgnoreCase)) one = one.Substring(7);
+                foreach (string part in one.Split(','))
+                    if (part.Trim().Equals("door2", StringComparison.OrdinalIgnoreCase)) return true;
+            }
+        }
+        catch (Exception error) { capri.Log(error.Message); }
+        return false;
+    }
+
+    public bool Heard(string words)
+    {
+        string said = (words ?? "").ToLowerInvariant();
+        if (!said.Contains("intro") || !(said.Contains("door2") || said.Contains("door 2") || said.Contains("door two"))) return false;
+        once = true;
+        capri.PlayIntro();
+        return true;
+    }
+
+    public void Stop()
+    {
+        EndPopups();
+        EndSpills();
+        foreach (Bitmap art in new[] { sleepArt, wakeArt, idleArt }) if (art != null) art.Dispose();
+        sleepArt = wakeArt = idleArt = null;
+        if (tag != null) { tag.Dispose(); tag = null; }
+    }
+
+    public double Seconds { get { return on || once || !Shown() ? Length : 0; } }
+
+    private bool Shown()
+    {
+        try { return File.Exists(Path.Combine(capri.Folder, ShownFile)); }
+        catch (Exception error) { capri.Log(error.Message); return true; }
+    }
+
+    // The circle and the sprite of her in it are one fixed size, whatever size she is set to: the scene was tuned at
+    // 560 on a 1440 screen, so it is always that share of her screen's height, centred where she lands. It draws a
+    // sprite, not her, so it never needs to match her.
+    private const float SceneTall = 0.385f;
+
+    private static Rectangle Grown(Rectangle her, Rectangle screen)
+    {
+        float tall = screen.Height * SceneTall;
+        if (her.Height <= 0) return her;
+        float f = tall / her.Height;
+        float wide = her.Width * f;
+        float cx = her.X + her.Width / 2f, cy = her.Y + her.Height / 2f;
+        return new Rectangle((int)Math.Round(cx - wide / 2), (int)Math.Round(cy - tall / 2), (int)Math.Round(wide), (int)Math.Round(tall));
+    }
+
+    public void Begin(Bitmap desktop, Rectangle screen, Rectangle her)
+    {
+        her = Grown(her, screen);
+        once = false;
+        try
+        {
+            Directory.CreateDirectory(capri.Folder);
+            File.WriteAllText(Path.Combine(capri.Folder, ShownFile), DateTime.UtcNow.ToString("o"));
+        }
+        catch (Exception error) { capri.Log(error.Message); }
+        pattern = new Random().Next(1, 1000000);
+        home = HomeScreen(screen);
+        MakeField(new Rectangle(her.X + home.X, her.Y + home.Y, her.Width, her.Height));
+        DoorSound();
+        StartSpills();
+        StartWarnings(new Rectangle(her.X + home.X, her.Y + home.Y, her.Width, her.Height));
+    }
+
+    public void Draw(Graphics g, Rectangle screen, Rectangle her, double at)
+    {
+        her = Grown(her, screen);
+        Quality(g);
+        Field(g, home, at);
+        Arrives(g, her, at);
+    }
+
+    // Asleep in the opening, waking as the field goes, then standing as she will once the intro hands over: door 1's
+    // own frames, placed the way she draws them, so the last frame is where she already stands.
+    private void Arrives(Graphics g, Rectangle her, double at)
+    {
+        float size = Math.Max(40f, (her.Height - 6) / 1.11f);
+        float midX = her.X + her.Width / 2f - IdleShift * size, midY = her.Y + her.Height / 2f;
+        double sleeps = Filled + SleepAt, wakes = Filled + WakeAt, settles = Filled + SettleAt;
+        double asleep = Clamp((at - sleeps) / 1.0);
+        double awake = Clamp((at - wakes) / 0.15);
+        double settled = Clamp((at - settles) / 0.35);
+        Frame(g, sleepArt, 16, (int)(Math.Max(0, at - sleeps) * 6) % 16, size, midX, midY, 0, asleep * (1 - awake));
+        Frame(g, wakeArt, 13, (int)(Math.Max(0, at - wakes) * 15), size, midX, midY, 0, awake * (1 - settled));
+        Frame(g, idleArt, 60, (int)(Math.Max(0, at - settles) * 24) % 60, size, midX, midY, IdleShift * size, settled);
+    }
+
+    private static void Quality(Graphics g)
+    {
+        g.CompositingQuality = CompositingQuality.HighSpeed;
+        g.PixelOffsetMode = PixelOffsetMode.HighSpeed;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.InterpolationMode = InterpolationMode.Bilinear;
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+    }
+
+    // The screen her intro covers: the one she is on when it is the size she was given, else the first that size.
+    private Rectangle HomeScreen(Rectangle screen)
+    {
+        try
+        {
+            if (capri != null && capri.Her != null)
+            {
+                Rectangle hers = Screen.FromRectangle(capri.Her.Screen).Bounds;
+                if (hers.Size == screen.Size) return hers;
+            }
+        }
+        catch (Exception error) { capri.Log(error.Message); }
+        return DoorScreen(screen);
+    }
+
+    // Every screen attached right now, read as the intro starts, so a screen added or taken away since she started
+    // counts. Each other screen gets a window of its own, drawn from the same field.
+    private void StartSpills()
+    {
+        EndSpills();
+        spillClock.Restart();
+        try
+        {
+            foreach (Screen one in Screen.AllScreens)
+            {
+                if (one.Bounds == home) continue;
+                Spill spill = new Spill(this, one.Bounds);
+                spills.Add(spill);
+                spill.Show();
+            }
+        }
+        catch (Exception error) { capri.Log(error.Message); }
+        if (spills.Count == 0) return;
+        spillBeat = new Timer { Interval = 16 };
+        spillBeat.Tick += delegate
+        {
+            if (spillClock.Elapsed.TotalSeconds >= Length) { EndSpills(); return; }
+            foreach (Spill spill in spills) spill.Invalidate();
+        };
+        spillBeat.Start();
+    }
+
+    // Esc during the intro: its windows on her other screens and its signs close now, not when its time runs out.
+    public void StopIntro()
+    {
+        EndPopups();
+        EndSpills();
+    }
+
+    private void EndSpills()
+    {
+        if (spillBeat != null) { spillBeat.Stop(); spillBeat.Dispose(); spillBeat = null; }
+        foreach (Spill spill in spills)
+        {
+            try { spill.Close(); spill.Dispose(); }
+            catch (Exception error) { if (capri != null) capri.Log(error.Message); }
+        }
+        spills.Clear();
+        spillClock.Stop();
+    }
+
+    // One other screen: what was on it as the intro began, with the field drawn over it. It never takes focus or
+    // clicks, and it closes when the intro ends.
+    private sealed class Spill : Form
+    {
+        private readonly Door2Intro owner;
+        private readonly Bitmap under;
+        private readonly Rectangle area;
+
+        internal Spill(Door2Intro door, Rectangle bounds)
+        {
+            owner = door;
+            area = bounds;
+            FormBorderStyle = FormBorderStyle.None;
+            ShowInTaskbar = false;
+            StartPosition = FormStartPosition.Manual;
+            Bounds = bounds;
+            TopMost = true;
+            DoubleBuffered = true;
+            BackColor = Color.Black;
+            under = new Bitmap(bounds.Width, bounds.Height, PixelFormat.Format32bppArgb);
+            try { using (Graphics grab = Graphics.FromImage(under)) grab.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size); }
+            catch (System.ComponentModel.Win32Exception) { using (Graphics grab = Graphics.FromImage(under)) grab.Clear(Color.Black); }
+        }
+
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams value = base.CreateParams;
+                value.ExStyle |= 0x00000080 | 0x08000000 | 0x00000020 | 0x00000008;
+                return value;
+            }
+        }
+
+        protected override bool ShowWithoutActivation { get { return true; } }
+
+        protected override void OnPaintBackground(PaintEventArgs e) { }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            e.Graphics.DrawImageUnscaled(under, 0, 0);
+            Quality(e.Graphics);
+            owner.Field(e.Graphics, area, owner.spillClock.Elapsed.TotalSeconds);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) under.Dispose();
+            base.Dispose(disposing);
+        }
+    }
+
+    // Part 1. The same grid as door 1, centred on her with the same hexagon size, spread over every screen as one desk.
+    // On her screen a hexagon lands as the closing edge passes it, her screen's edges first and her middle last; on
+    // the others as the spreading edge passes it, nearest her screen first. Outside door 1's opening the noise
+    // decides whether one is lit; inside it every one is, solid red. In desk coordinates.
+    private void MakeField(Rectangle her)
+    {
+        Rectangle screen = home;
+        Screen[] screens = Screen.AllScreens;
+        foreach (Screen one in screens) screen = Rectangle.Union(screen, one.Bounds);
+        door.Clear();
+        darkDone = 0;
+        float tall = Math.Max(60f, her.Height - 6);
+        float open = tall * Opening, pillReach = tall * PillWide / 2;
+        float cx = her.X + her.Width / 2f, cy = her.Y + her.Height / 2f;
+        float reach = Math.Max(12f, Math.Min(LargestHex, pillReach * 2 / 15f)) / 2f;
+        doorReach = reach;
+        if (tag != null) tag.Dispose();
+        tag = new Font("Consolas", Math.Max(6f, Math.Min(reach * 0.3f, reach * 1.5f / (9 * 0.56f))), FontStyle.Bold, GraphicsUnit.Pixel);
+        float stepX = reach * 1.5f, stepY = (float)(Math.Sqrt(3) * reach);
+        // How far each edge of the desk is from her middle, for the grid's reach.
+        float left = Math.Max(1, cx - screen.Left), right = Math.Max(1, screen.Right - cx);
+        float up = Math.Max(1, cy - screen.Top), down = Math.Max(1, screen.Bottom - cy);
+        // How far each edge of her screen is from her middle, so it closes in on time wherever she stands.
+        float homeLeft = Math.Max(1, cx - home.Left), homeRight = Math.Max(1, home.Right - cx);
+        float homeUp = Math.Max(1, cy - home.Top), homeDown = Math.Max(1, home.Bottom - cy);
+        // The furthest the desk reaches past her screen, which the spread covers in Spreading.
+        float beyond = Math.Max(1, Math.Max(Math.Max(home.Left - screen.Left, screen.Right - home.Right), Math.Max(home.Top - screen.Top, screen.Bottom - home.Bottom)));
+        int colsL = (int)Math.Ceiling(left / stepX) + 1, colsR = (int)Math.Ceiling(right / stepX) + 1;
+        int rowsU = (int)Math.Ceiling(up / stepY) + 1, rowsD = (int)Math.Ceiling(down / stepY) + 1;
+        Random seed = new Random(7);
+        for (int col = -colsL; col <= colsR; col++)
+            for (int row = -rowsU; row <= rowsD; row++)
+            {
+                float x = cx + col * stepX, y = cy + row * stepY + ((col & 1) != 0 ? stepY / 2 : 0);
+                float dx = x - cx, dy = y - cy;
+                double middle = Math.Sqrt(dx * dx + dy * dy);
+                bool inner = middle <= open;
+                if (!inner && !OnAScreen(screens, x, y, reach)) continue;
+                Hex one = new Hex();
+                one.Centre = new PointF(x, y);
+                one.Col = col;
+                one.FadeLag = seed.NextDouble() * HexFadeSpread;
+                one.Row = row;
+                // Past her screen's edge, by how far, and inside it, how near its edge it is: 1 on the edge, 0 at her.
+                float outX = Math.Max(0, Math.Max(home.Left - x, x - home.Right)), outY = Math.Max(0, Math.Max(home.Top - y, y - home.Bottom));
+                float past = Math.Max(outX, outY);
+                one.Grown = past > 0;
+                one.Inner = inner;
+                float rim = open - Rim * stepY * 0.95f;
+                one.Gone = inner && middle < rim ? Filled + OpenGap + middle / rim * (OpenTakes - 0.5) : double.MaxValue;
+                Dress(one, seed);
+                door.Add(one);
+            }
+        if (sleepArt == null) sleepArt = capri.Art("sleep");
+        if (wakeArt == null) wakeArt = capri.Art("wake");
+        if (idleArt == null) idleArt = capri.Art("idle");
+        Grow(new Random(pattern));
+        foreach (Hex one in door) darkDone = Math.Max(darkDone, one.Born - DarkLead + Darkening);
+    }
+
+    private double darkDone;
+
+    // When each hexagon lands. Growth starts from the hexagons on the rim of her screen and takes the cheapest step
+    // next, one neighbour at a time, in towards her and out across the other screens. A step along a vein is cheap
+    // and open ground dear, so it runs along branching veins and fills in between them. Her screen's last hexagon
+    // lands at the end of Closing and the other screens' last at the end of Spreading.
+    private void Grow(Random luck)
+    {
+        Dictionary<long, int> at = new Dictionary<long, int>();
+        for (int i = 0; i < door.Count; i++) at[Key(door[i].Col, door[i].Row)] = i;
+        double[] cost = new double[door.Count], reached = new double[door.Count];
+        int salt = pattern + 7;
+        for (int i = 0; i < door.Count; i++)
+        {
+            double ridge = Math.Abs(Smooth(door[i].Col / VineScale, door[i].Row / VineScale, 0, salt) - 0.5) * 2;
+            cost[i] = (VineFast + (1 - VineFast) * Math.Pow(ridge, VineSharp)) * (1 + VineRough * (luck.NextDouble() * 2 - 1));
+            reached[i] = double.MaxValue;
+        }
+        int[] near = new int[12];
+        Heap queue = new Heap();
+        // The rim: on her screen, with a neighbour off it or off the desk.
+        for (int i = 0; i < door.Count; i++)
+        {
+            if (door[i].Grown) continue;
+            Neighbours(door[i].Col, door[i].Row, near);
+            for (int n = 0; n < 12; n += 2)
+            {
+                int j;
+                if (at.TryGetValue(Key(near[n], near[n + 1]), out j) && !door[j].Grown) continue;
+                reached[i] = cost[i];
+                queue.Push(cost[i], i);
+                break;
+            }
+        }
+        while (queue.Count > 0)
+        {
+            double so;
+            int i = queue.Pop(out so);
+            if (so > reached[i]) continue;
+            Neighbours(door[i].Col, door[i].Row, near);
+            for (int n = 0; n < 12; n += 2)
+            {
+                int j;
+                if (!at.TryGetValue(Key(near[n], near[n + 1]), out j)) continue;
+                double then = so + cost[j];
+                if (then >= reached[j]) continue;
+                reached[j] = then;
+                queue.Push(then, j);
+            }
+        }
+        // Landed in the order the growth reached them, evenly spaced through the time, so the screen fills at a steady
+        // rate to the end rather than mostly at the start with a few stragglers.
+        foreach (bool grown in new[] { false, true })
+        {
+            List<int> order = new List<int>();
+            for (int i = 0; i < door.Count; i++) if (door[i].Grown == grown) order.Add(i);
+            order.Sort(delegate(int a, int b) { return reached[a].CompareTo(reached[b]); });
+            for (int rank = 0; rank < order.Count; rank++)
+            {
+                double share = order.Count <= 1 ? 1 : rank / (double)(order.Count - 1);
+                door[order[rank]].Born = grown ? SpreadFrom + share * Spreading : ClosingFrom + share * Closing;
+            }
+        }
+    }
+
+    private static long Key(int col, int row) { return ((long)col << 32) | (uint)row; }
+
+    // The six around a hexagon on this grid, as column and row pairs. Odd columns sit half a step lower.
+    private static void Neighbours(int col, int row, int[] near)
+    {
+        int lift = (col & 1) == 0 ? -1 : 0;
+        near[0] = col; near[1] = row - 1;
+        near[2] = col; near[3] = row + 1;
+        near[4] = col - 1; near[5] = row + lift;
+        near[6] = col - 1; near[7] = row + lift + 1;
+        near[8] = col + 1; near[9] = row + lift;
+        near[10] = col + 1; near[11] = row + lift + 1;
+    }
+
+    // The cheapest step first.
+    private sealed class Heap
+    {
+        private readonly List<double> keys = new List<double>();
+        private readonly List<int> items = new List<int>();
+        internal int Count { get { return items.Count; } }
+
+        internal void Push(double key, int item)
+        {
+            keys.Add(key);
+            items.Add(item);
+            int i = items.Count - 1;
+            while (i > 0)
+            {
+                int up = (i - 1) / 2;
+                if (keys[up] <= keys[i]) break;
+                Swap(i, up);
+                i = up;
+            }
+        }
+
+        internal int Pop(out double key)
+        {
+            key = keys[0];
+            int top = items[0], last = items.Count - 1;
+            Swap(0, last);
+            keys.RemoveAt(last);
+            items.RemoveAt(last);
+            int i = 0;
+            while (true)
+            {
+                int a = i * 2 + 1, b = a + 1, least = i;
+                if (a < items.Count && keys[a] < keys[least]) least = a;
+                if (b < items.Count && keys[b] < keys[least]) least = b;
+                if (least == i) break;
+                Swap(i, least);
+                i = least;
+            }
+            return top;
+        }
+
+        private void Swap(int a, int b)
+        {
+            double k = keys[a]; keys[a] = keys[b]; keys[b] = k;
+            int t = items[a]; items[a] = items[b]; items[b] = t;
+        }
+    }
+
+    // A gap between screens of different sizes is not drawn on, so it holds no hexagons.
+    private static bool OnAScreen(Screen[] screens, float x, float y, float reach)
+    {
+        foreach (Screen one in screens)
+        {
+            Rectangle near = one.Bounds;
+            near.Inflate((int)(reach * 2), (int)(reach * 2));
+            if (near.Contains((int)x, (int)y)) return true;
+        }
+        return false;
+    }
+
+    // What a hexagon shows: solid or an outline, a word or an arrow, and its own flash. The opening's are always solid.
+    private static void Dress(Hex one, Random seed)
+    {
+        one.Solid = one.Inner || seed.NextDouble() < 0.12;
+        one.Arrow = seed.Next(7) == 0;
+        one.Said = one.Arrow ? null : seed.Next(100) < 42 ? Alerts[seed.Next(Alerts.Length)] : null;
+        bool flashes = one.Inner || seed.Next(4) != 0;
+        one.Rate = flashes ? 0.7 + seed.NextDouble() * 3.4 : 0;
+        one.Phase = seed.NextDouble() * Math.PI * 2;
+        one.Hard = flashes && seed.Next(2) == 0;
+    }
+
+    private readonly Random redress = new Random(13);
+
+    // How lit a hexagon is now: 0 before the closing edge reaches it, then the moving noise decides, except in the
+    // opening, which stays lit. One that went dark comes back dressed afresh.
+    private double Lit(Hex hex, double at)
+    {
+        double landed = Clamp((at - hex.Born) / Lighting);
+        if (landed <= 0.01 || hex.Inner) return landed;
+        double lit = landed * Clamp((Pick(hex.Col, hex.Row, at) - Sparse) / Soft);
+        if (lit <= 0.01) { hex.Dark = true; return 0; }
+        if (hex.Dark) { hex.Dark = false; Dress(hex, redress); }
+        return lit;
+    }
+
+    // One screen of the field, area in desk coordinates. Each cell goes dark as the edge nears it, so the dark spreads
+    // with the edge rather than over the whole screen at once, then it lights up where it sits. The opening's hexagons
+    // stay full red while their words and arrows flash; the others flash whole, as in door 1.
+    private void Field(Graphics g, Rectangle area, double at)
+    {
+        double scene = 1 - Clamp((at - Filled - FadeAt) / FadeTakes);
+        if (1 - Clamp((at - Filled - FadeAt - HexFadeSpread) / FadeTakes) <= 0.003) return;
+        GraphicsState was = g.Save();
+        g.TranslateTransform(-area.X, -area.Y);
+        RectangleF seen = area;
+        seen.Inflate(doorReach * 1.2f, doorReach * 1.2f);
+        PointF[] shape = new PointF[6];
+        // The dark, cell by cell, edge to edge with no smoothing so neighbours meet without a seam. Once every cell is
+        // fully dark it is one fill.
+        if (at >= darkDone)
+            using (SolidBrush dim = new SolidBrush(Color.FromArgb((int)(255 * Dim * scene), 0, 0, 0))) g.FillRectangle(dim, area);
+        else
+        {
+            SmoothingMode smoothing = g.SmoothingMode;
+            g.SmoothingMode = SmoothingMode.None;
+            using (SolidBrush dim = new SolidBrush(Color.Black))
+                foreach (Hex hex in door)
+                {
+                    if (!seen.Contains(hex.Centre)) continue;
+                    double dark = Clamp((at - hex.Born + DarkLead) / Darkening);
+                    if (dark <= 0.01) continue;
+                    Corners(shape, hex.Centre, doorReach);
+                    dim.Color = Color.FromArgb((int)(255 * Dim * dark * scene), 0, 0, 0);
+                    g.FillPolygon(dim, shape);
+                }
+            g.SmoothingMode = smoothing;
+        }
+        using (SolidBrush dark = new SolidBrush(Color.Black))
+        using (SolidBrush fill = new SolidBrush(Alert))
+        using (SolidBrush knocked = new SolidBrush(Color.Black))
+        using (Pen line = new Pen(Alert, Math.Max(1.5f, doorReach * 0.08f)))
+        {
+            double[] lit = new double[door.Count];
+            for (int i = 0; i < door.Count; i++) lit[i] = seen.Contains(door[i].Centre) ? Lit(door[i], at) : 0;
+            for (int i = 0; i < door.Count; i++)
+            {
+                Hex hex = door[i];
+                double landed = lit[i];
+                if (landed <= 0.01) continue;
+                Corners(shape, hex.Centre, doorReach * 1.03f);
+                dark.Color = Color.FromArgb((int)(255 * landed * Fading(hex, at)), 0, 0, 0);
+                g.FillPolygon(dark, shape);
+            }
+            for (int i = 0; i < door.Count; i++)
+            {
+                Hex hex = door[i];
+                double landed = lit[i];
+                if (landed <= 0.01) continue;
+                double shown = landed * Fading(hex, at), mark;
+                // The circle's red goes as it opens; its black stays, which is the opening.
+                if (hex.Inner) shown *= 1 - Clamp((at - hex.Gone) / OpenFade);
+                if (hex.Inner) mark = shown * Beat(hex, at);
+                else { shown *= Beat(hex, at); mark = shown; }
+                if (shown <= 0.01) continue;
+                PointF spot = hex.Centre;
+                Corners(shape, spot, doorReach * 0.86f);
+                fill.Color = Color.FromArgb((int)(255 * shown), Alert);
+                if (hex.Solid) g.FillPolygon(fill, shape);
+                else { line.Color = Color.FromArgb((int)(255 * shown), Alert); g.DrawPolygon(line, shape); }
+                if (mark <= 0.01) continue;
+                // On a solid one the mark is knocked out in black; on an outline it is drawn in red.
+                Brush over = hex.Solid ? (Brush)knocked : fill;
+                if (hex.Solid) knocked.Color = Color.FromArgb((int)(255 * mark), 0, 0, 0);
+                float cx = spot.X, cy = spot.Y;
+                if (hex.Arrow)
+                {
+                    float arm = doorReach * 0.26f;
+                    g.FillPolygon(over, new[] { new PointF(cx, cy + arm * 0.7f), new PointF(cx - arm, cy - arm * 0.6f), new PointF(cx + arm, cy - arm * 0.6f) });
+                }
+                else if (hex.Said != null && tag != null)
+                    g.DrawString(hex.Said, tag, over, new RectangleF(cx - doorReach * 0.85f, cy - doorReach * 0.3f, doorReach * 1.7f, doorReach * 0.6f), middle);
+            }
+        }
+        g.Restore(was);
+    }
+
+    // How much of a hexagon is left as the field fades at the end, slowly and at its own moment.
+    private static double Fading(Hex hex, double at)
+    {
+        return 1 - Clamp((at - Filled - FadeAt - hex.FadeLag) / FadeTakes);
+    }
+
+    // Smooth noise over the grid, 0 to 1, moving with time: large shapes drifting and changing, with a finer grain on
+    // their edges that drifts the other way. The same every time it plays.
+    private double Pick(int col, int row, double at)
+    {
+        double big = Smooth(col / Blob + at * Drift, row / Blob + at * Drift * 0.6, at * Evolve, pattern);
+        double fine = Smooth(col / Grain - at * Drift * 1.5, row / Grain, at * Evolve * 1.7, pattern + 1);
+        return (1 - GrainShare) * big + GrainShare * fine;
+    }
+
+    private static double Smooth(double x, double y, double z, int salt)
+    {
+        int x0 = (int)Math.Floor(x), y0 = (int)Math.Floor(y), z0 = (int)Math.Floor(z);
+        double fx = Ease(x - x0), fy = Ease(y - y0), fz = Ease(z - z0);
+        double near = Lerp(Lerp(Lattice(x0, y0, z0, salt), Lattice(x0 + 1, y0, z0, salt), fx), Lerp(Lattice(x0, y0 + 1, z0, salt), Lattice(x0 + 1, y0 + 1, z0, salt), fx), fy);
+        double far = Lerp(Lerp(Lattice(x0, y0, z0 + 1, salt), Lattice(x0 + 1, y0, z0 + 1, salt), fx), Lerp(Lattice(x0, y0 + 1, z0 + 1, salt), Lattice(x0 + 1, y0 + 1, z0 + 1, salt), fx), fy);
+        return Lerp(near, far, fz);
+    }
+
+    private static double Ease(double t) { return t * t * (3 - 2 * t); }
+
+    private static double Lattice(int x, int y, int z, int salt)
+    {
+        unchecked
+        {
+            uint h = (uint)(x * 374761393 + y * 668265263 + z * 1274126177 + salt * 1442695041);
+            h = (h ^ (h >> 13)) * 1274126177u;
+            h ^= h >> 16;
+            return (h & 0xFFFFFF) / (double)0xFFFFFF;
+        }
+    }
+
+    private static double Lerp(double a, double b, double t) { return a + (b - a) * t; }
+
+    // A pill lying on its side: a band with a round cap at each end.
+    private static bool InPill(float dx, float dy, float reach, float half)
+    {
+        float straight = reach - half;
+        if (Math.Abs(dy) > half) return false;
+        if (Math.Abs(dx) <= straight) return true;
+        float ex = Math.Abs(dx) - straight;
+        return ex * ex + dy * dy <= half * half;
+    }
+
+    // Black lands only where a hexagon does, so the rest of the screen stays the desktop. The middle ones lose their colour
+    // and keep their black, which is the opening; then the door and its dark fade together.
+    private void Door(Graphics g, Rectangle her, double at)
+    {
+        double scene = 1 - Clamp((at - Fades) / 1.0);
+        if (scene > 0.003)
+        {
+            PointF[] shape = new PointF[6];
+            using (SolidBrush dark = new SolidBrush(Color.Black))
+            using (SolidBrush fill = new SolidBrush(Alert))
+            using (SolidBrush knocked = new SolidBrush(Color.Black))
+            using (Pen line = new Pen(Alert, Math.Max(1.5f, doorReach * 0.08f)))
+            {
+                foreach (Hex hex in door)
+                {
+                    double shown = Clamp((at - hex.Born) / 0.45) * scene;
+                    if (shown <= 0.01) continue;
+                    // The black closes up, so the opening is one dark rather than a grid; only the colour keeps its gaps.
+                    Corners(shape, hex.Centre, doorReach * 1.03f);
+                    dark.Color = Color.FromArgb((int)(255 * shown), 0, 0, 0);
+                    g.FillPolygon(dark, shape);
+                }
+                foreach (Hex hex in door)
+                {
+                    double shown = Clamp((at - hex.Born) / 0.45) * scene;
+                    if (hex.Inner) shown *= 1 - Clamp((at - hex.Gone) / 0.4);
+                    shown *= Beat(hex, at);
+                    if (shown <= 0.01) continue;
+                    Corners(shape, hex.Centre, doorReach * 0.86f);
+                    int alpha = (int)(255 * shown);
+                    fill.Color = Color.FromArgb(alpha, Alert);
+                    if (hex.Solid) g.FillPolygon(fill, shape);
+                    else { line.Color = Color.FromArgb(alpha, Alert); g.DrawPolygon(line, shape); }
+                    // Knocked out of a solid one, in the colour on an outline.
+                    Brush over = hex.Solid ? (Brush)knocked : fill;
+                    if (hex.Solid) knocked.Color = Color.FromArgb(alpha, 0, 0, 0);
+                    float cx = hex.Centre.X, cy = hex.Centre.Y;
+                    if (hex.Arrow)
+                    {
+                        float arm = doorReach * 0.26f;
+                        g.FillPolygon(over, new[] { new PointF(cx, cy + arm * 0.7f), new PointF(cx - arm, cy - arm * 0.6f), new PointF(cx + arm, cy - arm * 0.6f) });
+                    }
+                    else if (hex.Said != null && tag != null)
+                        g.DrawString(hex.Said, tag, over, new RectangleF(cx - doorReach * 0.85f, cy - doorReach * 0.3f, doorReach * 1.7f, doorReach * 0.6f), middle);
+                }
+            }
+        }
+        // Asleep in the opening, waking as the door goes, then standing as she will once the intro hands over. Her own
+        // animations, placed the way she draws them, so the last frame is where she already stands.
+        float size = Math.Max(40f, (her.Height - 6) / 1.11f);
+        float midX = her.X + her.Width / 2f - IdleShift * size, midY = her.Y + her.Height / 2f;
+        double asleep = Clamp((at - Asleep) / 1.0);
+        double awake = Clamp((at - Wakes) / 0.15);
+        double settled = Clamp((at - Settles) / 0.35);
+        Frame(g, sleepArt, 16, (int)(Math.Max(0, at - Asleep) * 6) % 16, size, midX, midY, 0, asleep * (1 - awake));
+        Frame(g, wakeArt, 13, (int)(Math.Max(0, at - Wakes) * 15), size, midX, midY, 0, awake * (1 - settled));
+        Frame(g, idleArt, 60, (int)(Math.Max(0, at - Settles) * 24) % 60, size, midX, midY, IdleShift * size, settled);
+    }
+
+    // Where one hexagon is in its own flash, the screensaver's way: a hard one snaps between on and nearly off, a soft
+    // one swells, a steady one sits at full.
+    private static double Beat(Hex hex, double at)
+    {
+        if (hex.Rate <= 0) return 1;
+        double turn = Math.Sin(at * hex.Rate + hex.Phase);
+        return hex.Hard ? (turn > 0 ? 1 : 0.12) : 0.3 + 0.7 * (0.5 + 0.5 * turn);
+    }
+
+    private static void Corners(PointF[] shape, PointF centre, float reach)
+    {
+        for (int corner = 0; corner < 6; corner++)
+        {
+            double turn = Math.PI / 3 * corner;
+            shape[corner] = new PointF(centre.X + (float)(reach * Math.Cos(turn)), centre.Y + (float)(reach * Math.Sin(turn)));
+        }
+    }
+
+    // One frame of one of her strips: 1.11 of her size tall, as wide as the frame is, centred on her middle.
+    private static void Frame(Graphics g, Bitmap strip, int count, int index, float size, float midX, float midY, float shift, double shown)
+    {
+        if (strip == null || shown <= 0.01 || count <= 0) return;
+        int width = strip.Width / count;
+        float tall = size * 1.11f, wide = tall * width / strip.Height;
+        Rectangle spot = Rectangle.Round(new RectangleF(midX - wide / 2 + shift, midY - tall / 2, wide, tall));
+        using (ImageAttributes faded = new ImageAttributes())
+        {
+            ColorMatrix matrix = new ColorMatrix();
+            matrix.Matrix33 = (float)Math.Min(1, shown);
+            faded.SetColorMatrix(matrix);
+            g.DrawImage(strip, spot, Math.Max(0, Math.Min(count - 1, index)) * width, 0, width, strip.Height, GraphicsUnit.Pixel, faded);
+        }
+    }
+
+    // door2.wav from the sounds folder in the door's own folder, quietly, else another that is not a beep; the beeps
+    // there are kept for the signs.
+    private readonly List<string> beepFiles = new List<string>();
+    private double lastBeep = double.MinValue;
+
+    private void Beep(double at)
+    {
+        if (beepFiles.Count == 0 || at - lastBeep < BeepGap) return;
+        lastBeep = at;
+        double fadeFrom = Filled + FadeAt, gone = Filled + FadeAt + FadeTakes + WarnLinger;
+        double level = BeepLevel * (1 - Clamp((at - fadeFrom) / (gone - fadeFrom)));
+        if (level <= 0.002) return;
+        try { capri.Sounds.Play(beepFiles[warnLuck.Next(beepFiles.Count)], level); }
+        catch (Exception error) { capri.Log(error.Message); }
+    }
+
+    private void DoorSound()
+    {
+        try
+        {
+            string folder = Path.Combine(capri.Folder, "sounds");
+            if (!Directory.Exists(folder)) return;
+            List<string> found = new List<string>();
+            foreach (string file in Directory.GetFiles(folder))
+            {
+                string kind = Path.GetExtension(file).ToLowerInvariant();
+                if (kind == ".wav" || kind == ".mp3" || kind == ".m4a" || kind == ".wma") found.Add(file);
+            }
+            beepFiles.Clear();
+            string main = null;
+            foreach (string file in found)
+            {
+                string name = Path.GetFileName(file);
+                if (name.StartsWith(Beeps, StringComparison.OrdinalIgnoreCase)) beepFiles.Add(file);
+                else if (main == null || name.Equals(MainSound, StringComparison.OrdinalIgnoreCase)
+                    || name.Equals(Fallback, StringComparison.OrdinalIgnoreCase) && !Path.GetFileName(main).Equals(MainSound, StringComparison.OrdinalIgnoreCase)) main = file;
+            }
+            if (main != null && Path.GetFileName(main).Equals(MainSound, StringComparison.OrdinalIgnoreCase)) beepFiles.Clear();
+            if (main != null) capri.Sounds.Play(main, 0.35);
+        }
+        catch (Exception error) { capri.Log(error.Message); }
+    }
+
+    // ---- Pop-ups: little alert screens landing all over every monitor while the door builds, flashing, then all
+    // closing as it opens.
+    private sealed class Popup : Form
+    {
+        internal double Born, Closes, Rate, Phase;
+        internal bool Hard, Open;
+        // Door 2's: the screen it belongs to, the flash it is on, and whether it found a place for this flash.
+        internal Rectangle Area;
+        internal int Cycle = int.MinValue;
+        internal bool Placed;
+        private readonly Bitmap art;
+        private readonly string title;
+
+        internal Popup(Bitmap picture, Rectangle at, string word)
+        {
+            art = picture;
+            title = word;
+            FormBorderStyle = FormBorderStyle.None;
+            ShowInTaskbar = false;
+            StartPosition = FormStartPosition.Manual;
+            Bounds = at;
+            TopMost = true;
+            BackColor = Color.Black;
+            DoubleBuffered = true;
+            Opacity = 0.99;
+        }
+
+        // On top, never taking focus, and clicks pass straight through to whatever is under it.
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams value = base.CreateParams;
+                value.ExStyle |= 0x00000080 | 0x08000000 | 0x00000020 | 0x00000008;
+                return value;
+            }
+        }
+
+        protected override bool ShowWithoutActivation { get { return true; } }
+
+        // A small window: a title bar with the word and a close mark, the picture under it, a red frame round both.
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            int bar = Math.Max(14, Height / 9);
+            g.Clear(Color.Black);
+            g.InterpolationMode = InterpolationMode.HighQualityBilinear;
+            if (art != null) g.DrawImage(art, new Rectangle(2, bar, Width - 4, Height - bar - 2));
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+            using (Font font = new Font("Consolas", Math.Max(8f, bar * 0.62f), FontStyle.Bold, GraphicsUnit.Pixel))
+            using (SolidBrush red = new SolidBrush(Alert))
+            {
+                g.DrawString(title, font, red, 5, (bar - font.Height) / 2f);
+                g.DrawString("x", font, red, Width - bar, (bar - font.Height) / 2f);
+            }
+            using (Pen frame = new Pen(Alert, 2)) g.DrawRectangle(frame, 1, 1, Width - 2, Height - 2);
+            using (Pen under = new Pen(Alert, 1)) g.DrawLine(under, 2, bar - 1, Width - 3, bar - 1);
+        }
+    }
+
+    // Door 2's pop-ups: each screen gets as many as cover WarnShare of it, placed fresh on every flash.
+    private PointF warnMiddle;
+    private float warnOpen;
+    private Random warnLuck;
+
+    private void StartWarnings(Rectangle her)
+    {
+        EndPopups();
+        try
+        {
+            LoadPopupArt();
+            if (popupArt.Count == 0) return;
+            warnOpen = Math.Max(60f, her.Height - 6) * Opening + doorReach * 2;
+            warnMiddle = new PointF(her.X + her.Width / 2f, her.Y + her.Height / 2f);
+            warnLuck = new Random(pattern + 3);
+            lastBeep = double.MinValue;
+            foreach (Screen one in Screen.AllScreens)
+            {
+                Rectangle area = one.Bounds;
+                double budget = (double)area.Width * area.Height * WarnShare, used = 0;
+                for (int tries = 0; tries < 60; tries++)
+                {
+                    Bitmap art = popupArt[warnLuck.Next(popupArt.Count)];
+                    int wide = (int)(area.Width * (0.11 + warnLuck.NextDouble() * 0.1));
+                    int bar = Math.Max(14, wide / 14);
+                    int high = (int)(wide * (double)art.Height / art.Width) + bar + 2;
+                    if (used + (double)wide * high > budget) continue;
+                    Popup popup = new Popup(art, new Rectangle(area.X, area.Y, wide, high), Alerts[warnLuck.Next(Alerts.Length)]);
+                    popup.Area = area;
+                    popup.Born = WarnFrom;
+                    popup.Closes = Filled + FadeAt + FadeTakes + warnLuck.NextDouble() * WarnLinger;
+                    // Door 1's flashes: a hard one snaps between full and faint, a soft one swells.
+                    popup.Rate = 4 + warnLuck.NextDouble() * 8;
+                    popup.Phase = warnLuck.NextDouble() * Math.PI * 2;
+                    popup.Hard = warnLuck.Next(2) == 0;
+                    // Its window made now, hidden, so showing it later is quick and has nothing unpainted to show.
+                    popup.Opacity = 0;
+                    IntPtr made = popup.Handle;
+                    popups.Add(popup);
+                    used += (double)wide * high;
+                }
+            }
+            popupClock.Restart();
+            popupBeat = new Timer { Interval = 30 };
+            popupBeat.Tick += delegate { WarnFrame(); };
+            popupBeat.Start();
+        }
+        catch (Exception error) { capri.Log(error.Message); EndPopups(); }
+    }
+
+    // Each frame: a pop-up starting a new flash takes a new place, or stays hidden for that flash when there is none;
+    // then it flashes as door 1's do. A hard one's flash starts as it snaps on, a soft one's at its faintest.
+    private void WarnFrame()
+    {
+        double at = popupClock.Elapsed.TotalSeconds;
+        if (at >= Length) { EndPopups(); return; }
+        try
+        {
+            foreach (Popup popup in popups)
+            {
+                if (popup.IsDisposed) continue;
+                if (at >= popup.Closes) { popup.Close(); popup.Dispose(); continue; }
+                if (at < popup.Born) continue;
+                double turn = at * popup.Rate + popup.Phase;
+                int cycle = (int)Math.Floor((popup.Hard ? turn : turn + Math.PI / 2) / (Math.PI * 2));
+                if (cycle != popup.Cycle)
+                {
+                    popup.Cycle = cycle;
+                    Rectangle spot;
+                    popup.Placed = Place(popup, at, out spot);
+                    if (popup.Placed)
+                    {
+                        popup.Bounds = spot;
+                        // Shown see-through and drawn at once, so a new window never flashes white before its picture.
+                        if (!popup.Open || !popup.Visible) { popup.Open = true; popup.Opacity = 0; popup.Show(); popup.Update(); }
+                        if (at < popup.Closes - WarnFadeOut) Beep(at);
+                    }
+                    else if (popup.Open && popup.Visible) popup.Hide();
+                }
+                if (!popup.Placed) continue;
+                double wave = Math.Sin(turn);
+                double flash = popup.Hard ? (wave > 0 ? 1 : 0.3) : 0.45 + 0.55 * (0.5 + 0.5 * wave);
+                popup.Opacity = flash * (1 - Clamp((at - popup.Closes + WarnFadeOut) / WarnFadeOut));
+            }
+        }
+        catch (Exception error) { capri.Log(error.Message); EndPopups(); }
+    }
+
+    // A place on its own screen where the fill has freshly reached and no other pop-up there is in the way.
+    private bool Place(Popup popup, double at, out Rectangle spot)
+    {
+        Rectangle area = popup.Area;
+        int wide = popup.Width, high = popup.Height;
+        for (int tries = 0; tries < 14; tries++)
+        {
+            spot = new Rectangle(area.X + warnLuck.Next(Math.Max(1, area.Width - wide)), area.Y + warnLuck.Next(Math.Max(1, area.Height - high)), wide, high);
+            if (Fresh(spot, at) && !Crowded(spot, popup)) return true;
+        }
+        spot = Rectangle.Empty;
+        return false;
+    }
+
+    // Every hexagon under this place has grown, some in the last WarnFresh seconds while the fill is still growing, and
+    // it keeps clear of the circle.
+    private bool Fresh(Rectangle at, double when)
+    {
+        float nearX = Math.Max(at.Left, Math.Min(warnMiddle.X, at.Right)), nearY = Math.Max(at.Top, Math.Min(warnMiddle.Y, at.Bottom));
+        if ((nearX - warnMiddle.X) * (nearX - warnMiddle.X) + (nearY - warnMiddle.Y) * (nearY - warnMiddle.Y) < warnOpen * warnOpen) return false;
+        bool fresh = false, any = false;
+        foreach (Hex hex in door)
+        {
+            if (!at.Contains((int)hex.Centre.X, (int)hex.Centre.Y)) continue;
+            if (hex.Born + Lighting > when) return false;
+            any = true;
+            if (hex.Born >= when - WarnFresh) fresh = true;
+        }
+        return any && (fresh || when >= Filled);
+    }
+
+    // It would land over too much of another one showing on the same screen.
+    private bool Crowded(Rectangle at, Popup moving)
+    {
+        double own = (double)at.Width * at.Height;
+        foreach (Popup other in popups)
+        {
+            if (other == moving || other.IsDisposed || !other.Placed || other.Area != moving.Area) continue;
+            Rectangle both = Rectangle.Intersect(at, other.Bounds);
+            if (!both.IsEmpty && (double)both.Width * both.Height > own * WarnOverlap) return true;
+        }
+        return false;
+    }
+
+    private void PopupFrame()
+    {
+        double at = popupClock.Elapsed.TotalSeconds;
+        if (at >= Length) { EndPopups(); return; }
+        try
+        {
+            foreach (Popup popup in popups)
+            {
+                if (popup.IsDisposed) continue;
+                if (at >= popup.Closes) { popup.Close(); popup.Dispose(); continue; }
+                if (at < popup.Born) continue;
+                if (!popup.Open) { popup.Open = true; popup.Show(); }
+                double turn = Math.Sin(at * popup.Rate + popup.Phase);
+                popup.Opacity = popup.Hard ? (turn > 0 ? 1 : 0.3) : 0.45 + 0.55 * (0.5 + 0.5 * turn);
+            }
+        }
+        catch (Exception error) { capri.Log(error.Message); EndPopups(); }
+    }
+
+    private void EndPopups()
+    {
+        if (popupBeat != null) { popupBeat.Stop(); popupBeat.Dispose(); popupBeat = null; }
+        foreach (Popup popup in popups)
+            try { if (!popup.IsDisposed) { popup.Close(); popup.Dispose(); } }
+            catch (Exception error) { capri.Log(error.Message); }
+        popups.Clear();
+    }
+
+    // The screen the door is on: the one her intro covers, which is the same size as what she was given. The main
+    // screen when more than one fits.
+    private static Rectangle DoorScreen(Rectangle screen)
+    {
+        if (Screen.PrimaryScreen.Bounds.Size == screen.Size) return Screen.PrimaryScreen.Bounds;
+        foreach (Screen one in Screen.AllScreens) if (one.Bounds.Size == screen.Size) return one.Bounds;
+        return Screen.PrimaryScreen.Bounds;
+    }
+
+    // Pictures from the art folder in the door's own folder, and its own drawn panels when there are none.
+    private void LoadPopupArt()
+    {
+        if (popupArt.Count > 0) return;
+        string folder = Path.Combine(capri.Folder, "art");
+        if (Directory.Exists(folder))
+            foreach (string file in Directory.GetFiles(folder))
+            {
+                string kind = Path.GetExtension(file).ToLowerInvariant();
+                if (kind != ".png" && kind != ".jpg" && kind != ".jpeg" && kind != ".bmp" && kind != ".gif") continue;
+                try { using (Bitmap read = new Bitmap(file)) popupArt.Add(new Bitmap(read)); }
+                catch (Exception error) { capri.Log(Path.GetFileName(file) + ": " + error.Message); }
+            }
+        if (popupArt.Count > 0) return;
+        foreach (string word in new[] { "ALERT", "DANGER", "WARNING" }) popupArt.Add(Panel(word));
+    }
+
+    // A red panel with black chevrons above and below and the word across a black band.
+    private static Bitmap Panel(string word)
+    {
+        Bitmap made = new Bitmap(480, 270);
+        using (Graphics g = Graphics.FromImage(made))
+        using (SolidBrush red = new SolidBrush(Color.FromArgb(200, 10, 20)))
+        using (SolidBrush black = new SolidBrush(Color.Black))
+        using (Font font = new Font("Arial", 92, FontStyle.Bold, GraphicsUnit.Pixel))
+        using (StringFormat centre = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.Clear(red.Color);
+            for (int x = -60; x < 540; x += 60)
+            {
+                g.FillPolygon(black, new[] { new PointF(x, 0), new PointF(x + 26, 0), new PointF(x + 56, 52), new PointF(x + 30, 52) });
+                g.FillPolygon(black, new[] { new PointF(x + 30, 218), new PointF(x + 56, 218), new PointF(x + 26, 270), new PointF(x, 270) });
+            }
+            g.FillRectangle(black, 0, 72, 480, 126);
+            g.DrawString(word, font, red, new RectangleF(0, 72, 480, 126), centre);
+        }
+        return made;
+    }
+
+
+    // Her data folder: a mod's own folder is mods\<id>-data inside it.
+    private string Home() { return Path.GetDirectoryName(Path.GetDirectoryName(capri.Folder)) ?? ""; }
+
+    private static double Clamp(double value) { return value < 0 ? 0 : value > 1 ? 1 : value; }
+}

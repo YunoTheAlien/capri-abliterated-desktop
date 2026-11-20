@@ -1,0 +1,206 @@
+# Her menus and labels in Hungarian: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe megnyitása
+Her folder	Az ő mappája
+Play	Lejátszás
+Music	Zene
+Chess	Sakk
+Connect four	Négy a sorban
+Tic-tac-toe	Amőba
+Rock, paper, scissors	Kő, papír, olló
+Hide Capri	Capri elrejtése
+Hologram	Hologram
+Normal	Normál
+Small	Kicsi
+Medium	Közepes
+Large	Nagy
+Huge	Hatalmas
+Giant	Óriás
+Move	Mozgatás
+Wander around	Kóborolj körbe
+Dance to music	Táncolj zenére
+Dance	Tánc
+Ride cursor	Kurzor lovaglása
+Sit on windows	Ülj az ablakokra
+Sit here	Ülj ide
+Hang here	Maradj itt
+Lie down	Feküdj le
+Go to sleep	Elalvás
+Bring to this screen	Hozd erre a képernyőre
+Go to the next screen	Ugrás a következő képernyőre
+Black	Fekete
+White	Fehér
+Test	Teszt
+Stop	Leállítás
+Help	Súgó
+Commands	Parancsok
+Help page	Súgóoldal
+Join the Discord	Csatlakozz a Discordhoz
+Copy error details	Hibaadatok másolása
+Check for updates	Frissítések keresése
+Quit Capri	Capri bezárása
+MAINFRAME	MAINFRAME
+Settings	Beállítások
+Mods	Modok
+BRAIN	AGY
+Provider	Szolgáltató
+Using your server with no key	Saját szerver használata kulcs nélkül
+Refresh	Frissítés
+Set up her brain	Agy beállítása
+Have Ollama? Open it, then press Refresh.	Van Ollamád? Nyisd meg, majd nyomj Frissítést.
+Pick one. Only one brain runs at a time.	Válassz egyet. Egyszerre csak egy agy fut.
+MEDIUM INTELLIGENCE	KÖZEPES INTELLIGENCIA
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Ki
+Free key	Ingyenes kulcs
+Connect	Csatlakozás
+Free keys can be rate limited and slow.	Az ingyenes kulcsok sebessége korlátozott és lassú lehet.
+That's a paid key: it goes under MAX INTELLIGENCE.	Ez egy fizetős kulcs: a MAX INTELLIGENCE alá kerül.
+Move to MAX	Áthelyezés a MAXBA
+VOICE	HANG
+Ctrl + Alt + V to talk	Ctrl + Alt + V a beszédhez
+PREBUILT LOCAL	ELŐRE ELKÉSZÍTETT HELYI
+CUSTOM LOCAL	EGYEDI HELYI
+CLOUD VOICE	FELHŐS HANG
+Set up	Beállítás
+Setup guide	Beállítási útmutató
+Fish Audio	Fish Audio
+Default model	Alapértelmezett modell
+Pick a voice model	Válassz egy hangmodellt
+Get free voice	Ingyenes hang beszerzése
+Mic: default	Mikrofon: alapértelmezett
+Her speaker: Default	Hangszóró: alapértelmezett
+Ctrl + Alt + N mutes mic	A Ctrl + Alt + N elnémítja a mikrofont
+CAPRI	CAPRI
+Support	Támogatás
+Remote	Távoli
+Bring here	Hozd ide
+Advanced Settings	Speciális beállítások
+YOU	TE
+Your personality	A személyiséged
+Language	Nyelv
+English	Angol
+What should she call you?	Hogyan szólítsalak?
+Save	Mentés
+Volume	Hangerő
+Pitch	Hangmagasság
+Speed	Sebesség
+Robot	Robot
+Glitch	Glitch
+Sounds	Hangok
+Typing sound	Gépelési hang
+Listen for Capri	Hallgass Capri-ra
+Hearing	Hallás
+Auto	Auto
+Free voice in games	Ingyenes hang játékokban
+Call mode (beta)	Hívásmód (béta)
+Her voice in your mic	Hangja a mikrofonodban
+Get VB-CABLE	VB-CABLE letöltése
+How to	Hogyan
+Her voice in your mic: loudness	Hangja a mikrofonodban: hangerő
+MOVES	MOZDULATOK
+Pop-in times	Megjelenési idők
+Mini player	Mini lejátszó
+Wander	Kóborlás
+Sleep	Alvás
+Pop-ins	Megjelenések
+Glitch in at startup	Glitch indításkor
+KEYS	BILLENTYŰK
+Talk: Ctrl + Alt + V	Beszéd: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Mikrofon némítása: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Gépelés: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Elrejtés/megjelenítés: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Csend: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Játékmód: Ctrl + Alt + G
+Confirm	Megerősítés
+Cancel	Mégse
+Size	Méret
+Check in on me	Nézz rám
+Edit check-in lines	Üdvözlő sorok szerkesztése
+Always on top	Mindig felül
+Mainframe size	Mainframe mérete
+Mainframe colours	Mainframe színei
+Head pats	Fejsimogatások
+Pat stroke	Fejsimogatás
+Chaos when upset	Káosz, ha ideges
+Legacy stand	Régi állvány
+Jealous of other AIs	Féltékeny a többi MI-re
+Teases when another AI comes to the front.	Csipkelődik, amikor egy másik MI kerül előtérbe.
+Close other AIs for me	Zárd be helyettem a többi MI-t
+Asks before closing only the apps you choose.	Csak a kiválasztott alkalmazásoknál kérdez bezárás előtt.
+Apps she may close	Alkalmazások, amelyeket bezárhat
+Choose apps	Alkalmazások kiválasztása
+WATCH	NÉZÉS
+Watch my screen	Nézd a képernyőmet
+Screens	Képernyők
+All screens	Minden képernyő
+Remember what she sees	Emlékezz arra, amit lát
+Every	Minden
+Watch-along memory	Közös nézés emléke
+Code/Husk Mode	Kód/Husk mód
+Thinking	Gondolkodom
+Default	Alapértelmezett
+Extra request JSON	Extra kérés JSON
+Add	Hozzáadás
+Verbosity	Szövegesség
+Replies	Válaszok
+Memory	Memória
+Memory size	Memória mérete
+Max reply	Maximális válasz
+Bubble	Buborék
+Follow-up messages	Követő üzenetek
+Use	Használat
+A model in Ollama, on your local server or on your key.	Egy modell az Ollamában, a helyi szervereden vagy a saját kulcsoddal.
+HABITS	SZOKÁSOK
+Open her memories	Emlékeinek megnyitása
+Start with Windows	Indítás a Windows-szal
+Show on Discord	Megjelenítés a Discordon
+Use her cursor	Használja a kurzorát
+Remember our chats	Emlékezz a csevegéseinkre
+Power saver	Energiatakarékos
+Music app	Zenei alkalmazás
+Perch	Perch
+Keep PC awake for jobs	PC ébren tartása a feladatokhoz
+Hide in full screen	Elrejtés teljes képernyőn
+Mini player over full screen	Mini lejátszó teljes képernyő felett
+Explore while I'm away	Felfedezés, amíg távol vagyok
+Explore after	Felfedezés utána
+GAMES	JÁTÉKOK
+Controls	Vezérlők
+Comments	Megjegyzések
+Live reactions	Élő reakciók
+Game sounds	Játékhangok
+Gaming Mode	Játékmód
+She reacts to your game until you close it.	A játékodra reagál, amíg be nem zárod.
+Works best on MAX INTELLIGENCE.	A MAX INTELLIGENCE-en működik a legjobban.
+Fast hands in games	Gyors kezek játékokban
+Mute her	Elnémítás
+CLIPS	KLIPEK
+Clip my games	Klippeld a játékaimat
+Save big moments	Nagy pillanatok mentése
+Save folder	Mentési mappa
+Choose folder	Mappa kiválasztása
+Open clips folder	Klipek mappájának megnyitása
+Default length	Alapértelmezett hossz
+Frame rate	Képkockasebesség
+Resolution	Felbontás
+Video bitrate	Videó-bitráta
+Weather	Időjárás
+Code mods can reach your whole PC. Only trusted ones.	A kódmodok elérhetik az egész PC-det. Csak megbízhatókat.
+Import mod	Mod importálása
+Browse mods	Modok böngészése
+Mods folder	Modok mappája
+INSTALLED	TELEPÍTVE
+Update mods	Modok frissítése
+No mods match.	Nincs egyező mod.
+On	Be
+Remove	Eltávolítás
+Publish	Közzététel
+Options	Beállítások
+Back	Vissza
+Next	Következő
+COLORS	SZÍNEK
+Reset colors	Színek alaphelyzetbe
+Running on this PC	Fut ezen a PC-n
+NORMAL	NORMÁL
+OFF	KI
+Local server address	Helyi szerver címe

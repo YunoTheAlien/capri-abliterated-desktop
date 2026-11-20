@@ -1,0 +1,206 @@
+# Her menus and labels in Hausa: the English, a tab, then the translation.
+Open Capri Mainframe	Buɗe Capri Mainframe
+Her folder	Babban fayil ɗinta
+Play	Kunna
+Music	Kiɗa
+Chess	Chess
+Connect four	Hudu a jere
+Tic-tac-toe	Tic-tac-toe
+Rock, paper, scissors	Dutse, takarda, almakashi
+Hide Capri	Ɓoye Capri
+Hologram	Hologram
+Normal	Na al'ada
+Small	Ƙarami
+Medium	Matsakaici
+Large	Babba
+Huge	Babba ƙwarai
+Giant	Babba
+Move	Matsa
+Wander around	Yawo a kusa
+Dance to music	Rawa ga kiɗa
+Dance	Rawa
+Ride cursor	Hau kan siginan
+Sit on windows	Zauna kan tagogi
+Sit here	Zauna a nan
+Hang here	Zauna a nan
+Lie down	Kwanta
+Go to sleep	Je barci
+Bring to this screen	Kawo zuwa wannan allo
+Go to the next screen	Je zuwa allo na gaba
+Black	Baƙi
+White	Fari
+Test	Gwaji
+Stop	Tsaya
+Help	Taimako
+Commands	Umarni
+Help page	Shafin taimako
+Join the Discord	Shiga Discord
+Copy error details	Kwafi cikakkun bayanai na kuskure
+Check for updates	Duba sabuntawa
+Quit Capri	Rufe Capri
+MAINFRAME	MAINFRAME
+Settings	Saitunan
+Mods	Mods
+BRAIN	KWAKWALWA
+Provider	Mai samarwa
+Using your server with no key	Kana amfani da sabar ka ba tare da maɓalli ba
+Refresh	Sabunta
+Set up her brain	Saita kwakwalwarta
+Have Ollama? Open it, then press Refresh.	Kana da Ollama? Buɗe shi, sannan danna Sabunta.
+Pick one. Only one brain runs at a time.	Zaɓi ɗaya. Kwakwalwa ɗaya kawai ke gudana a lokaci ɗaya.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Kashe
+Free key	Maɓalli kyauta
+Connect	Haɗa
+Free keys can be rate limited and slow.	Maɓallai kyauta na iya kasancewa a iyakance kuma a hankali.
+That's a paid key: it goes under MAX INTELLIGENCE.	Wannan maɓallin da aka biya ne: yana zuwa ƙarƙashin MAX INTELLIGENCE.
+Move to MAX	Matsa zuwa MAX
+VOICE	MURYA
+Ctrl + Alt + V to talk	Ctrl + Alt + V don yin magana
+PREBUILT LOCAL	SAMFUR NA GIDA DA AKA RIGA AKA SHIGA
+CUSTOM LOCAL	GIDA NA MUSAMMAN
+CLOUD VOICE	MURYAR CLOUD
+Set up	Saita
+Setup guide	Jagorar saiti
+Fish Audio	Fish Audio
+Default model	Samfurin tsoho
+Pick a voice model	Zaɓi samfurin murya
+Get free voice	Sami muryar kyauta
+Mic: default	Makirifo: tsoho
+Her speaker: Default	Mai magana da ita: Tsoho
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N yana kashe makirifon
+CAPRI	CAPRI
+Support	Taimako
+Remote	Nesa
+Bring here	Kawo nan
+Advanced Settings	Saitunan ci gaba
+YOU	KAI
+Your personality	Halinka
+Language	Harshe
+English	Turanci
+What should she call you?	Yaya za ta kira ka?
+Save	Ajiye
+Volume	Ƙara
+Pitch	Pitch
+Speed	Gudu
+Robot	Robot
+Glitch	Glitch
+Sounds	Sautuna
+Typing sound	Sautin rubutu
+Listen for Capri	Ji Capri
+Hearing	Ji
+Auto	Auto
+Free voice in games	Muryar kyauta a wasanni
+Call mode (beta)	Yanayin kira (beta)
+Her voice in your mic	Muryarta a makirifon ka
+Get VB-CABLE	Sami VB-CABLE
+How to	Yadda
+Her voice in your mic: loudness	Muryarta a makirifon ka: ƙara
+MOVES	MOTSI
+Pop-in times	Lokutan fitowa
+Mini player	Mini player
+Wander	Yawo
+Sleep	Barci
+Pop-ins	Fitowa
+Glitch in at startup	Glitch a farawa
+KEYS	MAƁALLAI
+Talk: Ctrl + Alt + V	Yi magana: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Kashe makirifo: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Rubuta: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Ɓoye/nuna: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Shiru: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Yanayin Wasa: Ctrl + Alt + G
+Confirm	Tabbatar
+Cancel	Soke
+Size	Girma
+Check in on me	Ka duba ni
+Edit check-in lines	Gyara layukan shiga
+Always on top	Koyaushe a sama
+Mainframe size	Girman Mainframe
+Mainframe colours	Launukan Mainframe
+Head pats	Shafawa a kai
+Pat stroke	Bugun shafa
+Chaos when upset	Hargitsi idan ta yi fushi
+Legacy stand	Tsohon tsayawa
+Jealous of other AIs	Kishi ga sauran AI
+Teases when another AI comes to the front.	Tana yi wa ba'a idan wata AI ta zo gaba.
+Close other AIs for me	Rufe sauran AI a gare ni
+Asks before closing only the apps you choose.	Yana tambaya kafin ya rufe apps ɗin da ka zaɓa kawai.
+Apps she may close	Apps da za ta iya rufewa
+Choose apps	Zaɓi apps
+WATCH	KALLO
+Watch my screen	Kalli allona
+Screens	Allo
+All screens	Duk allo
+Remember what she sees	Tuna abin da ta gani
+Every	Kowane
+Watch-along memory	Ƙwaƙwalwar kallon tare
+Code/Husk Mode	Yanayin Code/Husk
+Thinking	Tunani
+Default	Tsoho
+Extra request JSON	JSON ɗin buƙata ƙari
+Add	Ƙara
+Verbosity	Yawan magana
+Replies	Amsoshi
+Memory	Ƙwaƙwalwa
+Memory size	Girman ƙwaƙwalwa
+Max reply	Amsa mafi girma
+Bubble	Kumfa
+Follow-up messages	Saƙonnin biyo baya
+Use	Yi amfani
+A model in Ollama, on your local server or on your key.	Samfuri a cikin Ollama, a sabar gida ko tare da maɓallinka.
+HABITS	HALAYE
+Open her memories	Buɗe tunaninta
+Start with Windows	Fara da Windows
+Show on Discord	Nuna akan Discord
+Use her cursor	Yi amfani da siginanta
+Remember our chats	Tuna hirarrakinmu
+Power saver	Mai adana wuta
+Music app	App ɗin kiɗa
+Perch	Mazauni
+Keep PC awake for jobs	Ka ajiye PC a farke don ayyuka
+Hide in full screen	Ɓoye a cikakken allo
+Mini player over full screen	Mini player a kan cikakken allo
+Explore while I'm away	Bincika yayin da ban nan ba
+Explore after	Bincika bayan haka
+GAMES	WASANNI
+Controls	Sarrafawa
+Comments	Sharhi
+Live reactions	Martanin kai tsaye
+Game sounds	Sautunan wasa
+Gaming Mode	Yanayin Wasa
+She reacts to your game until you close it.	Tana amsawa ga wasanka har sai ka rufe shi.
+Works best on MAX INTELLIGENCE.	Yana aiki mafi kyau akan MAX INTELLIGENCE.
+Fast hands in games	Hannaye masu sauri a wasanni
+Mute her	Kashe sautinta
+CLIPS	KLIPS
+Clip my games	Ɗauki wasannina
+Save big moments	Ajiye manyan lokuta
+Save folder	Babban fayil ɗin ajiya
+Choose folder	Zaɓi babban fayil
+Open clips folder	Buɗe babban fayil ɗin clips
+Default length	Tsawon tsoho
+Frame rate	Adadin frame a daƙiƙa
+Resolution	Ƙuduri
+Video bitrate	Bitrate na bidiyo
+Weather	Yanayi
+Code mods can reach your whole PC. Only trusted ones.	Mods na lamba na iya kaiwa dukkan PC ɗinka. Waɗanda aka amince kawai.
+Import mod	Shigo da mod
+Browse mods	Duba mods
+Mods folder	Babban fayil ɗin mods
+INSTALLED	AN SHIGAR
+Update mods	Sabunta mods
+No mods match.	Babu mods da suka dace.
+On	Kunne
+Remove	Cire
+Publish	Buga
+Options	Zaɓuɓɓuka
+Back	Koma baya
+Next	Na gaba
+COLORS	LAUNI
+Reset colors	Mayar da launuka
+Running on this PC	Yana gudana a wannan PC
+NORMAL	AL'ADA
+OFF	A KASHE
+Local server address	Adireshin sabar gida

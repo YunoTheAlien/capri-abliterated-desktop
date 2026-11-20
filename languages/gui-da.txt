@@ -1,0 +1,206 @@
+# Her menus and labels in Danish: the English, a tab, then the translation.
+Open Capri Mainframe	Åbn Capri Mainframe
+Her folder	Hendes mappe
+Play	Afspil
+Music	Musik
+Chess	Skak
+Connect four	Fire på stribe
+Tic-tac-toe	Bingo-kryds
+Rock, paper, scissors	Sten, saks, papir
+Hide Capri	Skjul Capri
+Hologram	Hologram
+Normal	Normal
+Small	Lille
+Medium	Medium
+Large	Stor
+Huge	Enorm
+Giant	Kæmpe
+Move	Flyt
+Wander around	Vandre rundt
+Dance to music	Dans til musik
+Dance	Dans
+Ride cursor	Ride-markør
+Sit on windows	Sid på vinduer
+Sit here	Sid her
+Hang here	Hæng her
+Lie down	Læg dig ned
+Go to sleep	Gå i seng
+Bring to this screen	Bring til denne skærm
+Go to the next screen	Gå til næste skærm
+Black	Sort
+White	Hvid
+Test	Test
+Stop	Stop
+Help	Hjælp
+Commands	Kommandoer
+Help page	Hjælpeside
+Join the Discord	Deltag i Discord
+Copy error details	Kopiér fejldetaljer
+Check for updates	Søg efter opdateringer
+Quit Capri	Luk Capri
+MAINFRAME	MAINFRAME
+Settings	Indstillinger
+Mods	Mods
+BRAIN	HJERNE
+Provider	Udbyder
+Using your server with no key	Brug din server uden nøgle
+Refresh	Opdater
+Set up her brain	Opsæt hendes hjerne
+Have Ollama? Open it, then press Refresh.	Har du Ollama? Åbn det, og tryk derefter på Opdater.
+Pick one. Only one brain runs at a time.	Vælg én. Kun én hjerne kører ad gangen.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Fra
+Free key	Gratis nøgle
+Connect	Forbind
+Free keys can be rate limited and slow.	Gratis nøgler kan være hastighedsbegrænsede og langsomme.
+That's a paid key: it goes under MAX INTELLIGENCE.	Det er en betalt nøgle: den går under MAX INTELLIGENCE.
+Move to MAX	Flyt til MAX
+VOICE	STEMME
+Ctrl + Alt + V to talk	Ctrl + Alt + V for at tale
+PREBUILT LOCAL	FORUDBYGGET LOKAL
+CUSTOM LOCAL	BRUGERDEFINERET LOKAL
+CLOUD VOICE	SKYSTEMME
+Set up	Opsæt
+Setup guide	Opsætningsguide
+Fish Audio	Fish Audio
+Default model	Standardmodel
+Pick a voice model	Vælg en stemmemodel
+Get free voice	Hent gratis stemme
+Mic: default	Mikrofon: standard
+Her speaker: Default	Hendes højttaler: Standard
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N slår mikrofonen fra
+CAPRI	CAPRI
+Support	Support
+Remote	Fjernbetjening
+Bring here	Bring her
+Advanced Settings	Avancerede indstillinger
+YOU	DIG
+Your personality	Din personlighed
+Language	Sprog
+English	Engelsk
+What should she call you?	Hvad skal hun kalde dig?
+Save	Gem
+Volume	Lydstyrke
+Pitch	Tonehøjde
+Speed	Hastighed
+Robot	Robot
+Glitch	Glitch
+Sounds	Lyde
+Typing sound	Skrivelyd
+Listen for Capri	Lyt efter Capri
+Hearing	Hører
+Auto	Auto
+Free voice in games	Gratis stemme i spil
+Call mode (beta)	Opkaldstilstand (beta)
+Her voice in your mic	Hendes stemme i din mikrofon
+Get VB-CABLE	Hent VB-CABLE
+How to	Sådan gør du
+Her voice in your mic: loudness	Hendes stemme i din mikrofon: lydstyrke
+MOVES	BEVÆGELSER
+Pop-in times	Indslagstider
+Mini player	Miniafspiller
+Wander	Vandre
+Sleep	Sov
+Pop-ins	Indslag
+Glitch in at startup	Glitch ved opstart
+KEYS	TASTER
+Talk: Ctrl + Alt + V	Tal: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Slå mikrofon fra: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Skriv: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Skjul/vis: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Stille: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Spiltilstand: Ctrl + Alt + G
+Confirm	Bekræft
+Cancel	Annuller
+Size	Størrelse
+Check in on me	Tjek ind på mig
+Edit check-in lines	Rediger tjek-ind-linjer
+Always on top	Altid øverst
+Mainframe size	Mainframe-størrelse
+Mainframe colours	Mainframe-farver
+Head pats	Hovedklap
+Pat stroke	Hovedklap
+Chaos when upset	Kaos når hun er vred
+Legacy stand	Gammelt stativ
+Jealous of other AIs	Jaloux på andre AI'er
+Teases when another AI comes to the front.	Driller når en anden AI kommer forrest.
+Close other AIs for me	Luk andre AI'er for mig
+Asks before closing only the apps you choose.	Spørger kun, før du lukker de apps, du vælger.
+Apps she may close	Apps hun må lukke
+Choose apps	Vælg apps
+WATCH	SE
+Watch my screen	Se min skærm
+Screens	Skærme
+All screens	Alle skærme
+Remember what she sees	Husk hvad hun ser
+Every	Hver
+Watch-along memory	Fællesvisningshukommelse
+Code/Husk Mode	Kode/Husk-tilstand
+Thinking	Tænker
+Default	Standard
+Extra request JSON	Ekstra anmodnings-JSON
+Add	Tilføj
+Verbosity	Ordrighed
+Replies	Svar
+Memory	Hukommelse
+Memory size	Hukommelsesstørrelse
+Max reply	Maks. svar
+Bubble	Boble
+Follow-up messages	Opfølgningsbeskeder
+Use	Brug
+A model in Ollama, on your local server or on your key.	En model i Ollama, på din lokale server eller med din nøgle.
+HABITS	VANER
+Open her memories	Åbn hendes minder
+Start with Windows	Start med Windows
+Show on Discord	Vis på Discord
+Use her cursor	Brug hendes markør
+Remember our chats	Husk vores chats
+Power saver	Strømsparer
+Music app	Musikapp
+Perch	Perch
+Keep PC awake for jobs	Hold pc'en vågen til jobs
+Hide in full screen	Skjul i fuld skærm
+Mini player over full screen	Miniafspiller over fuld skærm
+Explore while I'm away	Udforsk når jeg er væk
+Explore after	Udforsk efter
+GAMES	SPIL
+Controls	Kontroller
+Comments	Kommentarer
+Live reactions	Live-reaktioner
+Game sounds	Spillyde
+Gaming Mode	Spiltilstand
+She reacts to your game until you close it.	Hun reagerer på dit spil, indtil du lukker det.
+Works best on MAX INTELLIGENCE.	Virker bedst på MAX INTELLIGENCE.
+Fast hands in games	Hurtige hænder i spil
+Mute her	Slå hende lydløs
+CLIPS	KLIP
+Clip my games	Klip mine spil
+Save big moments	Gem store øjeblikke
+Save folder	Gem-mappe
+Choose folder	Vælg mappe
+Open clips folder	Åbn klip-mappen
+Default length	Standardlængde
+Frame rate	Billedfrekvens
+Resolution	Opløsning
+Video bitrate	Videobitrate
+Weather	Vejr
+Code mods can reach your whole PC. Only trusted ones.	Kodemods kan nå hele din pc. Kun betroede.
+Import mod	Importer mod
+Browse mods	Gennemse mods
+Mods folder	Mods-mappe
+INSTALLED	INSTALLERET
+Update mods	Opdater mods
+No mods match.	Ingen mods matcher.
+On	Til
+Remove	Fjern
+Publish	Publicer
+Options	Muligheder
+Back	Tilbage
+Next	Næste
+COLORS	FARVER
+Reset colors	Nulstil farver
+Running on this PC	Kører på denne pc
+NORMAL	NORMAL
+OFF	FRA
+Local server address	Adresse på lokal server

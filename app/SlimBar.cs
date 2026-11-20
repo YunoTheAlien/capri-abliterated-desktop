@@ -141,6 +141,9 @@ namespace CapriDesktop
             }
         }
 
+        // Scrolled all the way down, or nothing to scroll.
+        internal bool AtEnd { get { return At >= Reach; } }
+
         internal void Sync()
         {
             bool wanted = Reach > 0;
@@ -185,7 +188,9 @@ namespace CapriDesktop
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
-            if (e.Button != MouseButtons.Left || watching == null) return;
+            // A text box bar has no panel. Testing only for the panel meant no text box bar could be clicked or
+            // dragged at all, the log's included.
+            if (e.Button != MouseButtons.Left || (watching == null && typing == null)) return;
             int top = ThumbTop, tall = Thumb;
             if (e.Y >= top && e.Y < top + tall)
             {
@@ -218,6 +223,7 @@ namespace CapriDesktop
             if (typing != null)
             {
                 if (typing.IsHandleCreated) SendMessage(typing.Handle, LineScroll, 0, e.Delta > 0 ? -3 : 3);
+                if (Taken != null) { try { Taken(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
                 Invalidate();
                 return;
             }

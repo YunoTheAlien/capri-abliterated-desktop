@@ -1,0 +1,377 @@
+# Her menus and labels in Hindi: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe खोलें
+Her folder	उसकी फ़ोल्डर
+MD editor	MD संपादक
+Play	चलाएँ
+Music	संगीत
+Chess	शतरंज
+Connect four	कनेक्ट फोर
+Tic-tac-toe	टिक-टैक-टो
+Rock, paper, scissors	रॉक, पेपर, सिज़र्स
+Hide Capri	Capri छिपाएँ
+Display	प्रदर्शित करें
+Hologram	होलोग्राम
+Clicks go through her until you turn it off from her tray icon	क्लिक उसके माध्यम से जाते हैं जब तक आप उसे उसकी ट्रे आइकन से बंद नहीं कर देते
+BOX SCALE	BOX SCALE
+Normal	सामान्य
+HER SIZE	उसका आकार
+Small	छोटा
+Medium	मध्यम
+Large	बड़ा
+Huge	विशाल
+Giant	दैत्य
+Double ({n}x)	डबल ({n}x)
+Triple ({n}x)	ट्रिपल ({n}x)
+Move	चलें
+Wander around	इधर-उधर घूमें
+Dance to music	संगीत पर नृत्य करें
+Dance	नृत्य
+Ride cursor	कर्सर पर सवारी करें
+Sit on windows	विंडोज़ पर बैठें
+Sit here	यहाँ बैठें
+Hang here	यहाँ लटकें
+Lie down	लेटें
+Go to sleep	सोने जाएँ
+Bring to this screen	इस स्क्रीन पर लाएँ
+Go to the next screen	अगली स्क्रीन पर जाएँ
+Personality	व्यक्तित्व
+Her own	अपना
+Dynamic	गतिशील
+Caregiver	देखभाल करने वाला
+Welcome Home	घर में आपका स्वागत है
+Devoted	समर्पित
+Emo	इमो
+Bratty	शरारती
+Sassy	बेबाक
+Feral	जंगली
+How forward she is: as her personality  (now {n})	वह कितनी आगे है: अपने व्यक्तित्व के अनुसार (अब {n})
+As her personality	उसके व्यक्तित्व के रूप में
+Let it drift, {n} to {n}	चले जाएं, {n} से {n}
+Moves on its own between forward min and forward max in dynamic.md, on the same timer as her moods	dynamic.md में आगे की न्यूनतम और अधिकतम के बीच अपने आप चलती है, उसके मूड के साथ उसी टाइमर पर
+{n}, never	{n}, कभी नहीं
+Mood: none	मूड: कोई नहीं
+Dynamic, she keeps changing it	गतिशील, वह इसे बदलती रहती है
+No mood, just her personality	कोई मूड नहीं, बस उसका व्यक्तित्व
+Sleepy	सुस्त
+Hyper	अतिसक्रिय
+Moody	मूडी
+Clingy	चिपचिपा
+Needy	ज़रूरत मंद
+Playful	चंचल
+Touchy	स्पर्श करने वाला
+Affectionate	स्नेही
+Mischievous	शरारती
+Focused	केंद्रित
+Melancholy	उदास
+Smug	घमंडी
+Furious	क्रोधित
+Jealous	ईर्ष्यालु
+Mood pranks	मूड शरारतें
+Lets a furious or ignored mood set off her icon rampage and window mischief	एक गुस्से वाले या अनदेखे मूड को उसके आइकन रैम्पेज और विंडो शरारत को ट्रिगर करने दें
+Personality editor	व्यक्तित्व संपादक
+Feed her	उसे खिलाएं
+A snack	एक नाश्ता
+A proper meal	एक उचित भोजन
+Something to drink	पीने के लिए कुछ
+A treat	एक इनाम
+Something sweet	कुछ मीठा
+Streaming	स्ट्रीमिंग
+Backdrop off	पृष्ठभूमि बंद करें
+Green screen	ग्रीन स्क्रीन
+Blue screen	ब्लू स्क्रीन
+Red screen	रेड स्क्रीन
+Magenta screen	मैजेंटा स्क्रीन
+Black	काला
+White	सफेद
+Streaming mode	स्ट्रीमिंग मोड
+Puts every guardrail back while you are live, whatever your settings say. Off again when you turn it off.	जब आप लाइव हों तो हर गार्डरेल वापस लगाता है, चाहे आपकी सेटिंग्स कुछ भी कहें। बंद करने पर फिर से बंद हो जाता है।
+Capture window	विंडो कैप्चर करें
+Just her, on the colour, as its own window for OBS	केवल वह, रंग पर, OBS के लिए एक अलग विंडो के रूप में
+Lock her in place	उसे जगह पर लॉक करें
+Stops her wandering out of frame	फ्रेम से बाहर भटकने से रोकती है
+Virtual camera	वर्चुअल कैमरा
+Her as a webcam, so Discord and anything else can pick her	वेबकैम के रूप में, ताकि Discord और अन्य चीजें उसे चुन सकें
+Stream safe	स्ट्रीम सुरक्षित
+Hides your file names, icons and window titles from anything she shows or says	उसके द्वारा दिखाए जाने या कहे जाने वाले किसी भी चीज़ से आपके फ़ाइल नामों, आइकनों और विंडो शीर्षकों को छिपाता है
+Twitch	Twitch
+Read chat	चैट पढ़ें
+Who's live now	कौन अब लाइव है
+Edit twitch.md	twitch.md संपादित करें
+Clear memory	मेमोरी साफ़ करें
+Forget this conversation, her transcripts and her memories of you. me.md stays.	इस बातचीत, उसके ट्रांसक्रिप्ट और आपकी यादों को भूल जाएं। me.md बना रहता है।
+Toggles	टॉगल
+Let a mischievous mood set off a prank on its own, now and then	एक शरारती मूड को कभी-कभी अपने आप एक शरारत करने दें
+Beat pulse	बीट पल्स
+On the player with music on, she swells a little on each beat	संगीत वाले प्लेयर पर, वह हर बीट पर थोड़ा फूलती है
+Mic notice	माइक नोटिस
+While your mic is muted in voice chat, keep the TYPE and TALK bar up. Off shows a small muted mic under her instead	जब आपका माइक वॉइस चैट में मूट है, तो TYPE और TALK बार ऊपर रखें। बंद चिन्ह उसके नीचे छोटा मूट माइक दिखाएगा
+Test	परीक्षण
+Pranks	शरारतें
+Crash	क्रैश
+Run her fake blue screen now	अब उसका नकली ब्लू स्क्रीन चलाएं
+Clones	क्लोन
+Run her clones now	अब उसके क्लोन चलाएं
+Rampage	रैम्पेज
+Run an icon rampage now	अब एक आइकन रैम्पेज चलाएं
+Run a dance now	अब एक नृत्य चलाएं
+Mess	गड़बड़
+Run scattered icons now	अब बिखरे हुए आइकन चलाएं
+Alert	अलर्ट
+Run her red alert now	अब उसका लाल अलर्ट चलाएं
+Surprise	आश्चर्य
+Run her GLaDOS surprise now	अब उसका GLaDOS आश्चर्य चलाएं
+Goodbye	अलविदा
+Run her GLaDOS goodbye now	अब उसका GLaDOS अलविदा चलाएं
+Alive	जीवित
+Run her Still Alive now	अब उसका Still Alive चलाएं
+Metal pipe	धातु की पाइप
+Drop the pipe now. On her own she only does it in a mischievous mood, with Mood pranks on	अब पाइप गिराएं। अकेले वह केवल शरारती मूड में करती है, Mood pranks पर
+Intros	परिचय
+Screensavers	स्क्रीनसेवर
+Show it now. Spacebar ends it. sys.md sets its colour and when it comes up by itself.	अब दिखाएं। स्पेसबार इसे समाप्त करता है। sys.md इसका रंग निर्धारित करता है और जब यह अपने आप आता है।
+Terminals	टर्मिनल
+Hexes	हेक्सेस
+Code	कोड
+Rain	बारिश
+Make GUI translations	GUI अनुवाद करें
+Translate her menus, keys and tips into her five voice languages, into the source's languages folder	उसके मेनू, कुंजियों और युक्तियों का उसके पांच आवाज भाषाओं में, स्रोत के भाषाओं फ़ोल्डर में अनुवाद करें
+Stop	रोकें
+Clear her clones, put the icons back and close the fake crash	उसके क्लोन साफ़ करें, आइकन वापस रखें और नकली क्रैश बंद करें
+Help	सहायता
+Commands	कमांड
+Her log	उसका लॉग
+What she is writing down, as it happens: her lines and her faults	वह क्या लिख रही है, जैसे होता है: उसकी पंक्तियाँ और उसकी गलतियाँ
+Help page	सहायता पृष्ठ
+Join the Discord	Discord से जुड़ें
+Copy error details	त्रुटि विवरण कॉपी करें
+Check for updates	अपडेट के लिए जांच करें
+Clear her drawing	उसका चित्र साफ़ करें
+Quit Capri	Capri छोड़ें
+MAINFRAME	MAINFRAME
+Settings	सेटिंग्स
+Mods	मॉड
+BRAIN	ब्रेन
+WORKSPACE	वर्कस्पेस
+LOG	लॉग
+Provider	प्रदाता
+Using your server with no key	अपने सर्वर का उपयोग करें, कोई की नहीं
+Refresh	रीफ़्रेश
+Set up her brain	उसका दिमाग सेट करें
+Have Ollama? Open it, then press Refresh.	क्या आपके पास Ollama है? इसे खोलें, फिर रीफ़्रेश दबाएं।
+Pick one. Only one brain runs at a time.	एक चुनें। एक समय में केवल एक दिमाग चलता है।
+MEDIUM INTELLIGENCE	मध्यम बुद्धिमत्ता
+MAX INTELLIGENCE	अधिकतम बुद्धिमत्ता
+Off	बंद
+Free key	निःशुल्क कुंजी
+My plan	मेरी योजना
+Connect	कनेक्ट करें
+Free keys can be rate limited and slow.	निःशुल्क कुंजियों पर दर सीमित और धीमा हो सकता है।
+That's a paid key: it goes under MAX INTELLIGENCE.	वह एक सशुल्क कुंजी है: यह अधिकतम बुद्धिमत्ता के अंतर्गत आती है।
+Move to MAX	अधिकतम पर जाएं
+VOICE	वॉइस
+Ctrl + Alt + V to talk	बात करने के लिए Ctrl + Alt + V
+PREBUILT LOCAL	पूर्व-निर्मित स्थानीय
+CUSTOM LOCAL	कस्टम स्थानीय
+CLOUD VOICE	क्लाउड आवाज़
+Set up	सेट करें
+Setup guide	सेटअप गाइड
+Fish Audio	फिश ऑडियो
+Set up Fish Audio	फिश ऑडियो सेट करें
+Default model	डिफ़ॉल्ट मॉडल
+Free voice: Your voice	निःशुल्क आवाज़: आपकी आवाज़
+Pick a voice model	एक वॉइस मॉडल चुनें
+Get free voice	निःशुल्क आवाज़ प्राप्त करें
+Mic: default	माइक: डिफ़ॉल्ट
+Her speaker: Default	उसका स्पीकर: डिफ़ॉल्ट
+Hearing: her own ears · Voice Chat Mic (BEACN Mix Create) · ready	सुनना: अपने अपने कान · वॉइस चैट माइक (BEACN Mix Create) · तैयार
+Open Sound settings	साउंड सेटिंग्स खोलें
+Type instead	टाइप करें
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N माइक म्यूट करता है
+HD voice from your clip, on your graphics card. Games get her free voice.	आपके क्लिप से HD आवाज़, आपके ग्राफ़िक्स कार्ड पर। गेम्स को उसका मुफ़्त आवाज़।
+CAPRI	कैप्री
+Support	सहायता
+Remote	रिमोट
+Bring here	यहाँ लाएँ
+Abliterated updates	मिटाए गए अपडेट
+INTERESTS ON  ·  sys.md	रुचियाँ · sys.md
+Resources	संसाधन
+Advanced Settings	उन्नत सेटिंग्स
+YOU	आप
+Your personality	आपकी व्यक्तित्व
+Language	भाषा
+English	अंग्रेज़ी
+What should she call you?	वह आपको क्या बुलाए?
+Get to know me	मुझे जानें
+Save	सहेजें
+Voice settings	आवाज़ सेटिंग्स
+Volume	आवाज़
+Pitch	पिच
+Speed	गति
+Robot	रोबोट
+Glitch	ग्लिच
+Sounds	ध्वनियाँ
+Typing sound	टाइपिंग ध्वनि
+Listen for Capri	Capri को सुनें
+Listen window	सुनने की विंडो
+Hearing	श्रवण
+Auto	स्वचालित
+Free voice in games	गेम्स में मुफ़्त आवाज़
+Call mode (beta)	कॉल मोड (बीटा)
+Her voice in your mic	आपके माइक में उसकी आवाज़
+VB-CABLE is donationware from vb-cable.com.	VB-CABLE vb-cable.com से दानवेयर है।
+Needs VB-CABLE (free).	VB-CABLE (मुफ़्त) की आवश्यकता है।
+Get VB-CABLE	VB-CABLE प्राप्त करें
+Output: none yet	आउटपुट: अभी कोई नहीं
+How to	कैसे करें
+Her voice in your mic: loudness	आपके माइक में उसकी आवाज़: आवाज़
+MOVES	मूव्स
+Pop-in times	पॉप-इन समय
+Mini player	मिनी प्लेयर
+Wander	घूमना
+Sleep	सोना
+Pop-ins	पॉप-इन्स
+Glitch in at startup	स्टार्टअप पर गड़बड़ी
+KEYS	कीज़
+Talk: Ctrl + Alt + V	बात करें: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	माइक म्यूट करें: Ctrl + Alt + N
+Type: Ctrl + Alt + T	टाइप करें: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	छिपाएँ/दिखाएँ: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	शांत: Ctrl + Alt + P
+Push to talk: Middle click	पुश टू टॉक: मिडिल क्लिक
+Gaming Mode: Ctrl + Alt + G	गेमिंग मोड: Ctrl + Alt + G
+Mainframe: Ctrl + Alt + M (taken)	Mainframe: Ctrl + Alt + M (taken)
+Confirm	पुष्टि करें
+Cancel	रद्द करें
+Size	आकार
+Check in on me	मेरे बारे में जाँच करें
+Water	पानी
+Stretch	खिंचाव
+{n} min	{n} मिनट
+Look away	दूर देखें
+Sleep nudge	नींद का संकेत
+Auto {n} am	ऑटो {n} एएम
+Meals	भोजन
+Game break	गेम ब्रेक
+Bored	ऊब
+Edit check-in lines	चेक-इन लाइनों को संपादित करें
+Always on top	हमेशा शीर्ष पर
+Mainframe size	Mainframe आकार
+Mainframe colours	Mainframe रंग
+Head pats	सिर सहलाना
+Pat stroke	थपथपाने का स्ट्रोक
+Chaos when upset	परेशान होने पर अराजकता
+Legacy stand	विरासत स्टैंड
+Jealous of other AIs	अन्य AIs से ईर्ष्या
+Teases when another AI comes to the front.	जब कोई अन्य AI सामने आता है तो संकेत देता है।
+Close other AIs for me	मेरे लिए अन्य AI बंद करें
+Asks before closing only the apps you choose.	केवल उन ऐप्स को बंद करने से पहले पूछता है जिन्हें आप चुनते हैं।
+Apps she may close	ऐप्स जिन्हें वह बंद कर सकती है
+Choose apps	ऐप्स चुनें
+WATCH	वॉच
+Watch my screen	मेरी स्क्रीन देखें
+Screens	स्क्रीन
+All screens	सभी स्क्रीन
+Remember what she sees	वह जो देखती है उसे याद रखें
+Every	हर
+Watch-along memory	साथ में देखने की स्मृति
+Code/Husk Mode	Code/Husk Mode
+Thinking	सोच रहा है
+Default	डिफ़ॉल्ट
+Extra request JSON	अतिरिक्त अनुरोध JSON
+Add	जोड़ें
+Verbosity	विस्तार
+Cloud model lock	क्लाउड मॉडल लॉक
+Replies	उत्तर
+Memory	स्मृति
+Memory size	स्मृति आकार
+Max reply	अधिकतम उत्तर
+Bubble	बुलबुला
+Follow-up messages	अनुवर्ती संदेश
+Use	उपयोग करें
+A model in Ollama, on your local server or on your key.	Ollama में एक मॉडल, आपके स्थानीय सर्वर पर या आपकी कुंजी पर।
+Local servers	लोकल सर्वर
+Saved providers ({n})	सेव्ड प्रदाता ({n})
+Local fallback	स्थानीय फॉलबैक
+Fallback list	फॉलबैक लिस्ट
+Refresh · {n} found	रीफ्रेश · {n} पाए गए
+Fallback brain	फॉलबैक मस्तिष्क
+Brains in use	उपयोग में मस्तिष्क
+No cloud	कोई क्लाउड नहीं
+No local	कोई स्थानीय नहीं
+Local priority	स्थानीय प्राथमिकता
+Secondary	द्वितीयक
+Primary	प्राथमिक
+HABITS	हैबिट्स
+Obsidian vault	Obsidian vault
+Open her memories	उसकी यादें खोलें
+Start with Windows	विंडोज के साथ शुरू करें
+Show on Discord	Discord पर दिखाएं
+Use her cursor	उसके कर्सर का उपयोग करें
+Remember our chats	हमारी चैट याद रखें
+Security: Trusted	सुरक्षा: विश्वसनीय
+Asks before paying or what you didn't say.	भुगतान करने से पहले या जो आपने नहीं कहा
+Power saver	पावर सेवर
+Music app	संगीत ऐप
+Perch	परच
+Keep PC awake for jobs	कामों के लिए पीसी को जगाए रखें
+Hide in full screen	फुल स्क्रीन में छिपाएं
+Mini player over full screen	फुल स्क्रीन पर मिनी प्लेयर
+Explore while I'm away	मेरे दूर होने पर खोजें
+Explore after	बाद में खोजें
+Chimes	घंटियाँ
+Sound set	ध्वनि सेट
+Chime volume	घंटी की आवाज़
+Message sent	संदेश भेजा गया
+Heard you	मैंने आपको सुना
+Listening	सुन रहा हूँ
+GAMES	गेम्स
+Controls	नियंत्रण
+Comments	टिप्पणियाँ
+Live reactions	लाइव प्रतिक्रियाएँ
+Game sounds	गेम ध्वनियाँ
+Gaming Mode	गेमिंग मोड
+She reacts to your game until you close it.	जब तक आप इसे बंद नहीं करते, वह आपके गेम पर प्रतिक्रिया करती है।
+"Hey Capri, activate gaming mode" turns it on.	"हे Capri, गेमिंग मोड सक्रिय करें" इसे चालू करता है।
+Works best on MAX INTELLIGENCE.	MAX INTELLIGENCE पर सबसे अच्छा काम करता है।
+Fast hands in games	खेलों में तेज़ हाथ
+Mute her	उसे म्यूट करें
+CLIPS	क्लिप्स
+Clip my games	मेरे खेलों को क्लिप करें
+Save big moments	बड़े पलों को सहेजें
+Save folder	सहेजें फ़ोल्डर
+Choose folder	फोल्डर चुनें
+Open clips folder	क्लिप फ़ोल्डर खोलें
+Default length	डिफ़ॉल्ट लंबाई
+Frame rate	फ्रेम दर
+Resolution	रिज़ॉल्यूशन
+Video bitrate	वीडियो बिटरेट
+Weather	मौसम
+City	शहर
+DOOMSCROLL	डूमस्क्रॉल
+Scroll limit	स्क्रॉल सीमा
+Code mods can reach your whole PC. Only trusted ones.	कोड मॉड्स आपके पूरे PC तक पहुँच सकते हैं। केवल भरोसेमंद।
+Import mod	मॉड आयात करें
+Browse mods	मॉड्स ब्राउज़ करें
+Mods folder	मॉड्स फ़ोल्डर
+INSTALLED	इंस्टेल्ड
+Update mods	मॉड्स अपडेट करें
+No mods yet. Import a .capri-mod file.	अभी कोई मॉड नहीं है। एक .capri-mod फ़ाइल आयात करें।
+No mods match.	कोई मॉड नहीं मिला।
+On	चालू
+Remove	हटाएँ
+Publish	प्रकाशित करें
+Options	विकल्प
+Back	वापस
+Next	अगला
+COLORS	कलर्स
+Hair	बाल
+Accents	लहजे
+Eyes	आँखें
+Edges	किनारे
+Body	शरीर
+Reset colors	रंग रीसेट करें
+Running on this PC	इस पीसी पर चल रहा है
+NORMAL	सामान्य
+OFF	बंद
+Local server address	स्थानीय सर्वर पता
+None	कोई नहीं

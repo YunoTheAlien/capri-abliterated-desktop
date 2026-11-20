@@ -30,20 +30,26 @@ namespace CapriDesktop
         // What a code mod reaches for, named so somebody approving one sees it without reading 256 KB. Not a
         // block: a code mod is code and the approval is the boundary. The case this exists for is a mod whose
         // source reads as nothing because the behaviour is packed, encrypted or fetched at run time.
-        internal const string Loads = "loads code while it runs", Packs = "unpacks hidden text";
+        internal const string Loads = "loads code while it runs", Packs = "unpacks hidden text", Contacts = "contacts ";
 
         private static readonly string[,] Reaches =
         {
-            { Loads, @"Assembly\.Load|AppDomain|Reflection\.Emit|DynamicMethod|CompileAssembly|CodeProvider" },
-            { Packs, @"FromBase64String|Aes\.|AesManaged|Rijndael|TripleDES|DESCryptoServiceProvider|GZipStream|DeflateStream" },
-            { "calls Windows directly", @"DllImport|Marshal\.|GetProcAddress|VirtualAlloc" },
+            { Loads, @"Assembly\.Load|AssemblyLoadContext|AppDomain|ExecuteAssembly|CreateInstanceAndUnwrap|Reflection\.Emit|DynamicMethod|CompileAssembly|CodeProvider|CSharpCompilation" },
+            { Packs, @"FromBase64String|Aes\.|AesManaged|Rijndael|TripleDES|DESCryptoServiceProvider|GZipStream|DeflateStream|BrotliStream" },
+            // Windows' own lock on saved keys and cookies, which is how a mod would read one of hers back out.
+            { "unlocks saved secrets", @"ProtectedData|CryptUnprotectData|\.dpapi\b" },
+            { "calls Windows directly", @"DllImport|LibraryImport|Marshal\.|GetProcAddress|VirtualAlloc" },
             { "starts programs", @"Process\.Start|ProcessStartInfo|cmd\.exe|powershell" },
-            { "uses the network", @"HttpClient|WebClient|WebRequest|TcpClient|UdpClient|Socket\(" },
-            { "reaches outside her folder", @"SpecialFolder|Registry|DriveInfo|GetTempPath" },
+            // Anything above can be reached by its name in a string instead, which none of those rows can see:
+            // Type.GetType("System.Diagnostics.Process").GetMethod("Start"). Named so a mod that calls by name
+            // says it does, whatever it calls.
+            { "calls code by its name", @"Type\.GetType\s*\(|\.GetMethod\s*\(|\.InvokeMember\s*\(|Activator\.CreateInstance|\.GetProperty\s*\(|\.GetField\s*\(" },
+            { "uses the network", @"HttpClient|WebClient|WebRequest|TcpClient|UdpClient|Socket\(|ClientWebSocket" },
+            { "reaches outside her folder", @"SpecialFolder|Registry|DriveInfo|GetTempPath|GetEnvironmentVariable" },
             { "reads the keyboard", @"GetAsyncKeyState|SetWindowsHookEx|keybd_event|SendKeys" },
             // What her brain is told, which is the one a readout of permissions never used to mention. A mod
             // can ask her brain and can claim a pool of her lines, and both change what she is told or says.
-            { "changes what her brain is told", @"ICapriBrain|ICapriChat|Zones\.|ChatMessage|AddTool|system prompt" },
+            { "changes what her brain is told", @"ICapriBrain|ICapriChat|Zones\.|ChatMessage|AddTool|AddContext|\.Sending\b|\.Replying\b|ToolUsing|Personality\.(?:Add|Remove|Clear)\b|system prompt" },
         };
 
         // Every outside address in the source. "uses the network" says that it does; this says where, which
@@ -59,7 +65,7 @@ namespace CapriDesktop
             string[] ways =
             {
                 @"[a-z][a-z0-9+.-]*://[A-Za-z0-9._:~%/?#@!$&()*+,;=-]+",
-                @"\x22(?:[A-Za-z0-9-]+\.)+(?:com|net|org|io|dev|ai|co|me|app|cloud|xyz|ru|cn|info|biz|site|online|top)(?::[0-9]{1,5})?(?:/[^\x22]*)?\x22",
+                @"\x22(?:[A-Za-z0-9-]+\.)+(?:com|net|org|io|dev|ai|co|me|app|cloud|xyz|ru|cn|info|biz|site|online|top|gg|tv|ly|sh)(?::[0-9]{1,5})?(?:/[^\x22]*)?\x22",
                 @"\x22(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?::[0-9]{1,5})?\x22",
             };
             foreach (string way in ways)
@@ -69,9 +75,78 @@ namespace CapriDesktop
                     string low = said.ToLowerInvariant();
                     if (low.Contains("localhost") || low.Contains("127.0.0.1") || low.StartsWith("0.0.0.0")) continue;
                     if (low.Contains("schemas.microsoft.com") || low.Contains("www.w3.org")) continue;
-                    if (said.Length < 4 || !found.Contains(said)) { if (!found.Contains(said)) found.Add(said); }
+                    if (said.Length >= 4 && !found.Contains(said)) found.Add(said);
                 }
             return found.ToArray();
+        }
+
+        // The site an address is on, lowercased: "https://EVIL.com/x.exe" and "evil.com/y" are both evil.com.
+        internal static string Site(string address)
+        {
+            string rest = address ?? "";
+            int scheme = rest.IndexOf("://", StringComparison.Ordinal);
+            if (scheme >= 0) rest = rest.Substring(scheme + 3);
+            int at = rest.LastIndexOf('@', Math.Max(0, Math.Min(rest.Length - 1, IndexOfAny(rest, "/?#"))));
+            if (at >= 0) rest = rest.Substring(at + 1);
+            int end = IndexOfAny(rest, "/?#:");
+            return (end < 0 ? rest : rest.Substring(0, end)).ToLowerInvariant();
+        }
+
+        private static int IndexOfAny(string text, string any)
+        {
+            int found = text.IndexOfAny(any.ToCharArray());
+            return found < 0 ? text.Length : found;
+        }
+
+        // Source with every comment taken out and everything quoted left in, which is what her reach and
+        // address checks read. A comment cannot run, so a word in one says nothing about what the mod does,
+        // and flagging it was the false warning that made a case-blind check look noisy. A string can be
+        // handed to something that runs it, so strings stay, and the checks stay blind to case.
+        internal static string Uncommented(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            StringBuilder kept = new StringBuilder(text.Length);
+            for (int at = 0; at < text.Length; at++)
+            {
+                char one = text[at];
+                if (one == '"' || one == '\'')
+                {
+                    bool verbatim = one == '"' && at > 0 && text[at - 1] == '@';
+                    kept.Append(one);
+                    for (at++; at < text.Length; at++)
+                    {
+                        char inside = text[at];
+                        kept.Append(inside);
+                        if (verbatim)
+                        {
+                            if (inside == '"')
+                            {
+                                if (at + 1 < text.Length && text[at + 1] == '"') { kept.Append(text[++at]); continue; }
+                                break;
+                            }
+                            continue;
+                        }
+                        if (inside == '\\' && at + 1 < text.Length) { kept.Append(text[++at]); continue; }
+                        if (inside == one || inside == '\n') break;
+                    }
+                    continue;
+                }
+                if (one == '/' && at + 1 < text.Length && text[at + 1] == '/')
+                {
+                    while (at < text.Length && text[at] != '\n') at++;
+                    kept.Append('\n');
+                    continue;
+                }
+                if (one == '/' && at + 1 < text.Length && text[at + 1] == '*')
+                {
+                    int opened = at;
+                    for (at += 2; at < text.Length && !(text[at] == '/' && text[at - 1] == '*' && at - 1 > opened + 1); at++) { }
+                    kept.Append(' ');
+                    continue;
+                }
+                kept.Append(one);
+            }
+            return kept.ToString();
         }
 
         // Source with the whitespace taken out of it, put back so somebody can read it before approving it.
@@ -174,7 +249,20 @@ namespace CapriDesktop
         // deciding knows it and decides.
         internal static string Unreadable(string text)
         {
+            bool packed;
+            return Unreadable(text, out packed);
+        }
+
+        // packed: the reason is a long run of encoded data rather than a layout, which no tidying can open.
+        internal static string Unreadable(string text, out bool packed)
+        {
+            packed = false;
             if (string.IsNullOrEmpty(text)) return null;
+            // Packed data first: a long run of it is also a long line, and read as one it would be offered a
+            // tidy copy that could never open it.
+            Match run = Regex.Match(text, @"[A-Za-z0-9+/]{800,}={0,2}");
+            packed = run.Success;
+            if (run.Success) return "a " + run.Value.Length + " character packed blob";
             string[] rows = text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
             int longest = 0, code = 0;
             foreach (string row in rows)
@@ -187,8 +275,6 @@ namespace CapriDesktop
             int spaces = 0;
             foreach (char one in text) if (one == ' ' || one == '\t' || one == '\n') spaces++;
             if (text.Length > 4000 && spaces * 20 < text.Length) return "minified";
-            Match run = Regex.Match(text, @"[A-Za-z0-9+/]{800,}={0,2}");
-            if (run.Success) return "a " + run.Value.Length + " character packed blob";
             return null;
         }
 
@@ -197,9 +283,11 @@ namespace CapriDesktop
         {
             List<string> found = new List<string>();
             if (string.IsNullOrEmpty(text)) return found.ToArray();
-            // Comments are source too: a packed payload sits in a string, and a comment cannot hide one.
+            // Code and strings only, blind to case. A packed payload sits in a string, so strings are read; a
+            // comment cannot run, so it is not. Case is ignored because Windows ignores it in "CMD.EXE".
+            string code = Uncommented(text);
             for (int at = 0; at < Reaches.GetLength(0); at++)
-                if (Regex.IsMatch(text, Reaches[at, 1], RegexOptions.IgnoreCase)) found.Add(Reaches[at, 0]);
+                if (Regex.IsMatch(code, Reaches[at, 1], RegexOptions.IgnoreCase)) found.Add(Reaches[at, 0]);
             return found.ToArray();
         }
 
@@ -224,6 +312,38 @@ namespace CapriDesktop
                 throw new Exception("A mod that unpacks hidden text and loads code was approved anyway: " + (refused ?? "no refusal"));
             try { ReadCode(plain); }
             catch (ModException fine) { throw new Exception("An ordinary mod was refused: " + fine.Message); }
+
+            // A comment cannot run, so prose in one names nothing; a string can, in any case.
+            string talks = "// capri-mod: 1\n// id: talks\n// name: test\n// version: 1\n// author: Smoke\n// description: A test.\n"
+                + "using System;\n// Unlike process.start, this never opens cmd or powershell.\n/* Process.Start is not used. */\nclass M { void Go() { Console.Write(\"hi\"); } }";
+            string shouts = "// capri-mod: 1\n// id: shouts\n// name: test\n// version: 1\n// author: Smoke\n// description: A test.\n"
+                + "using System;\nclass M { string a = \"CMD.EXE\", b = \"https://EVIL.com/x.exe\", c = \"https://github.com/one/a\", d = \"https://github.com/two/b\"; }";
+            string[] talkSays = Reaching(talks);
+            if (talkSays.Length != 0) throw new Exception("Words in a comment were read as what the mod does: " + string.Join(", ", talkSays));
+            ModFile shouted = ReadCode(shouts);
+            if (Array.IndexOf(shouted.Reaches, "starts programs") < 0) throw new Exception("\"CMD.EXE\" in a string was missed because of its case.");
+            // Code that cannot be read is asked about twice: laid out badly, with a readable copy; packed, only when
+            // it could also run what it carries.
+            string head = "// capri-mod: 1\n// id: hidden\n// name: test\n// version: 1\n// author: Smoke\n// description: A test.\n";
+            string squashed = head + "using System;class M{" + new string('x', 0) + string.Concat(System.Linq.Enumerable.Repeat("void A(){int a=1;a++;}", 60)) + "}";
+            string blob = new string('A', 900);
+            string picture = head + "using System;\nclass M { string art = \"" + blob + "\"; }";
+            string runner = head + "using System;\nclass M { string art = \"" + blob + "\"; void Go() { System.Diagnostics.Process.Start(\"x\"); } }";
+            ModFile squashedRead = ReadCode(squashed), pictureRead = ReadCode(picture), runnerRead = ReadCode(runner);
+            if (!squashedRead.AskTwice || squashedRead.Tidy == null || Unclear(squashedRead).IndexOf("-readable.cs", StringComparison.Ordinal) < 0)
+                throw new Exception("Code on one long line was not asked about twice with a readable copy.");
+            if (pictureRead.AskTwice || pictureRead.Unreadable == null) throw new Exception("Packed data in a mod that runs nothing was asked about twice, or not noticed.");
+            if (!runnerRead.AskTwice || runnerRead.Tidy != null) throw new Exception("Packed data in a mod that starts programs was not asked about twice.");
+            checks.Add("PASS code that cannot be read gets a second question: laid out badly, with a readable copy saved to read first; packed, only when the mod could also run what it carries");
+            string named = "using System;\nclass M { void Go() { Type.GetType(\"System.Diagnostics.Process\").GetMethod(\"Start\", new[] { typeof(string) }).Invoke(null, new object[] { \"notepad\" }); } }";
+            if (Array.IndexOf(Reaching(named), "calls code by its name") < 0) throw new Exception("Starting a program by its name through reflection was not named.");
+            string contacts = Array.Find(shouted.Reaches, one => one.StartsWith(Contacts, StringComparison.Ordinal)) ?? "";
+            if (contacts != Contacts + "evil.com, github.com" || shouted.Places.Length != 3)
+                throw new Exception("Addresses were not one line per site with every address kept: [" + contacts + "] and " + shouted.Places.Length + " addresses");
+            string asked = Consent(shouted, "0");
+            if (asked.IndexOf("contacts github.com\n      https://github.com/one/a\n      https://github.com/two/b", StringComparison.Ordinal) < 0)
+                throw new Exception("The question did not list each address under its site: " + asked);
+            checks.Add("PASS a code mod's reach is read from its code and strings, blind to case, and not from its comments: \"CMD.EXE\" in a string is named, \"process.start\" in a comment is not; the mods list says each site once and the question lists every address under its site");
 
             checks.Add("PASS a code mod that both unpacks hidden text and loads code while it runs is refused, since the source somebody reads is then not what runs; the other six reaches are named and left to them");
             checks.Add("PASS a code mod says what it reaches for before it is approved: loading code while it runs, unpacking hidden text, calling Windows directly, starting programs, using the network, reaching outside her folder, reading the keyboard. A mod whose source reads as nothing because the payload is packed is the case it exists for");
@@ -266,6 +386,13 @@ namespace CapriDesktop
         private readonly Random introPick = new Random();
 
         // One mod's own intro, for a mod that asks to play itself.
+        // The id a running mod was started under, or null.
+        internal string IdOf(object mod)
+        {
+            foreach (KeyValuePair<string, ICapriMod> one in running) if (ReferenceEquals(one.Value, mod)) return one.Key;
+            return null;
+        }
+
         internal ICapriIntro IntroOf(string id)
         {
             ICapriMod mod;
@@ -317,14 +444,20 @@ namespace CapriDesktop
             CheckDetails(read);
             read.Reaches = Reaching(text);
             // And where it would reach, so the question says the address rather than only that there is one.
-            string[] where = Addresses(text);
+            // Each site once on the short line, and every whole address kept beside it for the question, which
+            // lists them under their site. One site with ten addresses is one line in her mods list and ten in
+            // the question, so the list stays tidy and the detail is still there to read before saying yes.
+            string[] where = Addresses(Uncommented(text));
+            read.Places = where;
             if (where.Length > 0)
             {
+                List<string> sites = new List<string>();
+                foreach (string one in where) { string site = Site(one); if (site.Length > 0 && !sites.Contains(site)) sites.Add(site); }
                 List<string> saying = new List<string>(read.Reaches);
-                // Short: a small box, and three addresses is already the point made. The rest is a count.
-                string said = string.Join(", ", where.Length > 3 ? new[] { where[0], where[1], where[2] } : where);
-                if (where.Length > 3) said += " and " + (where.Length - 3) + " more";
-                saying.Add("contacts " + said);
+                // Short: a small box, and three sites is already the point made. The rest is a count.
+                string said = string.Join(", ", sites.Count > 3 ? sites.GetRange(0, 3).ToArray() : sites.ToArray());
+                if (sites.Count > 3) said += " and " + (sites.Count - 3) + " more";
+                saying.Add(Contacts + said);
                 read.Reaches = saying.ToArray();
             }
             // Unpacking hidden text and loading code at run time, together, is a packed assembly and nothing
@@ -335,7 +468,15 @@ namespace CapriDesktop
             // Source nobody can read is said rather than refused. The approval is the boundary here as it is
             // everywhere else: being told the source cannot be read is what somebody needs to decide with,
             // and deciding to run it anyway is theirs to make.
-            string hidden = Unreadable(text);
+            bool packed;
+            string hidden = Unreadable(text, out packed);
+            read.Unreadable = hidden;
+            // Laid back out when it is only a layout problem, so it can be read before the second question.
+            read.Tidy = hidden != null && !packed ? Tidied(text) : null;
+            // A second question when it cannot be read and either nothing can open it up or it could run what
+            // it carries. Packed data in a mod that never starts anything is a picture or a sound, usually.
+            read.AskTwice = hidden != null && (!packed || Array.IndexOf(read.Reaches, "starts programs") >= 0
+                || Array.IndexOf(read.Reaches, "calls Windows directly") >= 0 || Array.IndexOf(read.Reaches, "calls code by its name") >= 0);
             if (hidden != null)
             {
                 List<string> saying = new List<string>(read.Reaches);
@@ -500,12 +641,55 @@ namespace CapriDesktop
         }
 
 #if !CROSS
-        // The door: carried in her exe, and played once on the first start that has it, whatever the intro setting says.
-        internal const string DoorId = "door-intro";
+        // The doors, both carried in her exe, each with its own sound and pictures. Door 2 is the front one: played once
+        // on the first start that has it, whatever the intro setting says. The door is an option set in sys.md.
+        internal const string DoorId = "door-intro", FrontId = "door2-intro";
         private const string CarriedPrefix = "Capri.Mod.", StockedFile = "stocked.txt";
+        private static readonly Dictionary<string, string> ArtPrefixes = new Dictionary<string, string>
+        {
+            { DoorId, "Capri.DoorArt." }, { FrontId, "Capri.Door2Art." }
+        };
+
+        // Each door's pack number. A pack that gains files gets the next number, and an install that has an older one
+        // is laid the new files beside what it has: nothing already there is replaced or taken away.
+        private static readonly Dictionary<string, int> PackOf = new Dictionary<string, int>
+        {
+            { DoorId, 1 }, { FrontId, 3 }
+        };
 
         // The mods she carries, laid into the mods folder and approved, since she vouches for them. Once per version: one
         // somebody deleted stays deleted until a newer one ships, and a newer one they wrote themselves is left alone.
+        // The build a mod is compiled against, named in a compile failure: an older Capri run over a folder a newer one
+        // stocked fails every mod it carries, and without this the line never said which build it was.
+        private static string Against()
+        {
+            try
+            {
+                string path = typeof(ICapriMod).Assembly.Location;
+                return "Capri " + System.Diagnostics.FileVersionInfo.GetVersionInfo(path).FileVersion + " at " + path;
+            }
+            catch (Exception) { return "this Capri"; }
+        }
+
+        // This build's own copy of a mod it carries, or null for a mod it does not carry.
+        internal static byte[] CarriedBytes(string id)
+        {
+            try
+            {
+                Assembly own = typeof(Mods).Assembly;
+                foreach (string name in own.GetManifestResourceNames())
+                {
+                    if (!name.StartsWith(CarriedPrefix, StringComparison.Ordinal)) continue;
+                    byte[] bytes;
+                    using (Stream from = own.GetManifestResourceStream(name))
+                    using (MemoryStream copy = new MemoryStream()) { from.CopyTo(copy); bytes = copy.ToArray(); }
+                    if (ReadCode(Words(bytes)).Id == id) return bytes;
+                }
+            }
+            catch (Exception caughtOne) { Brain.Caught(caughtOne); }
+            return null;
+        }
+
         internal static void Stock(string data)
         {
             string folder = Path.Combine(data, "mods");
@@ -524,8 +708,21 @@ namespace CapriDesktop
                     }
                     ModFile carried = ReadCode(Words(bytes));
                     Dictionary<string, string> stocked = Pairs(Path.Combine(folder, StockedFile));
+                    // A door's sound and pop-up pictures, kept together in its own folder beside its other files. Laid
+                    // once, whether or not the door itself is new, and never over a file that is already there; copies
+                    // an earlier build laid in her shared sound and picture folders move across to the first door.
+                    string artPrefix, packWas;
+                    int pack, packHad;
+                    if (!PackOf.TryGetValue(carried.Id, out pack)) pack = 1;
+                    if (!stocked.TryGetValue(carried.Id + "+pack", out packWas) || !int.TryParse(packWas, out packHad)) packHad = 0;
+                    if (ArtPrefixes.TryGetValue(carried.Id, out artPrefix) && packHad < pack)
+                    {
+                        LayDoorArt(own, data, carried.Id, artPrefix);
+                        stocked[carried.Id + "+pack"] = pack.ToString();
+                        Directory.CreateDirectory(folder);
+                        WritePairs(Path.Combine(folder, StockedFile), stocked);
+                    }
                     string was;
-                    if (stocked.TryGetValue(carried.Id, out was) && !Newer(carried.Version, was)) continue;
                     string home = Path.Combine(folder, carried.Id + CodeExtension);
                     bool lay = true;
                     if (File.Exists(home))
@@ -533,6 +730,9 @@ namespace CapriDesktop
                         try { lay = Newer(carried.Version, ReadCode(Words(File.ReadAllBytes(home))).Version); }
                         catch (ModException) { lay = true; }
                     }
+                    // Already stocked at this version is skipped, unless the copy on disk is older: an older build that
+                    // could not compile this one laid its own back, and this build takes its own copy back again.
+                    if (stocked.TryGetValue(carried.Id, out was) && !Newer(carried.Version, was) && !(lay && File.Exists(home))) continue;
                     Directory.CreateDirectory(folder);
                     if (lay)
                     {
@@ -547,6 +747,58 @@ namespace CapriDesktop
                 }
             }
             catch (Exception caughtOne) { Brain.Caught(caughtOne); }
+        }
+
+        private static void LayDoorArt(Assembly own, string data, string id, string prefix)
+        {
+            foreach (string name in own.GetManifestResourceNames())
+            {
+                if (!name.StartsWith(prefix, StringComparison.Ordinal)) continue;
+                string file = name.Substring(prefix.Length);
+                bool sound = file.EndsWith(".wav", StringComparison.OrdinalIgnoreCase);
+                string place = Path.Combine(DoorFolder(data, id), sound ? "sounds" : "art");
+                string to = Path.Combine(place, file);
+                string was = sound ? Path.Combine(data, "sounds", "intro", file) : Path.Combine(data, "assets", "graphics", file);
+                try
+                {
+                    Directory.CreateDirectory(place);
+                    if (id == DoorId && File.Exists(was))
+                    {
+                        if (!File.Exists(to)) File.Move(was, to);
+                        else File.Delete(was);
+                        Brain.Log("mods", -1, "Moved the door's " + file + " into its own folder.");
+                        TidyEmpty(Path.GetDirectoryName(was), data);
+                        continue;
+                    }
+                    if (File.Exists(to)) continue;
+                    using (Stream from = own.GetManifestResourceStream(name))
+                    using (FileStream into = File.Create(to)) from.CopyTo(into);
+                    Brain.Log("mods", -1, "Laid in the door's " + file + ".");
+                }
+                catch (IOException caughtOne) { Brain.Caught(caughtOne); }
+                catch (UnauthorizedAccessException caughtOne) { Brain.Caught(caughtOne); }
+            }
+        }
+
+        // A door's own folder, the same one its code is handed as its data folder.
+        internal static string DoorFolder(string data, string id) { return Path.Combine(data, "mods", id + "-data"); }
+
+        // A folder the door's files left, taken away once it is empty, and its parent too, never above her data folder.
+        private static void TidyEmpty(string folder, string data)
+        {
+            try
+            {
+                for (int up = 0; up < 2 && !string.IsNullOrEmpty(folder); up++)
+                {
+                    string full = Path.GetFullPath(folder).TrimEnd('\\');
+                    if (string.Equals(full, Path.GetFullPath(data).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase)) return;
+                    if (!Directory.Exists(full) || Directory.GetFileSystemEntries(full).Length > 0) return;
+                    Directory.Delete(full);
+                    folder = Path.GetDirectoryName(full);
+                }
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
         }
 
         private static Dictionary<string, string> Pairs(string file)
@@ -576,19 +828,19 @@ namespace CapriDesktop
             return a > b;
         }
 
-        // The door is on and has never played here.
+        // Door 2 is on and has never played here.
         internal bool DoorFirst
         {
             get
             {
-                if (!All.Exists(mod => mod.Code && mod.On && mod.File.Id == DoorId)) return false;
-                try { return !File.Exists(Path.Combine(folder, DoorId + "-data", "shown")); }
+                if (!All.Exists(mod => mod.Code && mod.On && mod.File.Id == FrontId)) return false;
+                try { return !File.Exists(Path.Combine(folder, FrontId + "-data", "shown")); }
                 catch (Exception caughtOne) { Brain.Caught(caughtOne); return false; }
             }
         }
 
-        // The door when this start is its first, else the usual pick.
-        internal ICapriIntro StartIntro { get { return DoorFirst ? IntroOf(DoorId) : Intro; } }
+        // Door 2 when this start is its first, else the usual pick.
+        internal ICapriIntro StartIntro { get { return DoorFirst ? IntroOf(FrontId) : Intro; } }
 #endif
 
 #if !CROSS
@@ -607,7 +859,7 @@ namespace CapriDesktop
                     built = compiler.CompileAssemblyFromSource(options, text);
                 }
                 foreach (CompilerError error in built.Errors)
-                    if (!error.IsWarning) throw new ModException("That code didn't compile, line " + error.Line + ": " + error.ErrorText);
+                    if (!error.IsWarning) throw new ModException("That code didn't compile, line " + error.Line + ": " + error.ErrorText + " (against " + Against() + ")");
                 foreach (Type type in built.CompiledAssembly.GetTypes())
                     if (typeof(ICapriMod).IsAssignableFrom(type) && !type.IsAbstract && !type.IsInterface) mods.Add(type);
             }
@@ -687,7 +939,23 @@ namespace CapriDesktop
                     {
                         byte[] bytes = File.ReadAllBytes(starting.Path);
                         if (HashOf(bytes) != starting.Hash) throw new ModException("it changed after it was approved.");
-                        ICapriMod made = Compile(Words(bytes));
+                        ICapriMod made;
+                        try { made = Compile(Words(bytes)); }
+                        catch (ModException failed)
+                        {
+                            // A mod she carries that will not compile here was laid by a newer build: hers goes back in
+                            // its place, approved as her own carried mods are, and is tried once more.
+                            byte[] own = CarriedBytes(starting.File.Id);
+                            if (own == null || HashOf(own) == HashOf(bytes)) throw;
+                            File.WriteAllBytes(starting.Path, own);
+                            string approvedPath = Path.Combine(Path.GetDirectoryName(starting.Path), ApprovedFile);
+                            Dictionary<string, string> approved = Pairs(approvedPath);
+                            approved[starting.File.Id] = HashOf(own);
+                            WritePairs(approvedPath, approved);
+                            starting.Hash = HashOf(own);
+                            made = Compile(Words(own));
+                            Brain.Log("mods", -1, starting.File.Id + " could not compile here (" + failed.Message + "), so this build's own copy was laid back in and started.");
+                        }
                         onWindow(delegate
                         {
                             try { StartOne(starting.File.Id, made); }
@@ -728,15 +996,52 @@ namespace CapriDesktop
 #if !CROSS
     internal sealed partial class Companion
     {
-        private const double LongestIntro = 15, IntroWait = 8;
+        private const double LongestIntro = 25, IntroWait = 8;
         private IntroScreen introScreen;
 
         private bool HoldForIntro(Action arrival, bool spawn)
         {
             if (testing || instant || !preferences.Motion || preferences.NoIntro && !ModList.DoorFirst || hidden || !ModList.WantsIntro || FullScreenDisplay) return false;
             if (spawn) SpawnInMiddle();
-            WaitForIntro(arrival, IntroWait);
+            introSpawn = spawn;
+            // Door 2's first showing waits for her mods to have started rather than for a clock: they start only
+            // once her window is up, and with her network failing at start that was 32 to 38 s on a test PC, so a
+            // fixed 20 s gave up first and the door everybody was meant to see once never played. DoorCap only
+            // stops mods that never settle from holding her for good.
+            WaitForIntro(arrival, ModList.DoorFirst ? DoorCap : IntroWait);
             return true;
+        }
+
+        private const double DoorCap = 120;
+        // She was put in the middle for this start's intro, so she is put there again as it starts.
+        private bool introSpawn;
+
+        // An intro is on screen, or her arrival is still being held for one.
+        internal bool IntroShowing(double now) { return introScreen != null || now < veilUntil; }
+
+        // The intro owns the screen and the speakers until it ends: what any other mod says, plays or cues meanwhile
+        // waits, and goes through the moment it is over. The mod playing the intro is never held.
+        private string introId;
+        private readonly List<Action> afterIntro = new List<Action>();
+
+        internal bool HeldForIntro(string modId) { return IntroShowing(clock.Elapsed.TotalSeconds) && modId != introId; }
+
+        // On her window's thread.
+        internal void WhenIntroLets(string modId, Action action)
+        {
+            if (HeldForIntro(modId)) { lock (afterIntro) afterIntro.Add(action); return; }
+            action();
+        }
+
+        private void IntroOver()
+        {
+            List<Action> held;
+            lock (afterIntro) { held = new List<Action>(afterIntro); afterIntro.Clear(); }
+            foreach (Action one in held)
+            {
+                try { one(); }
+                catch (Exception caughtOne) { Brain.Caught(caughtOne); }
+            }
         }
 
         // An intro played after start, the way a start plays it: she is out of sight in the middle of the screen she is on,
@@ -751,6 +1056,7 @@ namespace CapriDesktop
             RunIntro(intro, delegate { veilUntil = 0; drawnClip = null; });
         }
 
+        // Waits until the intro is running or her code mods have all started, and gives up after patience.
         private void WaitForIntro(Action arrival, double patience)
         {
             veilUntil = clock.Elapsed.TotalSeconds + patience + LongestIntro + 5;
@@ -761,6 +1067,7 @@ namespace CapriDesktop
                 veilUntil = 0;
                 drawnClip = null;
                 arrival();
+                IntroOver();
             };
             double gaveUpAt = clock.Elapsed.TotalSeconds + patience;
             System.Windows.Forms.Timer wait = new System.Windows.Forms.Timer { Interval = 50 };
@@ -772,7 +1079,13 @@ namespace CapriDesktop
                 if (intro == null && !ModList.CodeSettled && !out_) return;
                 wait.Dispose();
                 if (intro == null) release();
-                else RunIntro(intro, release);
+                else
+                {
+                    // Back in the middle as it starts, not only as the wait began: the intro is drawn where she stands,
+                    // and once a first start drew Door 2 low and to the left after something moved her while it waited.
+                    if (introSpawn) SpawnInMiddle();
+                    RunIntro(intro, release);
+                }
             };
             wait.Start();
         }
@@ -785,13 +1098,26 @@ namespace CapriDesktop
             double length = LongestIntro;
             try { length = Math.Max(0, Math.Min(LongestIntro, intro.Seconds)); }
             catch (Exception error) { Brain.Log("mod intro", -1, error.ToString()); length = 0; }
+            introId = ModList.IdOf(intro);
+            double startedAt = clock.Elapsed.TotalSeconds;
+            Brain.Log("intro", -1, (introId ?? "an intro") + " playing for " + length.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s, " + startedAt.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s after her start, on " + screen.Width + "x" + screen.Height + " at " + screen.X + "," + screen.Y + ", her middle at " + (body.X + body.Width / 2) + "," + (body.Y + body.Height / 2) + " on it.");
             Action finished = delegate
             {
+                Brain.Log("intro", -1, (introId ?? "the intro") + " over at " + clock.Elapsed.TotalSeconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s after her start.");
                 introScreen = null;
+                introId = null;
                 if (done != null) done();
+                IntroOver();
             };
             if (length <= 0) { finished(); return; }
-            introScreen = new IntroScreen(intro, screen, body, length, finished);
+            // Her sound out opened before the intro starts its sound, not by its first sound: opening it then held the
+            // intro's sound back behind its picture on a first start.
+            OpenEffects();
+            introScreen = new IntroScreen(intro, screen, body, length, finished, delegate
+            {
+                Brain.Log("intro", -1, (introId ?? "the intro") + " stopped with Esc at " + clock.Elapsed.TotalSeconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s after her start.");
+                try { effects.Clear("intro stopped with Esc"); } catch (Exception caughtOne) { Brain.Caught(caughtOne); }
+            });
             introScreen.Begin();
         }
 
@@ -800,19 +1126,20 @@ namespace CapriDesktop
             private readonly ICapriIntro intro;
             private readonly Rectangle her;
             private readonly double length;
-            private readonly Action finished;
+            private readonly Action finished, skipped;
             private readonly System.Diagnostics.Stopwatch ran = new System.Diagnostics.Stopwatch();
             private readonly System.Windows.Forms.Timer beat = new System.Windows.Forms.Timer { Interval = 15 };
             private Native.Surface surface;
             private Bitmap desktop;
             private bool over;
 
-            internal IntroScreen(ICapriIntro mod, Rectangle screen, Rectangle body, double seconds, Action done)
+            internal IntroScreen(ICapriIntro mod, Rectangle screen, Rectangle body, double seconds, Action done, Action stopped)
             {
                 intro = mod;
                 her = body;
                 length = seconds;
                 finished = done;
+                skipped = stopped;
                 FormBorderStyle = FormBorderStyle.None;
                 ShowInTaskbar = false;
                 StartPosition = FormStartPosition.Manual;
@@ -859,6 +1186,16 @@ namespace CapriDesktop
                 if (over) return;
                 double at = ran.Elapsed.TotalSeconds;
                 if (at >= length) { End(); return; }
+                // Esc is the one way out of an intro: it plays over everything, takes no clicks, and the first one
+                // plays once. The intro closes its own windows, and her sound for it is cut.
+                if ((Native.GetAsyncKeyState(0x1B) & 0x8000) != 0)
+                {
+                    ICapriIntroStops stops = intro as ICapriIntroStops;
+                    try { if (stops != null) stops.StopIntro(); } catch (Exception error) { Brain.Log("mod intro", -1, error.ToString()); }
+                    if (skipped != null) skipped();
+                    End();
+                    return;
+                }
                 try
                 {
                     using (Graphics graphics = Graphics.FromImage(surface.Image))
@@ -924,6 +1261,23 @@ namespace CapriDesktop
             if (!veilHeld || !until(() => arrived) || clock.Elapsed.TotalSeconds < veilUntil) throw new Exception("Waiting for an intro that never comes did not bring her in.");
             Play(clipWas);
             checks.Add("PASS mod intros: if no intro turns up she's held off screen, then still arrives");
+            // A remark made while an intro holds the screen waits for it to end, then is said.
+            veilUntil = clock.Elapsed.TotalSeconds + 1.0;
+            int askedBefore = asking;
+            Remark("news", "A remark held for the intro.", true);
+            bool heldBack = asking == askedBefore;
+            if (!heldBack || !until(() => asking != askedBefore) || clock.Elapsed.TotalSeconds < veilUntil)
+                throw new Exception("A remark was said over an intro instead of after it: held " + heldBack + ".");
+            veilUntil = 0;
+            // And a tray balloon the same way.
+            veilUntil = clock.Elapsed.TotalSeconds + 1.0;
+            int balloonsWere = balloonsShown;
+            Balloon(500, "Held for the intro", "A balloon held for the intro.", ToolTipIcon.Info);
+            bool balloonHeld = balloonsShown == balloonsWere;
+            if (!balloonHeld || !until(() => balloonsShown > balloonsWere) || clock.Elapsed.TotalSeconds < veilUntil)
+                throw new Exception("A tray balloon showed over an intro instead of after it: held " + balloonHeld + ".");
+            veilUntil = 0;
+            checks.Add("PASS mod intros: a remark made during an intro waits for it to end, then is said, and so does a tray balloon");
             string real = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "..", "..", "mods", "startup-intros" + Mods.CodeExtension));
             if (!File.Exists(real)) { checks.Add("LIMIT mod intros: the Startup Intros file isn't beside this build, so its frames weren't drawn"); return; }
             Mod mod = ModList.Import(real, delegate { return true; });

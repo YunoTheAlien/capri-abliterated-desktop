@@ -1,0 +1,206 @@
+# Her menus and labels in Swedish: the English, a tab, then the translation.
+Open Capri Mainframe	Öppna Capri Mainframe
+Her folder	Hennes mapp
+Play	Spela
+Music	Musik
+Chess	Schack
+Connect four	Fyra i rad
+Tic-tac-toe	Tre i rad
+Rock, paper, scissors	Sten, sax, påse
+Hide Capri	Dölj Capri
+Hologram	Hologram
+Normal	Normal
+Small	Liten
+Medium	Medel
+Large	Stor
+Huge	Enorm
+Giant	Jätte
+Move	Flytta
+Wander around	Vandra omkring
+Dance to music	Dansa till musik
+Dance	Dansa
+Ride cursor	Åk på markören
+Sit on windows	Sitt på fönster
+Sit here	Sitt här
+Hang here	Häng här
+Lie down	Ligg ner
+Go to sleep	Gå och lägg dig
+Bring to this screen	Ta till den här skärmen
+Go to the next screen	Gå till nästa skärm
+Black	Svart
+White	Vit
+Test	Testa
+Stop	Stoppa
+Help	Hjälp
+Commands	Kommandon
+Help page	Hjälpsida
+Join the Discord	Gå med i Discord
+Copy error details	Kopiera felinformation
+Check for updates	Sök efter uppdateringar
+Quit Capri	Avsluta Capri
+MAINFRAME	MAINFRAME
+Settings	Inställningar
+Mods	Mods
+BRAIN	HJÄRNA
+Provider	Leverantör
+Using your server with no key	Använder din server utan nyckel
+Refresh	Uppdatera
+Set up her brain	Konfigurera hennes hjärna
+Have Ollama? Open it, then press Refresh.	Har du Ollama? Öppna det och tryck på Uppdatera.
+Pick one. Only one brain runs at a time.	Välj en. Bara en hjärna körs åt gången.
+MEDIUM INTELLIGENCE	MEDIUM INTELLIGENCE
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Av
+Free key	Gratis nyckel
+Connect	Anslut
+Free keys can be rate limited and slow.	Gratisnycklar kan ha hastighetsbegränsning och vara långsamma.
+That's a paid key: it goes under MAX INTELLIGENCE.	Det är en betald nyckel: den hamnar under MAX INTELLIGENCE.
+Move to MAX	Flytta till MAX
+VOICE	RÖST
+Ctrl + Alt + V to talk	Ctrl + Alt + V för att prata
+PREBUILT LOCAL	FÖRINSTALLERAD LOKAL
+CUSTOM LOCAL	ANPASSAD LOKAL
+CLOUD VOICE	MOLNRÖST
+Set up	Konfigurera
+Setup guide	Installationsguide
+Fish Audio	Fish Audio
+Default model	Standardmodell
+Pick a voice model	Välj en röstmodell
+Get free voice	Hämta gratis röst
+Mic: default	Mikrofon: standard
+Her speaker: Default	Hennes högtalare: Standard
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N stänger av mikrofonen
+CAPRI	CAPRI
+Support	Support
+Remote	Fjärr
+Bring here	Ta hit
+Advanced Settings	Avancerade inställningar
+YOU	DU
+Your personality	Din personlighet
+Language	Språk
+English	Engelska
+What should she call you?	Vad ska hon kalla dig?
+Save	Spara
+Volume	Volym
+Pitch	Tonhöjd
+Speed	Hastighet
+Robot	Robot
+Glitch	Glitch
+Sounds	Ljud
+Typing sound	Skrivljud
+Listen for Capri	Lyssna efter Capri
+Hearing	Hörsel
+Auto	Auto
+Free voice in games	Gratis röst i spel
+Call mode (beta)	Samtalsläge (beta)
+Her voice in your mic	Hennes röst i din mikrofon
+Get VB-CABLE	Hämta VB-CABLE
+How to	Hur man
+Her voice in your mic: loudness	Hennes röst i din mikrofon: volym
+MOVES	RÖRELSER
+Pop-in times	Inslagstider
+Mini player	Minispelare
+Wander	Vandra
+Sleep	Sov
+Pop-ins	Inslag
+Glitch in at startup	Glitch vid start
+KEYS	NYCKLAR
+Talk: Ctrl + Alt + V	Prata: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Tysta mikrofon: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Skriv: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Dölj/visa: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Tyst: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Spelläge: Ctrl + Alt + G
+Confirm	Bekräfta
+Cancel	Avbryt
+Size	Storlek
+Check in on me	Kolla till mig
+Edit check-in lines	Redigera incheckningsrader
+Always on top	Alltid överst
+Mainframe size	Mainframe-storlek
+Mainframe colours	Mainframe-färger
+Head pats	Klappar på huvudet
+Pat stroke	Huvudklappsdrag
+Chaos when upset	Kaos när hon blir upprörd
+Legacy stand	Äldre stativ
+Jealous of other AIs	Avundsjuk på andra AI:er
+Teases when another AI comes to the front.	Retas när en annan AI kommer fram.
+Close other AIs for me	Stäng andra AI:er åt mig
+Asks before closing only the apps you choose.	Frågar innan den stänger bara de appar du väljer.
+Apps she may close	Appar hon får stänga
+Choose apps	Välj appar
+WATCH	BEVAKA
+Watch my screen	Titta på min skärm
+Screens	Skärmar
+All screens	Alla skärmar
+Remember what she sees	Kom ihåg vad hon ser
+Every	Varje
+Watch-along memory	Minne för gemensam tittning
+Code/Husk Mode	Kod-/Husk-läge
+Thinking	Tänker
+Default	Standard
+Extra request JSON	Extra begäran JSON
+Add	Lägg till
+Verbosity	Utförlighet
+Replies	Svar
+Memory	Minne
+Memory size	Minnesstorlek
+Max reply	Max svar
+Bubble	Bubbla
+Follow-up messages	Uppföljningsmeddelanden
+Use	Använd
+A model in Ollama, on your local server or on your key.	En modell i Ollama, på din lokala server eller med din nyckel.
+HABITS	VANOR
+Open her memories	Öppna hennes minnen
+Start with Windows	Starta med Windows
+Show on Discord	Visa på Discord
+Use her cursor	Använd hennes markör
+Remember our chats	Kom ihåg våra chattar
+Power saver	Strömsparläge
+Music app	Musikapp
+Perch	Sittpinne
+Keep PC awake for jobs	Håll datorn vaken för uppdrag
+Hide in full screen	Dölj i helskärm
+Mini player over full screen	Minispelare över helskärm
+Explore while I'm away	Utforska när jag är borta
+Explore after	Utforska efteråt
+GAMES	SPEL
+Controls	Kontroller
+Comments	Kommentarer
+Live reactions	Reaktioner live
+Game sounds	Spelljud
+Gaming Mode	Spelläge
+She reacts to your game until you close it.	Hon reagerar på ditt spel tills du stänger det.
+Works best on MAX INTELLIGENCE.	Fungerar bäst på MAX INTELLIGENCE.
+Fast hands in games	Snabba händer i spel
+Mute her	Tysta henne
+CLIPS	KLIPP
+Clip my games	Klippa mina spel
+Save big moments	Spara stora ögonblick
+Save folder	Sparmapp
+Choose folder	Välj mapp
+Open clips folder	Öppna klippmappen
+Default length	Standardlängd
+Frame rate	Bildfrekvens
+Resolution	Upplösning
+Video bitrate	Videobithastighet
+Weather	Väder
+Code mods can reach your whole PC. Only trusted ones.	Kodmods kan nå hela din dator. Bara betrodda sådana.
+Import mod	Importera mod
+Browse mods	Bläddra bland mods
+Mods folder	Mods-mapp
+INSTALLED	INSTALLERAT
+Update mods	Uppdatera mods
+No mods match.	Inga mods matchar.
+On	På
+Remove	Ta bort
+Publish	Publicera
+Options	Alternativ
+Back	Tillbaka
+Next	Nästa
+COLORS	FÄRGER
+Reset colors	Återställ färger
+Running on this PC	Körs på den här datorn
+NORMAL	NORMAL
+OFF	AV
+Local server address	Lokal serveradress

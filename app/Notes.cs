@@ -110,7 +110,7 @@ namespace CapriDesktop
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) return false;
                 string was;
                 if (!ShippedList(path).TryGetValue(Path.GetFileName(path), out was) || string.IsNullOrEmpty(was)) return false;
-                return string.Equals(was, Hash(File.ReadAllText(path)), StringComparison.OrdinalIgnoreCase);
+                return string.Equals(was, Hash(ReadAll(path)), StringComparison.OrdinalIgnoreCase);
             }
             catch (IOException) { return false; }
             catch (UnauthorizedAccessException) { return false; }
@@ -174,7 +174,7 @@ namespace CapriDesktop
                 }
                 string stock = fresh();
                 if (string.IsNullOrEmpty(stock)) return false;
-                string had = File.ReadAllText(path);
+                string had = ReadAll(path);
                 // The carriage return. Her files are CRLF and an end of line anchor will not pass it, so this
                 // matched nothing in a real file: somebody wrote 1, she rewrote the file with the same content
                 // and the line stayed at 1, and reset to stock had never once worked outside a test.
@@ -207,7 +207,7 @@ namespace CapriDesktop
         {
             if (Regex.IsMatch(text, @"(?mi)^[ \t]*" + Regex.Escape(ResetKey) + @"[ \t]*:")) return text;
             string note = ResetKey + ": 0" + Environment.NewLine
-                + "> Set that to 1 and this file goes back to the one she ships with, next time she reads it." + Environment.NewLine;
+                + ">! Set that to 1 and this file goes back to the one she ships with, next time she reads it." + Environment.NewLine;
             Match head = Regex.Match(text, @"(?m)^#[^\r\n]*\r?\n");
             if (!head.Success) return note + Environment.NewLine + text;
             int at = head.Index + head.Length;
@@ -302,15 +302,63 @@ namespace CapriDesktop
             FileAttributes was = File.Exists(path) ? File.GetAttributes(path) : FileAttributes.Normal;
             bool hidden = (was & FileAttributes.Hidden) != 0;
             if (hidden) File.SetAttributes(path, was & ~FileAttributes.Hidden);
-            try { File.WriteAllText(path, text, new UTF8Encoding(false)); }
+            try { WriteAll(path, text); }
             finally { if (hidden) File.SetAttributes(path, was); }
+        }
+
+        // Read whole without standing in a writer's way, and waiting out a moment when a write has it. Her folder
+        // watcher and her startup check read her files on their own threads while her packs are being written, and
+        // a plain read both refused those writes and failed on them.
+        internal static string ReadAll(string path)
+        {
+            for (int tries = 0; ; tries++)
+            {
+                try
+                {
+                    using (FileStream open = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                    using (StreamReader reader = new StreamReader(open, Encoding.UTF8, true))
+                        return reader.ReadToEnd();
+                }
+                catch (FileNotFoundException) { throw; }
+                catch (DirectoryNotFoundException) { throw; }
+                catch (IOException)
+                {
+                    if (tries >= 100) throw;
+                    System.Threading.Thread.Sleep(50);
+                }
+            }
+        }
+
+        internal static string[] ReadLines(string path)
+        {
+            string text = ReadAll(path);
+            if (text.EndsWith("\r\n", StringComparison.Ordinal)) text = text.Substring(0, text.Length - 2);
+            else if (text.EndsWith("\n", StringComparison.Ordinal)) text = text.Substring(0, text.Length - 1);
+            return text.Length == 0 ? new string[0] : text.Replace("\r\n", "\n").Split('\n');
+        }
+
+        // Written whole, waiting out a few seconds when the file is busy. A file she has just written is opened by
+        // other programs straight after (a virus scan, an editor watching the folder), so a second write at startup
+        // could fail; on a fresh install that left a pack without a line it should have been given. Measured: a
+        // second was not always enough.
+        internal static void WriteAll(string path, string text)
+        {
+            for (int tries = 0; ; tries++)
+            {
+                try { File.WriteAllText(path, text, new UTF8Encoding(false)); return; }
+                catch (IOException)
+                {
+                    if (tries >= 100 || !File.Exists(path)) throw;
+                    System.Threading.Thread.Sleep(50);
+                }
+            }
         }
 
         internal static void Put(string path, string text)
         {
             try
             {
-                if (File.Exists(path) && File.ReadAllText(path) == text) return;
+                if (File.Exists(path) && ReadAll(path) == text) return;
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             Overwrite(path, text);
@@ -330,7 +378,8 @@ namespace CapriDesktop
                 foreach (string raw in had)
                     if (Regex.IsMatch((raw ?? "").Trim(), @"^" + Regex.Escape(ResetKey) + @"[ \t]*:", RegexOptions.IgnoreCase))
                     { authority = Marked(fresh); break; }
-                Dictionary<string, List<string>> mine = Noted(authority.Replace("\r\n", "\n").Split('\n'));
+                Dictionary<string, List<string>> mine = Noted(InTheirLanguage(authority.Replace("\r\n", "\n").Split('\n')));
+                HashSet<string> moved = MarkedSections(had);
 
                 StringBuilder made = new StringBuilder();
                 string under = "";
@@ -346,12 +395,8 @@ namespace CapriDesktop
                         made.AppendLine(raw);
                         continue;
                     }
-                    // In some sections a ">" line is the setting rather than a note: an intro with ">" in front
-                    // of it is switched off. Those sit under the section's own lines, so once a line that is not
-                    // a note has gone by, every ">" after it is left exactly as it is. The note block at the top
-                    // still gets her current wording.
                     if (one.Length > 0 && !one.StartsWith(">")) settings = true;
-                    if (one.StartsWith(">") && !(settings && Keeps(under)))
+                    if (IsNote(one, under, settings, moved))
                     {
                         // Their notes go; ours take their place once, where theirs began.
                         changed = true;
@@ -388,21 +433,143 @@ namespace CapriDesktop
             return false;
         }
 
+        // A note of hers starts ">!". A line with a plain ">" in front is switched off, theirs or hers, and is never
+        // a note, so a refresh can no longer take away a line somebody switched off.
+        //
+        // A section still written the old way, with no ">!" in it yet, is read by the old rule once: every ">" is a
+        // note, except in the sections listed above, where only the block above the first real line is. Its notes
+        // come back as ">!" and from then on it is read the new way.
+        internal const string NoteMark = ">!";
+
+        // ---------- In their language ----------
+        // Her notes are hers, so with a language picked they are written in it, from the notes she ships, by her
+        // brain (Said), the same way her lines are; English until a line's translation is in. A note that starts
+        // with a setting's name keeps the name in English, since the name is what she reads.
+        internal static Func<string, string> Translate;
+
+        private static string[] InTheirLanguage(string[] lines)
+        {
+            Func<string, string> translate = Translate;
+            if (translate == null) return lines;
+            string[] made = new string[lines.Length];
+            for (int at = 0; at < lines.Length; at++)
+            {
+                string line = lines[at];
+                made[at] = line;
+                if (line == null || !line.StartsWith(NoteMark + " ", StringComparison.Ordinal)) continue;
+                string text = line.Substring(NoteMark.Length + 1);
+                Match named = Regex.Match(text, @"^(\s*[a-z][a-z ]{0,30}:\s+)(.+)$");
+                string lead = named.Success ? named.Groups[1].Value : "", rest = named.Success ? named.Groups[2].Value : text;
+                if (rest.Trim().Length == 0) continue;
+                string said = null;
+                try { said = translate(rest.Trim()); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                if (!string.IsNullOrEmpty(said)) made[at] = NoteMark + " " + lead + said;
+            }
+            return made;
+        }
+
+        // Above each setting, with a language picked: the word for settings in their language, the line in it, and
+        // what its values mean, so a file read in Polish says what "yes" does. Keys and values stay in English,
+        // since she reads them. Marked ">!=" so it is kept through a refresh and taken out again for English.
+        internal const string SettingMark = ">!=";
+
+        // Takes the lines out, for English or before they are made again in another language.
+        internal static bool Unexplained(string path)
+        {
+            if (string.IsNullOrEmpty(path) || !File.Exists(path)) return false;
+            string[] had = File.ReadAllLines(path);
+            List<string> kept = new List<string>();
+            foreach (string row in had) if (!(row ?? "").TrimStart().StartsWith(SettingMark, StringComparison.Ordinal)) kept.Add(row);
+            if (kept.Count == had.Length) return false;
+            Put(path, string.Join(Environment.NewLine, kept.ToArray()) + Environment.NewLine);
+            return true;
+        }
+
+        // The settings in a file that have no line above them yet. The terms at the bottom of sys.md are left alone.
+        internal static List<string> Unexplaining(string path)
+        {
+            List<string> wanted = new List<string>();
+            if (string.IsNullOrEmpty(path) || !File.Exists(path)) return wanted;
+            string[] rows = File.ReadAllLines(path);
+            bool terms = false;
+            for (int at = 0; at < rows.Length; at++)
+            {
+                string one = (rows[at] ?? "").Trim();
+                if (one.StartsWith("#", StringComparison.Ordinal)) { terms = Terms(one); continue; }
+                if (terms || !Setting(one)) continue;
+                int above = at - 1;
+                while (above >= 0 && (rows[above] ?? "").Trim().Length == 0) above--;
+                if (above >= 0 && (rows[above] ?? "").TrimStart().StartsWith(SettingMark, StringComparison.Ordinal)) continue;
+                if (!wanted.Contains(one)) wanted.Add(one);
+            }
+            return wanted;
+        }
+
+        private static bool Terms(string heading) { return Regex.IsMatch(heading, @"licen[cs]e|terms|agreement", RegexOptions.IgnoreCase); }
+
+        private static bool Setting(string one)
+        {
+            return one.Length > 2 && !one.StartsWith(">", StringComparison.Ordinal) && !one.StartsWith("-", StringComparison.Ordinal)
+                && Regex.IsMatch(one, @"^[A-Za-z][A-Za-z0-9 _'-]{0,40}:\s*\S");
+        }
+
+        // Puts each line above its setting, from what her brain made of it.
+        internal static void Explained(string path, Dictionary<string, string> lines)
+        {
+            if (lines == null || lines.Count == 0 || !File.Exists(path)) return;
+            string[] rows = File.ReadAllLines(path);
+            List<string> made = new List<string>();
+            bool terms = false;
+            foreach (string row in rows)
+            {
+                string one = (row ?? "").Trim();
+                if (one.StartsWith("#", StringComparison.Ordinal)) terms = Terms(one);
+                string said;
+                if (!terms && Setting(one) && lines.TryGetValue(one, out said) && !string.IsNullOrWhiteSpace(said)
+                    && (made.Count == 0 || !made[made.Count - 1].TrimStart().StartsWith(SettingMark, StringComparison.Ordinal)))
+                    made.Add(SettingMark + " " + said.Trim());
+                made.Add(row);
+            }
+            Put(path, string.Join(Environment.NewLine, made.ToArray()) + Environment.NewLine);
+        }
+
+        private static bool IsNote(string one, string under, bool settings, HashSet<string> moved)
+        {
+            // Her line in their language above a setting is kept through a refresh, and goes only when the language does.
+            if (one.StartsWith(SettingMark, StringComparison.Ordinal)) return false;
+            if (one.StartsWith(NoteMark, StringComparison.Ordinal)) return true;
+            if (!one.StartsWith(">", StringComparison.Ordinal) || moved.Contains(under)) return false;
+            return !(settings && Keeps(under));
+        }
+
+        // The sections that already have a ">!" line in them.
+        private static HashSet<string> MarkedSections(string[] lines)
+        {
+            HashSet<string> found = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            string under = "";
+            foreach (string raw in lines)
+            {
+                string one = (raw ?? "").Trim();
+                if (one.StartsWith("#")) { under = one.TrimStart('#').Trim(); continue; }
+                if (one.StartsWith(NoteMark, StringComparison.Ordinal)) found.Add(under);
+            }
+            return found;
+        }
+
         private static Dictionary<string, List<string>> Noted(string[] lines)
         {
             Dictionary<string, List<string>> found = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            HashSet<string> moved = MarkedSections(lines);
             string under = "";
             bool settings = false;
             foreach (string raw in lines)
             {
                 string one = (raw ?? "").Trim();
                 if (one.StartsWith("#")) { under = one.TrimStart('#').Trim(); settings = false; continue; }
-                // Same rule the writer uses: in a section whose ">" lines are settings, only the block above
-                // the first real line counts as notes. Without this her own switches would be read as notes
-                // and written back a second time.
+                // Same rule the writer uses, so her own switched-off lines are never read as notes and written back
+                // a second time.
                 if (one.Length > 0 && !one.StartsWith(">")) settings = true;
-                if (settings && Keeps(under)) continue;
-                if (!one.StartsWith(">")) continue;
+                if (!IsNote(one, under, settings, moved)) continue;
                 List<string> had;
                 if (!found.TryGetValue(under, out had)) { had = new List<string>(); found[under] = had; }
                 had.Add(raw.TrimEnd());

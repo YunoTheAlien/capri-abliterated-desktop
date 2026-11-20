@@ -1,0 +1,26 @@
+# Words Italian always uses for these terms: the English, a tab, then the word. The GUI maker hands
+# them to her brain with every batch. Blank means not decided yet. Edit any of them; it is the one place to fix a term.
+Refresh	Aggiorna
+Settings	Impostazioni
+Provider	Provider
+Saved providers	
+Local servers	
+Fallback brain	Cervello di fallback
+Voice	
+Mic	
+Mods	Mod
+Music	Musica
+Chess	Scacchi
+Connect four	Forza quattro
+Tic-tac-toe	Tris
+Rock, paper, scissors	Pietra, carta, forbici
+Quiet	
+Check in on me	Controllami
+Watch my screen	Guarda il mio schermo
+Personality	Personalità
+Mood	
+Hide Capri	Nascondi Capri
+Open	
+Close	
+Off	Spento
+On	Su

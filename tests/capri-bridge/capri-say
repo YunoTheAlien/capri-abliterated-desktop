@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+"""Type to a running Capri and print what she does, through the Test Bridge mod.
+
+  capri-say "switch to Files"     send a line, print what she hears, says and does, until she's idle again
+  capri-say --watch               print everything as it happens until Ctrl+C
+  capri-say --status              is the mod running?
+  capri-say --install             copy the mod into her mods folder (she asks you to approve it once)
+
+Options: --timeout SECONDS (default 120), --folder PATH (her data folder, default ~/.config/Capri).
+"""
+import argparse, json, os, shutil, sys, time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+MOD_ID = "capri-test-bridge"
+
+
+def paths(folder):
+    mods = os.path.join(folder, "mods")
+    data = os.path.join(mods, MOD_ID + "-data")
+    return mods, data, os.path.join(data, "in"), os.path.join(data, "out.jsonl"), os.path.join(data, "alive")
+
+
+def alive_age(alive):
+    try:
+        with open(alive) as f:
+            return time.time() - int(f.read().strip())
+    except (OSError, ValueError):
+        return None
+
+
+def show(event):
+    kind, about, text = event.get("kind"), event.get("about", ""), event.get("text", "")
+    clock = event.get("at", "")[11:19]
+    if kind == "heard": line = "heard (%s): %s" % (about, text)
+    elif kind == "said": line = "CAPRI (%s): %s" % (about, text)
+    elif kind == "tool": line = "tool  %s: %s" % (about, text)
+    elif kind == "tool-done": line = "done  %s: %s" % (about, text if len(text) < 600 else text[:600] + " ...")
+    elif kind == "send": line = "sent: %s" % text
+    else: line = kind + ((" " + text) if text else "")
+    print(clock, line, flush=True)
+
+
+def follow(out, start, until=None, timeout=None):
+    """Print events after byte offset start. until(event) -> True stops."""
+    began, pos, buf = time.time(), start, b""
+    while timeout is None or time.time() - began < timeout:
+        try:
+            with open(out, "rb") as f:
+                f.seek(pos)
+                chunk = f.read()
+        except FileNotFoundError:
+            chunk = b""
+        if chunk:
+            pos += len(chunk)
+            buf += chunk
+            while b"\n" in buf:
+                raw, buf = buf.split(b"\n", 1)
+                try: event = json.loads(raw.decode("utf-8"))
+                except ValueError: continue
+                show(event)
+                if until and until(event): return True
+        else:
+            time.sleep(0.2)
+    return False
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("text", nargs="*")
+    p.add_argument("--watch", action="store_true")
+    p.add_argument("--status", action="store_true")
+    p.add_argument("--install", action="store_true")
+    p.add_argument("--timeout", type=float, default=120)
+    p.add_argument("--folder", default=os.path.join(os.path.expanduser("~"), ".config", "Capri"))
+    a = p.parse_args()
+    mods, data, inbox, out, alive = paths(a.folder)
+
+    if a.install:
+        os.makedirs(mods, exist_ok=True)
+        shutil.copyfile(os.path.join(HERE, MOD_ID + ".capri-code"), os.path.join(mods, MOD_ID + ".capri-code"))
+        print("Copied to", mods)
+        print("Turn it on: right-click her > Capri Mainframe > Mods, and approve Test Bridge (restart her first if it isn't listed).")
+        return 0
+
+    age = alive_age(alive)
+    running = age is not None and age < 5
+    if a.status:
+        print("running" if running else ("not running (last tick %.0fs ago)" % age if age is not None else "not running (never started)"))
+        return 0 if running else 1
+    if not running:
+        print("Test Bridge isn't running. Start Capri, install it with --install and approve it when she asks.", file=sys.stderr)
+        return 1
+
+    start = os.path.getsize(out) if os.path.exists(out) else 0
+    if a.watch or not a.text:
+        try: follow(out, start)
+        except KeyboardInterrupt: pass
+        return 0
+
+    text = " ".join(a.text)
+    os.makedirs(inbox, exist_ok=True)
+    name = "%d-%d" % (time.time_ns(), os.getpid())
+    tmp = os.path.join(inbox, name + ".tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(text)
+    os.replace(tmp, os.path.join(inbox, name + ".txt"))
+
+    state = {"sent": False, "replied": False}
+    def done(event):
+        kind = event.get("kind")
+        if kind == "send" and event.get("about") == name: state["sent"] = True
+        elif state["sent"] and kind == "said" and event.get("about") == "reply": state["replied"] = True
+        # Finished once she has answered this line and gone quiet.
+        return state["replied"] and kind == "idle"
+    if not follow(out, start, done, a.timeout):
+        print("(timed out after %.0fs; she may still be working - use --watch)" % a.timeout, file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

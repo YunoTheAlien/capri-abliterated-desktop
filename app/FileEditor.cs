@@ -62,6 +62,11 @@ namespace CapriDesktop
         // moved, so saving is what checks it, rather than a sweep of every file on a timer. A file that
         // resets is rewritten here and shows as stock the next time it is opened or Reload is pressed.
         internal static Action<string> Stocked;
+        // Her skills, for the skill.md files she was taught here: each opens as a tab, and New makes one.
+        internal static Mods Skills;
+        internal static Action SkillSaved;
+        private static readonly object skillWriting = new object();
+        internal readonly bool ForPersonalities;
         internal bool Motion = true;
         // The frames it drew, in order, while her smoke test watches: where in the art each one was, when on the animation's clock,
         // and how long it took to draw. And a stop on its clock for stepping it by hand.
@@ -70,7 +75,7 @@ namespace CapriDesktop
         private readonly float forcedScale, forcedArt;
         private readonly Page page;
         private readonly Frost frost;
-        private readonly Doc[] docs;
+        private Doc[] docs;
         private readonly Pacer pacer = new Pacer();
         private readonly Stopwatch clock = new Stopwatch();
         private readonly string version = Companion.Built + "V";
@@ -122,7 +127,7 @@ namespace CapriDesktop
                 // Absent until her settings folder is known, since there is no file to offer before that.
                 new Doc("check-ins.md", delegate { return CareLines.Open.Note(); }, delegate { return CareLines.Open != null; })
             };
-            // Only with Uncensored on, and the tab is absent rather than disabled, so censored shows no trace of it.
+            // Only with the switch on; the tab is left out rather than disabled.
             if (!personalities && Interests.Shown)
             {
                 Doc[] senpai = new Doc[docs.Length + 3];
@@ -135,7 +140,10 @@ namespace CapriDesktop
             // Her personalities open in her own editor rather than whatever Windows has for.md, which was Notepad
             //. Order: who she is right now, then the dynamic settings, then the rest, then her moods.
             // The tab strip already wraps, so three rows of them is fine.
+            ForPersonalities = personalities;
             if (personalities) docs = PersonalityDocs();
+            // Skills she was taught here open as tabs in her own files, never among the personalities.
+            else docs = WithSkills(docs);
             // Anything that says it should not be offered right now goes before the strip is built, so there is
             // no tab for it at all rather than one that cannot be used.
             List<Doc> offered = new List<Doc>();
@@ -538,9 +546,92 @@ namespace CapriDesktop
             string problem = Write(doc);
             page.Mark(doc);
             if (problem != null) { page.Say(problem, true); return false; }
-            page.Say(doc == docs[0] && Brain.PersonalityNote.Length > 0 ? "Saved. " + Brain.PersonalityNote + "." : "Saved.", false);
+            page.Say(doc.SkillPath != null ? SkillSays(doc) : doc == docs[0] && Brain.PersonalityNote.Length > 0 ? "Saved. " + Brain.PersonalityNote + "." : "Saved.", false);
             return true;
         }
+
+        private static string SkillSays(Doc doc)
+        {
+            ModFile read = Mods.ReadOwn(doc.Note.Text, Path.GetFileNameWithoutExtension(doc.Note.Path));
+            if (read == null) return "Saved. Answer one of the questions so Capri has something to go on.";
+            if (read.Apps.Length > 0) return "Saved. Capri uses this whenever she does something in " + read.Apps[0] + ".";
+            if (read.Games.Length > 0) return "Saved. Capri uses this whenever she plays " + read.Games[0] + ".";
+            return "Saved. Capri reads this when it fits what you ask.";
+        }
+
+        private static Doc[] WithSkills(Doc[] own)
+        {
+            List<Doc> all = new List<Doc>(own);
+            Mods skills = Skills;
+            string folder = skills == null ? null : skills.OwnFolder;
+            try
+            {
+                if (folder != null && Directory.Exists(folder))
+                {
+                    string[] files = Directory.GetFiles(folder, "*" + Mods.OwnExtension);
+                    Array.Sort(files, StringComparer.OrdinalIgnoreCase);
+                    foreach (string file in files)
+                        if (string.Equals(Path.GetExtension(file), Mods.OwnExtension, StringComparison.OrdinalIgnoreCase)) all.Add(SkillDoc(file));
+                }
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            return all.ToArray();
+        }
+
+        private static Doc SkillDoc(string path)
+        {
+            return new Doc(Path.GetFileName(path), delegate { return new WrittenNote(path, "", skillWriting); }) { SkillPath = path };
+        }
+
+        internal void New(Control under)
+        {
+            if (stage == Stage.Waiting || stage == Stage.Gone || Leaving || guarded) return;
+            Finish();
+            ContextMenuStrip menu = new ContextMenuStrip { ShowImageMargin = false };
+            ToolStripMenuItem skill = new ToolStripMenuItem("skill.md") { ToolTipText = "Teach Capri an app or a game" };
+            skill.Click += delegate { BeginInvoke(new Action(AskSkill)); };
+            menu.Items.Add(skill);
+            menu.Closed += delegate { BeginInvoke(new Action(menu.Dispose)); };
+            menu.Show(under, new Point(0, under.Height));
+        }
+
+        private void AskSkill()
+        {
+            if (stage == Stage.Waiting || stage == Stage.Gone || Leaving || guarded) return;
+            using (SkillAsk ask = new SkillAsk(s))
+            {
+                if (ask.ShowDialog(page) != DialogResult.OK) return;
+                string problem = NewSkill(ask.SkillName, ask.Game, ask.Guided);
+                if (problem != null) page.Say(problem, true);
+            }
+        }
+
+        internal string NewSkill(string name, bool game, bool guided)
+        {
+            if (stage == Stage.Waiting || stage == Stage.Gone) return "Open the file editor first.";
+            Mods skills = Skills;
+            if (skills == null) return "Her skills aren't ready yet. Try again in a moment.";
+            string path;
+            try { path = skills.MakeOwn(name, game, guided); }
+            catch (ModException error) { return error.Message; }
+            int at = Array.FindIndex(docs, doc => doc.SkillPath != null && string.Equals(doc.SkillPath, path, StringComparison.OrdinalIgnoreCase));
+            bool had = at >= 0;
+            if (!had)
+            {
+                page.Keep();
+                List<Doc> all = new List<Doc>(docs);
+                all.Add(SkillDoc(path));
+                docs = all.ToArray();
+                at = docs.Length - 1;
+                page.Retab();
+            }
+            Turn(at);
+            string title = Mods.Titled(name);
+            page.Say(had ? "You already have a skill called " + title + ", so here it is." : guided ? "Answer what you can, then Save. Capri uses it for " + title + " from then on." : "Write what Capri should know about " + title + ", then Save.", false);
+            return null;
+        }
+
 
         private string Write(Doc doc)
         {
@@ -550,6 +641,9 @@ namespace CapriDesktop
             doc.Revert();
             ForgetDraft(doc);
             if (doc == docs[0] && Saved != null) Saved();
+            // A skill saved is put to use straight away.
+            Action skillSaved = SkillSaved;
+            if (doc.SkillPath != null && skillSaved != null) skillSaved();
             return null;
         }
 
@@ -1211,14 +1305,14 @@ namespace CapriDesktop
 
             // P_ and M_ in the tab only. The files keep their own names, since the folder they are in
             // already says which they are and renaming them would break every saved pick.
-            // A personality or mood marked uncensored only is absent while the toggle is off, not greyed out,
-            // the same as her interests file: a censored install should show no trace that there is anything to unlock.
-            // Her plain files always; the senpai half of a pack only with the toggle on, under its own tag so the two
-            // are told apart in the list. A censored install has no senpai file to offer in the first place.
-            foreach (string each in Sorted(Personalities.Plain)) if (Brain.Uncensored || !Personalities.AdultOnly(each)) Add(found, taken, each, "P_");
-            if (Brain.Uncensored) foreach (string each in Sorted(Personalities.Senpais)) Add(found, taken, each, "U_");
-            foreach (string each in Sorted(Dynamics.Plain)) if (Brain.Uncensored || !Personalities.AdultOnly(each)) Add(found, taken, each, "M_");
-            if (Brain.Uncensored) foreach (string each in Sorted(Dynamics.Senpais)) Add(found, taken, each, "U_");
+            // A personality or mood marked senpai only is left out while the switch is off, not greyed out,
+            // the same as her interests file.
+            // One side's files only: each side keeps its own whole copy of every pack and mood, so the switch picks
+            // which folder is listed, the same way it picks which one she reads.
+            bool senpaiSide = Brain.SenpaiOn && Directory.Exists(Personalities.Senpais ?? "");
+            foreach (string each in Sorted(senpaiSide ? Personalities.Senpais : Personalities.Plain)) if (senpaiSide || !Personalities.SenpaiOnly(each)) Add(found, taken, each, "P_");
+            bool senpaiMoods = Brain.SenpaiOn && Directory.Exists(Dynamics.Senpais ?? "");
+            foreach (string each in Sorted(senpaiMoods ? Dynamics.Senpais : Dynamics.Plain)) if (senpaiMoods || !Personalities.SenpaiOnly(each)) Add(found, taken, each, "M_");
             return found.ToArray();
         }
 
@@ -1230,7 +1324,7 @@ namespace CapriDesktop
                 // Every file, since her senpai ones are numbered and have no type. A backup is a copy of one
                 // of them rather than one of them, so it stays out of her editor.
                 List<string> found = new List<string>();
-                foreach (string file in Directory.GetFiles(folder)) if (!file.EndsWith(".bak", StringComparison.OrdinalIgnoreCase)) found.Add(file);
+                foreach (string file in Directory.GetFiles(folder)) if (!file.EndsWith(".bak", StringComparison.OrdinalIgnoreCase) && !file.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)) found.Add(file);
                 found.Sort(StringComparer.OrdinalIgnoreCase);
                 return found.ToArray();
             }
@@ -1255,6 +1349,8 @@ namespace CapriDesktop
 
         private sealed class Doc
         {
+            // The skill.md this tab is, or null for her other files.
+            internal string SkillPath;
             internal readonly string Label;
             internal readonly Func<WrittenNote> Open;
             internal WrittenNote Note;
@@ -1292,8 +1388,8 @@ namespace CapriDesktop
             private readonly FileEditor panel;
             private readonly WordBox box;
             private readonly Bar bar;
-            private readonly Ink[] tabs;
-            private readonly Ink close, save, reload, keep;
+            private Ink[] tabs;
+            private readonly Ink close, save, reload, keep, make;
             private readonly Note status;
             private const TextFormatFlags TitleWidth = TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
             private const TextFormatFlags TitleLine = TitleWidth | TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis;
@@ -1334,13 +1430,7 @@ namespace CapriDesktop
                 box.MouseDown += delegate { panel.Finish(); };
                 box.TextChanged += delegate { if (!loading) Typed(); Freshen(); };
                 // STOCK 0.9.0: tabs = new[] { new Ink { Tag = 0 }, new Ink { Tag = 1 } };
-                tabs = new Ink[panel.docs.Length];
-                for (int made = 0; made < tabs.Length; made++) tabs[made] = new Ink { Tag = made, Rolling = true };
-                foreach (Ink tab in tabs)
-                {
-                    Ink press = tab;
-                    press.Click += delegate { panel.Turn((int)press.Tag); };
-                }
+                tabs = MakeTabs(panel.docs.Length);
                 close = new Ink { Mark = true, AccessibleName = "Close the file editor" };
                 close.Click += delegate { panel.Ask(); };
                 save = new Ink { Filled = true, Text = "Save" };
@@ -1349,13 +1439,16 @@ namespace CapriDesktop
                 reload.Click += delegate { if (panel.Guarding) panel.GuardDiscard(); else panel.Reload(); };
                 keep = new Ink { Text = "Keep editing", Visible = false };
                 keep.Click += delegate { panel.GuardKeep(); };
+                // New file, which today means a skill.md. Not in the personalities editor, where a skill has no tab.
+                make = new Ink { Text = "New", AccessibleName = "Make a new file, like a skill.md that teaches Capri an app or game", Visible = !panel.ForPersonalities };
+                make.Click += delegate { panel.New(make); };
                 status = new Note { BackColor = Red, ForeColor = Salmon, AutoEllipsis = true, UseMnemonic = false, TextAlign = ContentAlignment.MiddleLeft };
                 cover = new Veil(panel, this) { Visible = false };
-                Controls.AddRange(new Control[] { cover, close, box, bar, status, keep, reload, save });
+                Controls.AddRange(new Control[] { cover, close, box, bar, status, keep, make, reload, save });
                 Controls.AddRange(tabs);
                 cover.BringToFront();
                 int order = 0;
-                foreach (Control next in new Control[] { box, save, reload, keep }) next.TabIndex = order++;
+                foreach (Control next in new Control[] { box, save, reload, make, keep }) next.TabIndex = order++;
                 foreach (Ink tab in tabs) tab.TabIndex = order++;
                 close.TabIndex = order++;
                 foreach (Control grip in new Control[] { this, status })
@@ -1425,7 +1518,7 @@ namespace CapriDesktop
                 statusFont = Look.Mono(13 * s, FontStyle.Regular, GraphicsUnit.Pixel);
                 box.Font = Look.Mono(BodySize * s, FontStyle.Regular, GraphicsUnit.Pixel);
                 status.Font = statusFont;
-                foreach (Ink ink in new[] { close, save, reload, keep }) ink.Font = buttonFont;
+                foreach (Ink ink in new[] { close, save, reload, make, keep }) ink.Font = buttonFont;
                 foreach (Ink tab in tabs) tab.Font = buttonFont;
             }
 
@@ -1506,6 +1599,7 @@ namespace CapriDesktop
                 int at = pad;
                 at = PlaceButton(save, at, buttonTop, buttonHigh, gap);
                 at = PlaceButton(reload, at, buttonTop, buttonHigh, gap);
+                if (make.Visible) at = PlaceButton(make, at, buttonTop, buttonHigh, gap);
                 at = PlaceButton(keep, at, buttonTop, buttonHigh, gap);
                 status.Bounds = new Rectangle(at, buttonTop, Math.Max(Scaled(40), Width - pad - at), buttonHigh);
                 // Drawn in OnPaint rather than rendered as a control. As a child Label it came out of the page's
@@ -1533,11 +1627,41 @@ namespace CapriDesktop
                 int pad = Scaled(18), gap = Scaled(8), at = pad;
                 at = PlaceButton(save, at, save.Top, save.Height, gap);
                 at = PlaceButton(reload, at, save.Top, save.Height, gap);
+                if (make.Visible) at = PlaceButton(make, at, save.Top, save.Height, gap);
                 if (keep.Visible) at = PlaceButton(keep, at, save.Top, save.Height, gap);
                 status.Bounds = new Rectangle(at, save.Top, Math.Max(Scaled(40), Width - pad - at), save.Height);
             }
 
             private int Scaled(float value) { return (int)Math.Round(value * panel.s); }
+
+            private Ink[] MakeTabs(int count)
+            {
+                Ink[] made = new Ink[count];
+                for (int i = 0; i < count; i++)
+                {
+                    Ink press = new Ink { Tag = i, Rolling = true };
+                    press.Click += delegate { panel.Turn((int)press.Tag); };
+                    made[i] = press;
+                }
+                return made;
+            }
+
+            // The tab strip built again, for a file added while she is open, like a new skill.
+            internal void Retab()
+            {
+                foreach (Ink tab in tabs)
+                {
+                    Controls.Remove(tab);
+                    tab.Dispose();
+                }
+                tabs = MakeTabs(panel.docs.Length);
+                Controls.AddRange(tabs);
+                int order = keep.TabIndex + 1;
+                foreach (Ink tab in tabs) tab.TabIndex = order++;
+                close.TabIndex = order;
+                cover.BringToFront();
+                Fit();
+            }
 
             // Shows this file, reading it first.
             // Scrolls the side column so the file being opened is one you can see.
@@ -1639,6 +1763,7 @@ namespace CapriDesktop
                 save.Text = "Save + close";
                 reload.Text = "Discard";
                 keep.Visible = true;
+                make.Visible = false;
                 PlaceFoot();
                 Say("Unsaved changes in " + names + ".", false);
                 save.Focus();
@@ -1648,6 +1773,7 @@ namespace CapriDesktop
             {
                 save.Text = "Save";
                 keep.Visible = false;
+                make.Visible = !panel.ForPersonalities;
                 box.Focus();
             }
 
@@ -2337,6 +2463,75 @@ namespace CapriDesktop
                 internal ulong PixelsReceived, PixelsDrawn, BuffersEmpty;
             }
 #pragma warning restore 649
+        }
+
+        // The name of a new skill, whether it is for a game, and whether it starts as questions to answer.
+        private sealed class SkillAsk : Form
+        {
+            private readonly TextBox named;
+            private readonly RadioButton game;
+
+            internal string SkillName { get { return named.Text.Trim(); } }
+            internal bool Game { get { return game.Checked; } }
+            internal bool Guided { get; private set; }
+
+            internal SkillAsk(float scale)
+            {
+                float at = Math.Max(1, scale);
+                Text = "New skill.md";
+                FormBorderStyle = FormBorderStyle.FixedDialog;
+                MaximizeBox = false;
+                MinimizeBox = false;
+                ShowInTaskbar = false;
+                StartPosition = FormStartPosition.CenterParent;
+                AutoScaleMode = AutoScaleMode.None;
+                BackColor = Red;
+                ForeColor = Salmon;
+                Font = Look.Mono(15 * at, FontStyle.Regular, GraphicsUnit.Pixel);
+                int pad = (int)(18 * at), wide = (int)(440 * at), row = (int)(30 * at), gap = (int)(8 * at);
+                Label asking = new Label { Text = "Name it after the app or game it teaches her:", AutoSize = false, Bounds = new Rectangle(pad, pad, wide, row), TextAlign = ContentAlignment.MiddleLeft, UseMnemonic = false };
+                named = new TextBox { Bounds = new Rectangle(pad, pad + row, wide, row), BackColor = Dark, ForeColor = Salmon, BorderStyle = BorderStyle.FixedSingle, MaxLength = 40, AccessibleName = "The skill's name" };
+                RadioButton app = new RadioButton { Text = "An app or website, like Discord", Checked = true, AutoSize = false, Bounds = new Rectangle(pad, pad + row * 2 + gap, wide, row), UseMnemonic = false };
+                game = new RadioButton { Text = "A game, like Minecraft", AutoSize = false, Bounds = new Rectangle(pad, pad + row * 3 + gap, wide, row), UseMnemonic = false };
+                int buttons = pad + row * 4 + gap * 3, third = (wide - gap * 2) / 3;
+                Button guided = Pressable("Template", true, new Rectangle(pad, buttons, third, row + gap));
+                Button blank = Pressable("Blank", false, new Rectangle(pad + third + gap, buttons, third, row + gap));
+                Button cancel = Pressable("Cancel", false, new Rectangle(pad + (third + gap) * 2, buttons, third, row + gap));
+                guided.AccessibleName = "Start from a template that asks you questions";
+                blank.AccessibleName = "Start with a blank skill";
+                cancel.DialogResult = DialogResult.Cancel;
+                guided.Click += delegate { Done(true); };
+                blank.Click += delegate { Done(false); };
+                AcceptButton = guided;
+                CancelButton = cancel;
+                Label hint = new Label { Text = "The template asks things like its shortcuts, where to click and what your names for things mean.", AutoSize = false, Bounds = new Rectangle(pad, buttons + row + gap * 2, wide, row * 2), UseMnemonic = false };
+                ClientSize = new Size(pad * 2 + wide, hint.Bottom + pad);
+                Controls.AddRange(new Control[] { asking, named, app, game, guided, blank, cancel, hint });
+                named.TabIndex = 0;
+                app.TabIndex = 1;
+                game.TabIndex = 2;
+                guided.TabIndex = 3;
+                blank.TabIndex = 4;
+                cancel.TabIndex = 5;
+            }
+
+            private static Button Pressable(string words, bool filled, Rectangle place)
+            {
+                Button button = new Button { Text = words, Bounds = place, FlatStyle = FlatStyle.Flat, BackColor = filled ? Salmon : Red, ForeColor = filled ? Dark : Salmon, UseMnemonic = false, Cursor = Cursors.Hand };
+                button.FlatAppearance.BorderColor = Salmon;
+                return button;
+            }
+
+            private void Done(bool template)
+            {
+                if (SkillName.Length == 0)
+                {
+                    named.Focus();
+                    return;
+                }
+                Guided = template;
+                DialogResult = DialogResult.OK;
+            }
         }
 
         // A button in the panel's colours. Filled is her red with dark words; the others are a red line with red words.

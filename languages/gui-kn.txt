@@ -1,0 +1,206 @@
+# Her menus and labels in Kannada: the English, a tab, then the translation.
+Open Capri Mainframe	Capri Mainframe ತೆರೆ
+Her folder	ಅವಳ ಫೋಲ್ಡರ್
+Play	ಪ್ಲೇ
+Music	ಸಂಗೀತ
+Chess	ಚೆಸ್
+Connect four	ಕನೆಕ್ಟ್ ಫೋರ್
+Tic-tac-toe	ಟಿಕ್-ಟ್ಯಾಕ್-ಟೋ
+Rock, paper, scissors	ಕಲ್ಲು, ಕಾಗದ, ಕತ್ತರಿ
+Hide Capri	Capri ಮರೆಮಾಡಿ
+Hologram	ಹೋಲೋಗ್ರಾಂ
+Normal	ಸಾಮಾನ್ಯ
+Small	ಚಿಕ್ಕ
+Medium	ಮಧ್ಯಮ
+Large	ದೊಡ್ಡದು
+Huge	ಅಪಾರ
+Giant	ದೈತ್ಯ
+Move	ಸರಿಸು
+Wander around	ಸುತ್ತಾಡು
+Dance to music	ಸಂಗೀತಕ್ಕೆ ನೃತ್ಯ ಮಾಡು
+Dance	ನೃತ್ಯ ಮಾಡು
+Ride cursor	ಕರ್ಸರ್ ಮೇಲೆ ಸವಾರಿ
+Sit on windows	ಕಿಟಕಿಗಳ ಮೇಲೆ ಕೂರು
+Sit here	ಇಲ್ಲಿ ಕೂರು
+Hang here	ಇಲ್ಲೇ ಇರು
+Lie down	ಮಲಗು
+Go to sleep	ನಿದ್ರೆ ಮಾಡು
+Bring to this screen	ಈ ಪರದೆಗೆ ತನ್ನಿ
+Go to the next screen	ಮುಂದಿನ ಪರದೆಗೆ ಹೋಗು
+Black	ಕಪ್ಪು
+White	ಬಿಳಿ
+Test	ಪರೀಕ್ಷೆ
+Stop	ನಿಲ್ಲಿಸು
+Help	ಸಹಾಯ
+Commands	ಆಜ್ಞೆಗಳು
+Help page	ಸಹಾಯ ಪುಟ
+Join the Discord	Discord ಸೇರಿ
+Copy error details	ದೋಷ ವಿವರಗಳನ್ನು ನಕಲಿಸಿ
+Check for updates	ನವೀಕರಣಗಳನ್ನು ಪರಿಶೀಲಿಸಿ
+Quit Capri	Capri ನಿಂದ ನಿರ್ಗಮಿಸು
+MAINFRAME	MAINFRAME
+Settings	ಸೆಟ್ಟಿಂಗ್‌ಗಳು
+Mods	Mods
+BRAIN	ಮೆದುಳು
+Provider	ಒದಗಿಸುವವರು
+Using your server with no key	ಕೀ ಇಲ್ಲದೆ ನಿನ್ನ ಸರ್ವರ್ ಬಳಸುತ್ತಿದ್ದೇನೆ
+Refresh	ರಿಫ್ರೆಶ್
+Set up her brain	ಅವಳ ಮೆದುಳನ್ನು ಸೆಟಪ್ ಮಾಡಿ
+Have Ollama? Open it, then press Refresh.	Ollama ಇದೆಯೇ? ತೆರೆದು, ನಂತರ ರಿಫ್ರೆಶ್ ಒತ್ತಿ.
+Pick one. Only one brain runs at a time.	ಒಂದನ್ನು ಆರಿಸು. ಒಂದು ಸಮಯದಲ್ಲಿ ಒಂದೇ ಮೆದುಳು ಓಡುತ್ತದೆ.
+MEDIUM INTELLIGENCE	ಮಧ್ಯಮ ಬುದ್ಧಿವಂತಿಕೆ
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	ಆಫ್
+Free key	ಉಚಿತ ಕೀ
+Connect	ಸಂಪರ್ಕಿಸಿ
+Free keys can be rate limited and slow.	ಉಚಿತ ಕೀಗಳಿಗೆ ದರ ಮಿತಿ ಇರಬಹುದು ಮತ್ತು ನಿಧಾನವಾಗಿರಬಹುದು.
+That's a paid key: it goes under MAX INTELLIGENCE.	ಅದು ಪಾವತಿಸಿದ ಕೀ: ಅದು MAX INTELLIGENCE ಅಡಿಯಲ್ಲಿ ಹೋಗುತ್ತದೆ.
+Move to MAX	MAX ಗೆ ಸರಿಸು
+VOICE	VOICE
+Ctrl + Alt + V to talk	Ctrl + Alt + V ಮಾತನಾಡಲು
+PREBUILT LOCAL	ಪೂರ್ವನಿರ್ಮಿತ ಸ್ಥಳೀಯ
+CUSTOM LOCAL	ಕಸ್ಟಮ್ ಸ್ಥಳೀಯ
+CLOUD VOICE	ಕ್ಲೌಡ್ ಧ್ವನಿ
+Set up	ಸೆಟಪ್
+Setup guide	ಸೆಟಪ್ ಮಾರ್ಗದರ್ಶಿ
+Fish Audio	Fish Audio
+Default model	ಡೀಫಾಲ್ಟ್ ಮಾದರಿ
+Pick a voice model	ಧ್ವನಿ ಮಾದರಿ ಆರಿಸು
+Get free voice	ಉಚಿತ ಧ್ವನಿ ಪಡೆಯಿರಿ
+Mic: default	ಮೈಕ್: ಡೀಫಾಲ್ಟ್
+Her speaker: Default	ಅವಳ ಸ್ಪೀಕರ್: ಡೀಫಾಲ್ಟ್
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N ಮೈಕ್ ಮ್ಯೂಟ್ ಮಾಡುತ್ತದೆ
+CAPRI	CAPRI
+Support	ಬೆಂಬಲ
+Remote	Remote
+Bring here	ಇಲ್ಲಿಗೆ ತನ್ನಿ
+Advanced Settings	ಸುಧಾರಿತ ಸೆಟ್ಟಿಂಗ್‌ಗಳು
+YOU	ನೀನು
+Your personality	ನಿನ್ನ ವ್ಯಕ್ತಿತ್ವ
+Language	ಭಾಷೆ
+English	ಇಂಗ್ಲಿಷ್
+What should she call you?	ಅವಳು ನಿನ್ನನ್ನು ಏನೆಂದು ಕರೆಯಬೇಕು?
+Save	ಉಳಿಸಿ
+Volume	ವಾಲ್ಯೂಮ್
+Pitch	ಪಿಚ್
+Speed	ವೇಗ
+Robot	ರೋಬೋಟ್
+Glitch	Glitch
+Sounds	ಶಬ್ದಗಳು
+Typing sound	ಟೈಪಿಂಗ್ ಶಬ್ದ
+Listen for Capri	Capri ಗಾಗಿ ಆಲಿಸು
+Hearing	ಕೇಳಿಸಿಕೊಳ್ಳುವಿಕೆ
+Auto	ಸ್ವಯಂ
+Free voice in games	ಆಟಗಳಲ್ಲಿ ಉಚಿತ ಧ್ವನಿ
+Call mode (beta)	ಕರೆ ಮೋಡ್ (ಬೀಟಾ)
+Her voice in your mic	ನಿಮ್ಮ ಮೈಕ್‌ನಲ್ಲಿ ಅವಳ ಧ್ವನಿ
+Get VB-CABLE	VB-CABLE ಪಡೆಯಿರಿ
+How to	ಹೇಗೆ
+Her voice in your mic: loudness	ನಿಮ್ಮ ಮೈಕ್‌ನಲ್ಲಿ ಅವಳ ಧ್ವನಿ: ಜೋರು
+MOVES	ಚಲನೆಗಳು
+Pop-in times	ಪಾಪ್-ಇನ್ ಸಮಯಗಳು
+Mini player	ಮಿನಿ ಪ್ಲೇಯರ್
+Wander	ಅಲೆದಾಡು
+Sleep	ನಿದ್ರೆ
+Pop-ins	ಪಾಪ್-ಇನ್‌ಗಳು
+Glitch in at startup	ಪ್ರಾರಂಭದಲ್ಲಿ Glitch
+KEYS	ಕೀಗಳು
+Talk: Ctrl + Alt + V	ಮಾತನಾಡು: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	ಮೈಕ್ ಮ್ಯೂಟ್: Ctrl + Alt + N
+Type: Ctrl + Alt + T	ಟೈಪ್: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	ಮರೆಮಾಡಿ/ತೋರಿಸಿ: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	ಶಾಂತ: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	ಗೇಮಿಂಗ್ ಮೋಡ್: Ctrl + Alt + G
+Confirm	ದೃಢೀಕರಿಸಿ
+Cancel	ರದ್ದುಮಾಡಿ
+Size	ಗಾತ್ರ
+Check in on me	ನನ್ನನ್ನು ನೋಡಲು ಬಾ
+Edit check-in lines	ಚೆಕ್-ಇನ್ ಸಾಲುಗಳನ್ನು ಸಂಪಾದಿಸಿ
+Always on top	ಯಾವಾಗಲೂ ಮೇಲೆ
+Mainframe size	Mainframe ಗಾತ್ರ
+Mainframe colours	Mainframe ಬಣ್ಣಗಳು
+Head pats	ತಲೆ ನೇವರಿಕೆಗಳು
+Pat stroke	ಸ್ಟ್ರೋಕ್
+Chaos when upset	ಕೋಪಗೊಂಡಾಗ ಗೊಂದಲ
+Legacy stand	ಹಳೆಯ ಸ್ಟ್ಯಾಂಡ್
+Jealous of other AIs	ಇತರ AI ಗಳ ಮೇಲೆ ಅಸೂಯೆ
+Teases when another AI comes to the front.	ಬೇರೆ AI ಮುಂದೆ ಬಂದಾಗ ಕೀಟಲೆ ಮಾಡುತ್ತಾಳೆ.
+Close other AIs for me	ನನಗಾಗಿ ಇತರ AI ಗಳನ್ನು ಮುಚ್ಚಿ
+Asks before closing only the apps you choose.	ನೀವು ಆಯ್ಕೆ ಮಾಡಿದ ಆ್ಯಪ್‌ಗಳನ್ನು ಮಾತ್ರ ಮುಚ್ಚುವ ಮೊದಲು ಕೇಳುತ್ತದೆ.
+Apps she may close	ಅವಳು ಮುಚ್ಚಬಹುದಾದ ಆ್ಯಪ್‌ಗಳು
+Choose apps	ಆ್ಯಪ್‌ಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ
+WATCH	ವೀಕ್ಷಿಸು
+Watch my screen	ನನ್ನ ಪರದೆ ನೋಡು
+Screens	ಪರದೆಗಳು
+All screens	ಎಲ್ಲಾ ಪರದೆಗಳು
+Remember what she sees	ಅವಳು ನೋಡುವುದನ್ನು ನೆನಪಿಡು
+Every	ಪ್ರತಿ
+Watch-along memory	ಒಟ್ಟಿಗೆ ನೋಡಿದ ಸ್ಮರಣೆ
+Code/Husk Mode	Code/Husk ಮೋಡ್
+Thinking	ಯೋಚಿಸುತ್ತಿದ್ದೇನೆ
+Default	ಡೀಫಾಲ್ಟ್
+Extra request JSON	ಹೆಚ್ಚುವರಿ ವಿನಂತಿ JSON
+Add	ಸೇರಿಸಿ
+Verbosity	ವಾಚಾಳಿತನ
+Replies	ಉತ್ತರಗಳು
+Memory	ಸ್ಮರಣೆ
+Memory size	ಸ್ಮರಣೆ ಗಾತ್ರ
+Max reply	ಗರಿಷ್ಠ ಉತ್ತರ
+Bubble	ಬಬಲ್
+Follow-up messages	ಫಾಲೋ-ಅಪ್ ಸಂದೇಶಗಳು
+Use	ಬಳಸು
+A model in Ollama, on your local server or on your key.	Ollama ನಲ್ಲಿ ಒಂದು ಮಾದರಿ, ನಿಮ್ಮ ಸ್ಥಳೀಯ ಸರ್ವರ್‌ನಲ್ಲಿ ಅಥವಾ ನಿಮ್ಮ ಕೀಯೊಂದಿಗೆ.
+HABITS	ಅಭ್ಯಾಸಗಳು
+Open her memories	ಅವಳ ನೆನಪುಗಳನ್ನು ತೆರೆ
+Start with Windows	Windows ಜೊತೆ ಪ್ರಾರಂಭಿಸು
+Show on Discord	Discord ನಲ್ಲಿ ತೋರಿಸು
+Use her cursor	ಅವಳ ಕರ್ಸರ್ ಬಳಸು
+Remember our chats	ನಮ್ಮ ಚಾಟ್‌ಗಳನ್ನು ನೆನಪಿಡು
+Power saver	ಪವರ್ ಸೇವರ್
+Music app	ಸಂಗೀತ ಆ್ಯಪ್
+Perch	ಪರ್ಚ್
+Keep PC awake for jobs	ಕೆಲಸಗಳಿಗಾಗಿ PC ಎಚ್ಚರವಾಗಿರಿಸು
+Hide in full screen	ಪೂರ್ಣ ಪರದೆಯಲ್ಲಿ ಮರೆಮಾಡಿ
+Mini player over full screen	ಪೂರ್ಣ ಪರದೆಯ ಮೇಲೆ ಮಿನಿ ಪ್ಲೇಯರ್
+Explore while I'm away	ನಾನು ಇಲ್ಲದಿದ್ದಾಗ ಅನ್ವೇಷಿಸು
+Explore after	ನಂತರ ಅನ್ವೇಷಿಸು
+GAMES	ಆಟಗಳು
+Controls	ನಿಯಂತ್ರಣಗಳು
+Comments	ಕಾಮೆಂಟ್‌ಗಳು
+Live reactions	ನೇರ ಪ್ರತಿಕ್ರಿಯೆಗಳು
+Game sounds	ಆಟದ ಶಬ್ದಗಳು
+Gaming Mode	ಗೇಮಿಂಗ್ ಮೋಡ್
+She reacts to your game until you close it.	ನೀನು ಮುಚ್ಚುವವರೆಗೂ ಅವಳು ನಿನ್ನ ಆಟಕ್ಕೆ ಪ್ರತಿಕ್ರಿಯಿಸುತ್ತಾಳೆ.
+Works best on MAX INTELLIGENCE.	MAX INTELLIGENCE ನಲ್ಲಿ ಉತ್ತಮವಾಗಿ ಕೆಲಸ ಮಾಡುತ್ತದೆ.
+Fast hands in games	ಆಟಗಳಲ್ಲಿ ಚುರುಕಾದ ಕೈಗಳು
+Mute her	ಅವಳನ್ನು ಮ್ಯೂಟ್ ಮಾಡು
+CLIPS	ಕ್ಲಿಪ್‌ಗಳು
+Clip my games	ನನ್ನ ಆಟಗಳನ್ನು ರೆಕಾರ್ಡ್ ಮಾಡಿ
+Save big moments	ದೊಡ್ಡ ಕ್ಷಣಗಳನ್ನು ಉಳಿಸಿ
+Save folder	ಉಳಿಸುವ ಫೋಲ್ಡರ್
+Choose folder	ಫೋಲ್ಡರ್ ಆಯ್ಕೆಮಾಡಿ
+Open clips folder	ಕ್ಲಿಪ್‌ಗಳ ಫೋಲ್ಡರ್ ತೆರೆ
+Default length	ಡೀಫಾಲ್ಟ್ ಉದ್ದ
+Frame rate	ಫ್ರೇಮ್ ದರ
+Resolution	ರೆಸಲ್ಯೂಶನ್
+Video bitrate	ವೀಡಿಯೊ ಬಿಟ್‌ರೇಟ್
+Weather	ಹವಾಮಾನ
+Code mods can reach your whole PC. Only trusted ones.	ಕೋಡ್ mods ನಿಮ್ಮ ಇಡೀ PC ಯನ್ನು ತಲುಪಬಹುದು. ನಂಬಿಕೆಯಿರುವವುಗಳನ್ನು ಮಾತ್ರ ಬಳಸಿ.
+Import mod	Mod ಆಮದು ಮಾಡಿ
+Browse mods	mod ಬ್ರೌಸ್ ಮಾಡಿ
+Mods folder	Mods ಫೋಲ್ಡರ್
+INSTALLED	ಸ್ಥಾಪಿಸಲಾಗಿದೆ
+Update mods	Mods ನವೀಕರಿಸಿ
+No mods match.	mods ಹೊಂದುತ್ತಿಲ್ಲ.
+On	ಆನ್
+Remove	ತೆಗೆದುಹಾಕಿ
+Publish	ಪ್ರಕಟಿಸಿ
+Options	ಆಯ್ಕೆಗಳು
+Back	ಹಿಂದೆ
+Next	ಮುಂದೆ
+COLORS	ಬಣ್ಣಗಳು
+Reset colors	ಬಣ್ಣಗಳನ್ನು ಮರುಹೊಂದಿಸಿ
+Running on this PC	ಈ PC ಯಲ್ಲಿ ಚಲಿಸುತ್ತಿದೆ
+NORMAL	ಸಾಮಾನ್ಯ
+OFF	ಆಫ್
+Local server address	ಸ್ಥಳೀಯ ಸರ್ವರ್ ವಿಳಾಸ

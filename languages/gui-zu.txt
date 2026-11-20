@@ -1,0 +1,206 @@
+# Her menus and labels in Zulu: the English, a tab, then the translation.
+Open Capri Mainframe	Vula i-Capri Mainframe
+Her folder	Ifolda yakhe
+Play	Dlala
+Music	Umculo
+Chess	Ichess
+Connect four	Izinkanyezi ezine
+Tic-tac-toe	Tic-tac-toe
+Rock, paper, scissors	Idwala, iphepha, isikelo
+Hide Capri	Fihla uCapri
+Hologram	I-Hologram
+Normal	Olujwayelekile
+Small	Kuncane
+Medium	Maphakathi
+Large	Omkhulu
+Huge	Omkhulu kakhulu
+Giant	Omkhulu kakhulu
+Move	Hambisa
+Wander around	Uzulazula
+Dance to music	Dansa emculweni
+Dance	Dansa
+Ride cursor	Gada isikhombi
+Sit on windows	Hlala phezu kwamawindi
+Sit here	Hlala lapha
+Hang here	Hlala lapha
+Lie down	Lala phansi
+Go to sleep	Lala
+Bring to this screen	Yiletha kulesi sikrini
+Go to the next screen	Iya esikrinini esilandelayo
+Black	Okumnyama
+White	Okumhlophe
+Test	Hlola
+Stop	Misa
+Help	Usizo
+Commands	Imiyalo
+Help page	Ikhasi losizo
+Join the Discord	Joyina i-Discord
+Copy error details	Kopisha imininingwane yephutha
+Check for updates	Hlola izibuyekezo
+Quit Capri	Phuma ku-Capri
+MAINFRAME	MAINFRAME
+Settings	Izilungiselelo
+Mods	Ama-mod
+BRAIN	INGQONDO
+Provider	Umhlinzeki
+Using your server with no key	Sebenzisa iseva yakho ngaphandle kokhiye
+Refresh	Vuselela
+Set up her brain	Setha ingqondo yakhe
+Have Ollama? Open it, then press Refresh.	Unayo i-Ollama? Yivule, bese ucindezela Vuselela.
+Pick one. Only one brain runs at a time.	Khetha eyodwa. Ingqondo eyodwa kuphela isebenza ngesikhathi esisodwa.
+MEDIUM INTELLIGENCE	UKUHLAKANIPHA OKUPHAKATHI
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Valiwe
+Free key	Ukhiye wamahhala
+Connect	Xhuma
+Free keys can be rate limited and slow.	Okhiye bamahhala bangase babe nomkhawulo wesivinini futhi babe nensali.
+That's a paid key: it goes under MAX INTELLIGENCE.	Lokho ukhiye okhokhelwayo: uya ngaphansi kwe-MAX INTELLIGENCE.
+Move to MAX	Hambisela ku-MAX
+VOICE	IZWI
+Ctrl + Alt + V to talk	Ctrl + Alt + V ukukhuluma
+PREBUILT LOCAL	AKHIWE NGAPHAMBILI KWENDAWO
+CUSTOM LOCAL	KWENDAWO YENZIWE NGOKWEZIDINGO
+CLOUD VOICE	IZWI LE-CLOUD
+Set up	Setha
+Setup guide	Umhlahlandlela wokusetha
+Fish Audio	Fish Audio
+Default model	Imodeli ezenzakalelayo
+Pick a voice model	Khetha imodeli yezwi
+Get free voice	Thola izwi elingenamahhala
+Mic: default	Imic: okuzenzakalelayo
+Her speaker: Default	Isipikha sakhe: Okuzenzakalelayo
+Ctrl + Alt + N mutes mic	I-Ctrl + Alt + N ithulisa imakrofoni
+CAPRI	CAPRI
+Support	Ukusekela
+Remote	Remote
+Bring here	Yiletha lapha
+Advanced Settings	Izilungiselelo ezithuthukile
+YOU	WENA
+Your personality	Ubuntu bakho
+Language	Ulimi
+English	IsiNgisi
+What should she call you?	Kufanele ngikubize ngani?
+Save	Gcina
+Volume	Ivolumu
+Pitch	Ipitch
+Speed	Isivinini
+Robot	Irobhothi
+Glitch	Glitch
+Sounds	Imisindo
+Typing sound	Umsindo wokuthayipha
+Listen for Capri	Lalela uCapri
+Hearing	Ukuzwa
+Auto	Ngokuzenzakalela
+Free voice in games	Izwi elingenamahhala emidlalweni
+Call mode (beta)	Imodi yekholi (beta)
+Her voice in your mic	Izwi lakhe emakrofonini yakho
+Get VB-CABLE	Thola i-VB-CABLE
+How to	Indlela yokwenza
+Her voice in your mic: loudness	Izwi lakhe emakrofonini yakho: ukukhala
+MOVES	IZINYATHO
+Pop-in times	Izikhathi zokuvela
+Mini player	I-mini player
+Wander	Uzulazula
+Sleep	Lala
+Pop-ins	Ukuvela
+Glitch in at startup	Glitch ekuqaleni
+KEYS	AMAKHIYE
+Talk: Ctrl + Alt + V	Khuluma: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Thula imic: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Thayipha: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Fihla/bonisa: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Thula: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Imodi yemidlalo: Ctrl + Alt + G
+Confirm	Qinisekisa
+Cancel	Khansela
+Size	Usayizi
+Check in on me	Hlola kimi
+Edit check-in lines	Hlela imigqa yokungena
+Always on top	Njalo phezulu
+Mainframe size	Usayizi we-Mainframe
+Mainframe colours	Imibala ye-Mainframe
+Head pats	Ukushaya ikhanda
+Pat stroke	Ukushaya ikhanda
+Chaos when upset	Ukukhathala lapho ecasukile
+Legacy stand	Isitendi sakudala
+Jealous of other AIs	Ukuzwela ezinye ze-AI
+Teases when another AI comes to the front.	Ihlekisa lapho enye i-AI ifika phambili.
+Close other AIs for me	Vala ezinye ze-AI ngami
+Asks before closing only the apps you choose.	Ibuza ngaphambi kokuvala izinhlelo ozikhethile kuphela.
+Apps she may close	Izinhlelo ezingavalwa yiye
+Choose apps	Khetha izinhlelo
+WATCH	BUKA
+Watch my screen	Bheka isikrini sami
+Screens	Izikrini
+All screens	Zonke izikrini
+Remember what she sees	Khumbula ayibonayo
+Every	Yonke
+Watch-along memory	Inkumbulo yokubukela ndawonye
+Code/Husk Mode	Imodi ye-Code/Husk
+Thinking	Ngicabanga
+Default	Okuzenzakalelayo
+Extra request JSON	Icelo elengeziwe le-JSON
+Add	Engeza
+Verbosity	Ukuhlobana kwamazwi
+Replies	Izimpendulo
+Memory	Inkumbulo
+Memory size	Usayizi wenkumbulo
+Max reply	Impendulo enkulu kakhulu
+Bubble	Ibhamuza
+Follow-up messages	Imilayezo elandelayo
+Use	Sebenzisa
+A model in Ollama, on your local server or on your key.	Imodeli ku-Ollama, kwiseva yakho yendawo noma ngokhiye wakho.
+HABITS	IZINKAMBISO
+Open her memories	Vula izikhumbuzo zakhe
+Start with Windows	Qala ne-Windows
+Show on Discord	Bonisa ku-Discord
+Use her cursor	Sebenzisa isikhombi sakhe
+Remember our chats	Khumbula izingxoxo zethu
+Power saver	Isilondolozi samandla
+Music app	Uhlelo lomculo
+Perch	Isihlalo
+Keep PC awake for jobs	Gcina i-PC ivuka ngemisebenzi
+Hide in full screen	Fihla esikrinini esigcwele
+Mini player over full screen	I-mini player phezu kwesikrini esigcwele
+Explore while I'm away	Hlola lapho ngingekho
+Explore after	Hlola ngemva
+GAMES	AMAGEYIMU
+Controls	Izilawuli
+Comments	Izimvo
+Live reactions	Imisabelo ephilayo
+Game sounds	Amaswi omdlalo
+Gaming Mode	Imodi yemidlalo
+She reacts to your game until you close it.	Uphendula emdlalweni wakho uze uwuvale.
+Works best on MAX INTELLIGENCE.	Isebenza kangcono ku-MAX INTELLIGENCE.
+Fast hands in games	Izandla ezisheshayo emidlalweni
+Mute her	Thula
+CLIPS	IZIQEPHU
+Clip my games	Qopha imidlalo yami
+Save big moments	Gcina izikhathi ezinkulu
+Save folder	Ifolda yokugcina
+Choose folder	Khetha ifolda
+Open clips folder	Vula ifolda yamaklipu
+Default length	Ubude obuzenzakalelayo
+Frame rate	Izinga lezithombe ngomzuzwana
+Resolution	Ukucaca
+Video bitrate	I-bitrate yevidiyo
+Weather	Isimo sezulu
+Code mods can reach your whole PC. Only trusted ones.	Ama-mod ekhodi angafinyelela yonke i-PC yakho. Ahlobene nodaba kuphela.
+Import mod	Ngenisa i-mod
+Browse mods	Phequlula ama-mod
+Mods folder	Ifolda ye-mod
+INSTALLED	OKUFAKIWE
+Update mods	Vuselela ama-mod
+No mods match.	Akukho mod ohambisanayo.
+On	Vuliwe
+Remove	Susa
+Publish	Shicilela
+Options	Izinketho
+Back	Emuva
+Next	Okulandelayo
+COLORS	AMABALA
+Reset colors	Setha kabusha imibala
+Running on this PC	Isebenza kule PC
+NORMAL	OLUJWAYELEKILE
+OFF	VALIWE
+Local server address	Ikheli leseva yendawo

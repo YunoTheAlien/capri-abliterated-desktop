@@ -1,0 +1,206 @@
+# Her menus and labels in Javanese: the English, a tab, then the translation.
+Open Capri Mainframe	Bukak Capri Mainframe
+Her folder	Folder dheweke
+Play	Puter
+Music	Musik
+Chess	Catur
+Connect four	Connect four
+Tic-tac-toe	Tic-tac-toe
+Rock, paper, scissors	Batu, gunting, kertas
+Hide Capri	Didhelikake Capri
+Hologram	Hologram
+Normal	Normal
+Small	Cilik
+Medium	Sedheng
+Large	Gedhe
+Huge	Gedhe banget
+Giant	Raksasa
+Move	Pindah
+Wander around	Mlaku-mlaku mubeng
+Dance to music	Joget karo musik
+Dance	Joget
+Ride cursor	Numpak kursor
+Sit on windows	Lenggah ing jendhela
+Sit here	Lenggah kene
+Hang here	Nggantung ing kene
+Lie down	Turu-turu
+Go to sleep	Turu
+Bring to this screen	Gawa menyang layar iki
+Go to the next screen	Pindah menyang layar sabanjure
+Black	Ireng
+White	Putih
+Test	Tes
+Stop	Mandhegake
+Help	Bantuan
+Commands	Perintah
+Help page	Kaca bantuan
+Join the Discord	Gabung karo Discord
+Copy error details	Salin rincian kesalahan
+Check for updates	Priksa pembaruan
+Quit Capri	Metu Capri
+MAINFRAME	MAINFRAME
+Settings	Setelan
+Mods	Mod
+BRAIN	OTAK
+Provider	Penyedia
+Using your server with no key	Nggunakake servermu tanpa kunci
+Refresh	Segarkan
+Set up her brain	Atur otak dheweke
+Have Ollama? Open it, then press Refresh.	Duwe Ollama? Bukak, banjur pencet Segarkan.
+Pick one. Only one brain runs at a time.	Pilih siji. Mung siji otak sing mlaku bebarengan.
+MEDIUM INTELLIGENCE	INTELLIGENCE SEDENG
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Mati
+Free key	Kunci gratis
+Connect	Sambungake
+Free keys can be rate limited and slow.	Kunci gratis bisa diwatesi lan alon.
+That's a paid key: it goes under MAX INTELLIGENCE.	Iki kunci bayar: mlebu MAX INTELLIGENCE.
+Move to MAX	Pindah menyang MAX
+VOICE	SWARA
+Ctrl + Alt + V to talk	Ctrl + Alt + V kanggo ngomong
+PREBUILT LOCAL	LOKAL SIAP PAKAI
+CUSTOM LOCAL	LOKAL KUSTOM
+CLOUD VOICE	SWARA CLOUD
+Set up	Atur
+Setup guide	Pandhuan setelan
+Fish Audio	Fish Audio
+Default model	Model standar
+Pick a voice model	Pilih model swara
+Get free voice	Entuk swara gratis
+Mic: default	Mikropon: standar
+Her speaker: Default	Speaker dheweke: Standar
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N mateni mikropon
+CAPRI	CAPRI
+Support	Dhukungan
+Remote	Remot
+Bring here	Gawa mrene
+Advanced Settings	Setelan Lanjut
+YOU	KOWE
+Your personality	Kepribadianmu
+Language	Basa
+English	Inggris
+What should she call you?	Dheweke kudu nyebut kowe apa?
+Save	Simpen
+Volume	Volume
+Pitch	Nada
+Speed	Kecepatan
+Robot	Robot
+Glitch	Glitch
+Sounds	Swara
+Typing sound	Swara ngetik
+Listen for Capri	Rungokake Capri
+Hearing	Pendengaran
+Auto	Otomatis
+Free voice in games	Swara gratis ing game
+Call mode (beta)	Mode telpon (beta)
+Her voice in your mic	Swara dheweke ing mikropon-mu
+Get VB-CABLE	Entuk VB-CABLE
+How to	Cara
+Her voice in your mic: loudness	Swara dheweke ing mikropon-mu: volume
+MOVES	GERAKAN
+Pop-in times	Wektu muncul
+Mini player	Pemutar mini
+Wander	Mlaku-mlaku
+Sleep	Turu
+Pop-ins	Kemunculan
+Glitch in at startup	Glitch nalika wiwitan
+KEYS	KUNCI
+Talk: Ctrl + Alt + V	Ngomong: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Bisukake mikropon: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Ngetik: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Didhelikake/tampilake: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Meneng: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Mode Game: Ctrl + Alt + G
+Confirm	Konfirmasi
+Cancel	Batal
+Size	Ukuran
+Check in on me	Priksa aku
+Edit check-in lines	Sunting baris priksa
+Always on top	Tansah ing ndhuwur
+Mainframe size	Ukuran Mainframe
+Mainframe colours	Warna Mainframe
+Head pats	Usap sirah
+Pat stroke	Goresan usap
+Chaos when upset	Kacau nalika jengkel
+Legacy stand	Stan lawas
+Jealous of other AIs	Cemburu karo AI liyane
+Teases when another AI comes to the front.	Ngece nalika AI liya maju ing ngarep.
+Close other AIs for me	Tutup AI liyane kanggo aku
+Asks before closing only the apps you choose.	Takon dhisik sadurunge nutup mung aplikasi sing kowe pilih.
+Apps she may close	Aplikasi sing bisa ditutup dheweke
+Choose apps	Pilih aplikasi
+WATCH	DELENG
+Watch my screen	Deleng layarku
+Screens	Layar
+All screens	Kabeh layar
+Remember what she sees	Elingi apa sing dideleng dheweke
+Every	Saben
+Watch-along memory	Memori nonton bareng
+Code/Husk Mode	Mode Kode/Husk
+Thinking	Mikir
+Default	Standar
+Extra request JSON	JSON request tambahan
+Add	Tambah
+Verbosity	Akeh cakape
+Replies	Balesan
+Memory	Memori
+Memory size	Ukuran memori
+Max reply	Balesan paling dawa
+Bubble	Gelembung
+Follow-up messages	Pesen lanjutan
+Use	Nggunakake
+A model in Ollama, on your local server or on your key.	Model ing Ollama, ing server lokalmu utawa nganggo kunci sampeyan.
+HABITS	KEBIASAAN
+Open her memories	Bukak memori dheweke
+Start with Windows	Mlaku bareng Windows
+Show on Discord	Tampilake ing Discord
+Use her cursor	Nggunakake kursor dheweke
+Remember our chats	Elingi obrolan kita
+Power saver	Hemat daya
+Music app	Aplikasi musik
+Perch	Tenggeran
+Keep PC awake for jobs	Tetep nggawe PC tangi kanggo tugas
+Hide in full screen	Didhelikake ing layar penuh
+Mini player over full screen	Pemutar mini ing layar penuh
+Explore while I'm away	Jelajah nalika aku ora ana
+Explore after	Jelajah sawise
+GAMES	GAME
+Controls	Kontrol
+Comments	Komentar
+Live reactions	Reaksi langsung
+Game sounds	Swara game
+Gaming Mode	Mode Game
+She reacts to your game until you close it.	Dheweke nanggapi game-mu nganti kowe nutup.
+Works best on MAX INTELLIGENCE.	Paling apik ing MAX INTELLIGENCE.
+Fast hands in games	Tangan cepet ing game
+Mute her	Bisukake dheweke
+CLIPS	KLIP
+Clip my games	Klip game-ku
+Save big moments	Simpen momen gedhe
+Save folder	Folder simpenan
+Choose folder	Pilih folder
+Open clips folder	Bukak folder klip
+Default length	Dawa standar
+Frame rate	Frame rate
+Resolution	Resolusi
+Video bitrate	Bitrate video
+Weather	Cuaca
+Code mods can reach your whole PC. Only trusted ones.	Mod kode bisa ngakses kabeh PC-mu. Mung sing dipercaya.
+Import mod	Impor mod
+Browse mods	Telusuri mod
+Mods folder	Folder mod
+INSTALLED	WIS DIINSTAL
+Update mods	Nganyari mod
+No mods match.	Ora ana mod sing cocok.
+On	Nyala
+Remove	Copot
+Publish	Unggah
+Options	Opsi
+Back	Bali
+Next	Sabanjure
+COLORS	WARNA
+Reset colors	Reset warna
+Running on this PC	Mlaku ing PC iki
+NORMAL	NORMAL
+OFF	MATI
+Local server address	Alamat server lokal

@@ -1,0 +1,206 @@
+# Her menus and labels in Albanian: the English, a tab, then the translation.
+Open Capri Mainframe	Hap Capri Mainframe
+Her folder	Dosja e saj
+Play	Luaj
+Music	Muzika
+Chess	Shah
+Connect four	Katër në rresht
+Tic-tac-toe	Tic-tac-toe
+Rock, paper, scissors	Gur, letër, gërshërë
+Hide Capri	Fshih Capri
+Hologram	Hologram
+Normal	Normal
+Small	E vogël
+Medium	Mesatare
+Large	E madhe
+Huge	Shumë i madh
+Giant	Gjigant
+Move	Lëviz
+Wander around	Endu rreth
+Dance to music	Vallëzo me muzikë
+Dance	Vallëzo
+Ride cursor	Hip mbi kursor
+Sit on windows	Ulu mbi dritare
+Sit here	Ulu këtu
+Hang here	Qëndro këtu
+Lie down	Shtrihu
+Go to sleep	Shko të flesh
+Bring to this screen	Sill në këtë ekran
+Go to the next screen	Shko te ekrani tjetër
+Black	E zezë
+White	E bardhë
+Test	Test
+Stop	Ndal
+Help	Ndihmë
+Commands	Komandat
+Help page	Faqja e ndihmës
+Join the Discord	Bashkohu me Discord
+Copy error details	Kopjo detajet e gabimit
+Check for updates	Kontrollo për përditësime
+Quit Capri	Mbyll Capri
+MAINFRAME	MAINFRAME
+Settings	Cilësimet
+Mods	Modifikimet
+BRAIN	TRURI
+Provider	Ofruesi
+Using your server with no key	Përdor serverin tënd pa çelës
+Refresh	Rifresko
+Set up her brain	Konfiguro trurin e saj
+Have Ollama? Open it, then press Refresh.	Ke Ollama? Hape, pastaj shtyp Rifresko.
+Pick one. Only one brain runs at a time.	Zgjidh një. Vetëm një tru punon njëkohësisht.
+MEDIUM INTELLIGENCE	INTELIGJENCË E MESME
+MAX INTELLIGENCE	MAX INTELLIGENCE
+Off	Jashtë
+Free key	Çelës falas
+Connect	Lidh
+Free keys can be rate limited and slow.	Çelësat falas mund të kufizohen në shpejtësi dhe janë të ngadaltë.
+That's a paid key: it goes under MAX INTELLIGENCE.	Ai është një çelës i paguar: shkon nën MAX INTELLIGENCE.
+Move to MAX	Lëviz te MAX
+VOICE	ZË
+Ctrl + Alt + V to talk	Ctrl + Alt + V për të folur
+PREBUILT LOCAL	LOKAL I PARA-NDËRTUAR
+CUSTOM LOCAL	LOKALE E PERSONALIZUAR
+CLOUD VOICE	ZË NË CLOUD
+Set up	Konfiguro
+Setup guide	Udhëzuesi i konfigurimit
+Fish Audio	Fish Audio
+Default model	Modeli i parazgjedhur
+Pick a voice model	Zgjidh një model zëri
+Get free voice	Merr zë falas
+Mic: default	Mikrofoni: e parazgjedhur
+Her speaker: Default	Altoparlanti i saj: E parazgjedhur
+Ctrl + Alt + N mutes mic	Ctrl + Alt + N fik mikrofonin
+CAPRI	CAPRI
+Support	Mbështetje
+Remote	Remote
+Bring here	Sill këtu
+Advanced Settings	Cilësimet e avancuara
+YOU	TI
+Your personality	Personaliteti yt
+Language	Gjuha
+English	Anglisht
+What should she call you?	Si duhet të të thërras?
+Save	Ruaj
+Volume	Volumi
+Pitch	Lartësia
+Speed	Shpejtësia
+Robot	Robot
+Glitch	Gabim
+Sounds	Tingujt
+Typing sound	Tingulli i shkrimit
+Listen for Capri	Dëgjo për Capri
+Hearing	Dëgjimi
+Auto	Auto
+Free voice in games	Zë falas në lojëra
+Call mode (beta)	Modaliteti i thirrjes (beta)
+Her voice in your mic	Zëri i saj në mikrofonin tënd
+Get VB-CABLE	Merr VB-CABLE
+How to	Si
+Her voice in your mic: loudness	Zëri i saj në mikrofonin tënd: volumi
+MOVES	LËVIZJET
+Pop-in times	Kohët e shfaqjes
+Mini player	Mini lojtar
+Wander	Endu
+Sleep	Gjumë
+Pop-ins	Shfaqjet
+Glitch in at startup	Gabim në nisje
+KEYS	TASTET
+Talk: Ctrl + Alt + V	Fol: Ctrl + Alt + V
+Mute mic: Ctrl + Alt + N	Hesht mikrofonin: Ctrl + Alt + N
+Type: Ctrl + Alt + T	Shkruaj: Ctrl + Alt + T
+Hide/show: Ctrl + Alt + H	Fshih/shfaq: Ctrl + Alt + H
+Quiet: Ctrl + Alt + P	Heshtje: Ctrl + Alt + P
+Gaming Mode: Ctrl + Alt + G	Modaliteti i lojës: Ctrl + Alt + G
+Confirm	Konfirmo
+Cancel	Anulo
+Size	Madhësia
+Check in on me	Shiko si jam
+Edit check-in lines	Redakto frazat e Shiko si jam
+Always on top	Gjithmonë sipër
+Mainframe size	Madhësia e Mainframe
+Mainframe colours	Ngjyrat e Mainframe
+Head pats	Shpalosje kokës
+Pat stroke	Goditje me prekje
+Chaos when upset	Kaos kur zemërohet
+Legacy stand	Standi i vjetër
+Jealous of other AIs	Xhelozi ndaj AI të tjera
+Teases when another AI comes to the front.	Tallet kur një AI tjetër vjen në plan të parë.
+Close other AIs for me	Mbyll AI të tjera për mua
+Asks before closing only the apps you choose.	Pyet përpara se të mbyllë vetëm aplikacionet që zgjedh ti.
+Apps she may close	Aplikacionet që mund t'i mbyllë
+Choose apps	Zgjidh aplikacionet
+WATCH	SHIKO
+Watch my screen	Shiko ekranin tim
+Screens	Ekranet
+All screens	Të gjitha ekranet
+Remember what she sees	Mbaj mend çfarë shikon
+Every	Çdo
+Watch-along memory	Kujtesa e shikimit së bashku
+Code/Husk Mode	Modaliteti Kod/Husk
+Thinking	Duke menduar
+Default	E parazgjedhur
+Extra request JSON	JSON i kërkesës extra
+Add	Shto
+Verbosity	Shkurtësia
+Replies	Përgjigjet
+Memory	Kujtesa
+Memory size	Madhësia e kujtesës
+Max reply	Përgjigja maksimale
+Bubble	Flluskë
+Follow-up messages	Mesazhet e vazhdimit
+Use	Përdor
+A model in Ollama, on your local server or on your key.	Një model në Ollama, në serverin tënd lokal ose me çelësin tënd.
+HABITS	ZAKONET
+Open her memories	Hap kujtimet e saj
+Start with Windows	Nis me Windows
+Show on Discord	Shfaq në Discord
+Use her cursor	Përdor kursorin e saj
+Remember our chats	Mbaj mend bisedat tona
+Power saver	Kursyesi i energjisë
+Music app	Aplikacioni i muzikës
+Perch	Shtyllë
+Keep PC awake for jobs	Mbaj PC zgjuar për punët
+Hide in full screen	Fshih në ekran të plotë
+Mini player over full screen	Mini lojtar mbi ekran të plotë
+Explore while I'm away	Eksploro kur jam larg
+Explore after	Eksploro pas
+GAMES	LOJËRA
+Controls	Kontrollet
+Comments	Komentet
+Live reactions	Reagime të drejtpërdrejta
+Game sounds	Tingujt e lojës
+Gaming Mode	Modaliteti i lojës
+She reacts to your game until you close it.	Reagon ndaj lojës sate deri sa ta mbyllësh.
+Works best on MAX INTELLIGENCE.	Punon më mirë me MAX INTELLIGENCE.
+Fast hands in games	Duar të shpejta në lojëra
+Mute her	Hesht atë
+CLIPS	KLIPE
+Clip my games	Regjistro lojërat e mia
+Save big moments	Ruaj momentet e mëdha
+Save folder	Dosja e ruajtjes
+Choose folder	Zgjidh dosjen
+Open clips folder	Hap dosjen e klipeve
+Default length	Gjatësia e parazgjedhur
+Frame rate	Shpejtësia e kornizave
+Resolution	Rezolucioni
+Video bitrate	Bitrate i videos
+Weather	Moti
+Code mods can reach your whole PC. Only trusted ones.	Modifikimet e kodit mund të arrijnë të gjithë PC-në tënde. Vetëm ato të besuara.
+Import mod	Importo modifikim
+Browse mods	Shfleto modifikimet
+Mods folder	Dosja e modifikimeve
+INSTALLED	INSTALUAR
+Update mods	Përditëso modifikimet
+No mods match.	Asnjë modifikim nuk përputhet.
+On	Ndezur
+Remove	Hiq
+Publish	Publiko
+Options	Opsionet
+Back	Mbrapa
+Next	Tjetra
+COLORS	NGJYRA
+Reset colors	Rivendos ngjyrat
+Running on this PC	Duke punuar në këtë PC
+NORMAL	NORMAL
+OFF	JASHTË
+Local server address	Adresa e serverit lokal

@@ -129,13 +129,72 @@ namespace CapriDesktop
                 if (last.Length < UnsureHours) return false;
                 if ((now - last.To).TotalHours > 3) return false;
                 last.Asked = true;
+                // Their routine answers it when they have one: the same spell placed the same way twice before.
+                string usual = Usually(last);
+                if (usual != null) { last.Called = usual; Write(now); return false; }
                 Write(now);
                 question = Nightly(last)
-                    ? "You were gone a good while there. Were you asleep, or working?"
-                    : "You were off for most of that. Work, or were you out?";
+                    ? Pick("You were gone a good while. Sleeping, or were you working?", "Long one. Asleep, or working a shift?")
+                    : Pick("Where were you? Work, or out?", "Did you get up to anything, or was that a working one?");
                 return true;
             }
         }
+
+        // The long spell they just came back from, for her small talk: what it was ("slept", "worked" or "out"), or
+        // null while it is short, not yet placed, or no longer news.
+        internal static string Back(DateTime now)
+        {
+            lock (gate)
+            {
+                Fresh();
+                if (spells.Count == 0) return null;
+                Spell last = spells[spells.Count - 1];
+                if (last.Length < UnsureHours || (now - last.To).TotalHours > 3 || now < last.To) return null;
+                return last.Called.Length > 0 ? last.Called : null;
+            }
+        }
+
+        // Their own word about the spell she asked about, already read as "worked", "slept" or "out".
+        internal static void Called(string label)
+        {
+            if (label != "worked" && label != "slept" && label != "out") return;
+            lock (gate)
+            {
+                Fresh();
+                for (int each = spells.Count - 1; each >= 0; each--)
+                {
+                    if (!spells[each].Asked || spells[each].Called.Length > 0) continue;
+                    spells[each].Called = label;
+                    Write(DateTime.Now);
+                    return;
+                }
+            }
+        }
+
+        // What a spell was, from the ones before it that they already placed: two or more at about the same time
+        // of day and about as long, all the same thing, and it is that again. A routine is asked about until she
+        // has seen it, then not, and a schedule that moves keeps being asked about because nothing matches.
+        private static string Usually(Spell spell)
+        {
+            Dictionary<string, int> seen = new Dictionary<string, int>();
+            int matched = 0;
+            foreach (Spell before in spells)
+            {
+                if (before == spell || before.Called.Length == 0 || (spell.From - before.From).TotalDays > 14) continue;
+                int apart = Math.Abs(before.From.Hour - spell.From.Hour);
+                if (Math.Min(apart, 24 - apart) > 2 || Math.Abs(before.Length - spell.Length) > 3) continue;
+                int had;
+                seen.TryGetValue(before.Called, out had);
+                seen[before.Called] = had + 1;
+                matched++;
+            }
+            foreach (KeyValuePair<string, int> one in seen) if (one.Value >= 2 && one.Value == matched) return one.Key;
+            return null;
+        }
+
+        private static readonly Random dice = new Random();
+
+        private static string Pick(string one, string other) { return dice.Next(2) == 0 ? one : other; }
 
         // Whether a spell sits in the part of the day they are not usually about, which is the shape of a night
         // whatever hours they keep. Falls back to the small hours while she does not know their routine yet.
@@ -269,9 +328,9 @@ namespace CapriDesktop
                 StringBuilder made = new StringBuilder();
                 made.AppendLine("# When this PC was left alone");
                 made.AppendLine();
-                made.AppendLine("> One line per spell with no keyboard or mouse at all, longest kept last, and the last");
-                made.AppendLine("> moment there was any. She reads sleep and work out of these. Delete the file to");
-                made.AppendLine("> start it again. Nothing here leaves this PC.");
+                made.AppendLine(">! One line per spell with no keyboard or mouse at all, longest kept last, and the last");
+                made.AppendLine(">! moment there was any. She reads sleep and work out of these. Delete the file to");
+                made.AppendLine(">! start it again. Nothing here leaves this PC.");
                 made.AppendLine();
                 made.AppendLine("here | " + seen.ToString("o", CultureInfo.InvariantCulture));
                 foreach (Spell spell in spells)

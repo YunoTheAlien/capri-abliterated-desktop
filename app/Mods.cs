@@ -26,18 +26,39 @@ namespace CapriDesktop
         [DataMember(Name = "accessory")] public bool Accessory;
         // What accessories were called before they had a name of their own.
         [DataMember(Name = "overlay")] public bool Overlay;
+        // Personalities and moods the mod brings, each a name and the text of its .md file. One marked senpai is
+        // only written with the switch at the bottom of sys.md on, into the senpai folder, like her own.
+        [DataMember(Name = "personalities")] public ModPack[] Personalities;
+        [DataMember(Name = "moods")] public ModPack[] Moods;
         internal bool Intro;
         internal string[] Permissions = new string[0];
         // A code mod's // requires: line: the mod API it needs, and other mods that must be installed and on.
         internal int NeedsApi;
         internal string[] Requires = new string[0];
         internal string[] Games;
+        // The programs a skill is for, so it is offered when one of them is in front.
+        internal string[] Apps = new string[0];
         internal string Know;
         // What a code mod reaches for, read off its source when the file is read. Shown where it is approved.
         internal string[] Reaches = new string[0];
+        // Every outside address in its code, whole. Reaches names only each site; these go under it.
+        internal string[] Places = new string[0];
+        // Why its source cannot be read, or null; that source laid back out when it can be; and whether that
+        // is worth a second question before it runs.
+        internal string Unreadable;
+        internal string Tidy;
+        internal bool AskTwice;
         // Pools of hers this mod says instead, by zone name. Read apart from the rest, since a JSON object
         // with names of its own does not fit a contract with fixed fields.
         internal Dictionary<string, string[]> Zones;
+    }
+
+    [DataContract]
+    internal sealed class ModPack
+    {
+        [DataMember(Name = "name")] public string Name;
+        [DataMember(Name = "senpai")] public bool Senpai;
+        [DataMember(Name = "text")] public string Text;
     }
 
     [DataContract]
@@ -56,7 +77,8 @@ namespace CapriDesktop
         internal ModFile File;
         internal string Path;
         internal bool On;
-        internal bool Code, Changed, Skin, Skill;
+        // Own: a skill she was taught here, kept in her own skills folder rather than installed as a mod.
+        internal bool Code, Changed, Skin, Skill, Own;
         internal string Hash;
     }
 
@@ -90,6 +112,9 @@ namespace CapriDesktop
         internal Mods(string data)
         {
             folder = Path.Combine(data, "mods");
+            ownFolder = Path.Combine(data, OwnFolderName);
+            // The directory's last good list lives with her data, where a temp-folder clean cannot take it.
+            ModDirectory.KeptFolder = Path.Combine(data, "mod-directory");
             All = new List<Mod>();
             Problems = new List<string>();
             Hands.AlsoHeard = delegate(string words)
@@ -128,11 +153,12 @@ namespace CapriDesktop
             All.Clear();
             Problems.Clear();
             HashSet<string> off;
-            string[] files;
+            string[] files, own = new string[0];
             try
             {
                 off = Off();
                 files = new string[0];
+                own = OwnFiles();
                 if (Directory.Exists(folder))
                 {
                     List<string> found = new List<string>(Directory.GetFiles(folder, "*" + Extension));
@@ -163,6 +189,22 @@ namespace CapriDesktop
                         ModFile read = Read(File.ReadAllText(file));
                         if (!string.Equals(read.Id, Path.GetFileNameWithoutExtension(file), StringComparison.OrdinalIgnoreCase)) throw new ModException("its file name doesn't match its id, " + read.Id + ".");
                         All.Add(new Mod { File = read, Path = file, On = !off.Contains(read.Id) });
+                    }
+                    catch (Exception error)
+                    {
+                        if (!(error is ModException || error is IOException || error is UnauthorizedAccessException)) throw;
+                        string problem = Path.GetFileName(file) + ": " + error.Message;
+                        Problems.Add(problem);
+                        Brain.Log("mods", -1, problem);
+                    }
+                }
+                // Skills she was taught here, after the installed ones.
+                foreach (string file in own)
+                {
+                    try
+                    {
+                        Mod mine = LoadOwn(file, off);
+                        if (mine != null) All.Add(mine);
                     }
                     catch (Exception error)
                     {
@@ -305,7 +347,9 @@ namespace CapriDesktop
             CheckDetails(read);
             read.WakeNames = read.WakeNames ?? new string[0];
             read.HeardAs = read.HeardAs ?? new string[0];
-            if (read.WakeNames.Length == 0 && read.HeardAs.Length == 0 && !read.SoundsLike && !read.HearingLog && read.Colors == null && (read.Zones == null || read.Zones.Count == 0)) throw new ModException("That mod doesn't change anything. It needs wake_names, heard_as, sounds_like, hearing_log, colors or zones.");
+            if (read.WakeNames.Length == 0 && read.HeardAs.Length == 0 && !read.SoundsLike && !read.HearingLog && read.Colors == null && (read.Zones == null || read.Zones.Count == 0)
+                && (read.Personalities == null || read.Personalities.Length == 0) && (read.Moods == null || read.Moods.Length == 0))
+                throw new ModException("That mod doesn't change anything. It needs wake_names, heard_as, sounds_like, hearing_log, colors, zones, personalities or moods.");
             if (read.Colors != null) CheckColours(read.Colors);
             if (read.WakeNames.Length > MostNames) throw new ModException("A mod can add up to " + MostNames + " names.");
             if (read.HeardAs.Length > MostSpellings) throw new ModException("A mod can add up to " + MostSpellings + " spellings.");
@@ -378,10 +422,107 @@ namespace CapriDesktop
             logging = wantLog;
             if (!wantLog) DeleteLog();
             ApplySkin();
+            LayPacks();
             skills = All.FindAll(mod => mod.Skill && mod.On).ToArray();
             knownSkills = All.FindAll(mod => mod.Skill).ToArray();
             skillNote = Standing(skills);
             note = names.Length == 0 ? "" : "\nThey can also call you " + Listed(names) + ". Those are nicknames for you, so answer to them like your own name.";
+        }
+
+        // ---------- Personalities and moods from mods ----------
+
+        private const string LaidFile = "laid-packs.txt";
+        private const int LongestPack = 200000, LongestPackName = 40;
+
+        // The packs the mods that are on bring, written into her folders; the ones a mod no longer brings, because it
+        // was turned off or removed, taken away again. What was written is noted in laid-packs.txt with the text
+        // it had, so a file somebody has edited since is left alone, and one that was there first is never written
+        // over. A senpai one is written only with the switch on, and switching off does not take it away.
+        internal void LayPacks()
+        {
+            try
+            {
+                string ledger = Path.Combine(folder, LaidFile);
+                Dictionary<string, string> laid = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                if (File.Exists(ledger))
+                    foreach (string row in File.ReadAllLines(ledger))
+                    {
+                        int tab = row.IndexOf('\t');
+                        if (tab > 0) laid[row.Substring(tab + 1)] = row.Substring(0, tab);
+                    }
+                Dictionary<string, string> wanted = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                HashSet<string> senpai = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (Mod mod in All)
+                {
+                    if (!mod.On) continue;
+                    Want(wanted, senpai, mod.File.Personalities, true);
+                    Want(wanted, senpai, mod.File.Moods, false);
+                }
+                bool changed = false;
+                foreach (KeyValuePair<string, string> one in new List<KeyValuePair<string, string>>(laid))
+                {
+                    if (wanted.ContainsKey(one.Key)) continue;
+                    try { if (File.Exists(one.Key) && Fingerprint(File.ReadAllText(one.Key)) == one.Value) File.Delete(one.Key); }
+                    catch (IOException) { continue; }
+                    catch (UnauthorizedAccessException) { continue; }
+                    laid.Remove(one.Key);
+                    changed = true;
+                }
+                foreach (KeyValuePair<string, string> one in wanted)
+                {
+                    if (senpai.Contains(one.Key) && !Brain.SenpaiOn) continue;
+                    string print = Fingerprint(one.Value), had;
+                    bool ours = laid.TryGetValue(one.Key, out had);
+                    try
+                    {
+                        if (File.Exists(one.Key) && (!ours || had == print || Fingerprint(File.ReadAllText(one.Key)) != had)) continue;
+                        Directory.CreateDirectory(Path.GetDirectoryName(one.Key));
+                        File.WriteAllText(one.Key, one.Value, new UTF8Encoding(false));
+                        laid[one.Key] = print;
+                        changed = true;
+                    }
+                    catch (IOException error) { Brain.Log("mods", -1, error.Message); }
+                    catch (UnauthorizedAccessException error) { Brain.Log("mods", -1, error.Message); }
+                }
+                if (!changed) return;
+                List<string> rows = new List<string>();
+                foreach (KeyValuePair<string, string> one in laid) rows.Add(one.Value + "\t" + one.Key);
+                Directory.CreateDirectory(folder);
+                File.WriteAllLines(ledger, rows.ToArray());
+                Personalities.Forget();
+            }
+            catch (Exception caughtOne) { Brain.Caught(caughtOne); }
+        }
+
+        private static void Want(Dictionary<string, string> wanted, HashSet<string> senpai, ModPack[] packs, bool personality)
+        {
+            if (packs == null) return;
+            foreach (ModPack pack in packs)
+            {
+                if (pack == null || string.IsNullOrWhiteSpace(pack.Name) || string.IsNullOrWhiteSpace(pack.Text) || pack.Text.Length > LongestPack) continue;
+                string name = Regex.Replace(pack.Name.Trim(), @"[^\p{L}\p{N} _-]", "").Trim();
+                if (name.Length == 0 || name.Length > LongestPackName) continue;
+                string path = personality
+                    ? (pack.Senpai ? Personalities.SenpaiPathOf(name) : Personalities.PlainPathOf(name))
+                    : (pack.Senpai ? Dynamics.SenpaiPathOf(name) : Dynamics.PlainPathOf(name));
+                if (string.IsNullOrEmpty(path) || wanted.ContainsKey(path)) continue;
+                // Her packs open with their name as a title, which is how a file in the senpai folder is known.
+                string text = pack.Text.Replace("\r\n", "\n").Trim();
+                if (!text.StartsWith("# ", StringComparison.Ordinal)) text = "# " + name + "\n\n" + text;
+                wanted[path] = text.Replace("\n", Environment.NewLine) + Environment.NewLine;
+                if (pack.Senpai) senpai.Add(path);
+            }
+        }
+
+        private static string Fingerprint(string text)
+        {
+            using (System.Security.Cryptography.SHA256 sha = System.Security.Cryptography.SHA256.Create())
+            {
+                byte[] sum = sha.ComputeHash(Encoding.UTF8.GetBytes((text ?? "").Replace("\r\n", "\n")));
+                StringBuilder hex = new StringBuilder();
+                foreach (byte b in sum) hex.Append(b.ToString("x2"));
+                return hex.ToString();
+            }
         }
 
         internal string LogPath { get { return Path.Combine(folder, LogFile); } }
