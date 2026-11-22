@@ -204,3 +204,18 @@ Running on this PC	Qed jaħdem fuq dan il-PC
 NORMAL	NORMALI
 OFF	OFF
 Local server address	Indirizz tas-server lokali
+Remember panel position	Ftakar il-pożizzjoni tal-pannell
+Custom colours	Kuluri personalizzati
+Custom colours...	Kuluri personalizzati...
+Choose	Agħżel
+Hers	Tagħha
+Quiet	Kwiet
+Quiet min	Kwiet min
+Quiet max	Kwiet max
+Until I turn it off	Sakemm nitfih jien
+Quiet on calls	Kwiet waqt it-telefonati
+Quiet in videos	Kwiet fil-vidjows
+Quiet until {n}:{n}	Kwiet sal-{n}:{n}
+Quiet until turned off	Kwiet sakemm jintefa
+Export settings	Esporta s-settings
+Import settings	Importa s-settings

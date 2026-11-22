@@ -2,16 +2,9 @@ using System;
 
 namespace CapriDesktop
 {
-    // Where on her you put your hand, and what she says about it.
-    //
-    // A stroke anywhere on her read as the same head pat, and the other ctrl click landed the same wherever it hit, so her
-    // head and her hip were the same place as far as she was concerned.
-    //
-    // Some zones are named by what attached, and are read and written only with the switch on.
-    //
-    // Whether she wants it is her forwardness, the same number her brain is told about: five or more and she is
-    // pleased, under that and she moves your hand, whatever the toggle says. On air it is zero by that number's
-    // own rule, so none of this reaches a stream.
+    // Where on her you put your hand, and what she says about it. Some zones are named by what attached and work only
+    // with the switch on. Her forwardness decides: five or more and she's pleased, under that she moves your hand; on
+    // air it is zero.
     internal static class Touch
     {
         internal const string FileName = "touch.md";
@@ -22,9 +15,8 @@ namespace CapriDesktop
         internal const string Middle = "When you touch her middle";
         internal const string Legs = "When you touch her legs";
         internal const string Feet = "When you touch her feet";
-        // What the two bands over her chest and her hips answer with when the switch is off. Without it a
-        // hand there got nothing back at all, which reads as her being broken rather than as a boundary. The
-        // high five is a ctrl click rather than a zone, and has its own lines.
+        // What the bands over her chest and hips answer with while the switch is off, so a hand there meets a boundary,
+        // not silence. The high five is a ctrl click with its own lines.
         internal const string Tickled = "When you tickle her";
         // The senpai ones, and what she says when she is not in the mood for them.
         internal static string Upper { get { return Extended.Get("upper"); } }
@@ -35,29 +27,7 @@ namespace CapriDesktop
         // The forwardness at which she welcomes a senpai zone rather than moving your hand.
         internal const int Willing = 5;
 
-        // Lines replaced in her ordinary zones, in files already written as well as in the one she ships.
-        private static readonly string[,] Reworded =
-        {
-            { "Right there, yeah.", "Right behind the ear, yeah." },
-            { "Oh, that's the one. Do that again.", "Oh, that's the spot. Mind the antenna." },
-            { "That's cheating and I'm not stopping you.", "That's cheating. My hair's a lost cause now." },
-            { "You know exactly what you're doing.", "You've done this before, haven't you." },
-            { "Press harder. I can take it.", "Lean on it. There's a knot under there." },
-            { "Harder. I'm not made of glass. Mostly.", "Dig in. I'm not made of glass. Mostly." },
-            { "Oh, that's criminal. Don't stop.", "Oh, that's the knot. Keep at it." },
-            { "Both hands, choom. Commit.", "Both hands, choom. It's a big knot." },
-            { "Go on, dig in. I've earned it.", "Go on, knuckle it out. I've earned it." },
-            { "Mm. Keep that up and I'll owe you.", "Mm. Keep that up and I owe you a coffee." },
-            { "That's a bold place to put a hand.", "That's a lot of hand for a ribcage." },
-            { "That is not a handle.", "My ribs are not a handle." },
-            { "That's a bold hand placement, choom.", "That's a lot of hand for a kneecap, choom." },
-            { "If you're checking they're real, they are.", "If you're checking the chrome's real, it is." },
-            { "Harder. I've been sat here all day.", "Right into that knot, go on. I've been sat here all day." },
-            { "Mm. Don't stop on my account.", "That's the one. Mind the shoulder blade." },
-            { "Rude. Do it again.", "Rude. I'm getting you back for that." }
-        };
-
-        private static readonly LineFile file = new LineFile(delegate { return Defaults; }, Reworded);
+        private static readonly LineFile file = new LineFile(delegate { return Defaults; });
 
         internal static string Kept { get { return file.Kept; } set { file.Kept = value; } }
         internal static string Text { get { return file.Text; } }
@@ -82,6 +52,12 @@ namespace CapriDesktop
             return file.Pick(LineFile.Senpai(zone), null);
         }
 
+        // The lines she can say for a public zone, as her file holds them.
+        internal static string[] Lines(string zone)
+        {
+            return string.IsNullOrEmpty(zone) || Senpai(zone) ? new string[0] : file.Lines(zone);
+        }
+
         // The zones that are not in the public build. Something attaches them before her file is
         // written; with nothing attached the file simply ends after her ordinary ones.
         internal static string SenpaiTouch = "";
@@ -89,9 +65,8 @@ namespace CapriDesktop
         internal static string Defaults { get { return
             "# Where you touch her\n" +
             "\n" +
-            ">! What she says for a hand in one place rather than another. A zone with nothing under it falls\n" +
-            ">! back to her ordinary lines for being petted, so emptying a section is how you switch one off.\n" +
-            ">! Her personality and her mood still colour everything else she says; these are the words themselves.\n" +
+            ">! What she says for a hand in each place.\n" +
+            ">! An empty zone uses her ordinary petted lines, so empty one to switch it off.\n" +
             ">! Tokens: %petname% %name%\n" +
             "\n" +
             "## When you touch her head\n" +

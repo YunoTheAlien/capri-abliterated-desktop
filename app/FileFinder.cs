@@ -194,13 +194,13 @@ namespace CapriDesktop
             finally { FindClose(handle); }
         }
 
-        // Cloud placeholders keep names below them; junctions and symlinks can loop back (john_sandevistan, B88).
+        // Cloud placeholders keep names below them; junctions and symlinks can loop back (john_sandevistan).
         internal static bool Follow(FileAttributes attributes, uint tag)
         {
             return (attributes & FileAttributes.ReparsePoint) == 0 || (tag != 0 && (tag & 0x20000000) == 0);
         }
 
-        // Check each likely place at the same depth, so a big Desktop can't hold up a name sitting in Downloads (B88).
+        // Check each likely place at the same depth, so a big Desktop can't hold up a name sitting in Downloads.
         internal static List<FileMatch> Search(string description, IEnumerable<string> roots, Func<bool> stopped, HashSet<string> seen = null, Func<FileSystemInfo, bool> follow = null)
         {
             List<FileMatch> matches = new List<FileMatch>();
@@ -372,7 +372,7 @@ namespace CapriDesktop
         [DllImport("shell32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)] private static extern int SHParseDisplayName(string name, IntPtr context, out IntPtr item, uint attributes, IntPtr foundAttributes);
         [DllImport("shell32.dll")] private static extern int SHOpenFolderAndSelectItems(IntPtr item, uint count, IntPtr children, uint flags);
 
-        // The Shell says whether selecting it worked, which a launched Explorer can't (B88). If the Shell won't from this thread,
+        // The Shell says whether selecting it worked, which a launched Explorer can't. If the Shell won't from this thread,
         // Explorer's own /select still opens the folder on it, the way it always did.
         private static bool Show(string path)
         {

@@ -19,9 +19,7 @@ namespace CapriDesktop
 
         private void MakeWorkspaceKey()
         {
-            // The key said WORKSPACE (beta) and took the whole band to the right edge, for a word it says again on its own
-            // window with a BETA plate beside it. Shortened to the name alone, which frees the end of the row for LOG: the
-            // one thing worth opening from here that had nowhere to live but the right-click menu.
+            // The key says WORKSPACE alone, since its window shows BETA itself, which frees the row's end for LOG.
             workspaceKey = Make("WORKSPACE", 168, 57, 128, 18, delegate { capri.OpenWorkspace(); });
             workspaceKey.Accent = Cyan;
             workspaceKey.AccessibleName = "Workspace: Claude Code chats in your folders";
@@ -213,10 +211,8 @@ namespace CapriDesktop
         }
     }
 
-    // Her Workspace window, built to work like Metis: chats down the side, the conversation in the middle, and a composer at
-    // the bottom whose + adds folders and files through the regular Explorer windows. The chosen folders and files sit as
-    // chips over the message box. Everything is drawn in her look, and the frame is shaped like the Mainframe's, so the
-    // window's outline and its painted corners always agree.
+    // Her Workspace window: chats down the side, the conversation in the middle, a composer whose + adds folders and
+    // files through Explorer, shown as chips. Drawn in her look with the Mainframe's frame shape.
     internal sealed class WorkspaceWindow : Form, LookWindow, WorkGround
     {
         internal const int Wide = 1080, Tall = 740, Narrowest = 900, Shortest = 600;
@@ -271,6 +267,7 @@ namespace CapriDesktop
             SuspendLayout();
             Text = "Capri Workspace (beta)";
             FormBorderStyle = FormBorderStyle.None;
+            Neon.NeverFullScreen(this);
             AutoScaleMode = AutoScaleMode.None;
             StartPosition = FormStartPosition.Manual;
             BackColor = Neon.Ground;
@@ -616,9 +613,9 @@ namespace CapriDesktop
         // A path as it's shown: whole, or as the smoke test's pictures show their stand-in folders.
         internal string Display(string path) { return PathAlias != null && !string.IsNullOrEmpty(path) ? PathAlias(path) : path; }
 
-        // Paths as the chat sees them: inside the folder Claude Code runs in they're relative, inside another of the chat's
-        // folders they lead with that folder's name, and anywhere else they stay whole.
-        // Everything Shorten and the trust card read, so the conversation knows when its cards need laying out again.
+        // Paths as the chat sees them: relative inside Claude Code's folder, led by the folder's name inside another of
+        // the chat's folders, whole elsewhere. Shorten and the trust card read these, so cards know when to lay out
+        // again.
         internal string PathsSeen()
         {
             PathLookups++;
@@ -1512,9 +1509,9 @@ namespace CapriDesktop
             private void Scroll(int to) { offset = Math.Max(0, Math.Min(to, Content - Height)); Invalidate(); }
         }
 
-        // The message box and everything around it, like Metis's composer: the chat's folders and files as chips along the
-        // top, the box itself, and a row under it with +, MODE, MODEL and Send. The first folder chip is where Claude Code runs,
-        // so it has no cross; a file chip turns faint once it has gone out with a message.
+        // The message box and what surrounds it, like Metis's composer: folder and file chips on top, the box, and +,
+        // MODE, MODEL and Send under it. The first folder chip is where Claude Code runs, with no cross; a sent file's
+        // chip turns faint.
         private sealed class Composer : Control, WorkGround
         {
             private sealed class Chip { internal string Path, Name; internal bool Folder, Main, Sent; internal Rectangle Box, Cross; }
@@ -1803,10 +1800,8 @@ namespace CapriDesktop
             [DllImport("user32.dll")] private static extern IntPtr BeginPaint(IntPtr window, out PaintSheet sheet);
             [DllImport("user32.dll")] private static extern bool EndPaint(IntPtr window, ref PaintSheet sheet);
 
-            // While the box is empty its whole paint is hers, in one go: the field and the cue, focused or not. An empty edit
-            // control has nothing else to draw (the caret is Windows' own), so the cue can't be lost between the control's paint
-            // and a second one on top. A print (WM_PRINTCLIENT, how Windows copies the box) gets the same, and the box repaints
-            // whenever it gains or loses focus or empties.
+            // While empty, the box's whole paint is hers in one go, field and cue, so the cue is never lost between two
+            // paints. WM_PRINTCLIENT gets the same, and it repaints on focus changes and when emptied.
             protected override void WndProc(ref Message message)
             {
                 int kind = message.Msg;
@@ -1978,11 +1973,8 @@ namespace CapriDesktop
 
             protected override void OnPaintBackground(PaintEventArgs e) { }
         }
-        // The conversation, drawn by hand in her fonts: Bahnschrift for words and her own mono for code. Their messages sit
-        // in teal plates on the right; Claude's words run down the left beside a rose line, with code in dark wells. Tools are
-        // one quiet row each that opens to show the result, and approvals, trust and undo questions are plates with real keys.
-        // A message is picked with a click and copied with Ctrl+C or the right-click menu. Only the 150 items in view are laid
-        // out, and only the cards waiting on an answer hold controls.
+        // The conversation, drawn in her fonts: their messages in teal plates on the right, Claude's words down the
+        // left by a rose line, code in dark wells, tools as rows that open. Only the 150 items in view are laid out.
         private sealed class Transcript : Control, WorkGround
         {
             internal sealed class Block
@@ -2323,9 +2315,8 @@ namespace CapriDesktop
                 return first == null ? null : turn;
             }
 
-            // Keeps their place. At the end while the conversation grows, it follows, as Metis does. Otherwise the first thing they
-            // could see stays where it was, even when what shrank was at the bottom (an answered card folding away): the room it
-            // leaves stays under the end until they scroll or more arrives.
+            // Keeps their place: at the end it follows new content, as Metis does; otherwise the first visible thing
+            // stays put, even when something above the end folds away, until they scroll or more arrives.
             private void Hold(bool follow, int tall, List<KeyValuePair<WorkspaceItem, int>> anchors, int was)
             {
                 if (follow && Content >= tall) { Following = true; ScrollTo(int.MaxValue); Following = true; return; }
@@ -2623,9 +2614,9 @@ namespace CapriDesktop
                 return name.Length > 0 ? name : path;
             }
 
-            // The summary line's words, Metis's way: what happened, counted by kind. A call that failed, was denied or was stopped
-            // counts only there, named by what it was ("1 command failed", "1 read denied"), so the parts add up to the calls.
-            // Only finished calls count; a call that's running says what it's doing instead.
+            // The summary line's words, Metis's way: what happened, counted by kind; a failed, denied or stopped call
+            // counts only as that ("1 command failed"), so parts add up. Only finished calls count; a running one says
+            // what it's doing.
             private void Summarise(Block lead, List<Block> run)
             {
                 int commands = 0, searches = 0, web = 0, todos = 0, agents = 0;
@@ -2891,9 +2882,9 @@ namespace CapriDesktop
                 return inks;
             }
 
-            // Her mono rows in a well, each source line in its own ink (red for removed lines, green for added ones), wrapped at
-            // a path separator or a space so a path never breaks mid-word. With most above 0 a long well stops after that many
-            // rows and offers the rest as "N more lines".
+            // Her mono rows in a well, each line in its own ink (red removed, green added), wrapped at a path separator
+            // or space so a path never breaks mid-word. With most above 0 a long well stops there and offers "N more
+            // lines".
             private int Well(Block block, string text, List<string> lines, List<Color> inks, string tag, int x, int y, int width, int most, int made = -1)
             {
                 Font font = Look.Drawable(string.Join("\n", lines.ToArray())) ? window.mono : window.monoPlain;
@@ -3188,9 +3179,9 @@ namespace CapriDesktop
                 internal bool Space, Break;
             }
 
-            // Styled runs as lines of runs: each run in its own font, a line breaking at a space (inside a word only when the
-            // word is wider than a whole line) or at a line break in the text. Each stretch of one run on one line is drawn
-            // as a piece and selectable as a Seg counted from start along the part's shown characters. Returns the bottom.
+            // Styled runs as lines of runs, each in its own font, breaking at spaces (inside a word only when wider
+            // than a line) or at line breaks. Each run's stretch on a line is a piece, selectable as a Seg counted from
+            // start. Returns the bottom.
             private int Runs(Block block, int part, int start, List<WordRun> runs, Font font, Color ink, int x, int y, int width, int pitch, WordAlign align)
             {
                 width = Math.Max(Z(24), width);

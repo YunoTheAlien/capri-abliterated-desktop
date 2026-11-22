@@ -204,3 +204,18 @@ Running on this PC	Работи на овој PC
 NORMAL	НОРМАЛНО
 OFF	ИСКЛУЧЕНО
 Local server address	Адреса на локалниот сервер
+Remember panel position	Запомни ја положбата на панелот
+Custom colours	Сопствени бои
+Custom colours...	Сопствени бои...
+Choose	Избери
+Hers	Нејзини
+Quiet	Тишина
+Quiet min	Тишина min
+Quiet max	Тишина max
+Until I turn it off	Додека не го исклучам
+Quiet on calls	Тишина за време на повици
+Quiet in videos	Тишина во видеа
+Quiet until {n}:{n}	Тишина до {n}:{n}
+Quiet until turned off	Тишина до исклучување
+Export settings	Извези поставки
+Import settings	Увези поставки

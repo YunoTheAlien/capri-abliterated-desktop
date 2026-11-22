@@ -204,3 +204,18 @@ Running on this PC	ทำงานบนพีซีนี้
 NORMAL	ปกติ
 OFF	ปิด
 Local server address	ที่อยู่เซิร์ฟเวอร์ในเครื่อง
+Remember panel position	จำตำแหน่งแผง
+Custom colours	สีที่กำหนดเอง
+Custom colours...	สีที่กำหนดเอง...
+Choose	เลือก
+Hers	ของเธอ
+Quiet	เงียบ
+Quiet min	เงียบ min
+Quiet max	เงียบ max
+Until I turn it off	จนกว่าฉันจะปิด
+Quiet on calls	เงียบระหว่างโทร
+Quiet in videos	เงียบเมื่อดูวิดีโอ
+Quiet until {n}:{n}	เงียบถึง {n}:{n}
+Quiet until turned off	เงียบจนกว่าจะปิด
+Export settings	ส่งออกการตั้งค่า
+Import settings	นำเข้าการตั้งค่า

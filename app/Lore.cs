@@ -7,17 +7,8 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
-    // What she tells them about herself, a line at a time.
-    //
-    // Her pools are built so nothing repeats, which is right for a reaction and wrong for a story: a line from
-    // the middle of one, then a line from the end of another, is not a story at all. So this file is read as
-    // pieces rather than as pools. A piece is a section, its lines are told in the order they are written, and
-    // she stays on it until it is finished. Only then does she start another.
-    //
-    // A finished piece is written down and not told again until she has been through them all, so nobody hears
-    // the same story twice in a month of her saying one of these a day.
-    //
-    // Everything in it is hers to rewrite, and a piece somebody adds is told like any other.
+    // What she tells them about herself: each section is a piece told in order, line by line, until it ends. A finished
+    // piece isn't told again until she has been through them all.
     internal static class Lore
     {
         internal const string FileName = "lore.md";
@@ -119,22 +110,13 @@ namespace CapriDesktop
             return null;
         }
 
-        // Past this she is not offered in the editor. It lays a whole document out as pages, so a file of
-        // several megabytes would hang it rather than open, and a lore file can run to that easily. Everything
-        // else about her stories works the same at any size: only editing them by hand stops.
+        // Past this she isn't offered in the editor, which lays a whole document out as pages and would hang on
+        // megabytes. Her stories work the same at any size otherwise.
         internal const long MostEditable = 262144;
 
         // ---------- The pack beside the installer ----------
-        //
-        // Her stories run to thousands of pieces and grow every time somebody writes more. None of that can
-        // live in the exe: content in the exe means the exe changes every time a line of it does, and an exe
-        // that changes cannot be certified or told apart from the one before it. So the pack is a file,
-        // lore.md, sitting beside Capri-Setup.exe, and setup lays it down.
-        //
-        // Laying it down is a merge by heading, never a replacement. Theirs is theirs: a piece they have
-        // rewritten keeps their words, and a piece they deleted stays deleted, which is why this runs once per
-        // pack rather than every start. What it ran against last is written beside her bookmark, so a new pack
-        // is noticed and the same one is not laid twice.
+        // Her stories live in lore.md beside Capri-Setup.exe, not the exe, so the exe stays the same. Setup merges it
+        // by heading once per pack: their rewrites and deletions stand.
         internal const string PackName = "lore.md";
         internal const string PackMark = "lore.pack";
 
@@ -272,9 +254,9 @@ namespace CapriDesktop
             return LaidOne(PackPath, Kept, PackMarked, delegate { file.Write(false); });
         }
 
-        // One pack into one of her files: renames followed, then every piece she does not have appended in the
-        // pack's order. Returns how many went in, or -1 when there was nothing to do. The base file starts from
-        // what she ships; a numbered one she does not have yet starts empty and takes the whole pack.
+        // One pack into one of her files: renames followed, then every piece she lacks appended in the pack's order.
+        // How many went in, or -1 with nothing to do. The base file starts from stock; a new numbered one takes the
+        // whole pack.
         private static int LaidOne(string packPath, string keptPath, string markPath, Action first)
         {
             try
@@ -287,8 +269,11 @@ namespace CapriDesktop
                 if (first != null) first();
                 bool isBase = first != null;
                 string had = File.Exists(keptPath) ? File.ReadAllText(keptPath) : isBase ? Text : "";
+                // Her own file still as she wrote it stays recorded as hers once the pack is in it, so an update knows
+                // nobody touched it.
+                bool pristine = isBase && File.Exists(keptPath) && (CapriDesktop.Notes.Untouched(keptPath)
+                    || had.Replace("\r\n", "\n").TrimEnd() == Text.Replace("\r\n", "\n").TrimEnd());
                 bool swapped = false;
-                if (isBase) had = Mended(had, out swapped);
                 bool renamed;
                 had = Renamed(had, pack, out renamed);
                 swapped |= renamed;
@@ -317,6 +302,7 @@ namespace CapriDesktop
                 if (added > 0 || swapped)
                 {
                     File.WriteAllText(keptPath, made, new UTF8Encoding(false));
+                    if (pristine) CapriDesktop.Notes.Shipped(keptPath, made);
                     lock (gate) { read = false; }
                 }
                 Note(markPath, stamp);
@@ -328,13 +314,8 @@ namespace CapriDesktop
         // Added to the pack's stamp once renames are followed, so a pack laid before that is gone through once more.
         private const string Tidied = ":renames";
 
-        // A piece the pack renamed is the same piece, not a new one: only a new file is new lore. Laying went by
-        // heading alone, so a rename was appended as a second copy and she could tell that story twice.
-        //
-        // Her piece takes the pack's heading when its lines are the pack piece's lines word for word and she has
-        // nothing under the new heading yet. A copy already appended that way, the same lines under a heading the
-        // pack no longer has, is taken out. Lines that differ at all are never touched, so a piece they rewrote
-        // keeps their words.
+        // A piece the pack renamed is the same piece: hers takes the new heading when its lines match word for word,
+        // and a duplicate appended under an old heading goes. Lines that differ at all are never touched.
         internal static string Renamed(string text, string pack, out bool changed)
         {
             changed = false;
@@ -395,39 +376,6 @@ namespace CapriDesktop
             return changed ? string.Join("\n", rows.ToArray()) : text;
         }
 
-        // Lines a newer pack corrects in a piece she already has. Laying a pack only adds pieces, so a fix inside one
-        // reached new installs and nobody else. Swapped only while the line still says exactly what shipped, under its
-        // own heading, so a piece they rewrote keeps their words.
-        private static readonly string[,] Corrected =
-        {
-            { "Why I stopped with the grenades", "I used to have a habit of solving things with something you throw and then hide from.", "I used to have a habit of solving things with whatever the nearest hand was holding." },
-            { "The pads on the roofs", "I've been in one. It's four minutes of silence and a view that explains every decision they make.", "I've only heard about it. Four minutes of silence and a view that explains every decision they make." },
-            { "The sprayers", "Everybody out there has a cousin who knows a pilot. I've been up in one. Never again, and I'd go tomorrow.", "Everybody out there has a cousin who knows a pilot. I've never been up in one. I'd go tomorrow, and never again after." },
-            { "The meeting room names", "A corp named nine meeting rooms after birds and I swapped the nameplates on four of them for a fortnight.", "A corp named nine meeting rooms after birds and I swapped four of them in the booking system for a fortnight." }
-        };
-
-        internal static string Mended(string text, out bool swapped)
-        {
-            swapped = false;
-            if (string.IsNullOrEmpty(text)) return text;
-            string[] rows = text.Split('\n');
-            string heading = null;
-            for (int at = 0; at < rows.Length; at++)
-            {
-                string one = rows[at].TrimEnd('\r').Trim();
-                if (one.StartsWith("##", StringComparison.Ordinal)) { heading = one.TrimStart('#').Trim(); continue; }
-                if (heading == null) continue;
-                for (int fix = 0; fix < Corrected.GetLength(0); fix++)
-                {
-                    if (!string.Equals(heading, Corrected[fix, 0], StringComparison.OrdinalIgnoreCase) || !string.Equals(one, Corrected[fix, 1], StringComparison.Ordinal)) continue;
-                    rows[at] = Corrected[fix, 2] + (rows[at].EndsWith("\r", StringComparison.Ordinal) ? "\r" : "");
-                    swapped = true;
-                    break;
-                }
-            }
-            return swapped ? string.Join("\n", rows) : text;
-        }
-
         // A pack is known by its size and its first and last thousand bytes, which is cheap and enough: two
         // packs the same in all three are the same pack.
         private static string Stamp(string pack)
@@ -471,17 +419,9 @@ namespace CapriDesktop
         internal static WrittenNote Open() { return file.Open(); }
         internal static void Write(bool over) { file.Write(over); }
 
-        // The next line of whatever she is telling, or null when there is nothing to tell. Picking the piece,
-        // moving along it and finishing it all happen here, so the caller only decides when she gets to speak.
-        // When she is next due to tell one.
-        //
-        // A story used to arrive on a two in a hundred roll at every check-in, which made it a trickle
-        // nobody could set: a quiet evening heard several and a busy one heard none. The gap is a window
-        // in dynamic.md instead, story min to story max in hours, and the moment is picked somewhere
-        // inside it so she does not become a clock. story min of 0 stops her telling them at all.
-        //
-        // The first one waits out a window of its own rather than arriving at startup, because the first
-        // minute of her being open is the worst time for a story.
+        // The next line of what she is telling, or null; picking, moving along and finishing a piece all happen here.
+        // The gap is story min to story max hours in dynamic.md (0 stops them), and the first waits a window too, never
+        // at startup.
         private static DateTime due = DateTime.MinValue;
         internal static Func<DateTime> Clock = delegate { return DateTime.UtcNow; };
         private static readonly Random when = new Random();

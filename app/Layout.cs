@@ -7,16 +7,9 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
-    // Her interface, in colours of their choosing.
-    //
-    // Mainframe colours picks one of the looks she ships, and that swaps every window at once. This is the
-    // same palette, one entry at a time: a colour named here is used wherever that entry is drawn, and a
-    // colour left blank follows whichever look is picked. So somebody can take Night City and make one thing
-    // green without rebuilding a look, and the look they are on still works underneath.
-    //
-    // Read when she starts and whenever the file is saved, with her windows repainted on the spot. The same
-    // colour writing her sys.md lines take: a name like blue, or a hex code with or without the hash, three
-    // digits or six, and eight to say how solid it is.
+    // Her interface in colours of their choosing: a named entry overrides that colour of the picked look, and a blank
+    // follows the look. Re-read on save with her windows repainted; colours as in sys.md, with eight hex digits for
+    // alpha.
     internal static class Layout
     {
         internal const string FileName = "layout.md";
@@ -43,19 +36,6 @@ namespace CapriDesktop
                     File.WriteAllText(Kept, Text, new UTF8Encoding(false));
                     lock (gate) { wasLong = -1; read = DateTime.MinValue; }
                     return;
-                }
-                // Every entry she ships that the file has not got, added with nothing set, so a palette entry
-                // added by a later build turns up in a file written before it existed.
-                string had = File.ReadAllText(Kept);
-                StringBuilder adding = new StringBuilder();
-                foreach (string name in Neon.Names)
-                    if (!System.Text.RegularExpressions.Regex.IsMatch(had, @"(?mi)^[ \t]*" + System.Text.RegularExpressions.Regex.Escape(name) + @"[ \t]*:"))
-                        adding.AppendLine(Line(name));
-                if (adding.Length > 0)
-                {
-                    if (!had.EndsWith("\n", StringComparison.Ordinal)) had += Environment.NewLine;
-                    File.WriteAllText(Kept, had + adding, new UTF8Encoding(false));
-                    lock (gate) { wasLong = -1; read = DateTime.MinValue; }
                 }
                 Notes.Refresh(Kept, Text);
             }
@@ -89,9 +69,8 @@ namespace CapriDesktop
                         int mark = one.IndexOf(':');
                         if (mark <= 0) continue;
                         string name = one.Substring(0, mark).Trim(), said = one.Substring(mark + 1).Trim();
-                        // Each line carries hers after a "#", for reference. A hex colour starts with one too,
-                        // so the note is the "#" with a space in front of it and anything after a colour is not
-                        // part of it. Without this, setting a colour and leaving the note read as neither.
+                        // Each line carries hers after a "#" for reference. A hex colour starts with one too, so the
+                        // note is "#" with a space before it, and nothing after a colour is part of it.
                         int note = said.IndexOf(" #", StringComparison.Ordinal);
                         if (note > 0) said = said.Substring(0, note).Trim();
                         if (said.Length == 0) continue;
@@ -106,28 +85,45 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
-        // A colour set somewhere else, written in here. Her bubble's four were in sys.md as well and that
-        // pair won, so moving them had to bring whatever was set across or somebody's bubble would change
-        // colour on the build that tidied it. Only into a line nobody has filled in: theirs stays theirs.
-        internal static void Carry(string name, string said)
+        // One colour set from her Mainframe, or put back to hers with null: its line in the file is written again and the
+        // file read at once, so her windows repaint. False when the name isn't one of hers or the file can't be written.
+        internal static bool Set(string name, Color? colour)
         {
+            Dictionary<string, Color?> one = new Dictionary<string, Color?>();
+            one[name] = colour;
+            return Set(one);
+        }
+
+        // Many at once, as a preset is: the file written and read once, so her windows repaint once.
+        internal static bool Set(IDictionary<string, Color?> colours)
+        {
+            if (string.IsNullOrEmpty(Kept) || colours == null || colours.Count == 0) return false;
+            foreach (string name in colours.Keys) if (Neon.Stock(name).IsEmpty) return false;
             try
             {
-                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept) || string.IsNullOrEmpty(name) || string.IsNullOrEmpty(said)) return;
-                string had = File.ReadAllText(Kept);
-                Match line = Regex.Match(had, @"(?mi)^[ \t]*" + Regex.Escape(name) + @"[ \t]*:[ \t]*([^\r\n]*)$");
-                if (!line.Success) return;
-                // A line they have already filled in is theirs and is left alone.
-                string inside = line.Groups[1].Value;
-                if (inside.Trim().Length > 0 && !inside.TrimStart().StartsWith("#")) return;
-                string keeping = inside.TrimStart().StartsWith("#") ? "    " + inside.TrimStart() : "";
-                string pad = name.Length >= 18 ? " " : new string(' ', 18 - name.Length);
-                string made = had.Substring(0, line.Index) + name + ":" + pad + said + keeping + had.Substring(line.Index + line.Length);
+                Write(false);
+                string made = File.ReadAllText(Kept);
+                foreach (KeyValuePair<string, Color?> entry in colours)
+                {
+                    string name = entry.Key;
+                    string pad = name.Length >= 18 ? " " : new string(' ', 18 - name.Length);
+                    string said = (entry.Value.HasValue ? Hex(entry.Value.Value) : "") + "    # hers: " + Hex(Neon.Stock(name));
+                    // No end anchor: in multiline mode $ stops only before \n, so a line ending \r\n never matched and the
+                    // colour went on a second line under the first.
+                    Match line = Regex.Match(made, @"(?mi)^[ \t]*" + Regex.Escape(name) + @"[ \t]*:[^\r\n]*");
+                    made = line.Success ? made.Substring(0, line.Index) + name + ":" + pad + said + made.Substring(line.Index + line.Length)
+                        : made + (made.EndsWith("\n", StringComparison.Ordinal) ? "" : Environment.NewLine) + name + ":" + pad + said + Environment.NewLine;
+                }
                 Notes.Put(Kept, made);
                 lock (gate) { wasLong = -1; read = DateTime.MinValue; }
+                Fresh();
+                return true;
             }
-            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return false; }
         }
+
+        // Read again on the next look, for a file swapped under her.
+        internal static void Forget() { lock (gate) { wasLong = -1; read = DateTime.MinValue; } }
 
         private static void Tell()
         {
@@ -154,10 +150,9 @@ namespace CapriDesktop
                 StringBuilder made = new StringBuilder();
                 made.AppendLine("# Her colours");
                 made.AppendLine();
-                made.AppendLine(">! Every colour of her interface. Set one and it is used wherever that part of her is drawn;");
-                made.AppendLine(">! leave it blank and it follows Mainframe colours, which swaps the whole set at once.");
-                made.AppendLine(">! A name like blue, or a hex code like #1affd5, with or without the hash. Three digits work");
-                made.AppendLine(">! too, and eight set how solid it is. The value after each one is hers, for reference.");
+                made.AppendLine(">! Every colour of her interface. Blank follows Mainframe colours.");
+                made.AppendLine(">! A name like blue, or a hex code of 3, 6 or 8 digits. 8 sets how solid it is.");
+                made.AppendLine(">! The value after each one is hers, for reference.");
                 made.AppendLine(">! Saved and she repaints: no restart.");
                 made.AppendLine();
                 made.AppendLine("## Her windows");
@@ -186,6 +181,15 @@ namespace CapriDesktop
                 made.AppendLine();
                 foreach (string name in new[] { "bubble outline", "bubble title", "bubble text", "bubble accent", "bubble background" })
                     made.AppendLine(Line(name));
+                made.AppendLine();
+                made.AppendLine("## Her player");
+                made.AppendLine();
+                foreach (string name in new[] { "player edge", "player accent", "player title", "player rail", "player ground" })
+                    made.AppendLine(Line(name));
+                made.AppendLine();
+                made.AppendLine("## Tamagotchi");
+                made.AppendLine();
+                made.AppendLine(Line("points"));
                 return made.ToString();
             }
         }

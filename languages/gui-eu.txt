@@ -204,3 +204,18 @@ Running on this PC	PC honetan exekutatzen
 NORMAL	ARRUNTA
 OFF	OFF
 Local server address	Tokiko zerbitzariaren helbidea
+Remember panel position	Gogoratu panelaren kokapena
+Custom colours	Kolore pertsonalizatuak
+Custom colours...	Kolore pertsonalizatuak...
+Choose	Aukeratu
+Hers	Bereak
+Quiet	Isila
+Quiet min	Isila min
+Quiet max	Isila max
+Until I turn it off	Nik itzali arte
+Quiet on calls	Isilik deietan
+Quiet in videos	Isilik bideoetan
+Quiet until {n}:{n}	Isilik {n}:{n} arte
+Quiet until turned off	Isilik itzali arte
+Export settings	Esportatu ezarpenak
+Import settings	Inportatu ezarpenak

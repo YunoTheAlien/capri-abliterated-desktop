@@ -204,3 +204,18 @@ Running on this PC	اس PC پر چل رہا ہے
 NORMAL	عام
 OFF	آف
 Local server address	لوکل سرور کا پتہ
+Remember panel position	پینل کی جگہ یاد رکھیں
+Custom colours	اپنی مرضی کے رنگ
+Custom colours...	اپنی مرضی کے رنگ...
+Choose	چنیں
+Hers	اس کے اپنے
+Quiet	خاموش
+Quiet min	خاموش min
+Quiet max	خاموش max
+Until I turn it off	جب تک میں بند نہ کروں
+Quiet on calls	کالز کے دوران خاموش
+Quiet in videos	ویڈیوز میں خاموش
+Quiet until {n}:{n}	{n}:{n} تک خاموش
+Quiet until turned off	بند ہونے تک خاموش
+Export settings	ترتیبات برآمد کریں
+Import settings	ترتیبات درآمد کریں

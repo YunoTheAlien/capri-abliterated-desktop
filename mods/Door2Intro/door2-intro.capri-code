@@ -1,7 +1,7 @@
 // capri-mod: 1
 // id: door2-intro
 // name: Door 2 Intro
-// version: 1.24.0
+// version: 1.26.0
 // author: Yuno
 // description: Hexagons grow like vines in from her screen's edges and out across every other screen, leaving a solid red circle where she lands; it opens and she wakes in it.
 // intro: yes
@@ -23,7 +23,9 @@ public class Door2Intro : ICapriMod, ICapriIntro, ICapriIntroNames, ICapriIntroS
     // A hexagon fits in a square no larger than this, in pixels.
     private const float LargestHex = 60f;
     // The screensaver's alert red, so the door reads as the same panel.
-    private static readonly Color Alert = Color.FromArgb(255, 30, 38);
+    // The hexagons' colour: its own, or what they set in Custom colours under this mod's fold-down.
+    private static readonly Color AlertUsual = Color.FromArgb(255, 30, 38);
+    private static Color Alert = AlertUsual;
     // Her idle strip sits a little right of the others, the same nudge she draws it with.
     private const float IdleShift = 11f / 384 * 1.11f;
     // The screensaver's hexagon words, and danger.
@@ -37,40 +39,33 @@ public class Door2Intro : ICapriMod, ICapriIntro, ICapriIntroNames, ICapriIntroS
     // Door 1's seconds, kept for the pop-ups and the opening, which come back in part 2.
     private const double Built = 8.0, Opened = 9.2, Asleep = 8.6, Fades = 10.4, Wakes = 11.4, Settles = 12.25;
 
-    // Part 1, the settings to tweak. Seconds: on her screen the hexagons grow in from its edges to her middle over
-    // Closing; from SpreadFrom they also grow out from her screen across every other screen, covering it all over
-    // Spreading. Both end together. A cell goes dark as the creeping hexagons reach it, taking
-    // Darkening, DarkLead after its hexagon's time (0 is with it). Each takes Lighting to come on; it holds, then fades.
+    // Part 1, the settings to tweak, in seconds: hexagons grow in to her middle over Closing and, from SpreadFrom, out
+    // across the other screens over Spreading. A cell darkens over Darkening, DarkLead after its hexagon, and lights
+    // over Lighting.
     private const double ClosingFrom = 0.3, Closing = 9.7, SpreadFrom = 1.0, Spreading = 9.0, Lighting = 0.25;
     private const double DarkLead = 0.0, Darkening = 0.25;
-    // Part 2, the way door 1 ends, counted from when the fill is done. The circle's red goes from its middle out,
-    // starting OpenGap after and reaching its rim over OpenTakes, each hexagon taking OpenFade, and leaves its black as
-    // the opening; after a pause she fades in asleep in it at SleepAt; the whole field fades at FadeAt over FadeTakes;
-    // she wakes at WakeAt and stands as she will at SettleAt; it ends at EndAt.
+    // Part 2, door 1's ending, from when the fill is done: the red clears from the middle out (OpenGap, OpenTakes,
+    // OpenFade); she fades in asleep at SleepAt, the field fades at FadeAt over FadeTakes, she wakes at WakeAt, settles
+    // at SettleAt, ends at EndAt.
     private const double Filled = ClosingFrom + Closing;
     private const double OpenGap = 0.1, OpenTakes = 2.5, OpenFade = 0.8, SleepAt = 3.7, FadeAt = 7.5, FadeTakes = 2.0, WakeAt = 8.5, SettleAt = 9.35, EndAt = 11.6;
     // Each hexagon starts its fade up to this much later than FadeAt, so they go at their own moments.
     private const double HexFadeSpread = 0.8;
     // The door keeps a rim this many hexagons wide, solid red; only inside it opens.
     private const int Rim = 2;
-    // The warning pop-ups, from WarnFrom. They flash as door 1's do, and each time one flashes back up it shows up in a
-    // new place where the hexagons grew in the last WarnFresh seconds, so they follow the fill without sliding. Each
-    // screen has as many as cover WarnShare of it, and one never lands over another by more than WarnOverlap of its
-    // own area. Once the fill is done they land anywhere it reached. They keep on to the end and each fades out over
-    // WarnFadeOut at its own moment, within WarnLinger after the field has faded.
+    // The warning pop-ups from WarnFrom, each flash in a fresh spot the fill reached in the last WarnFresh seconds.
+    // They cover WarnShare of each screen, overlap at most WarnOverlap, and fade over WarnFadeOut within WarnLinger of
+    // the end.
     private const double WarnFrom = 6.0, WarnShare = 0.25, WarnFresh = 1.5, WarnOverlap = 0.2, WarnLinger = 1.8, WarnFadeOut = 0.4;
-    // A warning beep as a sign shows up, no closer than BeepGap seconds to the last, at BeepLevel: door 1's alert level
-    // in its mix, scaled the way door2.wav is mixed and played (source/mix-door2.py prints it). The beeps go with the
-    // signs, so they grow quieter from when the field starts to fade until the last sign has gone.
+    // A warning beep as a sign shows, at least BeepGap seconds apart, at BeepLevel (door 1's alert level scaled as
+    // door2.wav is, printed by source/mix-door2.py). Beeps follow the signs, fading from the field's fade until the
+    // last sign goes.
     private const double BeepGap = 1.4, BeepLevel = 0.059;
-    // The door's own sound is this file; the beeps are the files starting with Beeps.
-    // door2-full.wav carries the beeps in it on the scene's own clock, so with it nothing is fired as a sign shows
-    // and the sound cannot drift from the picture; door2.wav and the beep files are the fallback without it.
+    // The door's sound is this file and the beeps are the Beeps files. door2-full.wav carries the beeps on the scene's
+    // clock, so nothing is fired per sign and nothing drifts; door2.wav and the beeps are the fallback.
     private const string MainSound = "door2-full.wav", Fallback = "door2.wav", Beeps = "warning-";
-    // How the hexagons grow, like vines over ground: they race along veins first and fill the ground between them
-    // after, so no two parts keep the same pace. VineScale is how far apart the veins are, in hexagons; VineFast how
-    // quick a vein is against open ground (lower is quicker); VineSharp how narrow the veins are; VineRough how
-    // uneven every step is.
+    // How the hexagons grow, like vines: along veins first, then the ground between. VineScale spaces the veins,
+    // VineFast is their speed (lower is quicker), VineSharp their width, VineRough how uneven each step is.
     private const double VineScale = 6.0, VineFast = 0.12, VineSharp = 1.6, VineRough = 0.35;
     private const double Length = Filled + EndAt;
     // How dark the screen goes, 0 to 1.
@@ -131,15 +126,19 @@ public class Door2Intro : ICapriMod, ICapriIntro, ICapriIntroNames, ICapriIntroS
     {
         capri = host;
         on = Switched();
+        Tint();
+        host.Ui.ColoursChanged += Tint;
     }
+
+    // Its colours, named for Custom colours and read back, as any mod's are.
+    private void Tint() { Alert = capri.Ui.Colour("Hexagons", AlertUsual); }
 
     // sys.md's start-up intro list, with no ">" in front of door2.
     private bool Switched()
     {
         try
         {
-            string file = Path.Combine(Home(), "personalSettings", "sys.md");
-            if (!File.Exists(file)) file = Path.Combine(Home(), "sys.md");
+            string file = SysFile(Home());
             if (!File.Exists(file)) return false;
             bool inside = false;
             foreach (string raw in File.ReadAllLines(file))
@@ -186,9 +185,8 @@ public class Door2Intro : ICapriMod, ICapriIntro, ICapriIntroNames, ICapriIntroS
         catch (Exception error) { capri.Log(error.Message); return true; }
     }
 
-    // The circle and the sprite of her in it are one fixed size, whatever size she is set to: the scene was tuned at
-    // 560 on a 1440 screen, so it is always that share of her screen's height, centred where she lands. It draws a
-    // sprite, not her, so it never needs to match her.
+    // The circle and her sprite in it are one fixed size whatever size she is set to: always the share of her screen's
+    // height tuned at 560 on a 1440 screen, centred where she lands. A sprite, so it never needs to match her.
     private const float SceneTall = 0.385f;
 
     private static Rectangle Grown(Rectangle her, Rectangle screen)
@@ -364,10 +362,8 @@ public class Door2Intro : ICapriMod, ICapriIntro, ICapriIntroNames, ICapriIntroS
         }
     }
 
-    // Part 1. The same grid as door 1, centred on her with the same hexagon size, spread over every screen as one desk.
-    // On her screen a hexagon lands as the closing edge passes it, her screen's edges first and her middle last; on
-    // the others as the spreading edge passes it, nearest her screen first. Outside door 1's opening the noise
-    // decides whether one is lit; inside it every one is, solid red. In desk coordinates.
+    // Part 1: door 1's grid centred on her, spread over every screen as one desk. A hexagon lands as the closing edge
+    // passes on her screen and the spreading edge elsewhere; inside the opening all are lit, outside the noise decides.
     private void MakeField(Rectangle her)
     {
         Rectangle screen = home;
@@ -426,10 +422,8 @@ public class Door2Intro : ICapriMod, ICapriIntro, ICapriIntroNames, ICapriIntroS
 
     private double darkDone;
 
-    // When each hexagon lands. Growth starts from the hexagons on the rim of her screen and takes the cheapest step
-    // next, one neighbour at a time, in towards her and out across the other screens. A step along a vein is cheap
-    // and open ground dear, so it runs along branching veins and fills in between them. Her screen's last hexagon
-    // lands at the end of Closing and the other screens' last at the end of Spreading.
+    // When each hexagon lands: growth starts at her screen's rim and takes the cheapest neighbour next, veins cheap and
+    // open ground dear. Her screen finishes at Closing's end, the others at Spreading's.
     private void Grow(Random luck)
     {
         Dictionary<long, int> at = new Dictionary<long, int>();
@@ -589,9 +583,9 @@ public class Door2Intro : ICapriMod, ICapriIntro, ICapriIntroNames, ICapriIntroS
         return lit;
     }
 
-    // One screen of the field, area in desk coordinates. Each cell goes dark as the edge nears it, so the dark spreads
-    // with the edge rather than over the whole screen at once, then it lights up where it sits. The opening's hexagons
-    // stay full red while their words and arrows flash; the others flash whole, as in door 1.
+    // One screen of the field, area in desk coordinates: each cell darkens as the edge nears, so the dark spreads with
+    // the edge, then lights where it sits. The opening's hexagons stay red while their words and arrows flash; others
+    // flash whole.
     private void Field(Graphics g, Rectangle area, double at)
     {
         double scene = 1 - Clamp((at - Filled - FadeAt) / FadeTakes);
@@ -1129,4 +1123,25 @@ public class Door2Intro : ICapriMod, ICapriIntro, ICapriIntroNames, ICapriIntroS
     private string Home() { return Path.GetDirectoryName(Path.GetDirectoryName(capri.Folder)) ?? ""; }
 
     private static double Clamp(double value) { return value < 0 ? 0 : value > 1 ? 1 : value; }
+
+    // Her sys.md now sits in a folder of its own under personalSettings, one per side, and only the one she is
+    // using is written as she starts. So the newest sys.md under personalSettings is hers; the old places are the
+    // fallback for an older Capri.
+    private static string SysFile(string home)
+    {
+        string newest = null;
+        DateTime when = DateTime.MinValue;
+        try
+        {
+            string settings = Path.Combine(home, "personalSettings");
+            if (Directory.Exists(settings))
+                foreach (string one in Directory.GetFiles(settings, "sys.md", SearchOption.AllDirectories))
+                {
+                    DateTime at = File.GetLastWriteTimeUtc(one);
+                    if (newest == null || at > when) { newest = one; when = at; }
+                }
+        }
+        catch (Exception) { newest = null; }
+        return newest ?? Path.Combine(home, "sys.md");
+    }
 }

@@ -204,3 +204,18 @@ Running on this PC	Работает на этом ПК
 NORMAL	ОБЫЧНЫЙ
 OFF	ВЫКЛ
 Local server address	Адрес локального сервера
+Remember panel position	Запоминать положение панели
+Custom colours	Свои цвета
+Custom colours...	Свои цвета...
+Choose	Выбрать
+Hers	Её
+Quiet	Тишина
+Quiet min	Тишина min
+Quiet max	Тишина max
+Until I turn it off	Пока я не выключу
+Quiet on calls	Тишина во время звонков
+Quiet in videos	Тишина при видео
+Quiet until {n}:{n}	Тишина до {n}:{n}
+Quiet until turned off	Тишина до выключения
+Export settings	Экспорт настроек
+Import settings	Импорт настроек

@@ -17,14 +17,9 @@ namespace CapriDesktop
         internal RemoteChannel Channel;
     }
 
-    // The PC's side of Capri Remote (remote/PROTOCOL.md sections 4, 5, 7, 8 and 9): one connection out to the relay,
-    // pairing, a session per phone and the chat messages. There's no window or brain in here: app/RemoteChat.cs joins it
-    // to her chat, app/MainframeRemote.cs to the Mainframe, and app/RemoteTests drives it against the real relay.
-    //
-    // Threads: frames are read on one worker. Every frame leaves through one pump per connection, which takes a session's
-    // next sequence number and sends in the same step under one lock, so frames leave in sequence order and only one
-    // SendAsync ever runs. Everything shared sits behind gate. Events are raised outside it, on the thread that made the
-    // change, and must return quickly.
+    // The PC's side of Capri Remote: one connection to the relay, pairing, a session per phone, chat. One pump per
+    // connection numbers and sends under one lock, so frames go in order and one SendAsync runs.
+    // Shared state sits behind gate; events are raised outside it and must return quickly.
     internal sealed partial class RemoteLink
     {
         internal const string DefaultHost = "capri-remote.lachydotmcg.workers.dev";
@@ -275,9 +270,9 @@ namespace CapriDesktop
             return true;
         }
 
-        // Under gate, with a phone asking: a new device id, token and key go to it sealed in pair-allow, and the relay keeps
-        // only the token's hash. The PC keeps the id, key, name and date, and which phone's link it used if any, and forgets
-        // the token and the pairing key. Returns the state to save.
+        // Under gate, with a phone asking: a new device id, token and key go to it sealed in pair-allow, the relay
+        // keeping only the token's hash. The PC keeps id, key, name and date and forgets the token and pairing key.
+        // Returns the state to save.
         private RemoteState Admit(List<Note> notes)
         {
             RemoteAsk ask = pairing.Ask;
@@ -478,10 +473,8 @@ namespace CapriDesktop
                     if (phone.Online && (phone.Session != null || phone.JobHello) && !phone.Kicked) QueueJob(phone, json);
         }
 
-        // A step's newer update replaces its older one still waiting, and a job's state its same state, so a phone that's
-        // behind gets where things are now. A different state never jumps an older one, so running, asking and running again
-        // arrive in order. A phone that can't keep up, like during a game's quick keys, keeps her newest 30 steps, the most
-        // JOBS lists, instead of falling minutes behind.
+        // A step's newer update replaces its waiting older one, and a job's state its same state, so a phone that is
+        // behind catches up to now; states keep their order. A slow phone keeps her newest 30 steps.
         private void QueueJob(Phone phone, string json, bool coalesce = true)
         {
             RemoteJson.Map message = RemoteJson.ParseMap(json);
@@ -538,9 +531,8 @@ namespace CapriDesktop
             return false;
         }
 
-        // Job frames on a stand-in wire: both live phones get each one sealed with their own keys, a step's updates batch to
-        // its newest, frames keep to five a second, a frame from before a phone's newer hello is dropped, a phone that falls
-        // behind keeps only the newest 30 steps, and a job that ends during hello waits for the phone.
+        // Job frames on a stand-in wire: both phones get each sealed with their own keys, updates batch to the newest,
+        // five frames a second at most, stale frames dropped, a lagging phone keeps the newest 30 steps.
         internal static void SmokeJobs(List<string> checks)
         {
             RemoteState state = RemoteState.Fresh();
@@ -1143,9 +1135,9 @@ namespace CapriDesktop
             checks.Add("PASS pairing links refuse link-added phones, limit each phone to one ask a minute across sessions, save the parent's id and revoke its known link children; Remove all phones queues all 16 relay revokes and starts a fresh room with no phones");
         }
 
-        // Messages that only mean something now, like a screen frame or a moment of her voice, sealed together in order. They
-        // never wait for a phone's next session. left runs once they've gone to the relay, or been dropped: it must not
-        // block or take a lock. False, with left not run, when that phone has no session.
+        // Messages that only mean something now, like a screen frame or a moment of voice, sealed together in order and
+        // never held for a later session. left runs once they're sent or dropped and must not block. False when that
+        // phone has no session.
         internal bool SendLive(string device, IList<string> messages, Action left)
         {
             lock (gate)
@@ -1601,9 +1593,8 @@ namespace CapriDesktop
             if (dirty) copy = state.Copy();
         }
 
-        // A phone presented the open code. Only one try per QR; a request that doesn't open gets a plain no and a new QR
-        // goes up quietly; otherwise Capri asks, showing the phone's name and the confirmation code. A paired phone's pairing
-        // link was asked for over a live session, so its phone gets in with no Allow (PROTOCOL.md 5.1).
+        // A phone presented the open code: one try per QR, a failure gets a plain no and a fresh QR; otherwise Capri
+        // asks, showing the phone's name and code. A paired phone's own link gets in with no Allow (PROTOCOL.md 5.1).
         private void OnPending(RemoteJson.Map frame, List<Note> notes, ref RemoteState copy)
         {
             string id = frame.Text("id");
@@ -1651,9 +1642,9 @@ namespace CapriDesktop
             else notes.Add(new Note("ask", id));
         }
 
-        // PROTOCOL.md 5.1 and 8.3: a paired phone asks for a pairing link for another browser on it, like its home screen
-        // app. It gets a fresh one-time code that pairs with no Allow and is never shown on this PC. A QR up here or a phone
-        // waiting for Allow comes first; that phone's earlier link nobody used, or a QR that ran out, is replaced.
+        // A paired phone asks for a pairing link for another browser on it (PROTOCOL.md 5.1, 8.3): a one-time code that
+        // pairs with no Allow and never shows on the PC. A live QR or waiting phone comes first; an unused older link
+        // is replaced.
         private void PairAsk(Phone phone, string id, List<Note> notes)
         {
             if (!RemoteMessages.IdOk(id))
@@ -2093,10 +2084,9 @@ namespace CapriDesktop
             if (re != null && asks.TryGetValue(phone.Device.Id + " " + re, out ask)) ask.Sent = Now();
         }
 
-        // Every 100 ms while reply parts are gathering, and every second while a chat.send waits: parts go out, and a
-        // phone still waiting gets chat.typing again every 10 seconds (its dots stop 20 seconds after the last one).
-        // A timer runs this on a pool thread, where anything thrown would end her: a tick that fails is dropped, and the
-        // next reply part or send arms another.
+        // Every 100 ms while reply parts gather, and every second while a chat.send waits: parts go out, and a waiting
+        // phone gets chat.typing every 10 seconds. A failing tick is dropped, since a throw on a pool thread would end
+        // her.
         private void Tick(object unused)
         {
             try { Ticked(); }

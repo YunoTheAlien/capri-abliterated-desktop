@@ -204,3 +204,18 @@ Running on this PC	Đang chạy trên PC này
 NORMAL	BÌNH THƯỜNG
 OFF	TẮT
 Local server address	Địa chỉ máy chủ cục bộ
+Remember panel position	Ghi nhớ vị trí bảng
+Custom colours	Màu tùy chỉnh
+Custom colours...	Màu tùy chỉnh...
+Choose	Chọn
+Hers	Của cô ấy
+Quiet	Im lặng
+Quiet min	Im lặng min
+Quiet max	Im lặng max
+Until I turn it off	Cho đến khi tôi tắt
+Quiet on calls	Im lặng khi gọi
+Quiet in videos	Im lặng khi xem video
+Quiet until {n}:{n}	Im lặng đến {n}:{n}
+Quiet until turned off	Im lặng đến khi tắt
+Export settings	Xuất cài đặt
+Import settings	Nhập cài đặt

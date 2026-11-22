@@ -13,9 +13,8 @@ using System.Windows.Forms;
 
 namespace CapriDesktop
 {
-    // Pictures of a window as the screen would show it: Windows' own copy of the window, cut to the window's real outline and
-    // laid over a light backdrop, with any open menu laid on top where it sits. A light backdrop is where a frame that
-    // disagrees with its outline shows, as slivers at the corners.
+    // Pictures of a window as the screen shows it: Windows' copy cut to its real outline over a light backdrop, any
+    // open menu on top. The light backdrop shows a frame that disagrees with its outline, as slivers at the corners.
     internal static class LookShots
     {
         [DllImport("user32.dll")] private static extern bool PrintWindow(IntPtr window, IntPtr dc, uint flags);
@@ -133,14 +132,13 @@ namespace CapriDesktop
 
     internal sealed partial class Companion
     {
-        // Pictures of the Workspace window in every state it has, with stand-in chats, at 100%, 125% and 150% and at its
-        // smallest size, plus the Mainframe beside it. Each picture is also checked for crowding.
-        // A section's own folder under the run folder: 8 letters of a new id, which is plenty to keep runs apart.
+        // Pictures of the Workspace window in every state, with stand-in chats, at 100%, 125%, 150% and smallest, plus
+        // the Mainframe beside it, each checked for crowding. A section's folder: 8 letters of a new id, enough to keep
+        // runs apart.
         private static string RunFolder(string run) { return Path.Combine(run, Guid.NewGuid().ToString("N").Substring(0, 8)); }
 
-        // Below its root, Workspace writes paths up to 122 letters long: undo\<chat>\<turn>\manifest.json and the
-        // .<id>.tmp name it's written through. Past Windows' 259 letters that save fails, and a check fails somewhere
-        // far from the cause, so a run folder that leaves no room for the deepest root a section makes stops here instead.
+        // Workspace writes paths up to 122 letters below its root, so a run folder that leaves no room under Windows'
+        // 259-letter limit for the deepest root stops here, not in a far-off failed check.
         private static void RoomUnder(string run, string deepestRoot)
         {
             int longest = Path.GetFullPath(deepestRoot).Length + 122;
@@ -504,11 +502,9 @@ namespace CapriDesktop
             checks.Add("PASS Workspace chats take their title from their first message while it's still the one they were given (her folder's New chat, or a picked folder's name): the first words cut at a word near 40 letters ending in a tight \u2026, or the first file's name; titles cut for width end at a word the same way; two chats in one picked folder end up told apart, and a typed title is never replaced");
         }
 
-        // Her own folder and files as attachments, through the real send path with a stand-in claude.cmd: "+ New chat" opens a
-        // chat in her folder (a stand-in for the profile's Capri\Workspace here, never the real one), trusted and ready to type in,
-        // whose folder can change until the first message; files ride with one message and then leave the composer while
-        // staying part of the chat, also after a restart; a file can be taken off before sending, attached again later, and
-        // sent with no words; a failed start keeps the message and its files for Retry. Pictured at 100%, 125% and 150%.
+        // Her folder and files as attachments, through the real send path with a stand-in claude.cmd: a new chat in her
+        // folder, files riding with one message and kept in the chat across a restart, removal, re-attach, Retry. 100%,
+        // 125%, 150%.
         private void SmokeWorkspaceAttachments(List<string> checks, string folder, string projects, string pipe, Func<string, string> alias, Action<WorkspaceWindow, string, ToolStripDropDown> shoot)
         {
             string box = Path.Combine(folder, "att"), data = Path.Combine(box, "data");
@@ -654,10 +650,9 @@ namespace CapriDesktop
             checks.Add("PASS Workspace opens straight into a chat in her folder when it has none, and a folder picked with change or dropped on it before the first message takes its place; + New chat opens a trusted chat in her own folder (made when its first message goes), ready to type in and reused while unused, whose folder the runs-here chip can change until the first message; files ride with one message then leave the composer but stay part of the chat across a restart; a chip taken off before sending is un-attached, a sent file added again rides again, files can go with no words, and a failed start keeps the message and its files for Retry");
         }
 
-        // An Edit through the real path: a stand-in claude.cmd streams a real-shaped Edit call and its result, Capri's approval
-        // hook's undo copy is made as the hook would make it, and the card shows the removed and added lines from the tool's
-        // own input. They survive a restart, Undo last edits follows the engine's own answer after the edit and after an undo,
-        // and a 5,000-line Write keeps at most Workspace.ShownAll letters for its card and lays out quickly.
+        // An Edit through the real path with a stand-in claude.cmd: the card shows removed and added lines from the
+        // tool's input, survives a restart, Undo follows the engine, and a 5,000-line Write keeps at most
+        // Workspace.ShownAll letters.
         private void SmokeWorkspaceEdits(List<string> checks, string folder, string projects, string pipe, Func<string, string> alias, Action<WorkspaceWindow, string, ToolStripDropDown> shoot)
         {
             string box = Path.Combine(folder, "edits"), project = Path.Combine(projects, "shop"), data = Path.Combine(box, "data");
@@ -1046,11 +1041,8 @@ namespace CapriDesktop
             SmokeWorkspaceInside(checks, folder);
         }
 
-        // The window itself, at 100%, 125%, 150% and 200% and at its smallest size: nothing crowded, code in her mono,
-        // copyable messages, tool results that open, pickers that save, Everything at once, a draft per chat, following
-        // only at the end, Enter and Shift+Enter, the Explorer flow for folders and files, paging and its place.
-        // A change made just before Workspace closes is on disk when it opens again, even when a save takes a whole second:
-        // once with a save already being written as it closes, once with a change it hasn't started saving.
+        // The window at 100% to 200% and smallest: nothing crowded, and every control behaving. A change made just
+        // before closing is on disk on reopen, even with a slow save already under way.
         private static void WorkspaceClosingSaves(List<string> checks, string data, string project)
         {
             Directory.CreateDirectory(data);
@@ -1567,11 +1559,8 @@ namespace CapriDesktop
             checks.Add("PASS Workspace retries failed results and exit errors with the same attached files and one copy of the prompt, shows sign-in and limit details, keeps Retry after reopening and removes it when stopped or superseded");
         }
 
-        // The pictures' stand-in answers in a believable few seconds, at a believable cost, instead of the 40 ms it takes.
-        // Tool calls behind summary lines, built from a real turn and a few more: one line per run of calls
-        // between her words, closed until it's opened, worded by what finished, with a failed or denied call marked on the
-        // line, and a running call's shine on its own clock that stops when nothing runs or the window is minimised. Pictured
-        // at 100%, 125% and 150%; the t-c frames are the shine at four points of its pass.
+        // The pictures' stand-in answers in a believable few seconds and cost. Tool calls behind one closed summary
+        // line per run, marked when failed or denied, with a running call's shine that stops when idle or minimised.
         private void SmokeWorkspaceTools(List<string> checks, string folder, string projects, string pipe, Func<string, string> alias, Action<WorkspaceWindow, string, ToolStripDropDown> shoot)
         {
             string box = Path.Combine(folder, "tools"), project = Path.Combine(projects, "capri-desktop");
@@ -1971,12 +1960,8 @@ namespace CapriDesktop
             }
         }
 
-        // Copying out of the conversation, with a stand-in for Windows' clipboard so theirs is never touched: a selection from
-        // their message through her reply into a code well copies as it shows; double click takes a word and triple click the
-        // paragraph or code line; Shift+click carries a selection on; Ctrl+A and Ctrl+C take everything; dragging past the
-        // bottom scrolls; the copy key on a message or a well copies it and ticks for a second; the right-click menu offers
-        // Copy only with a selection; the message box keeps Windows' own cut, copy and paste. Pictures h (the selection) and
-        // i (the copy key resting, hovered and ticked).
+        // Copying out of the conversation with a stand-in clipboard: selections, double and triple click, Shift+click,
+        // Ctrl+A, Ctrl+C, drag-scroll, the copy key, and Copy in the menu only with a selection. Pictures h and i.
         private static void WorkspaceCopy(WorkspaceWindow window, Workspace work, string folder, WorkspaceChat longer, Action<WorkspaceChat, string, string> say, List<string> failures, int scale, Action<WorkspaceWindow, string, ToolStripDropDown> shoot)
         {
             List<string> clipped = new List<string>();
@@ -2183,10 +2168,9 @@ namespace CapriDesktop
             }
         }
 
-        // Her replies drawn from the Markdown reader: every kind of block and run (picture g), a table at full width and at
-        // the narrowest window (picture j), the reply half streamed, and a long one. Her words copy as WorkWords gives them,
-        // links open only http and https pages (through a stand-in here), show the hand and their address, and nothing is
-        // cut off or overlapping at any width.
+        // Her replies from the Markdown reader: every block and run (picture g), a table wide and narrow (picture j),
+        // half-streamed and long. Copies match WorkWords, links open only http and https, and nothing overlaps at any
+        // width.
         private static void WorkspaceFormatting(WorkspaceWindow window, Workspace work, string folder, Action<WorkspaceChat, string, string> say, List<string> failures, int scale, Action<WorkspaceWindow, string, ToolStripDropDown> shoot, Size full, List<string> timings)
         {
             List<string> opened = new List<string>();
@@ -2521,7 +2505,7 @@ namespace CapriDesktop
         private void SmokeWorkspacePickers(List<string> checks, string folder)
         {
             // Windows remembers where a program's open dialogs went, by program name, so this run's picks would be where their own
-            // Capri's dialogs open next (the Import mod dialog opened in one on 12 Nov). The history goes back as it was found.
+            // Capri's dialogs open next. The history goes back as it was found.
             DialogMemory memory = new DialogMemory();
             try { PickersOnce(checks, folder); }
             finally

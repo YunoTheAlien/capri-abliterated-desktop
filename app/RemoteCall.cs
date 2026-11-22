@@ -6,12 +6,9 @@ using System.Threading;
 
 namespace CapriDesktop
 {
-    // Capri Remote's call (remote/PROTOCOL.md section 8.2): a paired phone talks to her hands-free. Each line it sends
-    // comes in as call.audio parts (16 kHz, 16-bit mono), her own ears turn it into words, and the words go to her as if
-    // they'd been said to her at the PC, so her answer comes back to that phone like any chat reply. Her voice, as her
-    // speakers play it, goes to every phone on a call in quarter-second parts, and Interrupt on a phone (call.hush) asks
-    // for her answer to its line to stop. There's no mic, speaker or brain in here: Capri joins it to them in
-    // app/RemoteLive.cs, and app/RemoteTests gives it stand-in ears.
+    // Capri Remote's call (remote/PROTOCOL.md 8.2): a phone's 16 kHz audio goes through her ears to her like speech at
+    // the PC, and her voice goes back in quarter-second parts. call.hush stops her answer. Joined to the devices in
+    // RemoteLive.cs.
     internal sealed class RemoteCall : IDisposable
     {
         internal const int Rate = 16000;

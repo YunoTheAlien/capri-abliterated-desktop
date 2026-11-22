@@ -4,14 +4,8 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
-    // The questions she asks to find out about them, and when she is allowed to ask one.
-    //
-    // She had no way to learn anything she was not told. Her notes filled up only when someone remembered to say
-    // "remember that", so a companion that is supposed to know them started every week as blank as the first.
-    //
-    // Nothing here speaks. It decides there is a question worth asking and which one; her usual line path says it,
-    // and her brain writes the answer down through the remember tool with a key. What she asks about is whatever
-    // she knows least about, so the file fills out rather than one line getting asked about forever.
+    // The questions she asks to learn about them, and when one is allowed; her line path says it and her brain stores
+    // the answer with the remember tool. She asks about what she knows least, so the file fills out evenly.
     internal static class Probes
     {
         // The me.md lines she can fill in, and what she asks to fill them. Keys are what remember writes to, so
@@ -42,9 +36,8 @@ namespace CapriDesktop
             { "personalityLikes", "Do you want me chattier, or quieter? I can do either." }
         };
 
-        // Small talk: questions that are about today rather than about who they are. Each has the part of the day it
-        // makes sense in and goes stale outside it, is asked at most once a day, and is never written to me.md. Their
-        // answer is only conversation, so her brain replies to it and moves on.
+        // Small talk about today rather than who they are: each question fits a part of the day and goes stale outside
+        // it, is asked at most once a day and never written to me.md. Her brain replies and moves on.
         private static readonly string[] SleptAsks = { "How did you sleep?", "Sleep alright?", "Did you actually get some rest?", "Morning. How's the head?", "Awake yet, or still half asleep?", "Sleep alright, or weird dreams?" };
         private static readonly string[] BackAsks = { "Where were you?", "Did you get up to anything interesting?", "Out doing something good?", "How was it out there?", "Anything happen while you were gone?", "Good time, or just errands?" };
         private static readonly string[] WorkAsks = { "How was work?", "Work treat you alright today?", "Anything annoying happen at work?", "Good shift or long shift?", "Did work behave itself today?" };
@@ -239,9 +232,8 @@ namespace CapriDesktop
             Roll();
         }
 
-        // A question that has a reason to be asked now rather than whenever the next one is due: something
-        // happened that only they can explain. It waits for the same good moment as any other question, and it
-        // is dropped rather than queued if a second one arrives, since the moment it was about has passed.
+        // A question with a reason to be asked now: something happened only they can explain. It waits for a good
+        // moment like any other and is dropped, not queued, when a second arrives, since its moment has passed.
         private static string soonKey, soonQuestion;
 
         internal static void Soon(string key, string question)
@@ -285,9 +277,8 @@ namespace CapriDesktop
                 }
                 if (now.ToUniversalTime() < next && !(flowing && now.ToUniversalTime().AddMinutes(20) >= next)) return false;
 
-                // Something about today comes first when there is something to ask about: it is what a friend asks,
-                // and it goes stale. Only then a line of me.md that is still blank. A line they already answered is
-                // never asked again, which is what had her asking the same five questions for ever.
+                // Something about today comes first when there is something to ask, since it goes stale; then a
+                // still-blank line of me.md. A line already answered is never asked again.
                 question = Chat(now);
                 if (question != null) return true;
                 // A schedule that moves is asked about week by week rather than once, so she keeps up with it.
@@ -336,9 +327,8 @@ namespace CapriDesktop
         // The hour of their own day, from the hours she has learnt they are about; the plain clock until she has.
         internal static Func<DateTime, int> DayHour = delegate(DateTime when) { return Hours.OwnHour(when); };
 
-        // The small talk that fits right now, or null. By what just happened first: back from a night, or from a
-        // long spell in the day. Then by the hour of their own day: morning, lunch, evening and late follow when they
-        // are actually about, not the wall clock, once she has learnt it. The days of the week stay on the calendar.
+        // The small talk that fits now, or null: first what just happened (back from a night or a long spell), then the
+        // hour of their own day once learnt, not the wall clock. Days of the week stay on the calendar.
         internal static string Chat(DateTime now)
         {
             string back = null;
@@ -377,7 +367,7 @@ namespace CapriDesktop
 
         // Hours since she last asked a line, from the same store her other lines go in, so it survives a restart.
         internal static Func<string, double> Ago = delegate { return double.MaxValue; };
-        // Marks a line as asked in that store.
+        // Marks a line asked in that store.
         internal static Action<string> Asked = delegate { };
 
         // The line in a pool asked longest ago, so a pool goes all the way round before any line comes back. Lines
@@ -422,9 +412,8 @@ namespace CapriDesktop
         }
     }
 
-    // How they have seemed lately, read from what they say to her: a number that drifts up with good news and down
-    // with a rough day, halving every six hours. Only the number is kept, never their words. Her brain is told in a
-    // sentence when it is clearly one way or the other, so a bad day gets her gentler and a good one gets her energy.
+    // How they have seemed lately, from what they say: a number drifting up with good news and down with a rough day,
+    // halving every six hours. Only the number is kept; her brain hears a sentence when it's clearly one way.
     internal static class Feelings
     {
         private static readonly Regex Up = new Regex(

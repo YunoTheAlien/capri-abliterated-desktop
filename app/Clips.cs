@@ -431,8 +431,7 @@ namespace CapriDesktop
                     capturedSession = session;
                     if (pictures.Count == 0 || disposed) return Task.FromResult(new ClipResult { Problem = "I haven't buffered any game video yet." });
                     // A repeated voice or tool request gets the same save while it's written and for ten seconds after, even with fresh
-                    // settings of the same values, so a slow save or a repeat a few seconds later doesn't make a second file (john
-                    // sandevistan, 3 Nov).
+                    // settings of the same values, so a slow save or a repeat a few seconds later doesn't make a second file (john_sandevistan).
                     if (reuse && recent != null && recentSession == session && recentSeconds == seconds && recentSettings.Same(chosen)
                         && (!recent.IsCompleted || (recent.Result.Problem == null && clock() - recentAt < 100000000)))
                     {
@@ -575,7 +574,7 @@ namespace CapriDesktop
                 finishing = writer;
                 Clear();
             }
-            // Quitting waits a little for a clip that's saving, but never for good (Mika, 1 Nov: "QUITTING DOESNT WORK").
+            // Quitting waits a little for a clip that's saving, but never for good (Mika).
             bool ended = ending == null || ending.Join(2000);
             bool finished = finishing == null || finishing.Join(5000);
             if (ended && finished) changed.Dispose();
@@ -867,8 +866,8 @@ namespace CapriDesktop
             IMFMediaType target = null, input = null, audioTarget = null, audioInput = null;
             IMFAttributes options = null;
             int width, height;
-            // A chosen resolution goes by the newest picture: pictures from before they raised it kept clips small (john
-            // sandevistan, 3 Nov). Auto still goes by the first.
+            // A chosen resolution goes by the newest picture: pictures from before they raised it kept clips small (john_sandevistan).
+            // Auto still goes by the first.
             using (IEnumerator<ClipPart> opening = save.Pictures.Read(save.Settings.Resolution != 0).GetEnumerator())
             {
                 if (!opening.MoveNext()) throw new InvalidDataException("The clip has no pictures.");
@@ -1501,9 +1500,8 @@ namespace CapriDesktop
         }
     }
 
-    // Saving a clip pops this up at the top right of the game's screen with a short chime, the way Medal does: CLIP SAVED, how
-    // long and of what, and where it went. Clicking it shows the clip in its folder, and hovering holds it up (Lachy, 2 Nov:
-    // "a sound confirmation when it's clipped and like a little popup in the top right or something kinda like a medal clip").
+    // A saved clip pops this up at the top right of the game's screen with a short chime (Lachy): CLIP SAVED, its
+    // length and game, and where it went. Clicking shows it in its folder; hovering holds it up.
     internal sealed class ClipToast : Overlay
     {
         internal const int Shown = 4000, Slide = 160, Fade = 320, Step = 16;

@@ -4,20 +4,8 @@ using System.Text;
 
 namespace CapriDesktop
 {
-    // What somebody in a Twitch chat said to her a moment ago, so a back and forth reads as one.
-    //
-    // Every message was answered on its own: her reply to "what about the other one" had no idea what the
-    // other one was, because each went to her brain with no history at all. That is the right rule for the
-    // conversation she is having with the person at the keyboard, which Twitch must never push out, and the
-    // wrong one for following two lines from the same chatter.
-    //
-    // So Twitch gets a memory of its own, apart from hers, and a small one. Five minutes, because nobody
-    // cares what a stranger said before that and a longer one would start eating the room her own prompt
-    // needs. A handful of turns per name, and a bounded number of names, so a busy chat cannot grow it.
-    //
-    // Nothing here is written down. It is held while she runs, dropped when the chat closes, and never goes
-    // near her transcripts, her memories or the chat she is having with them: a chatter's name reaches her
-    // so she can answer to it, and that is all it is for.
+    // What a Twitch chatter said to her in the last five minutes, a few turns per name, so a back and forth reads as
+    // one. Held in memory only, apart from her transcripts, memories and the chat she has with them.
     internal static class Chatters
     {
         internal static readonly TimeSpan Keep = TimeSpan.FromMinutes(5);
@@ -64,11 +52,8 @@ namespace CapriDesktop
             }
         }
 
-        // What she and this one said lately, for the top of her prompt, or nothing when they are new.
-        //
-        // It goes in a data block. This lands in her system prompt, which is the one place text is read as
-        // authority, and half of it is a stranger's words: without the block a chatter writes a line, and on
-        // their next message that line is sitting above her rules reading like one of them.
+        // What she and this chatter said lately, for the top of her prompt, or nothing when they are new. It goes in a
+        // data block, so a stranger's words never sit above her rules reading like one of them.
         internal static string Lately(string who)
         {
             if (string.IsNullOrEmpty(who)) return "";

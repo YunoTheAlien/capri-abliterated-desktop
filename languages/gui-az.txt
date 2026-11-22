@@ -204,3 +204,18 @@ Running on this PC	Bu kompüterdə işləyir
 NORMAL	NORMAL
 OFF	SÖNÜK
 Local server address	Yerli server ünvanı
+Remember panel position	Panelin yerini yadda saxla
+Custom colours	Fərdi rənglər
+Custom colours...	Fərdi rənglər...
+Choose	Seç
+Hers	Özününkü
+Quiet	Səssiz
+Quiet min	Səssiz min
+Quiet max	Səssiz max
+Until I turn it off	Mən söndürənədək
+Quiet on calls	Zənglərdə səssiz
+Quiet in videos	Videolarda səssiz
+Quiet until {n}:{n}	{n}:{n}-dək səssiz
+Quiet until turned off	Söndürülənədək səssiz
+Export settings	Ayarları ixrac et
+Import settings	Ayarları idxal et

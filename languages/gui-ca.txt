@@ -204,3 +204,18 @@ Running on this PC	Executant-se en aquest PC
 NORMAL	NORMAL
 OFF	OFF
 Local server address	Adreça del servidor local
+Remember panel position	Recorda la posició del tauler
+Custom colours	Colors personalitzats
+Custom colours...	Colors personalitzats...
+Choose	Tria
+Hers	Els seus
+Quiet	Silenci
+Quiet min	Silenci min
+Quiet max	Silenci max
+Until I turn it off	Fins que el desactivi
+Quiet on calls	Silenci durant les trucades
+Quiet in videos	Silenci als vídeos
+Quiet until {n}:{n}	Silenci fins a les {n}:{n}
+Quiet until turned off	Silenci fins que es desactivi
+Export settings	Exporta la configuració
+Import settings	Importa la configuració

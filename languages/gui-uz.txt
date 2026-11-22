@@ -204,3 +204,18 @@ Running on this PC	Bu PC'da ishlamoqda
 NORMAL	ODDIY
 OFF	O'CHIQ
 Local server address	Mahalliy server manzili
+Remember panel position	Panel joyini eslab qolish
+Custom colours	Maxsus ranglar
+Custom colours...	Maxsus ranglar...
+Choose	Tanlash
+Hers	Uniki
+Quiet	Jim
+Quiet min	Jim min
+Quiet max	Jim max
+Until I turn it off	Men o'chirgunimcha
+Quiet on calls	Qo'ng'iroqlarda jim
+Quiet in videos	Videolarda jim
+Quiet until {n}:{n}	{n}:{n} gacha jim
+Quiet until turned off	O'chirilguncha jim
+Export settings	Sozlamalarni eksport qilish
+Import settings	Sozlamalarni import qilish

@@ -77,7 +77,7 @@ namespace CapriDesktop
             checks.Add("PASS clip capture samples exclusive state only in its 250 ms look, including a changed answer and switching off");
             long tick = 0, soundAt = 1, nextAt = 2, imageAt = 3;
             IntPtr window = new IntPtr(7), foreground = window;
-            Rectangle bounds = new Rectangle(System.Windows.Forms.Screen.PrimaryScreen.Bounds.Location, new Size(8, 8));
+            Rectangle bounds = new Rectangle(Displays.Home.Bounds.Location, new Size(8, 8));
             GameCapture capture = new GameCapture("clips", delegate { return tick; }, delegate { return new FrameGrab(delegate { return tick; }, delegate { return false; }, delegate { }, delegate { return false; }); }, delegate { return foreground; }, delegate { return false; });
             ClipWait wait = null;
             SoundTap tap = null;
@@ -544,7 +544,7 @@ namespace CapriDesktop
             string log = Path.Combine(Path.GetTempPath(), "capri-capture-quiet-" + Guid.NewGuid().ToString("N") + ".log");
             long tick = 0;
             IntPtr window = new IntPtr(7), foreground = window;
-            Rectangle bounds = new Rectangle(System.Windows.Forms.Screen.PrimaryScreen.Bounds.Location, new Size(8, 8));
+            Rectangle bounds = new Rectangle(Displays.Home.Bounds.Location, new Size(8, 8));
             bool full = false;
             List<QuietGrab> made = new List<QuietGrab>();
             GameCapture frames = new GameCapture(who, delegate { return tick; }, delegate
@@ -651,7 +651,7 @@ namespace CapriDesktop
             int starts = 0, takes = 0, queries = 0;
             bool dxgi = true;
             bool minimized = false;
-            Rectangle bounds = new Rectangle(System.Windows.Forms.Screen.PrimaryScreen.Bounds.Location, new Size(8, 8));
+            Rectangle bounds = new Rectangle(Displays.Home.Bounds.Location, new Size(8, 8));
             IntPtr window = new IntPtr(7), other = new IntPtr(8);
             IntPtr foreground = window;
             List<string> expected = new List<string>();
@@ -770,7 +770,7 @@ namespace CapriDesktop
                 if (!step(true, other, bounds, false)) throw new Exception(who + " did not capture the next steady window.");
                 expected.Add("opened screen copy 12x10 exclusive=no");
                 Rectangle screens = System.Windows.Forms.SystemInformation.VirtualScreen;
-                Rectangle edge = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
+                Rectangle edge = Displays.Home.Bounds;
                 foreach (System.Windows.Forms.Screen screen in System.Windows.Forms.Screen.AllScreens)
                     if (screen.Bounds.Left < edge.Left) edge = screen.Bounds;
                 Rectangle clipped = new Rectangle(edge.Left - 4, edge.Top, 8, 8);
@@ -849,7 +849,7 @@ namespace CapriDesktop
                 }
             }
             checks.Add("PASS empty, off-screen and screen-edge frame areas never reach display setup, screen copy or fullscreen retry across twenty later reopens");
-            Rectangle wanted = new Rectangle(System.Windows.Forms.Screen.PrimaryScreen.Bounds.Location, new Size(8, 8));
+            Rectangle wanted = new Rectangle(Displays.Home.Bounds.Location, new Size(8, 8));
             Rectangle changed = new Rectangle(wanted.Right + 16, wanted.Bottom + 16, 8, 8);
             long now = 0;
             int setups = 0, frames = 0, questions = 0;
@@ -880,7 +880,7 @@ namespace CapriDesktop
         {
             string before = Brain.LogPath;
             string log = Path.Combine(Path.GetTempPath(), "capri-capture-loss-" + Guid.NewGuid().ToString("N") + ".log");
-            Rectangle bounds = new Rectangle(System.Windows.Forms.Screen.PrimaryScreen.Bounds.Location, new Size(8, 8));
+            Rectangle bounds = new Rectangle(Displays.Home.Bounds.Location, new Size(8, 8));
             IntPtr window = new IntPtr(7);
             string privateDetails = @"private window title private-process.exe C:\private-game\game.exe";
             try
@@ -975,7 +975,7 @@ namespace CapriDesktop
         {
             string before = Brain.LogPath;
             string log = Path.Combine(Path.GetTempPath(), "capri-capture-retry-" + Guid.NewGuid().ToString("N") + ".log");
-            Rectangle bounds = new Rectangle(System.Windows.Forms.Screen.PrimaryScreen.Bounds.Location, new Size(8, 8));
+            Rectangle bounds = new Rectangle(Displays.Home.Bounds.Location, new Size(8, 8));
             IntPtr window = new IntPtr(7);
             try
             {
@@ -1049,7 +1049,7 @@ namespace CapriDesktop
 
         internal static void CheckRecovery(List<string> checks)
         {
-            Rectangle bounds = new Rectangle(System.Windows.Forms.Screen.PrimaryScreen.Bounds.Location, new Size(8, 8));
+            Rectangle bounds = new Rectangle(Displays.Home.Bounds.Location, new Size(8, 8));
             long tick = 1;
             int starts = 0, takes = 0, queries = 0;
             FrameGrab healthy = null;

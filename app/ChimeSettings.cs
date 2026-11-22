@@ -13,7 +13,7 @@ namespace CapriDesktop
 {
     internal sealed partial class Preferences
     {
-        // SOUNDS (Lachy, 12 Nov). Her chimes are on until they turn them off, so they're saved switched off. A volume of 0 was
+        // SOUNDS (Lachy). Her chimes are on until they turn them off, so they're saved switched off. A volume of 0 was
         // never set, which is 40%.
         [DataMember] public bool NoChimes;
         [DataMember] public bool NoChimeSent;
@@ -26,9 +26,8 @@ namespace CapriDesktop
 
     internal sealed partial class Companion
     {
-        // Her chimes have a speaker of their own: Plain, so they never go into her voice in their mic or Capri Remote's call, and
-        // apart from her voice's, so one never clears or cuts her off. Like her other speakers it plays on the speaker picked in
-        // VOICE, which is Windows' default unless they chose one.
+        // Her chimes have their own Plain speaker, so they never reach her mic voice or a Remote call and never cut her
+        // off. It plays on the speaker picked in VOICE, Windows' default unless they chose one.
         private Speaker chimeSpeaker;
         // Free voice chat chimed as the line ended, so the words coming back don't chime it again.
         private bool lineChimed;
@@ -201,6 +200,28 @@ namespace CapriDesktop
         // is a silent one and every chime goes into a list, so nothing plays on the PC's speakers.
         private void SmokeSounds(List<string> checks, string output)
         {
+            // Her pranks and cues under the same ceiling a mod's sound has: at full speakers the pipe and a prank clip
+            // peak 20 dB under full, and at an ordinary volume they are as made.
+            Func<double?> speakersWas = Sfx.SpeakersDecibels;
+            try
+            {
+                Sfx.SpeakersDecibels = delegate { return 0.0; };
+                short[] loud = Sfx.Make(Cue.Pipe, 100);
+                Sfx.Capped(loud, 100);
+                int loudPeak = 0;
+                foreach (short one in loud) loudPeak = Math.Max(loudPeak, Math.Abs((int)one));
+                double loudClip = Sfx.SafeVolume(1);
+                Sfx.SpeakersDecibels = delegate { return -40.0; };
+                short[] quiet = Sfx.Make(Cue.Pipe, 100), asMade = Sfx.Make(Cue.Pipe, 100);
+                Sfx.Capped(quiet, 100);
+                double quietClip = Sfx.SafeVolume(1);
+                bool same = quiet.Length == asMade.Length;
+                for (int i = 0; same && i < quiet.Length; i++) if (quiet[i] != asMade[i]) same = false;
+                if (loudPeak > 3300 || Math.Abs(loudClip - 0.1) > 0.001 || !same || quietClip < 0.999)
+                    throw new Exception("Her pranks passed the safe level: pipe peak " + loudPeak + " at full speakers, prank clip volume " + loudClip + ", untouched at -40 dB " + same + " (" + quietClip + ")");
+                checks.Add("PASS her pranks and cues keep under the safe level: at full speakers the metal pipe peaks 20 dB under full and a prank clip plays at 0.1, and at an ordinary volume both are as made");
+            }
+            finally { Sfx.SpeakersDecibels = speakersWas; }
             List<string> table = new List<string>();
             for (int set = 0; set < Chimes.Sets.Length; set++)
             {
@@ -271,11 +292,8 @@ namespace CapriDesktop
                 if (!Same(played[0], Chimes.Render(Chimes.Glass, Chime.Sent, 40)) || !Same(played[1], Chimes.Render(Chimes.Glass, Chime.Heard, 40))) throw new Exception("A chime wasn't Glass at 40% out of the box.");
                 checks.Add("PASS her chimes never stack or repeat fast: the same one waits 700 ms, any two 300 ms, one still ringing drops the next, and her ears' mask covers each chime and 700 ms after; Glass at 40% plays out of the box");
 
-                // Her real chime speaker: silent in the smoke, Plain, and apart from her voice, which plays on through a chime.
-                // Three seconds, not half of one. The wait below allows the chime two seconds to reach its own
-                // speaker, so a shorter tone of hers could finish on its own while this stood there waiting and
-                // read as a chime having cut her off. That is what failed on a box where the first open of an
-                // audio device is slow, and it was the check being wrong rather than her.
+                // Her real chime speaker: silent in the smoke, Plain, apart from her voice. Three seconds, so her tone
+                // can't finish on its own inside the two the wait below allows and read as a chime cutting her off.
                 short[] tone = new short[Chimes.Rate * 3];
                 for (int i = 0; i < tone.Length; i++) tone[i] = (short)(Math.Sin(i * 0.05) * 8000);
                 speaker.Open(Chimes.Rate);
@@ -429,7 +447,7 @@ namespace CapriDesktop
                     if (!shownWas) mainframe.Hide();
                     mainframe.WindowState = stateWas;
                 }
-                checks.Add("PASS SOUNDS shows under HABITS in Simple and Advanced Settings with nothing overlapping or past the page (" + reach.TrimEnd(' ', ';') + "); pictures in mainframe-sounds-simple.png and mainframe-sounds-advanced.png");
+                checks.Add("PASS SOUNDS shows under VOICE in Simple and Advanced Settings with nothing overlapping or past the page (" + reach.TrimEnd(' ', ';') + "); pictures in mainframe-sounds-simple.png and mainframe-sounds-advanced.png");
                 SettingsLook(Path.Combine(output, "sounds-look"));
                 {
                     bool visibleWas = mainframe.Visible;
@@ -805,9 +823,8 @@ namespace CapriDesktop
             }
         }
 
-        // How much of what they say straight after a chime reaches her, every way she hears them, with the chime's echo in the
-        // mic as speakers next to it would play it: each 100 ms of their line is looked for, whole, in what her ears turned into
-        // words or sent on to ElevenLabs. Losing someone's first word is worse than anything a chime's echo could do.
+        // How much of what they say right after a chime reaches her, with the chime's echo in the mic: each 100 ms of
+        // their line is looked for in what her ears heard. Losing a first word is worse than any echo.
         private void SoundsLost(List<string> checks, Action later, Action<long> step)
         {
             Func<short[], string> runWas = Hearing.Run;
@@ -1249,9 +1266,8 @@ namespace CapriDesktop
 
         internal string ChimeSetShown { get { return chimeSetName.Text + (chimeSet.Enabled ? "" : " (grey)"); } }
 
-        // Settings as they'd see it with Windows at dpi (96 for 100%, 120 for 125%, 144 for 150%) and her Mainframe size at 100%,
-        // drawn the way PrintWindow draws it on the smoke's own desktop: the view with HABITS at its top, and the whole page down
-        // its length. Each row's place on the page goes into rows, to hold against another build's.
+        // Settings as seen at a given Windows dpi (96, 120, 144) with her Mainframe at 100%, drawn by PrintWindow: the
+        // view from HABITS, and the whole page. Each row's place goes into rows, to hold against another build's.
         internal void SnapSettings(int dpi, string name, string folder, List<string> rows)
         {
             int dpiWas = layoutDpi, textWas = layoutText, sizeWas = capri.MainframeSize;
@@ -1328,6 +1344,8 @@ namespace CapriDesktop
             bool fallbackWas = layoutFallback;
             try
             {
+                // Only the check's own pointer counts, as in the tips check: a real one over another of her windows clears the tip.
+                tipsDriven = true;
                 foreach (int dpi in new[] { 96, 120, 144 })
                 {
                     int percent = dpi * 100 / 96;
@@ -1361,7 +1379,9 @@ namespace CapriDesktop
             }
             finally
             {
+                tipsDriven = false;
                 DismissHint();
+                overHint = dismissedHint = null;
                 ScrollPage(0);
                 LayoutScale(dpiWas, textWas, fallbackWas);
                 SizeMainframe(sizeWas);

@@ -6,10 +6,9 @@ using System.Text;
 
 namespace CapriDesktop
 {
-    // PROTOCOL.md section 9's proof for the PC: every value in remote/test/vectors.json, checked with her own code. Every
-    // envelopes[] entry seals to exactly its envelope with the given IV and opens back to its plaintext, every rejects[] entry
-    // fails to open, and the PC's own messages and relay controls come out byte for byte. Her smoke test runs it when the
-    // repo is there, and so does app/RemoteTests.
+    // The PC's proof of remote/test/vectors.json with her own code: envelopes seal and open exactly, rejects fail, and
+    // her messages and relay controls match byte for byte. Run by her smoke test when the repo is there, and
+    // app/RemoteTests.
     internal static class RemoteVectors
     {
         // remote/test/vectors.json from the working folder or any folder above her exe, or null.

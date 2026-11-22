@@ -370,3 +370,19 @@ Eyes	Olhos
 Edges	Bordas
 Body	Corpo
 Reset colors	Reiniciar cores
+Remember panel position	Memorizar posição do painel
+Custom colours	Cores personalizadas
+Custom colours...	Cores personalizadas...
+Choose	Escolher
+Hers	As dela
+Quiet	Silenciar
+Quiet min	Silenciar min
+Quiet max	Silenciar max
+Until I turn it off	Até eu desligar
+Quiet on calls	Silêncio nas chamadas
+Quiet in videos	Silêncio nos vídeos
+Quiet until {n}:{n}	Silêncio até às {n}:{n}
+Quiet until turned off	Silêncio até desligar
+Export settings	Exportar definições
+Import settings	Importar definições
+GENERAL SETTINGS	CONFIGURAÇÕES GERAIS

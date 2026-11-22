@@ -7,15 +7,8 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
-    // A voice per personality and per mood, one small file each: voices\voiceProfile_<name>.json.
-    //
-    // One file rather than a block in settings.json, so a profile can be copied between installs, deleted to go
-    // back to stock, or shared, without touching anything else she keeps. They are settings and not writing, so
-    // they are not in her .md files.
-    //
-    // Every number is measured against her stock voice, not against zero: a profile at pitch 2 changes nothing,
-    // because 2 is what she is. That keeps the sliders under Settings, VOICE meaningful, since a profile shifts
-    // what they set rather than replacing it.
+    // A voice per personality and mood, one file each: voices\voiceProfile_<name>.json, easy to copy, share or delete
+    // back to stock. Numbers are offsets from her stock voice, so the VOICE sliders still mean what they say.
     internal sealed class VoiceProfile
     {
         // Consts, not Stock's own fields. Stock is a VoiceProfile, so building it runs these initialisers, and
@@ -51,13 +44,8 @@ namespace CapriDesktop
 
         internal static string Folder;
 
-        // Where each one starts, so nobody has to invent fourteen voices before hearing a difference.
-        //
-        // Pitch stays between -1 and +4 throughout. Lower than that and she stops sounding like herself: the
-        // range the slider allows goes to -6, which is a man, and no character here wants that.
-        // The starting voice for a pack or mood that is not in this build. Something attaches to this
-        // before anything asks, and with nothing attached she uses her stock voice, which is what a
-        // censored install wants anyway.
+        // Where each starts, so nobody invents fourteen voices first; pitch stays between -1 and +4, since lower stops
+        // sounding like her. Profiles for packs not in this build come from what attached, else her stock voice.
         internal static Func<string, VoiceProfile> SenpaiVoice;
 
         private static readonly Dictionary<string, VoiceProfile> Starting = new Dictionary<string, VoiceProfile>(StringComparer.OrdinalIgnoreCase)
@@ -183,12 +171,8 @@ namespace CapriDesktop
         }
     }
 
-    // One line's feeling, from a cue written in front of it: "(joyful) You came back." Her Fish Audio voice acts
-    // cues out on its own; every other voice of hers needed telling, so this turns the word into a shift in pitch,
-    // pace and loudness for that line and nothing more. It is never saved and never follows her into the next line.
-    //
-    // Pitch moves by three semitones at the very most, before her own sliders are even applied. That is a mood on
-    // the same voice, which is the point: past that she stops sounding like herself.
+    // One line's feeling from a cue before it: "(joyful) You came back." For voices that don't act cues, it shifts that
+    // line's pitch, pace and loudness only, pitch by three semitones at most.
     internal static class VoiceFeel
     {
         // cue, pitch in semitones, pace as a percentage, loudness as a percentage.

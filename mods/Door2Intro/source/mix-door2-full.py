@@ -1,13 +1,6 @@
-# Door 2's whole sound in one file, beeps included, so it starts with the scene and can never drift from it. The
-# same layers and levels as door 2's approved mix (CapriSourceFiles/mods/Door2Intro/source/mix-door2.py), on the
-# scene's own clock:
-#   heartbeat 1.0, from 10.1, when the door starts to open, to the end at 21.6, stopping unfaded;
-#   siren 0.88, in at 1.71, looped, its fade over the last 0.8 ending at 19.6, 2 seconds before the heartbeat stops;
-#   static 0.3375, half door 1's, once from 0 with no loop, fading over its last 0.8;
-#   warning beeps 0.22, door 1's alert level, while the signs show: from 6.0 one every 1.4 to 1.6 seconds, growing
-#   quieter from 17.5, when the field starts to fade, to nothing at 21.3, when the last sign has gone.
-# Seeded, so the same layers always make the same file.
-# Run from the folder that holds _SOUNDS: python _SOUNDS\mix-door2-full.py
+# Door 2's whole sound in one file, beeps included, on the scene's clock with mix-door2.py's layers and levels; seeded,
+# so the same layers make the same file.
+# Run from the folder holding _SOUNDS: python _SOUNDS\mix-door2-full.py
 import os
 import random
 import numpy as np

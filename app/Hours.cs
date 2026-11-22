@@ -6,15 +6,8 @@ using System.Text;
 
 namespace CapriDesktop
 {
-    // When they are usually at the PC. She had no idea: every nudge about sleep came off the clock alone, so one at
-    // half past midnight read the same to someone who finishes at ten and someone who works nights.
-    //
-    // The PC being on is the whole measurement. One counter an hour, raised while she is running, so a week of use
-    // draws their day without asking them anything. The counters decay, so a changed routine catches up in about a
-    // fortnight rather than being outvoted by last month forever.
-    //
-    // Nothing here is sent anywhere. It is twenty four numbers in a file beside her settings, and what reaches her
-    // brain is one sentence of prose with no numbers in it, the way her mood and her forwardness are given to her.
+    // When they are usually at the PC: one counter an hour raised while they are here, decaying so a changed routine
+    // catches up in a fortnight. Twenty four numbers in a file; her brain gets one sentence with no numbers.
     internal static class Hours
     {
         internal const string FileName = "hours.txt";
@@ -33,17 +26,12 @@ namespace CapriDesktop
         // Below this an hour has not been seen enough to mean anything, so her day stays unknown rather than guessed.
         private const double Enough = 2.0;
 
-        // What they wrote in me.md, if anything. Their own word beats a week of counting: someone who works nights
-        // knows their hours better than a tally of when the PC happened to be on, and being told off at one in the
-        // morning for a normal evening is exactly the thing this is meant to stop.
+        // What they wrote in me.md, if anything: their own word beats a week of counting, so someone who works nights
+        // isn't told off at one in the morning.
         internal static string Told;
 
-        // Their own answer, however they wrote it. Every time in the line is read and the first and last of them
-        // are their day, rather than the first pair that looks like a range: a real answer here was "about midday,
-        // and then it ends at probably like 3 to 5 a.m", where the first range in it is "3 to 5" and reading that
-        // alone made her think their whole day was one hour long in the middle of the night.
-        //
-        // Words count as times, because people write them: midday, noon and midnight.
+        // Their own answer, however written: every time in it is read, and the first and last are their day, not the
+        // first range. Words count as times: midday, noon, midnight.
         private static bool Stated(out int from, out int to)
         {
             from = to = -1;
@@ -87,10 +75,8 @@ namespace CapriDesktop
 
         internal static void Mark() { Mark(DateTime.Now); }
 
-        // Called on her tick. An hour counts once, and only while they are at the PC: a machine left on all night
-        // used to draw those hours as theirs, so a week of leaving her running said they were up at four in the
-        // morning and her whole idea of their day came out wrong. The fade still has to happen on a new day even
-        // when nobody is here, or a fortnight away would leave every count exactly as it was.
+        // Called on her tick: an hour counts once, and only while they are at the PC. The fade still runs on a new day
+        // with nobody here.
         internal static void Mark(DateTime now)
         {
             lock (gate)
@@ -152,10 +138,8 @@ namespace CapriDesktop
             }
         }
 
-        // The hour on their own day's clock: the clock moved so their usual start reads as seven in the morning, the
-        // way a day that starts at seven does. Someone whose day starts at two in the afternoon gets their morning
-        // small talk then, and their late night at what the wall calls the next morning. The plain clock until she
-        // has learnt their hours, or when the day she learnt is too short or too long to be a day.
+        // The hour on their own day's clock, moved so their usual start reads as seven in the morning. The plain clock
+        // until she has learnt their hours, or when the learnt day is too short or long to be one.
         internal const int DayStarts = 7;
 
         internal static int OwnHour(DateTime now)

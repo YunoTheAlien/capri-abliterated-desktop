@@ -204,3 +204,18 @@ Running on this PC	Энэ компьютер дээр ажиллаж байна
 NORMAL	ХЭВИЙН
 OFF	УНТРААСАН
 Local server address	Локал серверийн хаяг
+Remember panel position	Самбарын байрлалыг санах
+Custom colours	Өөрийн өнгө
+Custom colours...	Өөрийн өнгө...
+Choose	Сонгох
+Hers	Түүнийх
+Quiet	Чимээгүй
+Quiet min	Чимээгүй min
+Quiet max	Чимээгүй max
+Until I turn it off	Би унтраах хүртэл
+Quiet on calls	Дуудлагын үед чимээгүй
+Quiet in videos	Видеон дээр чимээгүй
+Quiet until {n}:{n}	{n}:{n} хүртэл чимээгүй
+Quiet until turned off	Унтраах хүртэл чимээгүй
+Export settings	Тохиргоог экспортлох
+Import settings	Тохиргоог импортлох

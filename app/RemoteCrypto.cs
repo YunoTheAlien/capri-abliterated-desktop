@@ -5,10 +5,9 @@ using System.Text;
 
 namespace CapriDesktop
 {
-    // Capri Remote, protocol 1 (remote/PROTOCOL.md section 6). .NET Framework 4.8 has no AES-GCM, so every envelope is
-    // AES-256-CBC with PKCS#7 and an HMAC-SHA256 tag over its 8-byte header, IV and ciphertext (encrypt-then-MAC), with keys
-    // from HKDF-SHA256, which is hand-rolled on HMACSHA256 here. All of it is checked byte for byte against
-    // remote/test/vectors.json by RemoteVectors, in her smoke test and in app/RemoteTests.
+    // Capri Remote, protocol 1 (remote/PROTOCOL.md 6): .NET 4.8 has no AES-GCM, so envelopes are AES-256-CBC with an
+    // HMAC-SHA256 tag (encrypt-then-MAC), keys from a hand-rolled HKDF-SHA256. Checked against
+    // remote/test/vectors.json.
     internal static class RemoteCrypto
     {
         internal const byte Version = 1;
@@ -127,9 +126,8 @@ namespace CapriDesktop
             return Open(key, kind, direction, seq, envelope, 0, envelope == null ? 0 : envelope.Length, out reason);
         }
 
-        // The checks in PROTOCOL.md's order: the length, then the tag over all 32 bytes in constant time before anything is
-        // decrypted, then the header the tag covers, the exact next sequence number, and strict PKCS#7. Null when any fails;
-        // reason is only for the tests and never goes to the other side.
+        // The checks in PROTOCOL.md's order: length, the tag over all 32 bytes in constant time before decrypting, the
+        // header, the exact next sequence number, strict PKCS#7. Null on any failure; reason is only for tests.
         internal static byte[] Open(RemoteKey key, byte kind, byte direction, uint seq, byte[] envelope, int offset, int count, out string reason)
         {
             reason = null;

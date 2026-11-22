@@ -204,3 +204,18 @@ Running on this PC	এই PC-তে চলছে
 NORMAL	স্বাভাবিক
 OFF	বন্ধ
 Local server address	লোকাল সার্ভারের ঠিকানা
+Remember panel position	প্যানেলের অবস্থান মনে রাখো
+Custom colours	নিজস্ব রং
+Custom colours...	নিজস্ব রং...
+Choose	বেছে নাও
+Hers	ওর নিজের
+Quiet	চুপ
+Quiet min	চুপ min
+Quiet max	চুপ max
+Until I turn it off	আমি বন্ধ না করা পর্যন্ত
+Quiet on calls	কলের সময় চুপ
+Quiet in videos	ভিডিওতে চুপ
+Quiet until {n}:{n}	{n}:{n} পর্যন্ত চুপ
+Quiet until turned off	বন্ধ না করা পর্যন্ত চুপ
+Export settings	সেটিংস রপ্তানি
+Import settings	সেটিংস আমদানি

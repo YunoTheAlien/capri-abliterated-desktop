@@ -204,3 +204,18 @@ Running on this PC	Draait op deze pc
 NORMAL	NORMAAL
 OFF	UIT
 Local server address	Lokaal serveradres
+Remember panel position	Paneelpositie onthouden
+Custom colours	Eigen kleuren
+Custom colours...	Eigen kleuren...
+Choose	Kiezen
+Hers	De hare
+Quiet	Stil
+Quiet min	Stil min
+Quiet max	Stil max
+Until I turn it off	Tot ik het uitzet
+Quiet on calls	Stil tijdens gesprekken
+Quiet in videos	Stil bij video's
+Quiet until {n}:{n}	Stil tot {n}:{n}
+Quiet until turned off	Stil tot uitgezet
+Export settings	Instellingen exporteren
+Import settings	Instellingen importeren

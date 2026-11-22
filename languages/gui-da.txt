@@ -204,3 +204,18 @@ Running on this PC	Kører på denne pc
 NORMAL	NORMAL
 OFF	FRA
 Local server address	Adresse på lokal server
+Remember panel position	Husk panelets placering
+Custom colours	Egne farver
+Custom colours...	Egne farver...
+Choose	Vælg
+Hers	Hendes
+Quiet	Stille
+Quiet min	Stille min
+Quiet max	Stille max
+Until I turn it off	Indtil jeg slår det fra
+Quiet on calls	Stille under opkald
+Quiet in videos	Stille i videoer
+Quiet until {n}:{n}	Stille til {n}:{n}
+Quiet until turned off	Stille til slået fra
+Export settings	Eksportér indstillinger
+Import settings	Importér indstillinger

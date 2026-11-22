@@ -11,9 +11,8 @@ namespace CapriDesktop
 {
     internal enum AsideKind { Add, Change, Stop, Chat, Status, Screen, Tool }
 
-    // What they say to her while her hands are on a job (Lachy, 30 Oct: "you should more easily be able to talk to capri when
-    // shes working through things too"). The plain cases are sorted here with no brain, so a stop or a "how's it going?" never
-    // waits; anything else goes to her fast head, which sorts it and answers while the job carries on.
+    // What they say to her while her hands work a job (Lachy): plain cases are sorted here with no brain, so a stop or
+    // "how's it going?" never waits; anything else goes to her fast head while the job carries on.
     internal static class Asides
     {
         private static readonly Regex Stops = new Regex(
@@ -172,34 +171,28 @@ namespace CapriDesktop
     // much from her first moments and after that only counts what's well over that share and loud enough for a voice.
     internal sealed class TalkOver
     {
-        // Her first 600 ms of sound. Speakers start a few hundred ms after her clock does (Bluetooth ones later still), and a
-        // share learned before her voice reaches the mic is far too small, so her own echo then counts as them talking over
-        // her a couple of words in (ticket 35, GHISA with Hey Capri on: "speech stops after two words while text continues").
+        // Her first 600 ms of sound: speakers start late, Bluetooth later, so a share learned before her voice reaches
+        // the mic is too small and her echo would read as them talking over her.
         private const int Learning = 6;
-        // Off a call it learns until the mic has risen with her instead: three chunks at twice the quietest it's been this turn
-        // or in the last second before it. Speakers later than 600 ms learned their share from silence and still cut her off
-        // (#158). With headphones nothing rises, so it stops learning after 1.5 s of her.
+        // Off a call it learns until the mic rises with her: three chunks at twice its quietest this turn or the second
+        // before. With headphones nothing rises, so it stops learning after 1.5 s of her.
         private const int Rises = 3, LearningMost = 15;
         private const double RiseFloor = 0.004;
         // That last second is the room. Laptop speakers play her echo from her first word, so measured from her line alone it
-        // never rose, and someone talking over her in her first 1.5 s was learned as her echo and couldn't stop her (#158).
+        // never rose, and someone talking over her in her first 1.5 s was learned as her echo and couldn't stop her.
         private const int Rooms = 10;
         private readonly double[] rooms = new double[Rooms];
         private int roomSlot, roomsHeard;
-        // Off a call three loud chunks in a row stop her, so a bang or a cough in two of them doesn't (#158).
+        // Off a call three loud chunks in a row stop her, so a bang or a cough in two of them doesn't.
         internal const int Held = 3;
         private const double Margin = 2.5;
         private const double Fading = 0.93;
-        // A soft stretch fades the share 7% a chunk, and the late echo of her next loud word then looked like them. Off a call
-        // the share stays at 60% or more of its highest lately, which fades 1% a chunk, so a cough or a word of theirs it took
-        // for her echo doesn't keep them from stopping her for the rest of her line (#158).
+        // Off a call the share stays at 60% or more of its recent highest, fading 1% a chunk, so one cough mistaken for
+        // her echo can't stop them interrupting her for the rest of her line.
         private const double Floor = 0.6, HighFading = 0.99;
         private const double Pause = 0.002;
-        // A breath or room tone between her words is a gap too: Fish Audio's voices keep them, and over speakers the mic is still
-        // ringing with the word before, which counted as them talking over her and cut her voice off mid-reply (Mika, Ashy, 2 Nov).
-        // The mic is held against her loudest in this last second, which is the most her own echo can be, so them talking over
-        // a soft word after a loud one still counts, and a mic running behind her does not (Codex review, 3 Nov; the 600 ms
-        // echo on a call, from the smoke run on the Windows box).
+        // A breath or room tone between her words is a gap too (Mika, Ashy). The mic is held against her loudest in the
+        // last second, the most her own echo can be, so them talking over a soft word still counts.
         private const int Recent = 10;
         private readonly double[] recent = new double[Recent];
         private int slot;
@@ -210,7 +203,7 @@ namespace CapriDesktop
         private int chunks;
         private int over;
         // On a call she waits for about a second of them talking, nine of the last twelve chunks, so a laugh or a "yeah" at a
-        // friend doesn't cut her off mid-answer (Lachy, 4 Nov: "after first line are still cutting out").
+        // friend doesn't cut her off mid-answer (Lachy).
         internal const int CallWindow = 12, CallNeeds = 9;
         private readonly bool[] loudRecent = new bool[CallWindow];
         private int loudSlot;
@@ -250,13 +243,8 @@ namespace CapriDesktop
             if (mine <= Pause) return false;
             double loudest = 0;
             foreach (double level in recent) loudest = Math.Max(loudest, level);
-            // Always her loudest in the last second, never only how loud she is this instant. A mic running
-            // behind her carries the word she said half a second ago, so at 600 ms of echo on a call her own
-            // voice from a loud moment landed against a quieter one and read as somebody talking over her: the
-            // smoke run stopped her 1.8 seconds into a call. Her loudest is the most her own echo can be, so
-            // this is the ceiling it has to clear, and somebody genuinely talking over her clears it anyway.
-            // This used to apply in her gaps alone, under GapShare of her loudest, which is the same reasoning
-            // stopping one chunk short of where it leads.
+            // Always her loudest in the last second, not how loud she is now: a mic running behind her carries her
+            // earlier words, so this is the ceiling her own echo can reach, and real talking over her clears it.
             double against = loudest;
             bool learned = call ? chunks >= Learning : risen >= Rises || chunks >= LearningMost;
             chunks++;
@@ -483,10 +471,8 @@ namespace CapriDesktop
             return result;
         }
 
-        // Her side head's facts. A question during a game job with a matching skill switched on also gets that skill, in the same
-        // wrapper her hands get; anything else is exactly what it was. About 5,000 letters of skill is a lot for a fast head, so
-        // "shine that light" and "nice one" go without it: her hands already have it. Called off her window's thread, since finding
-        // the game reads the open windows.
+        // Her side head's facts: a game job's question also gets its matching skill, in the same wrapper her hands get.
+        // Short asks go without it. Called off her window's thread, since finding the game reads the open windows.
         private string AsideFacts(Job running, JobReport report, string text, bool question, ref string system)
         {
             Func<string, string> skills = GameNotes.Skills;
@@ -502,7 +488,7 @@ namespace CapriDesktop
             long sequence = running.Sequence();
             AsideKind guess = Asides.Guess(text);
             // Every brain sorts what they say beside the job with her tools, a brain on this PC too: there it waits for the job's
-            // turn, but a dance, a clone or a setting in any words runs as a tool instead of becoming a mouse step (Lachy, 3 Nov).
+            // turn, but a dance, a clone or a setting in any words runs as a tool instead of becoming a mouse step (Lachy).
             Hands.Kit kit = Hands.KitFor(brain.Blind);
             string system = Brain.Character + Brain.Remembered() + Asides.Head + "\nYou have the same tools beside the job. Use them whenever they ask, suggest or hint at an ability, including your own moves, animations, clones and settings. Use job_control for stopping, checking or changing the job. ADD and CHANGE are only for instructions that belong to its mouse work. Call tools without claiming they ran; their results will be said.";
             if (CallHands(ticket)) system += CallSession.Tools + callSession.Context(callUserVersion);
@@ -646,13 +632,13 @@ namespace CapriDesktop
         {
             double now = clock.Elapsed.TotalSeconds;
             // Every message they send counts as input, and with nothing of hers playing or on its way that's no interruption. A line
-            // for each pushed her real cuts out of errors.txt within a day (#158).
+            // for each pushed her real cuts out of errors.txt within a day.
             if (!ignored && !voice.Playing && answerVoice < 0 && hdSpeaking < 0 && speaker.Ago >= 1) return;
             Brain.Log("voice interruption", -1, source + " answer=" + answerTurn + " audio=" + audioTurn + " detected=" + detected + " ignored=" + ignored
                 + " played_ms=" + (spokenLevels == null ? -1 : (long)((now - spokenAt) * 1000)) + " remaining_ms=" + (long)(Math.Max(0, voiceUntil - now) * 1000) + " stream_busy=" + speaker.Busy);
         }
 
-        // A mic event queued for one reply must leave the next reply alone (ticket 35).
+        // A mic event queued for one reply must leave the next reply alone.
         private void QueueBargeIn(int ticket, int audio, string source)
         {
             Post(delegate
@@ -695,11 +681,9 @@ namespace CapriDesktop
         private bool tailOpen;
         private long tailSound;
 
-        // While she talks voice chat's agent gets silence, or it would hear her and answer itself. Them talking over her is what
-        // gets through: she stops, and the agent hears them from the start of what they said.
-        // That lasts until her stream has been quiet for a second, not just while sound is queued: her echo between sentences
-        // and after her last word reached ElevenLabs, which took it as them and cut her off (#158). Her pauses keep what it
-        // learned. Them answering in that second gets through from their first word, with nothing of hers left to stop.
+        // While she talks voice chat's agent gets silence, or it would answer itself; them talking over her gets
+        // through from the start of their words. It holds until her stream has been quiet for a second, so her echo
+        // isn't taken for them.
         private short[] OverHer(short[] chunk, Agent open)
         {
             int ticket = asking, audio = audioTurn;
@@ -720,7 +704,7 @@ namespace CapriDesktop
             heldBack.Add(chunk);
             if (heldBack.Count > TalkOver.Held + 2) heldBack.RemoveAt(0);
             // Her loudest of the last 600 ms, like free voice chat's and Hey Capri's: against 300 ms, with speakers 900 ms late it
-            // took over 400 ms to hear them over her (#158). In the second after her sound it's her loudest of that second.
+            // took over 400 ms to hear them over her. In the second after her sound it's her loudest of that second.
             if (!talkOver.Heard(level, speaker.Level(playing ? 0.6 : 1), WakeLevel)) return new short[chunk.Length];
             if (playing)
             {
@@ -763,7 +747,7 @@ namespace CapriDesktop
             }
             overHeld = false;
             // Listen for Capri waits to hear whether the line was for her. On a call every line is, so talking over her stops
-            // her there and then (Lachy, 3 Nov).
+            // her there and then (Lachy).
             if (preferences.ListenCapri && !CallModeOn)
             {
                 nameOver = true;
@@ -786,9 +770,8 @@ namespace CapriDesktop
             QueueBargeIn(ticket, audio, "wake mic talk-over");
         }
 
-        // Her push-to-talk key, any key or mouse button, read rather than taken, so it still does its own job in a game. Held, her
-        // mic is open whatever else is going on, and let go what they said is heard like anything else: it goes to a job if one's
-        // running. In ElevenLabs voice chat it only opens a muted mic, since that mic is the agent's already.
+        // Her push-to-talk key or mouse button, read rather than taken, so it still works in a game. Held, her mic is
+        // open; released, what they said is heard as usual. In ElevenLabs voice chat it only unmutes the agent's mic.
         private bool pushing;
         private bool pushOpened;
         private bool pushUnmuted;
@@ -796,9 +779,8 @@ namespace CapriDesktop
         private List<short[]> pushed;
         private List<CallChunk> pushedCall;
 
-        // Windows keeps keys from her while a game that runs as admin is in front, so in Genshin Impact her push-to-talk and her
-        // other keys did nothing (john_sandevistan, 3 Nov). She says why, once for each game while she runs; anything else that
-        // runs as admin, like Task Manager, gets nothing.
+        // Windows keeps keys from her while an admin game is in front (john_sandevistan), so she says why once per game
+        // while she runs; other admin windows, like Task Manager, get nothing.
         private IntPtr keyFront;
         private readonly HashSet<string> keyWarnings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private const string AdminKeys = "This game runs as administrator, so Windows hides your keys from me while it's in front. To use them here, " + Computer.AsAdmin + ".";
@@ -975,15 +957,13 @@ namespace CapriDesktop
         internal int KeepWait = 2500;
         private Func<string, string, List<KeyValuePair<string, ToolArguments>>> keepTest;
 
-        // Text chat never lets a brain's "I'll do it" stand with no tool behind it, but voice chat only logged it, so "opening Bloons
-        // TD 6 for you" was the end of it (Lachy, 7 Nov). Now every reply with no tool behind it gets her own brain's second look with
-        // every tool, and what it picks runs as it is. Her hands' shortcuts only fill in for a brain without tools of its own, or when
-        // hers couldn't look: then a promise to do something they clearly asked for runs as a job.
+        // A voice chat reply with no tool behind it gets her own brain's second look with every tool, and what it picks
+        // runs (Lachy). Her hands' shortcuts fill in only when her brain has no tools or couldn't look.
         private void KeepPromise(string words, string said, int ticket, Agent told)
         {
             bool promised = Hands.Promised(said);
             // The wait is a timer's, so no pool thread sleeps through it. Every reply waits here now, and on GitHub's 4-core runner
-            // three of them asleep at once took every free pool thread, so talking couldn't reopen her resting call in time (8 Nov).
+            // three of them asleep at once took every free pool thread, so talking couldn't reopen her resting call in time.
             System.Threading.Timer wait = null;
             wait = new System.Threading.Timer(delegate
             {
@@ -1032,7 +1012,7 @@ namespace CapriDesktop
             wait.Change(KeepWait, Timeout.Infinite);
         }
 
-        // ElevenLabs' agent sometimes says a line twice, which reached them word for word (their transcript, 30 Oct). The same
+        // ElevenLabs' agent sometimes says a line twice, which reached them word for word. The same
         // line again within half a minute is cut: its audio is dropped until she has something new to say.
         private bool repeating;
         private string lastSaid;

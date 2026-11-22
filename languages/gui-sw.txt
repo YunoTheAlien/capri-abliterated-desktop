@@ -204,3 +204,18 @@ Running on this PC	Inaendeshwa kwenye Kompyuta hii
 NORMAL	KAWAIDA
 OFF	IMEZIMWA
 Local server address	Anwani ya seva ya ndani
+Remember panel position	Kumbuka mahali pa paneli
+Custom colours	Rangi maalum
+Custom colours...	Rangi maalum...
+Choose	Chagua
+Hers	Zake
+Quiet	Kimya
+Quiet min	Kimya min
+Quiet max	Kimya max
+Until I turn it off	Hadi nikizime
+Quiet on calls	Kimya wakati wa simu
+Quiet in videos	Kimya kwenye video
+Quiet until {n}:{n}	Kimya hadi {n}:{n}
+Quiet until turned off	Kimya hadi kizimwe
+Export settings	Hamisha mipangilio
+Import settings	Leta mipangilio

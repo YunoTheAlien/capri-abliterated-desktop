@@ -4,21 +4,16 @@
 
 # Capri
 
-**Bring Capri (back lol) to life as a desktop companion!**<br>
+**An overhaul of Lachy's Capri Desktop: bring Capri (back lol) to life as a desktop companion!**<br>
 She sits on your windows, talks back, joins your calls, plays your games and gets into everything.
 
-<a href="https://apps.microsoft.com/detail/9P0KFRB76X0G"><img src="https://img.shields.io/badge/Get%20it%20from%20Microsoft%20Store-ff2a6d?style=for-the-badge" alt="Get it from the Microsoft Store"></a>
-<a href="https://github.com/lachydotmcg/capri-desktop/releases/latest/download/Capri-Setup.exe"><img src="https://img.shields.io/badge/Latest%20release%20for%20Windows-05d9e8?style=for-the-badge" alt="Download the latest release for Windows"></a>
-<a href="#mac-and-linux-preview"><img src="https://img.shields.io/badge/Mac%20and%20Linux-1b1d21?style=for-the-badge" alt="Mac and Linux"></a>
-<a href="#capri-vr"><img src="https://img.shields.io/badge/Capri%20VR%20for%20Quest-7854f0?style=for-the-badge" alt="Capri VR for Meta Quest"></a>
+<a href="https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/latest"><img src="https://img.shields.io/badge/Latest%20release%20for%20Windows-05d9e8?style=for-the-badge" alt="Download the latest release of this overhaul for Windows"></a>
+<a href="https://github.com/lachydotmcg/capri-desktop"><img src="https://img.shields.io/badge/The%20original%20by%20Lachy-ff2a6d?style=for-the-badge" alt="Lachy's original Capri Desktop"></a>
 
-<a href="https://github.com/lachydotmcg/capri-desktop/releases/latest"><img src="https://img.shields.io/github/v/release/lachydotmcg/capri-desktop?label=latest&color=05d9e8&style=flat-square" alt="Latest release"></a>
-<a href="https://github.com/lachydotmcg/capri-desktop/releases"><img src="https://img.shields.io/github/downloads/lachydotmcg/capri-desktop/total?color=05d9e8&style=flat-square" alt="Downloads"></a>
-<a href="https://discord.gg/capridesktop"><img src="https://img.shields.io/badge/Discord-join%20us-5865F2?logo=discord&logoColor=white&style=flat-square" alt="Discord"></a>
+<a href="https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/latest"><img src="https://img.shields.io/github/v/release/YunoTheAlien/capri-abliterated-desktop?label=latest&color=05d9e8&style=flat-square" alt="Latest release"></a>
+<a href="https://github.com/YunoTheAlien/capri-abliterated-desktop/releases"><img src="https://img.shields.io/github/downloads/YunoTheAlien/capri-abliterated-desktop/total?color=05d9e8&style=flat-square" alt="Downloads"></a>
 
-[Every download](https://capriai.app/#download) · [Setup guide](https://capriai.app/setup/) · [Website](https://capriai.app/) · [Help](https://capriai.app/help/) · [Support](#support)
-
-<sub>Get Capri only from [capriai.app](https://capriai.app/), [GitHub](https://github.com/lachydotmcg/capri-desktop/releases) or the [Microsoft Store](https://apps.microsoft.com/detail/9P0KFRB76X0G). Copies on other sites aren't ours. Zero telemetry.</sub>
+<sub>This is an overhaul built on <a href="https://github.com/lachydotmcg/capri-desktop">Lachy's original Capri Desktop</a>, with huge credit to him and everyone who built it. His original, with the <a href="https://apps.microsoft.com/detail/9P0KFRB76X0G">Microsoft Store</a> copy, its Mac, Linux and VR builds, the <a href="https://discord.gg/capridesktop">Discord</a> and the <a href="https://capriai.app/">website</a>, is the place for those. Contributors are credited from the original repository: see <a href="#credits">Credits</a>. Zero telemetry.</sub>
 
 <sub>Inspired by jpartnma_'s TikTok video.</sub>
 
@@ -83,7 +78,6 @@ Press **Mods** in the Mainframe's CAPRI band. Browse the [mods directory](https:
 - Every mod in the directory is checked for malware before it goes up
 - **Recolour her yourself:** press Hair, Accents, Eyes, Edges or Body on the Mods page. She saves it as a My Colors mod you can share
 - **Share yours:** fork [capri-mods](https://github.com/lachydotmcg/capri-mods), add a folder with the mod, a README and a `preview.png`, then open a pull request
-- **Mac and Linux** get the Mods window, the directory, settings mods, colour sets, stacking skins and code mods. A code mod that uses Windows-only parts, like drawing on her or an options page, is refused there with a message naming the part
 
 </details>
 
@@ -123,31 +117,6 @@ Beware that Capri may try to take over your human CPU. We take no responsibility
 </details>
 
 <details>
-<summary><h2><a name="mac-and-linux-preview"></a>Mac and Linux (preview)</h2><br><a name="mac-and-linux-preview-1"><img src="assets/readme/mac-desktop.png" alt="Capri on a Mac, answering in her speech bubble beside her TYPE and TALK pill" width="220"></a> <a name="mac-and-linux-preview-2"><img src="assets/readme/mac-mainframe.png" alt="Capri Mainframe on a Mac: the main page with BRAIN, VOICE and CAPRI, and Advanced Settings behind it" width="500"></a></summary>
-
-0.8.3 gives Mac and Linux her full **Capri Mainframe**, laid out like Windows: BRAIN, VOICE and CAPRI up front, plus Simple and Advanced Settings. She sits on your windows and chats, remembers your chats, watches your screen, opens, switches and closes apps and controls your music. She checks in on you, takes head pats, keeps your PC awake for jobs and keeps her notes in Obsidian. She talks through your own speech server or a cloud voice, and Mods and Code/Husk Mode work too.
-
-Linux can hear one English turn at a time through **TALK** once you set up her offline ears below. Calls and wake words are Windows only for now.
-
-1. Download [Mac (Apple Silicon)](https://github.com/lachydotmcg/capri-desktop/releases/latest/download/Capri-mac-apple-silicon.zip), [Mac (Intel)](https://github.com/lachydotmcg/capri-desktop/releases/latest/download/Capri-mac-intel.zip), [Linux (AppImage)](https://github.com/lachydotmcg/capri-desktop/releases/latest/download/Capri-linux-x64.AppImage) or [Linux (tar.gz)](https://github.com/lachydotmcg/capri-desktop/releases/latest/download/Capri-linux-x64.tar.gz)
-2. For her brain, open **Capri Mainframe > BRAIN**: use a free NVIDIA, Gemini or OpenRouter key, your own OpenAI, Claude or DeepSeek key, or any OpenAI-compatible provider with a key. Or install [Ollama](https://ollama.com) and run `ollama pull gemma4:e4b`
-3. **Mac:** unzip it, drag Capri into Applications, then open Terminal and run this once. Needs macOS 15 or newer
-   ```bash
-   xattr -dr com.apple.quarantine /Applications/Capri.app
-   ```
-   Apple hasn't approved (notarized) her yet, so macOS blocks her or calls her "damaged" until you do. That line only clears the downloaded-from-the-internet flag on Capri
-4. **Linux:** make the AppImage executable and run it (`chmod +x Capri-linux-x64.AppImage`), or unpack the tarball and run `Capri/Capri`. She sits on windows on X11; on Wayland she sits on the bottom of your screen
-
-### Linux TALK setup
-
-1. Install `parec` from your distribution's PulseAudio tools (`pulseaudio-utils` on Ubuntu). Pick your default mic in your system sound settings. PipeWire works when its PulseAudio service is running.
-2. Extract the [sherpa-onnx Linux CPU build](https://github.com/k2-fsa/sherpa-onnx/releases/tag/v1.13.8) for your machine into `${XDG_CONFIG_HOME:-$HOME/.config}/Capri/ears/`, keeping its libraries with the extracted build. She also finds `sherpa-onnx-offline` on your `PATH` or in `~/.local/bin`, `/usr/local/bin` or `/usr/bin`.
-3. Extract her [English Parakeet pack](https://github.com/lachydotmcg/capri-desktop/releases/download/ears-pack-1/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8.tar.bz2). Put `encoder.int8.onnx`, `decoder.int8.onnx`, `joiner.int8.onnx` and `tokens.txt` directly in `${XDG_CONFIG_HOME:-$HOME/.config}/Capri/ears/parakeet-tdt-0.6b-v2-int8/`.
-4. Hover over her and click **TALK**. Say one line and pause. Click **TALK** again to cancel. She reads the mic audio on your PC and sends only the words through the same chat as **TYPE**. She answers out loud when you've set up a voice under **Mainframe > VOICE**.
-
-</details>
-
-<details>
 <summary><a name="codehusk-mode-1"><img src="site/assets/presence/clones.gif" alt="A crowd of Capri clones glitching" width="96" align="left"></a><h2><a name="codehusk-mode"></a>Code/Husk Mode</h2><br>She becomes Claude Code's, Codex's and OpenCode's body while they work<br clear="left"></summary>
 
 She becomes Claude Code's, Codex's and OpenCode's body while they work. Leave them coding and go do something else: she acts it all out on your desktop, says when they need your OK, and tells you what they answered.
@@ -173,34 +142,20 @@ She becomes Claude Code's, Codex's and OpenCode's body while they work. Leave th
 - **Off** stops her listener and removes only her hooks and her OpenCode plugin
 - With a cloud brain, the answers and actions she reads go to that brain to be shortened or talked about, with keys, tokens and passwords taken out first
 
-Code/Husk Mode works on Windows, Mac and Linux.
-
-</details>
-
-<details>
-<summary><a name="capri-vr-1"><img src="site/assets/presence/controller.gif" alt="A glitching game controller" width="96" align="left"></a><h2><a name="capri-vr"></a>Capri VR</h2><br>Capri Room for Meta Quest 3 and 3S, by fadievr<br clear="left"></summary>
-
-**Capri Room** is her mixed-reality version for Meta Quest 3 and 3S, made by fadievr. She walks around your real room, sits on the edges of your furniture, naps when you ignore her, reacts when you pet, poke, grab or throw her, and talks with you through your headset.
-
-1. Turn on [Developer Mode](https://developers.meta.com/horizon/sign-up) for your Quest
-2. Download **[Capri-VR-Quest.apk](https://github.com/lachydotmcg/capri-desktop/releases/latest/download/Capri-VR-Quest.apk)**
-3. Install it with [SideQuest](https://sidequestvr.com) or [Meta Quest Developer Hub](https://developers.meta.com/horizon/documentation/unity/ts-mqdh/)
-4. In the headset, open **Library > Unknown Sources > Capri Room**, and allow spatial data and the microphone
-
-Press **Y** in the headset for her settings. Her brain and voice keys stay on your headset. The full install notes are in [quest/README.md](quest/README.md), and fadievr's own repo is [fadievr/capri-room](https://github.com/fadievr/capri-room).
+Code/Husk Mode works on Windows.
 
 </details>
 
 <details>
 <summary><a name="getting-started-1"><img src="site/assets/presence/plugged.gif" alt="Capri glitching as she powers up" width="96" align="left"></a><h2><a name="getting-started"></a>Getting started</h2><br>Three steps, and what your PC needs<br clear="left"></summary>
 
-1. Get her from the **[Microsoft Store](https://apps.microsoft.com/detail/9P0KFRB76X0G)** and open her, or download the latest release, **[Capri-Setup.exe](https://github.com/lachydotmcg/capri-desktop/releases/latest/download/Capri-Setup.exe)**, and run it
+1. Download this overhaul's latest release, **[Capri-Setup](https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/latest)**, and run it. Lachy's original is on the **[Microsoft Store](https://apps.microsoft.com/detail/9P0KFRB76X0G)** and at **[his releases](https://github.com/lachydotmcg/capri-desktop/releases)**
 2. In the Capri Mainframe, press **Set up her brain**, or press **Free key** to use a free NVIDIA key
 3. Optional: pick another voice under **VOICE** (see [Her voice](#her-voice))
 
-**Two ways to get her on Windows.** The [Microsoft Store copy](https://apps.microsoft.com/detail/9P0KFRB76X0G) (CapriAI, 0.8.9) is signed and checked by Microsoft, so there's no warning. It has Capri Remote and updates through the Store. The latest release, Capri-Setup.exe, updates herself, but it isn't signed yet, so Windows or your antivirus may warn you as if it were a virus. Both are on [capriai.app](https://capriai.app/#download), with the one for your device on top.
+**This overhaul and the original.** Lachy's original is on the [Microsoft Store](https://apps.microsoft.com/detail/9P0KFRB76X0G) (signed and checked by Microsoft, with Capri Remote) and at [capriai.app](https://capriai.app/#download). This overhaul's Capri-Setup updates herself, but it isn't signed yet, so Windows or your antivirus may warn you as if it were a virus.
 
-Get Capri only from [capriai.app](https://capriai.app/), [GitHub](https://github.com/lachydotmcg/capri-desktop/releases) or the [Microsoft Store](https://apps.microsoft.com/detail/9P0KFRB76X0G). Copies on other sites aren't ours.
+Get this overhaul only from [its GitHub releases](https://github.com/YunoTheAlien/capri-abliterated-desktop/releases), and the original only from [capriai.app](https://capriai.app/), [Lachy's GitHub](https://github.com/lachydotmcg/capri-desktop/releases) or the [Microsoft Store](https://apps.microsoft.com/detail/9P0KFRB76X0G).
 
 **Zero telemetry.** No analytics, crash reports or usage pings. [SECURITY.md](SECURITY.md) lists what she connects to, what the website counts, and what to do if Windows or your antivirus warns you.
 
@@ -304,11 +259,9 @@ Pick what she calls you, her language, her voice and what she does on your PC fr
 - **[She joins your calls.](#she-joins-your-calls)** She hops in your Discord call for you, covers for you and launches the game your friends pick
 - **[Code/Husk Mode.](#codehusk-mode)** She's Claude Code's, Codex's and OpenCode's body while they work
 - **[Mods.](#mods)** A Mods window with a directory, previews, downloads and ratings, and nine mods by Vocyn to start
-- **[Capri VR.](#capri-vr)** Capri Room for Meta Quest 3 and 3S, by fadievr
-- **[Mac and Linux.](#mac-and-linux-preview)** Her full Mainframe, Mods, Code/Husk Mode and any OpenAI-compatible provider
 - **From your ideas.** Any OpenAI-compatible provider on Windows too, pick her speaker and the screens she watches, edit her notes in the Mainframe, reminders on dates and more
 
-All the changes are in the [release notes](https://github.com/lachydotmcg/capri-desktop/releases/latest).
+This overhaul's changes are in [its release notes](https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/latest); the original's are in [Lachy's](https://github.com/lachydotmcg/capri-desktop/releases/latest).
 
 </details>
 
@@ -419,24 +372,6 @@ All the changes are in the [release notes](https://github.com/lachydotmcg/capri-
 
 - [x] A Mods window with a directory, previews, downloads and ratings (0.8.3)
 - [x] Nine mods to start, by Vocyn: colour sets, Custom Names, Startup Intros and more (0.8.3)
-- [x] Capri VR: Capri Room for Meta Quest 3 and 3S, by fadievr (0.8.3)
-
-**Mac and Linux**
-
-- [x] An early preview: she sits on your windows and chats
-- [x] Her ElevenLabs voice, wandering and dancing
-- [x] Opening apps and sites, and controlling your music
-- [x] Brains from a key: a free NVIDIA key, or OpenAI, Claude or DeepSeek, with no Ollama needed (0.7.6)
-- [x] Chat memory, watching your screen, pop-ins and Discord status (0.7.6)
-- [x] Switching and closing your apps (0.7.6)
-- [x] Telling you when a new version is out (0.7.6)
-- [x] The Mainframe, laid out like Windows (0.8.3)
-- [x] Mods: the Mods window, settings mods, colour sets and skins (0.8.3)
-- [ ] Voice chat and her free voice
-- [ ] Jobs with her own cursor
-- [ ] Updates that install themselves
-- [ ] Apple approving (notarizing) her, so macOS stops blocking her
-- [ ] Everything else Windows has, so they stop being an early preview
 
 **Setup and updates**
 
@@ -464,6 +399,14 @@ Capri is free. To support the people who make her, tip them on Ko-fi:
 
 Big thanks to **Vocyn** for the mods, **fadievr** for Capri VR, **Denoax** for the Mac and Linux Mainframe's look and **danielxxomg** for provider keys and silent installs, and to everyone in the Discord who sends ideas and bug reports.
 
+## Credits
+
+This overhaul is built on [Lachy's original Capri Desktop](https://github.com/lachydotmcg/capri-desktop). Huge credit to Lachy and to everyone who built the original. Contributors are credited from the original repository; its full history is on [its contributors page](https://github.com/lachydotmcg/capri-desktop/graphs/contributors).
+
+Contributors to the original: [lachydotmcg](https://github.com/lachydotmcg), [danielxxomg](https://github.com/danielxxomg), [nathanZW](https://github.com/nathanZW), [Vocyn](https://github.com/Vocyn), [fadievr](https://github.com/fadievr), [tuno473](https://github.com/tuno473), [coiai](https://github.com/coiai), [Aaqibhafeezkhan](https://github.com/Aaqibhafeezkhan), [Denoax](https://github.com/Denoax), [Denoaxx](https://github.com/Denoaxx), [Zak6571](https://github.com/Zak6571), [nikitchxd](https://github.com/nikitchxd), [painbaba](https://github.com/painbaba), [tob7as](https://github.com/tob7as), [swrd1337](https://github.com/swrd1337), [AlgorithmWiz](https://github.com/AlgorithmWiz), [AsLirith](https://github.com/AsLirith), [Givienne](https://github.com/Givienne), [jay23606](https://github.com/jay23606), [RajareCorp](https://github.com/RajareCorp), [Sharaj00](https://github.com/Sharaj00), [super-cr4SH](https://github.com/super-cr4SH).
+
+Every feature this overhaul took or adapted from the original carries its credit in the release notes.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to build her, test her and send a pull request. Made a mod? Share it in [capri-mods](https://github.com/lachydotmcg/capri-mods).
@@ -482,7 +425,7 @@ Have fun and more updates to come!
 
 <sub>Window perch and music perch animations: her artist, who prefers to stay private. Click effect: mixmix312352. Transformation animation she forms from when she teleports, and her two secret emotes: Qewiw (mix_qewiw1412_86144). Starter mods: Vocyn. Capri VR (Capri Room): fadievr. Mac and Linux Mainframe theme: Denoax. Setup guide based on Dancer's guide in the Discord. Font: Share Tech Mono (OFL). Free voice: Kokoro-82M (Apache-2.0). Her own ears: [NVIDIA Parakeet TDT 0.6B v2](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) for English and Ultra for 25 European languages (weights by Moondream, trained from [nvidia/parakeet-tdt-0.6b-v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3); both [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)), int8 exports by sherpa-onnx. Both run with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (Apache-2.0). HD voice: [Qwen3-TTS 1.7B](https://github.com/QwenLM/Qwen3-TTS) (Apache-2.0), run with [qwentts.cpp](https://github.com/ServeurpersoCom/qwentts.cpp) (MIT). Her voice in your mic: [VB-CABLE](https://vb-cable.com) by VB-Audio, donationware, carried unchanged and installed only by its own setup. Other notices: [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).</sub>
 
-## Star history
+## Star history of the original
 
 <a href="https://www.star-history.com/#lachydotmcg/capri-desktop&Date">
   <picture>

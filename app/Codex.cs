@@ -17,7 +17,12 @@ namespace CapriDesktop
     // attached, read by any build.
     internal static class Codex
     {
-        internal const string Name = "capri-codex-1.pack";
+        // Named for the release that carries it, so a file says which version it goes with: capri-codex-0.9.433.pack,
+        // capri-codex-0.9.432test.pack. That release is Tag, or this build's own version while Tag is empty.
+        internal static string Name { get { return NameFor(string.IsNullOrEmpty(CodexSum.Tag) ? Companion.Built : CodexSum.Tag); } }
+        internal static string NameFor(string version) { return "capri-codex-" + version + ".pack"; }
+        // Every codex file, this build's and older ones (capri-codex-1.pack was the name before versions).
+        internal const string Every = "capri-codex-*.pack";
         // In the release for this version, beside the programs, so a build only ever fetches the one its hash
         // names.
         internal static string Url { get { return ReleaseFile.Address(Name, CodexSum.Tag); } }
@@ -95,6 +100,23 @@ namespace CapriDesktop
             Put(s, "body", Ask(Interests.BodyFor));
             Put(s, "head", Ask(Interests.HeadFor));
             Put(s, "was", Ask(Interests.WasNameFor));
+            // The paces, the old names of her two interests files and a story mood for each of the moods above, which
+            // the side attaches beside the rest and which a build with only this pack had none of.
+            s["paces"] = Grid(Dynamics.StockPaces());
+            Put(s, "washers", Ask(Interests.WasHersFor));
+            Put(s, "wasyours", Ask(Interests.WasYoursFor));
+            if (Lore.StoryMoodFor != null)
+            {
+                List<string> stories = new List<string>();
+                foreach (string one in moods)
+                {
+                    string story = null;
+                    try { story = Lore.StoryMoodFor(one); }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                    if (!string.IsNullOrEmpty(story)) stories.Add(one + "\t" + story);
+                }
+                s["storymood"] = string.Join("\n", stories.ToArray());
+            }
             s["more"] = string.Join("\n", Interests.SenpaiMore ?? new string[0]);
             if (Sayings.SenpaiSectionFor != null)
                 for (int i = 0; i < 4; i++)
@@ -167,6 +189,23 @@ namespace CapriDesktop
             if (body != null) Interests.BodyFor = delegate { return body; };
             if (head != null) Interests.HeadFor = delegate { return head; };
             if (was != null) Interests.WasNameFor = delegate { return was; };
+            string[,] paces = Grid(Get(s, "paces"));
+            for (int row = 0; row < paces.GetLength(0); row++)
+            {
+                double pace;
+                if (double.TryParse(paces[row, 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out pace))
+                    Dynamics.StockPace(paces[row, 0], pace);
+            }
+            string wasHers = Get(s, "washers"), wasYours = Get(s, "wasyours");
+            if (wasHers != null) Interests.WasHersFor = delegate { return wasHers; };
+            if (wasYours != null) Interests.WasYoursFor = delegate { return wasYours; };
+            Dictionary<string, string> stories = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string one in Lines(Get(s, "storymood")))
+            {
+                int tab = one.IndexOf('\t');
+                if (tab > 0) stories[one.Substring(0, tab)] = one.Substring(tab + 1);
+            }
+            if (stories.Count > 0) Lore.StoryMoodFor = delegate(string named) { string story; return stories.TryGetValue(named ?? "", out story) ? story : null; };
             Interests.SenpaiMore = Lines(Get(s, "more"));
             Sayings.SenpaiSectionFor = delegate(int which) { return Get(s, "lines/" + which) ?? ""; };
             Touch.SenpaiTouch = Get(s, "touch") ?? "";
@@ -263,7 +302,21 @@ namespace CapriDesktop
 
         // ---------- Fetching ----------
 
-        internal static string Fetch(string data) { return ReleaseFile.Fetch(Name, CodexSum.Sha, CodexSum.Size, PathIn(data), CodexSum.Tag); }
+        internal static string Fetch(string data)
+        {
+            Remove(data, Name);
+            return ReleaseFile.Fetch(Name, CodexSum.Sha, CodexSum.Size, PathIn(data), CodexSum.Tag);
+        }
+
+        // Every codex file in her folder but the one named keep (null for all): an older version's is never read
+        // again, and switched off with cleanup, none stays on disk.
+        internal static void Remove(string data, string keep)
+        {
+            if (string.IsNullOrEmpty(data) || !Directory.Exists(data)) return;
+            foreach (string one in Directory.GetFiles(data, Every))
+                if (keep == null || !string.Equals(System.IO.Path.GetFileName(one), keep, StringComparison.OrdinalIgnoreCase))
+                    try { File.Delete(one); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+        }
 
         internal static bool Fine(string path) { return ReleaseFile.Matches(path, CodexSum.Sha, CodexSum.Size); }
 
@@ -395,14 +448,13 @@ namespace CapriDesktop
         }
     }
 
-    // One file from the release that carries it, kept only when its size and hash match the ones this build was made
-    // with. Used for her codex and for her stories. The tag is the release the file first went out on, so an unchanged
-    // file is uploaded once; empty means this build's own release.
+    // One file from the release that carries it, kept only when size and hash match this build's, for her codex and
+    // stories. The tag is the release it first shipped on, so an unchanged file uploads once; empty is this build's.
     internal static class ReleaseFile
     {
         internal static string Address(string name, string tag)
         {
-            return "https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/download/v" + (string.IsNullOrEmpty(tag) ? Own(Companion.Built) : tag) + "/" + name;
+            return "https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/download/v" + Own(string.IsNullOrEmpty(tag) ? Companion.Built : tag) + "/" + name;
         }
 
         // Her own release is tagged with the numbers of her version only, so 0.9.427pi fetches from v0.9.427: a word in

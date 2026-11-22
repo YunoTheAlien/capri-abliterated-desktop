@@ -204,3 +204,18 @@ Running on this PC	Keyrir á þessari tölvu
 NORMAL	VENJULEGT
 OFF	SLÖKKT
 Local server address	Vistfang staðbundins þjóns
+Remember panel position	Muna staðsetningu spjaldsins
+Custom colours	Sérsniðnir litir
+Custom colours...	Sérsniðnir litir...
+Choose	Velja
+Hers	Hennar
+Quiet	Þögn
+Quiet min	Þögn min
+Quiet max	Þögn max
+Until I turn it off	Þar til ég slekk á því
+Quiet on calls	Þögn í símtölum
+Quiet in videos	Þögn í myndböndum
+Quiet until {n}:{n}	Þögn til {n}:{n}
+Quiet until turned off	Þögn þar til slökkt er
+Export settings	Flytja út stillingar
+Import settings	Flytja inn stillingar

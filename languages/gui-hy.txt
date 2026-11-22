@@ -204,3 +204,18 @@ Running on this PC	Աշխատում է այս PC-ում
 NORMAL	ՆՈՐՄԱԼ
 OFF	ԱՆՋԱՏՎԱԾ Է
 Local server address	Տեղական սերվերի հասցե
+Remember panel position	Հիշել վահանակի դիրքը
+Custom colours	Անհատական գույներ
+Custom colours...	Անհատական գույներ...
+Choose	Ընտրել
+Hers	Իրենը
+Quiet	Լուռ
+Quiet min	Լուռ min
+Quiet max	Լուռ max
+Until I turn it off	Մինչև ես անջատեմ
+Quiet on calls	Լուռ զանգերի ժամանակ
+Quiet in videos	Լուռ տեսանյութերում
+Quiet until {n}:{n}	Լուռ մինչև {n}:{n}
+Quiet until turned off	Լուռ մինչև անջատելը
+Export settings	Արտահանել կարգավորումները
+Import settings	Ներմուծել կարգավորումները

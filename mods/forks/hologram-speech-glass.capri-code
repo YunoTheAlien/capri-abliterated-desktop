@@ -1,0 +1,60 @@
+// capri-mod: 1
+// id: hologram-speech-glass
+// name: Hologram Speech Glass
+// version: 0.2.1
+// author: Dominik20074 (Yuno)
+// description: Makes Capri's speech bubble translucent in Hologram mode.
+// permissions: settings
+// requires: api 4
+using System;
+using System.IO;
+using System.Windows.Forms;
+using CapriDesktop;
+
+public sealed class HologramSpeechGlass : ICapriMod
+{
+    // How solid the bubble stays in Hologram mode.
+    private const float Glass = 0.63f;
+    private ICapriHost host;
+    private bool enabled = true;
+    private string settings;
+
+    public void Start(ICapriHost capri)
+    {
+        host = capri;
+        settings = Path.Combine(host.Folder, "enabled.txt");
+        if (File.Exists(settings)) enabled = File.ReadAllText(settings).Trim() != "off";
+        host.Settings.Changed += Apply;
+        // Under CAPRI, the panel Hologram heads.
+        host.Mainframe.AddPanel("Speech Glass", "right", 3, MakePanel);
+        Apply();
+    }
+
+    private Control MakePanel()
+    {
+        return host.Ui.Switch("Glass bubble in Hologram", enabled, Enable);
+    }
+
+    private void Apply()
+    {
+        host.Ui.BubbleOpacity = enabled && host.Settings.IsOn("hologram") == true ? Glass : 1f;
+    }
+
+    private void Enable(bool value)
+    {
+        enabled = value;
+        Apply();
+        try { File.WriteAllText(settings, value ? "on" : "off"); }
+        catch (IOException error) { host.Log("Speech Glass settings: " + error.Message); }
+        catch (UnauthorizedAccessException error) { host.Log("Speech Glass settings: " + error.Message); }
+    }
+
+    public bool Heard(string words) { return false; }
+
+    public void Stop()
+    {
+        if (host == null) return;
+        host.Settings.Changed -= Apply;
+        host.Ui.BubbleOpacity = 1f;
+    }
+}

@@ -375,3 +375,19 @@ NORMAL	NORMAL
 OFF	DESACTIVADO
 Local server address	Dirección del servidor local
 None	Ninguno
+Remember panel position	Recordar posición del panel
+Custom colours	Colores personalizados
+Custom colours...	Colores personalizados...
+Choose	Elegir
+Hers	Los suyos
+Quiet	Silencio
+Quiet min	Silencio min
+Quiet max	Silencio max
+Until I turn it off	Hasta que lo desactive
+Quiet on calls	Silencio en llamadas
+Quiet in videos	Silencio en vídeos
+Quiet until {n}:{n}	Silencio hasta las {n}:{n}
+Quiet until turned off	Silencio hasta desactivarlo
+Export settings	Exportar ajustes
+Import settings	Importar ajustes
+GENERAL SETTINGS	CONFIGURACIÓN GENERAL

@@ -5,11 +5,8 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
-    // Checks the line pools join cleanly, so a bad fragment is caught where it is written instead of turning up
-    // mid-sentence. Runs on start and writes what it finds to errors.txt.
-    //
-    // Not a grammar checker. It looks for the handful of faults that actually show: a core that cannot follow an
-    // opener, punctuation that will double up, a tail that reads as its own sentence, and tokens that will not fill.
+    // Checks the pools join cleanly at start, writing what it finds to errors.txt: a core that can't follow an opener,
+    // doubled punctuation, a tail that reads alone, a token that won't fill.
     internal static class Lint
     {
         // Night City words, so they are not flagged as typos or sentence starts.
@@ -18,7 +15,7 @@ namespace CapriDesktop
             "choom", "chooms", "gonk", "gonks", "gronk", "preem", "nova", "delta", "flatline", "braindance",
             "ripperdoc", "netrunner", "edgerunner", "corpo", "chrome", "chromed", "eddies", "solo", "nomad",
             "arasaka", "militech", "kiroshi", "scav", "scavs", "borg", "cyberpsycho", "input", "merc", "zero",
-            "capri", "capricorn", "kyoko"
+            "capri", "capricorn", "kyoko", "cyberpunk"
         };
 
         private static readonly Regex Token = new Regex(@"%[a-z]+%", RegexOptions.IgnoreCase);
@@ -50,12 +47,15 @@ namespace CapriDesktop
                 foreach (string raw in pool.Value)
                 {
                     string one = (raw ?? "").Trim();
-                    if (one.Length == 0) continue;
+                    // A meme line (Sayings.MemeMark) is written wrong on purpose.
+                    if (one.Length == 0 || one.StartsWith("~", StringComparison.Ordinal)) continue;
 
                     foreach (Match mark in Token.Matches(one))
                     {
                         bool good = false;
                         foreach (string ok in Tokens) if (string.Equals(ok, mark.Value, StringComparison.OrdinalIgnoreCase)) { good = true; break; }
+                        // Her favourite gift's name, filled in as she says a line from this pool (Tamagotchi GiftMemoryLine).
+                        if (!good && string.Equals(mark.Value, "%gift%", StringComparison.OrdinalIgnoreCase) && string.Equals(name, "gift remembered", StringComparison.OrdinalIgnoreCase)) good = true;
                         if (!good) found.Add(name + ": unknown token " + mark.Value + " in \"" + one + "\"");
                     }
 

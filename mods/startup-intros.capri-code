@@ -1,7 +1,7 @@
 // capri-mod: 1
 // id: startup-intros
 // name: Startup Intros
-// version: 2.0.1
+// version: 2.1.0
 // author: Avery
 // description: Three start-up animations: Hijack, Shatter and Wake.
 // intro: yes
@@ -19,14 +19,14 @@ public class StartupIntros : ICapriMod, ICapriIntro
     private static readonly string[] Names = { "Hijack", "Shatter", "Wake" };
     private static readonly double[] Lengths = { 4.7, 3.85, 4.5 };
 
-    private static readonly Color Red = Color.FromArgb(255, 44, 76);
-    private static readonly Color Orange = Color.FromArgb(244, 66, 44);
-    private static readonly Color Green = Color.FromArgb(46, 226, 110);
-    private static readonly Color DeepGreen = Color.FromArgb(24, 168, 84);
-    private static readonly Color Violet = Color.FromArgb(120, 84, 240);
-    private static readonly Color Blue = Color.FromArgb(24, 112, 240);
-    private static readonly Color Bone = Color.FromArgb(232, 232, 236);
-    private static readonly Color Ink = Color.FromArgb(5, 3, 9);
+    private static Color Red = Color.FromArgb(255, 44, 76);
+    private static Color Orange = Color.FromArgb(244, 66, 44);
+    private static Color Green = Color.FromArgb(46, 226, 110);
+    private static Color DeepGreen = Color.FromArgb(24, 168, 84);
+    private static Color Violet = Color.FromArgb(120, 84, 240);
+    private static Color Blue = Color.FromArgb(24, 112, 240);
+    private static Color Bone = Color.FromArgb(232, 232, 236);
+    private static Color Ink = Color.FromArgb(5, 3, 9);
 
     // Her head traced from face.png, in that art's pixels around the middle of her face.
     private static readonly float[] HeadShape = { 6, -35, 57, -89, 51, -41, 73, -51, 71, -31, 125, -53, 22, 11, 15, 25, -14, 42, -39, 17, -36, 10, -14, -45, -14, -9 };
@@ -64,14 +64,28 @@ public class StartupIntros : ICapriMod, ICapriIntro
         internal Color Colour;
     }
 
+    // Its palette, named for Custom colours and read back, as any mod's are.
+    private void Tint()
+    {
+        Red = capri.Ui.Colour("Red", Color.FromArgb(255, 44, 76));
+        Orange = capri.Ui.Colour("Orange", Color.FromArgb(244, 66, 44));
+        Green = capri.Ui.Colour("Green", Color.FromArgb(46, 226, 110));
+        DeepGreen = capri.Ui.Colour("Deep green", Color.FromArgb(24, 168, 84));
+        Violet = capri.Ui.Colour("Violet", Color.FromArgb(120, 84, 240));
+        Blue = capri.Ui.Colour("Blue", Color.FromArgb(24, 112, 240));
+        Bone = capri.Ui.Colour("Bone white", Color.FromArgb(232, 232, 236));
+        Ink = capri.Ui.Colour("Ink", Color.FromArgb(5, 3, 9));
+    }
+
     public void Start(ICapriHost host)
     {
         capri = host;
+        Tint();
+        host.Ui.ColoursChanged += Tint;
         choiceFile = Path.Combine(host.Folder, "choice.txt");
         Load();
-        // sys.md has the say: the intros with no ">" in front of them are the ones switched on, and one of
-        // those is picked at random each start. Nothing on there means this mod never shows an intro, which
-        // is how it ships. Saying "shatter", "hijack" or "wake" to her still pins one for the next start.
+        // sys.md decides: intros without ">" are on, and one is picked at random each start; none on means no intro, as
+        // it ships. Saying "shatter", "hijack" or "wake" still pins one for the next start.
         int[] allowed = Allowed();
         if (allowed.Length > 0)
         {
@@ -97,8 +111,7 @@ public class StartupIntros : ICapriMod, ICapriIntro
         {
             string folder = capri.Folder;
             string home = Path.GetDirectoryName(Path.GetDirectoryName(folder)) ?? "";
-            string file = Path.Combine(home, "personalSettings", "sys.md");
-            if (!File.Exists(file)) file = Path.Combine(home, "sys.md");
+            string file = SysFile(home);
             if (!File.Exists(file)) return on.ToArray();
             bool inside = false;
             foreach (string raw in File.ReadAllLines(file))
@@ -910,4 +923,25 @@ public class StartupIntros : ICapriMod, ICapriIntro
     private static double Out(double value) { value = Clamp(value); return 1 - (1 - value) * (1 - value) * (1 - value); }
     private static double Back(double value) { value = Clamp(value) - 1; return 1 + value * value * (2.4 * value + 1.4); }
     private static double Bump(double value) { return Math.Sin(Clamp(value) * Math.PI); }
+
+    // Her sys.md now sits in a folder of its own under personalSettings, one per side, and only the one she is
+    // using is written as she starts. So the newest sys.md under personalSettings is hers; the old places are the
+    // fallback for an older Capri.
+    private static string SysFile(string home)
+    {
+        string newest = null;
+        DateTime when = DateTime.MinValue;
+        try
+        {
+            string settings = Path.Combine(home, "personalSettings");
+            if (Directory.Exists(settings))
+                foreach (string one in Directory.GetFiles(settings, "sys.md", SearchOption.AllDirectories))
+                {
+                    DateTime at = File.GetLastWriteTimeUtc(one);
+                    if (newest == null || at > when) { newest = one; when = at; }
+                }
+        }
+        catch (Exception) { newest = null; }
+        return newest ?? Path.Combine(home, "sys.md");
+    }
 }

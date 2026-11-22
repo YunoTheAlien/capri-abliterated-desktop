@@ -204,3 +204,18 @@ Running on this PC	Veikia šiame PC
 NORMAL	NORMALUS
 OFF	IŠJUNGTA
 Local server address	Vietinio serverio adresas
+Remember panel position	Įsiminti skydelio vietą
+Custom colours	Pasirinktinės spalvos
+Custom colours...	Pasirinktinės spalvos...
+Choose	Pasirinkti
+Hers	Jos
+Quiet	Tyla
+Quiet min	Tyla min
+Quiet max	Tyla max
+Until I turn it off	Kol išjungsiu
+Quiet on calls	Tyla per skambučius
+Quiet in videos	Tyla per vaizdo įrašus
+Quiet until {n}:{n}	Tyla iki {n}:{n}
+Quiet until turned off	Tyla, kol išjungsiu
+Export settings	Eksportuoti nustatymus
+Import settings	Importuoti nustatymus

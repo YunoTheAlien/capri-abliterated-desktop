@@ -15,7 +15,7 @@ namespace CapriDesktop
         {
             bool wasSettings = paged, wasAdvanced = capri.AdvancedSettings;
             int wasSize = capri.MainframeSize;
-            Point wasAt = Location;
+            Point wasAt = Spot;
             Control wasFocus = ActiveControl;
             // Restore() brings the Mainframe up, so it goes back down after: a minimized start stays minimized.
             bool wasShown = Visible;
@@ -24,8 +24,16 @@ namespace CapriDesktop
             {
                 tipsDriven = true;
                 Restore();
+                // The tips need the Mainframe on a screen; one left at Windows' minimised spot has no room for any tip.
+                Action<string> onScreen = delegate(string after)
+                {
+                    foreach (Screen screen in Screen.AllScreens) if (screen.WorkingArea.IntersectsWith(Bounds)) return;
+                    throw new Exception(after + " left the Mainframe on no screen: at " + Bounds + ", " + WindowState + ", restore bounds " + RestoreBounds + "; before it, shown " + wasShown + ", " + wasState + ", at " + wasAt + ".");
+                };
+                onScreen("Restore");
                 LayoutScale(96, 100);
                 SizeMainframe(100);
+                onScreen("Sizing it");
                 int covered = 0;
                 List<string> missing = new List<string>();
                 foreach (bool advanced in new[] { false, true })
@@ -75,12 +83,16 @@ namespace CapriDesktop
 
                 ShowSettings(true);
                 ScrollPage(0);
+                // Check in on me sits under GENERAL SETTINGS' rows in CAPRI, which can put it below the view: brought into it, as
+                // a hover needs it on screen.
                 more.Focus();
+                InView(checkIns);
                 Control focus = ActiveControl;
                 IntPtr foreground = Native.GetForegroundWindow();
                 DismissHint();
                 dismissedHint = null;
                 overHint = null;
+                onScreen("Showing Settings");
                 Stopwatch delay = Stopwatch.StartNew();
                 MoveOverHint(checkIns);
                 if (waitingHint != hints[checkIns] || !hintDelay.Enabled) throw new Exception("The first Mainframe hover did not queue the check-ins tip with its delay enabled.");
@@ -298,6 +310,16 @@ namespace CapriDesktop
             if (row.Text != hintCard.Body || control.AccessibleDescription != hintCard.Body) throw new Exception("A shown tip differs from its accessible text.");
         }
 
+        // A settings row a hover needs on screen: the page scrolled just far enough to show it, as Tab reaching it would.
+        // A layout change can put the page back at its top between hovers, and a row below the window takes no hover.
+        private void InView(Control control)
+        {
+            if (!paged || pageView >= PageNow) return;
+            int edge = Scaled(48);
+            if (control.Bottom > ClientSize.Height - Scaled(8)) ScrollPage(pageScroll + (int)Math.Ceiling((control.Bottom - ClientSize.Height + edge) / Unit()));
+            else if (control.Top < Scaled(TitleTall + 8)) ScrollPage(Math.Max(0, pageScroll - (int)Math.Ceiling((Scaled(TitleTall) + edge - control.Top) / Unit())));
+        }
+
         private void MoveOverHint(Control control)
         {
             Point point = new Point(control.Width / 2, control.Height / 2);
@@ -317,21 +339,35 @@ namespace CapriDesktop
 
         private void AwaitHint(Control control = null, Stopwatch delay = null)
         {
-            Stopwatch clock = Stopwatch.StartNew();
-            int retries = 0;
-            while (!HintVisible && clock.ElapsedMilliseconds < 4000)
+            Stopwatch clock = Stopwatch.StartNew(), whole = Stopwatch.StartNew();
+            int retries = 0, holds = 0;
+            bool held = false;
+            // What put the first hover's tip away, if anything did, before this wait starts its own record.
+            string droppedBefore = hintDropped, refusedBefore = hintRefused;
+            hintDropped = hintRefused = null;
+            while (!HintVisible && clock.ElapsedMilliseconds < 4000 && whole.ElapsedMilliseconds < 15000)
             {
-                if (control != null && waitingHint == null && !HintVisible && retries < 2)
+                // A real button held anywhere on the desktop holds every tip back, as it should. That wait is not the
+                // tip's, so the clock starts again and the next try isn't counted.
+                if (Control.MouseButtons != MouseButtons.None)
                 {
-                    retries++;
+                    if (!held) holds++;
+                    held = true;
+                    clock.Restart();
+                }
+                else if (control != null && waitingHint == null && !HintVisible && (retries < 2 || held))
+                {
+                    if (!held) retries++;
+                    held = false;
                     dismissedHint = null;
                     if (delay != null) delay.Restart();
+                    InView(control);
                     MoveOverHint(control);
                 }
                 Application.DoEvents();
                 Thread.Sleep(10);
             }
-            if (!HintVisible) throw new Exception("A Mainframe tip never appeared after its delay: retries " + retries + ", waiting " + (waitingHint != null) + ", over " + (overHint == null ? "nothing" : overHint.Title) + ", mouse buttons " + Control.MouseButtons + ", shown " + Visible + ", " + WindowState + ", page " + ClientRectangle + ", check-ins " + checkIns.Bounds + " hidden " + Hidden(checkIns) + ", screen " + Screen.FromControl(this).WorkingArea + ".");
+            if (!HintVisible) throw new Exception("A Mainframe tip never appeared after its delay: retries " + retries + ", buttons held " + holds + ", before the wait put away by " + (droppedBefore ?? "nothing") + (refusedBefore == null ? "" : " (" + refusedBefore + ")") + ", put away by " + (hintDropped ?? "nothing") + (hintRefused == null ? "" : " (" + hintRefused + ")") + ", waiting " + (waitingHint != null) + ", over " + (overHint == null ? "nothing" : overHint.Title) + ", mouse buttons " + Control.MouseButtons + ", shown " + Visible + ", " + WindowState + ", page " + ClientRectangle + ", check-ins " + checkIns.Bounds + " hidden " + Hidden(checkIns) + ", screen " + Screen.FromControl(this).WorkingArea + ", foreground " + TimerWatch.Who(Native.GetForegroundWindow()) + ", active " + (Form.ActiveForm == this) + ".");
         }
 
         private static void PumpTips(int milliseconds)

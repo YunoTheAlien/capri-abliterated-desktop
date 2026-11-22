@@ -7,9 +7,8 @@ namespace CapriDesktop
 {
     internal partial class Companion
     {
-        // Her brain's own thinking and its tool calls written as text never reach her chat, in every shape models write them, and
-        // honest replies about code, JSON, XML or a plain < keep every word (Lachy, 12 Nov: "AI's are leaking their thought
-        // processes or their tool use into the chat"). Stand-in brains only: no real model is asked.
+        // Her brain's thinking and written-out tool calls never reach her chat in any shape models write them, while
+        // honest replies about code, JSON, XML or a plain < keep every word (Lachy). Stand-in brains only.
         private static void SmokeLeaks(List<string> checks)
         {
             string[,] shapes =
@@ -289,12 +288,75 @@ namespace CapriDesktop
                 if (oss != "Hey there, choom.") throw new Exception("gpt-oss's analysis channel reached her chat on Ollama: " + oss);
                 fake.Stop();
 
+                // A server on their PC, OpenAI style like Ollama's /v1, whose model puts its thinking in a field of its own and
+                // answers nothing, or only a closing tag (gemma4 did): asked once more for just her answer, and twice says so.
+                asked.Clear();
+                Func<string, string, string> served = delegate(string content, string reasoning)
+                {
+                    return "{\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":" + Voice.Quote(content) + (reasoning == null ? "" : ",\"reasoning\":" + Voice.Quote(reasoning)) + "},\"finish_reason\":\"stop\"}]}";
+                };
+                string serverAt = FakeServer(new[] { served("", "The user says hi. Say hi back."), served("Hi, choom.", null), served("<channel|>", "Thinking about it."), served("", "Still only thinking.") }, asked, out fake);
+                Brain gemma = new Brain { Model = "gemma4:e4b-it-qat", Server = serverAt };
+                gemma.Act = brain.Act;
+                string hiBack = gemma.Ask("hi");
+                if (hiBack != "Hi, choom.") throw new Exception("A reply whose thinking was in its own field, with no answer, wasn't asked again for her answer: " + hiBack);
+                string twice = null;
+                try { gemma.Ask("you there?"); }
+                catch (BrainException error) { twice = error.Message; }
+                int gemmaAsks;
+                lock (asked) gemmaAsks = asked.Count;
+                if (twice != Brain.Answerless || gemmaAsks != 4) throw new Exception("Two replies of only thinking in its own field didn't say the model only thought: " + (twice ?? "nothing said") + " after " + gemmaAsks + " asks");
+                fake.Stop();
+
+                // Ollama is told not to think, and only Ollama: her own Ollama's address from the first ask, another server once
+                // a reply says it is Ollama, and any other server never.
+                Func<string, string> plainly = delegate(string fingerprint)
+                {
+                    return "{\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"Sure.\"},\"finish_reason\":\"stop\"}]" + (fingerprint == null ? "" : ",\"system_fingerprint\":\"" + fingerprint + "\"") + "}";
+                };
+                string ollamaWasHere = Brain.Ollama;
+                string toldNot = null;
+                try
+                {
+                    asked.Clear();
+                    string own = FakeServer(new[] { plainly(null) }, asked, out fake);
+                    Brain.Ollama = own;
+                    new Brain { Model = "gemma4:e4b-it-qat", Server = own }.Ask("one");
+                    fake.Stop();
+                    Brain.Ollama = ollamaWasHere;
+                    string[] ownSent;
+                    lock (asked) ownSent = asked.ToArray();
+                    asked.Clear();
+                    string learned = FakeServer(new[] { plainly("fp_ollama"), plainly("fp_ollama") }, asked, out fake);
+                    Brain elsewhere = new Brain { Model = "gemma4:e4b-it-qat", Server = learned };
+                    elsewhere.Ask("one");
+                    elsewhere.Ask("two");
+                    fake.Stop();
+                    string[] learnedSent;
+                    lock (asked) learnedSent = asked.ToArray();
+                    asked.Clear();
+                    string other = FakeServer(new[] { plainly("fp_other"), plainly("fp_other") }, asked, out fake);
+                    Brain lmStudio = new Brain { Model = "qwen3-4b", Server = other };
+                    lmStudio.Ask("one");
+                    lmStudio.Ask("two");
+                    fake.Stop();
+                    string[] otherSent;
+                    lock (asked) otherSent = asked.ToArray();
+                    const string none = "\"reasoning_effort\":\"none\"";
+                    if (ownSent.Length != 1 || ownSent[0].IndexOf(none, StringComparison.Ordinal) < 0) toldNot = "her own Ollama wasn't told not to think";
+                    else if (learnedSent.Length != 2 || learnedSent[0].IndexOf(none, StringComparison.Ordinal) >= 0 || learnedSent[1].IndexOf(none, StringComparison.Ordinal) < 0) toldNot = "a server that answered as Ollama wasn't told from its next ask on";
+                    else if (otherSent.Length != 2 || Array.Exists(otherSent, body => body.IndexOf("reasoning_effort", StringComparison.Ordinal) >= 0)) toldNot = "a server that isn't Ollama was sent reasoning_effort";
+                }
+                finally { Brain.Ollama = ollamaWasHere; Brain.ForgetOllamaServers(); }
+                if (toldNot != null) throw new Exception("Ollama's thinking: " + toldNot);
+
                 string[] lines = File.Exists(log) ? File.ReadAllLines(log) : new string[0];
                 string wanted = "| leak | - | nvidia qwen/qwen3-next-80b-a3b-thinking: thinking with no opening tag taken out of her reply";
                 if (!Array.Exists(lines, line => line.EndsWith(wanted, StringComparison.Ordinal))) throw new Exception("Her log didn't name the brain, model and kind of leak: " + string.Join(" / ", lines));
                 if (!Array.Exists(lines, line => line.IndexOf("ollama gpt-oss:20b: gpt-oss analysis channel", StringComparison.Ordinal) >= 0) || !Array.Exists(lines, line => line.IndexOf("local qwen3-4b: tool call tags", StringComparison.Ordinal) >= 0)) throw new Exception("Her log missed a brain's leak: " + string.Join(" / ", lines));
                 foreach (string line in lines) if (line.IndexOf("greet them", StringComparison.OrdinalIgnoreCase) >= 0 || line.IndexOf("Steam", StringComparison.Ordinal) >= 0 || line.IndexOf("netrunner", StringComparison.Ordinal) >= 0) throw new Exception("Her log kept what a leak said: " + line);
                 checks.Add("PASS leaks through her real chat with stand-in brains: NVIDIA, a streamed brain on their PC and Ollama never show thinking (no opening tag, split across a stream, unclosed, plain words or gpt-oss channels) in her bubble, voice or history, or feed it back to her brain; a call written as text in a chat reply is never shown, said or run, and the words around it stay, and a reply of only a call stops with no second ask; a reply that was all thinking is asked once more for her answer, and twice says the model only thought; an honest JSON reply keeps its words; an honest reply about \"the user\" is asked once and keeps every word, one that reads as thinking twice is shown as it came, and numpy code in a reply never runs her clip tool; her log names the brain, model and kind of each leak and never its words");
+                checks.Add("PASS a server on their PC that is Ollama is told not to think (reasoning_effort none), from the first ask at her own Ollama's address and from the next once a reply says it is Ollama, and no other server is sent it; a reply of only thinking in its own field is asked again for her answer, and twice says so");
                 checks.Add("LIMIT leak checks use stand-in brains only: no real reasoning model, Claude Code, Codex or Ollama was asked");
             }
             finally

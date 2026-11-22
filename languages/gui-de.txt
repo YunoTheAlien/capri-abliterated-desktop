@@ -204,3 +204,18 @@ Running on this PC	Läuft auf diesem PC
 NORMAL	NORMAL
 OFF	AUS
 Local server address	Lokale Server-Adresse
+Remember panel position	Panelposition merken
+Custom colours	Eigene Farben
+Custom colours...	Eigene Farben...
+Choose	Auswählen
+Hers	Ihre
+Quiet	Stille
+Quiet min	Stille min
+Quiet max	Stille max
+Until I turn it off	Bis ich es ausschalte
+Quiet on calls	Stille bei Anrufen
+Quiet in videos	Stille bei Videos
+Quiet until {n}:{n}	Stille bis {n}:{n}
+Quiet until turned off	Stille bis ausgeschaltet
+Export settings	Einstellungen exportieren
+Import settings	Einstellungen importieren

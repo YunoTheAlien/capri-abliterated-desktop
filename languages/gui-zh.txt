@@ -204,3 +204,18 @@ Running on this PC	在此电脑上运行中
 NORMAL	正常
 OFF	关
 Local server address	本地服务器地址
+Remember panel position	记住面板位置
+Custom colours	自定义颜色
+Custom colours...	自定义颜色...
+Choose	选择
+Hers	她的颜色
+Quiet	静默
+Quiet min	静默 min
+Quiet max	静默 max
+Until I turn it off	直到我关闭
+Quiet on calls	通话时静默
+Quiet in videos	视频时静默
+Quiet until {n}:{n}	静默至 {n}:{n}
+Quiet until turned off	静默直到关闭
+Export settings	导出设置
+Import settings	导入设置

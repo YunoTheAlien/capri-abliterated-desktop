@@ -109,7 +109,7 @@ namespace CapriDesktop
         internal static double Time { get { return (double)System.Diagnostics.Stopwatch.GetTimestamp() / System.Diagnostics.Stopwatch.Frequency; } }
         internal static double Unit(double value) { return double.IsNaN(value) ? 0 : Math.Max(0, Math.Min(1, value)); }
         // A voice's loudness on a meter's scale, by decibels like a real one: -48 dB is empty and -12 dB is full, so ordinary
-        // talking, around -20 dB, fills about three quarters (Lachy, 4 Nov: her volume looked tiny on the call panel).
+        // talking, around -20 dB, fills about three quarters (Lachy).
         internal static double Loud(double rms) { return double.IsNaN(rms) || rms <= 0 ? 0 : Unit((20 * Math.Log10(rms) + 48) / 36); }
         internal static float RingWidth(double level) { return 2 + 5 * (float)Unit(level); }
         internal static int Dot(bool motion, double time) { return motion ? (int)Math.Round(255 * (0.675 + 0.325 * Math.Cos(time * Math.PI * 2 / 1.4))) : 255; }
@@ -716,6 +716,7 @@ namespace CapriDesktop
             fonts = new CallFonts(s);
             Text = "Capri call";
             FormBorderStyle = FormBorderStyle.None;
+            Neon.NeverFullScreen(this);
             StartPosition = FormStartPosition.Manual;
             ShowInTaskbar = false;
             AutoScaleMode = AutoScaleMode.None;
@@ -803,7 +804,7 @@ namespace CapriDesktop
             }
         }
 
-        // Her call app menu hangs from the call app's name on its tile (Lachy, 6 Nov): the call apps, then the other apps her last
+        // Her call app menu hangs from the call app's name on its tile (Lachy): the call apps, then the other apps her last
         // look at Windows' volume mixer found, and the one you picked even while it's closed, so a restart never loses it.
         internal void ShowApps()
         {

@@ -2,21 +2,14 @@ using System;
 
 namespace CapriDesktop
 {
-    // How she comes at a look over their shoulder.
-    //
-    // A glance sends the picture and one instruction, and the instruction used to be word for word the same
-    // every time, so a small brain settled into one shape of reaction: the same handful of verbs, the same
-    // length, every look. An angle picked per glance moves her off that without a bigger model, and the angles
-    // were a list of twenty six in her source that nobody could add to.
-    //
-    // They are a file of hers now, so an angle can be written, reworded or deleted without a build, and there
-    // are far more of them. She never says any of these: they steer what she says about what she can see.
+    // How she comes at a look over their shoulder: one angle picked per glance from her file, so a small brain doesn't
+    // settle into one shape of reaction. She never says these; they steer what she says about what she sees.
     internal static class Angles
     {
         internal const string FileName = "watching.md";
         internal const string Steers = "How she takes a look";
 
-        private static readonly LineFile file = new LineFile(delegate { return Defaults; }, null);
+        private static readonly LineFile file = new LineFile(delegate { return Defaults; });
 
         internal static string Kept { get { return file.Kept; } set { file.Kept = value; } }
         internal static string Text { get { return file.Text; } }

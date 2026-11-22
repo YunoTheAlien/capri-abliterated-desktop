@@ -1,0 +1,155 @@
+// capri-mod: 1
+// id: auto-game-hologram
+// name: Auto Game Hologram
+// version: 2.2
+// author: Dominik20074 (Yuno)
+// description: Turns hologram on while a game is in front and restores its prior state afterward.
+// permissions: settings, system, hotkeys
+// requires: api 4
+using System;
+using System.IO;
+using System.Windows.Forms;
+using CapriDesktop;
+
+public sealed class AutoGameHologram : ICapriMod
+{
+    private const string DefaultKeys = "Ctrl+Alt+F8";
+    private ICapriHost host;
+    private Timer timer;
+    private bool inGame, previous, changed, candidate, bound, picking;
+    private int samples;
+    private string keys = DefaultKeys;
+    private string bindingFile;
+    private Control keyRow;
+
+    public void Start(ICapriHost capri)
+    {
+        host = capri;
+        bindingFile = Path.Combine(host.Folder, "hotkey.txt");
+        string saved = File.Exists(bindingFile) ? File.ReadAllText(bindingFile).Trim() : "";
+        if (saved.Length > 0) keys = saved.IndexOf(',') > 0 ? FromOldFile(saved) : saved;
+        bound = Bind(keys);
+        if (!bound) host.Log("Auto Game Hologram: " + keys + " is taken. Pick another under HOLOGRAM HOTKEY in Settings.");
+        // Under KEYS, where her own shortcuts are set.
+        host.Mainframe.AddPanel("Hologram Hotkey", "right", 7, MakePanel);
+        timer = new Timer { Interval = 400 };
+        timer.Tick += Tick;
+        timer.Start();
+    }
+
+    // The first version saved "modifiers,key" as numbers: Alt 1, Ctrl 2, Shift 4.
+    private static string FromOldFile(string saved)
+    {
+        string[] parts = saved.Split(',');
+        int mods, key;
+        if (parts.Length != 2 || !int.TryParse(parts[0], out mods) || !int.TryParse(parts[1], out key) || key <= 0 || key >= 256) return DefaultKeys;
+        return Named(mods, (Keys)key);
+    }
+
+    private static string Named(int mods, Keys key)
+    {
+        return ((mods & 2) != 0 ? "Ctrl+" : "") + ((mods & 1) != 0 ? "Alt+" : "") + ((mods & 4) != 0 ? "Shift+" : "") + key;
+    }
+
+    private bool Bind(string wanted)
+    {
+        try { return host.Keys.Hotkey(wanted, ToggleManual); }
+        catch (ArgumentException) { return false; }
+    }
+
+    private Control MakePanel()
+    {
+        keyRow = host.Ui.Button("Hologram hotkey", delegate { picking = true; keyRow.Text = "Press Ctrl or Alt plus a key, or Esc"; });
+        keyRow.PreviewKeyDown += delegate(object sender, PreviewKeyDownEventArgs e) { if (picking) e.IsInputKey = true; };
+        keyRow.KeyDown += Picked;
+        keyRow.Leave += delegate { picking = false; ShowKeys(); };
+        ShowKeys();
+        return keyRow;
+    }
+
+    private void ShowKeys()
+    {
+        if (keyRow == null || keyRow.IsDisposed) return;
+        keyRow.Text = "Hologram hotkey: " + keys.Replace("+", " + ") + (bound ? "" : " (taken)");
+    }
+
+    private void Picked(object sender, KeyEventArgs e)
+    {
+        if (!picking) return;
+        e.SuppressKeyPress = true;
+        e.Handled = true;
+        if (e.KeyCode == Keys.Escape) { picking = false; ShowKeys(); return; }
+        if (e.KeyCode == Keys.Menu || e.KeyCode == Keys.ControlKey || e.KeyCode == Keys.ShiftKey) return;
+        string wanted = Named((e.Alt ? 1 : 0) | (e.Control ? 2 : 0) | (e.Shift ? 4 : 0), e.KeyCode);
+        string was = keys;
+        if (!Bind(wanted))
+        {
+            keyRow.Text = wanted.Replace("+", " + ") + " can't be used or is taken. Try another, or Esc.";
+            return;
+        }
+        if (was != wanted) host.Keys.Remove(was);
+        keys = wanted;
+        bound = true;
+        picking = false;
+        try { File.WriteAllText(bindingFile, keys); }
+        catch (IOException error) { host.Log("Could not save hotkey: " + error.Message); }
+        catch (UnauthorizedAccessException error) { host.Log("Could not save hotkey: " + error.Message); }
+        ShowKeys();
+    }
+
+    private bool Current() { return host.Settings.IsOn("hologram") == true; }
+
+    private void Set(bool on)
+    {
+        if (Current() != on) host.Settings.Turn("hologram", on);
+    }
+
+    private void Restore()
+    {
+        if (changed && Current()) Set(previous);
+        changed = false;
+        inGame = false;
+    }
+
+    private void Tick(object sender, EventArgs args)
+    {
+        try
+        {
+            bool detected = host.System.GameInFront;
+            if (candidate != detected) { candidate = detected; samples = 0; }
+            if (samples < 2) samples++;
+            if (samples < 2 || inGame == detected) return;
+            if (!detected) { Restore(); return; }
+            previous = Current();
+            inGame = true;
+            if (!previous) { changed = true; Set(true); }
+        }
+        catch (Exception error)
+        {
+            Stop();
+            host.Log("Auto Game Hologram stopped: " + error.GetBaseException().Message);
+        }
+    }
+
+    private void ToggleManual()
+    {
+        Set(!Current());
+        changed = false;
+    }
+
+    public bool Heard(string words) { return false; }
+
+    public void Stop()
+    {
+        if (timer != null)
+        {
+            timer.Stop();
+            timer.Tick -= Tick;
+            timer.Dispose();
+            timer = null;
+        }
+        keyRow = null;
+        try { Restore(); }
+        catch (Exception error) { host.Log("Could not restore hologram: " + error.GetBaseException().Message); }
+    }
+}

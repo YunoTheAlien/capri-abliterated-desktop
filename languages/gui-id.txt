@@ -204,3 +204,18 @@ Running on this PC	Berjalan di PC ini
 NORMAL	NORMAL
 OFF	MATI
 Local server address	Alamat server lokal
+Remember panel position	Ingat posisi panel
+Custom colours	Warna khusus
+Custom colours...	Warna khusus...
+Choose	Pilih
+Hers	Miliknya
+Quiet	Diam
+Quiet min	Diam min
+Quiet max	Diam max
+Until I turn it off	Sampai saya matikan
+Quiet on calls	Diam saat panggilan
+Quiet in videos	Diam saat video
+Quiet until {n}:{n}	Diam sampai {n}:{n}
+Quiet until turned off	Diam sampai dimatikan
+Export settings	Ekspor pengaturan
+Import settings	Impor pengaturan

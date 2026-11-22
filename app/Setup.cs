@@ -31,9 +31,8 @@ namespace CapriSetup
                 || string.Equals(name, "Updater", StringComparison.OrdinalIgnoreCase) || string.Equals(name, "Update", StringComparison.OrdinalIgnoreCase);
         }
 
-        // Updater.exe is this same executable under another name, the way Capri-Setup.exe is, so it carries the new build
-        // inside it and needs nothing downloaded. Unzipping a release over an install is what wipes people's keys and notes,
-        // because the zip has the author's copies of those files in it. This writes the three programs and nothing else.
+        // Updater.exe is this same executable renamed, carrying the new build, so nothing is downloaded. It writes the
+        // three programs and nothing else, unlike unzipping a release, which overwrites keys and notes.
         internal static bool Updating(string file, string[] args)
         {
             if (args.Length > 0 && args[0] == "--apply-update") return true;
@@ -48,9 +47,8 @@ namespace CapriSetup
         // nothing ever took one away, so a PC updated often carried gigabytes of builds nobody asked to keep.
         internal const int MostSpares = 3;
 
-        // The programs an update overwrites are kept beside the new ones, so a build that turns out bad can be put back by
-        // hand without downloading anything. The spare is numbered past the highest there, so the largest number is always
-        // the newest, and the oldest go once there are more than MostSpares.
+        // The programs an update replaces are kept beside the new ones, so a bad build can be put back by hand. Spares
+        // are numbered upward, the newest highest, and the oldest go past MostSpares.
         private static string Spare(string path)
         {
             try
@@ -85,12 +83,8 @@ namespace CapriSetup
 
         private const uint Close = 0x0010;
 
-        // WM_CLOSE to every top level window the process owns, which is what her tray Quit ends up doing.
-        //
-        // Process.CloseMainWindow is the obvious call and does nothing here: her window is a layered tool window
-        // that keeps off the taskbar and never activates, so .NET finds no main window for her and the call
-        // quietly returns false. The updater then waited for a close it had never actually asked for, and fell
-        // through to Install, which gave up with "Quit Capri from her tray menu".
+        // WM_CLOSE to every top level window the process owns, as her tray Quit does: her layered tool window has no
+        // main window, so Process.CloseMainWindow finds nothing.
         private static void CloseWindows(int id)
         {
             EnumWindows(delegate(IntPtr window, IntPtr nothing)
@@ -102,12 +96,8 @@ namespace CapriSetup
             }, IntPtr.Zero);
         }
 
-        // Asks every Capri running from the installed folder to close, the way her tray Quit does, and waits. Null
-        // once they are gone, or the line to show when one will not go.
-        //
-        // Her own close takes a moment: she plays her leave clip and saves as she goes, so the wait is generous
-        // rather than a kill. Nothing here forces one: a forced exit is how settings written at that moment get
-        // lost, and the update can wait a few seconds more.
+        // Asks every Capri running from the installed folder to close, the way tray Quit does, and waits generously
+        // while she saves; nothing is forced. Null once gone, or the line to show when one won't go.
         private static string AskHerToClose(string app)
         {
             List<Process> hers = new List<Process>();
@@ -161,11 +151,8 @@ namespace CapriSetup
                         bool held;
                         if (string.Equals(SetupFiles.FileOf(process, out held), app, StringComparison.OrdinalIgnoreCase)) wasUp = true;
                     }
-                // And she is asked to close, which nothing did before this. Install waits three seconds to see
-                // whether she happens to exit on her own and then gives up with "Quit Capri from her tray menu,
-                // then install again", which is the error people were getting: no use from the updater, whose
-                // entire job is updating an install that is running. She is asked properly and saves on the way
-                // out, the same as the tray's Quit.
+                // She is asked to close properly and saves on the way out, as with the tray's Quit, so the updater can
+                // update a running install.
                 if (wasUp)
                 {
                     string stuck = AskHerToClose(app);
@@ -204,9 +191,18 @@ namespace CapriSetup
             }
         }
 
+        // The folder "--close" closes her in, or null for any other command. With no folder it is her usual install, the
+        // one an update writes; checked before the update, so an updater given only "--close" never updates.
+        internal static string Closing(string[] args)
+        {
+            if (args == null || args.Length == 0 || args[0] != "--close") return null;
+            return args.Length >= 2 ? args[1] : InstallPath;
+        }
+
         internal static int Run(string[] args)
         {
-            if (args.Length == 2 && args[0] == "--close") return CloseFolder(args[1]);
+            string closing = Closing(args);
+            if (closing != null) return CloseFolder(closing);
             if (Updating(Application.ExecutablePath, args)) return ApplyUpdate(Array.IndexOf(args, "--silent") >= 0);
             // A silent command she can't read exits 2, and one that fails exits 1, each with the reason on stderr.
             int mode;
@@ -356,11 +352,8 @@ namespace CapriSetup
             catch (Exception error) { Directory.CreateDirectory(output); File.WriteAllText(Path.Combine(output, "failure.txt"), error.ToString()); return 1; }
         }
 
-        // Puts the new file in place of one that may be locked.
-        //
-        // File.Replace needs to open the old file for writing, so antivirus holding a freshly written Capri.exe
-        // failed the whole update with "being used by another process" and no way forward. Windows always allows
-        // a locked file to be renamed, so it is moved aside instead and tidied up on the next run.
+        // Puts the new file in place of one that may be locked: Windows always allows a rename, so the old one is moved
+        // aside and tidied on the next run, where File.Replace would fail under an antivirus.
         private static void Swap(string made, string target)
         {
             try { File.Replace(made, target, null); return; }
@@ -373,29 +366,18 @@ namespace CapriSetup
             try { File.Delete(aside); } catch (IOException) { } catch (UnauthorizedAccessException) { }
         }
 
-        // A shortcut Windows won't save, often because of an antivirus, doesn't stop the install. She's installed either way,
-        // so its reason comes back for the installer to show. Null means every shortcut was saved.
+        // A shortcut Windows won't save doesn't stop the install; its reason comes back, null when all saved.
         // ---------- Starting fresh ----------
-        //
-        // An install over the top keeps everything of theirs on purpose, which is right nearly always and
-        // wrong when somebody wants her as she comes. So the setup can move their files aside first.
-        //
-        // Named rather than swept: an allow list cannot carry off her speech model, her voice pack, her mods
-        // or anything else that runs to gigabytes, where a deny list would the first time something new
-        // appeared beside them. The cost is that a personal file added later has to be added here too, which
-        // is the safe direction to be wrong in.
-        //
-        // Nothing is deleted. It all goes into a dated folder inside her own, so a clean install is undone by
-        // moving one folder back.
+        // Their files moved by a named allow list into a dated folder before a fresh install; nothing is deleted.
         private static readonly string[] Theirs =
         {
             "settings.json", "settings.crashed.json", "apps.json", "apps-used.txt", "away.txt", "chat.json",
             "errors.txt", "hours.txt", "lines-log.txt", "lines-said.txt", "lore.txt", "lore.pack",
             "playlist.json", "reminders.json", "running.on", "websites.json", "security.json", "routines.json",
-            "me.md", "memories.md", "personality.md", "personality.backup.md", "twitch.md", "check-ins.md"
+            "me.md", "memories.md", "personality.md", "personality.backup.md", "twitch.md", "twitch-seen.txt", "check-ins.md"
         };
 
-        private static readonly string[] TheirFolders = { "personalSettings", "personalities", "attitudes", "transcripts", "workspace", "clips" };
+        private static readonly string[] TheirFolders = { "personalSettings", "personalities", "attitudes", "games", "transcripts", "workspace", "clips" };
 
         // Whether there is anything of theirs here at all, which decides whether the choice is offered: on a
         // first install there is nothing to start fresh from and the tick would be noise.
@@ -464,7 +446,7 @@ namespace CapriSetup
             string existing = Path.Combine(destination, "Capri.exe");
             if (Directory.Exists(destination) && !File.Exists(marker) && File.Exists(existing) && !Ours(existing)) throw new IOException("There's a Capri.exe in " + destination + " that isn't this Capri. Move it out of that folder, then install again.");
             // Her input helper lives a moment after she closes, so a copy on its way out gets a few seconds. A copy started as
-            // administrator can't be closed from here, so Windows is asked to close it as administrator (Splinter, 6 Nov).
+            // administrator can't be closed from here, so Windows is asked to close it as administrator (Splinter).
             foreach (Process process in Process.GetProcessesByName("Capri"))
             {
                 using (process)
@@ -494,10 +476,8 @@ namespace CapriSetup
             }
             finally { if (File.Exists(temporary)) File.Delete(temporary); }
             File.Copy(Application.ExecutablePath, Path.Combine(destination, "Uninstall.exe"), true);
-            // What the build leaves beside this file rather than inside it, carried over with her. Her
-            // stories are 1.4 MB and sit next to the setup for that reason, and nothing was placing them,
-            // so a fresh install had no stories at all. Her notice sits there too. Neither replaces one
-            // that is already there, since the one there may be theirs.
+            // What the build leaves beside this file, carried over with her: her stories and her notice. Neither
+            // replaces one already there, since that may be theirs.
             string beside = Path.GetDirectoryName(Application.ExecutablePath);
             foreach (string spare in new[] { "lore.md", "NOTICE.txt" })
             {
@@ -837,9 +817,9 @@ namespace CapriSetup
         }
     }
 
-    // Her installer in her Mainframe's look: a borderless window cut at the corners with a red rim and hot red strokes over her
-    // wine glow, INSTALL CAPRI in rose for its title, its options on a band, cyan tick boxes, and a solid cyan Install Capri
-    // (a red Remove Capri). It drags from anywhere that isn't a control and lays itself out for the screen's scale.
+    // Her installer in the Mainframe's look: borderless, clipped corners, red rim and hot strokes over the wine glow, a
+    // rose INSTALL CAPRI title, options on a band, cyan ticks, a cyan Install Capri (red Remove Capri). It drags
+    // anywhere and scales.
     internal sealed class SetupWindow : Form
     {
         private readonly bool removing;
@@ -897,13 +877,14 @@ namespace CapriSetup
             launch.Checked = true;
             launch.Bounds = Box(34, 314, 340, 26);
             launch.Visible = !removing;
-            // Only when there is something of theirs to move: on a first install there is nothing to start
-            // fresh from. Off by default, because an install over the top keeping their files is the right
-            // thing nearly every time.
+            // Under Open Capri, always there so people know it exists; off by default, because an install over the top
+            // keeping their files is the right thing nearly every time. On a first install there is nothing to start
+            // fresh from, so it is shown but can't be ticked.
             fresh = new Tick();
-            fresh.Text = "Start fresh, keeping a copy of my current files";
+            fresh.Text = "Clean install, keeping a copy of my current files";
             fresh.Bounds = Box(34, 344, 440, 26);
-            fresh.Visible = !removing && Program.Started();
+            fresh.Visible = !removing;
+            fresh.Enabled = Program.Started();
             Controls.Add(desktop);
             Controls.Add(launch);
             Controls.Add(fresh);
@@ -930,7 +911,7 @@ namespace CapriSetup
                 // Skipping the speech model still leaves Capri installed; she can fetch it later from her Mainframe.
                 stopping = true;
                 cancel.Enabled = false;
-                status.Text = "Skipping it…";
+                status.Text = "Skipping it...";
             };
             Controls.Add(cancel);
             AcceptButton = primary;
@@ -1025,12 +1006,12 @@ namespace CapriSetup
                 if (removing) { Program.BeginUninstall(); Close(); return; }
                 if (fresh.Checked)
                 {
-                    status.Text = "Putting your files aside…";
+                    status.Text = "Putting your files aside...";
                     int keptBack;
                     string into = Program.Aside(out keptBack);
                     if (into != null) status.Text = "Your files are in " + Path.GetFileName(into) + (keptBack > 0 ? ", and " + keptBack + " could not be moved" : "");
                 }
-                status.Text = "Making a little room for Capri…";
+                status.Text = "Making a little room for Capri...";
                 noShortcut = Program.Install(desktop.Checked);
                 try { SetupFiles.Mark(Program.InstallPath, "manual"); }
                 catch (Exception error) { Notice.Tell(this, "Capri is installed, but the package marker couldn't be cleared. Delete " + SetupFiles.Marker + " in " + Program.InstallPath + " to let her update herself. " + error.Message, "Capri", true); }
@@ -1057,7 +1038,7 @@ namespace CapriSetup
         // Her local speech model comes with the install, and the window says so plainly while it downloads.
         private void FetchVoice()
         {
-            Speaking(0, VoicePack.Size, "Starting the download…");
+            Speaking(0, VoicePack.Size, "Starting the download...");
             Thread worker = new Thread(delegate()
             {
                 string failed = null;
@@ -1065,7 +1046,7 @@ namespace CapriSetup
                 {
                     Program.FetchVoice(Program.InstallPath, delegate(string what, long have, long size)
                     {
-                        string detail = what == "Downloading" ? Program.Megabytes(have) + " of " + Program.Megabytes(size) : what == "Checking" ? "Checking the download…" : "Unpacking…";
+                        string detail = what == "Downloading" ? Program.Megabytes(have) + " of " + Program.Megabytes(size) : what == "Checking" ? "Checking the download..." : "Unpacking...";
                         Post(delegate { Speaking(have, size, detail); });
                     }, delegate { return stopping; });
                 }
@@ -1094,7 +1075,7 @@ namespace CapriSetup
             stage.Visible = true;
             note.Visible = true;
             if (!stopping) cancel.Text = "Skip";
-            primary.Text = "Installing…";
+            primary.Text = "Installing...";
             primary.Enabled = false;
             got = have;
             total = size;
@@ -1134,7 +1115,9 @@ namespace CapriSetup
                 UseMnemonic = false;
             }
 
-            protected override void OnMouseEnter(EventArgs e) { hot = true; Invalidate(); base.OnMouseEnter(e); }
+            protected override void OnEnabledChanged(EventArgs e) { Cursor = Enabled ? Cursors.Hand : Cursors.Default; Invalidate(); base.OnEnabledChanged(e); }
+
+            protected override void OnMouseEnter(EventArgs e) { hot = Enabled; Invalidate(); base.OnMouseEnter(e); }
 
             protected override void OnMouseLeave(EventArgs e) { hot = false; Invalidate(); base.OnMouseLeave(e); }
 
@@ -1159,7 +1142,8 @@ namespace CapriSetup
                         graphics.DrawLines(tick, new[] { new PointF(box.Left + side * 0.22f, box.Top + side * 0.52f), new PointF(box.Left + side * 0.42f, box.Top + side * 0.72f), new PointF(box.Left + side * 0.78f, box.Top + side * 0.3f) });
                     }
                 int left = (int)(box.Right + 10 * s);
-                TextRenderer.DrawText(graphics, Text, Font, new Rectangle(left, 0, Width - left, Height), Neon.White, TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
+                // A box that can't be ticked yet reads faint, so it shows without inviting a click.
+                TextRenderer.DrawText(graphics, Text, Font, new Rectangle(left, 0, Width - left, Height), Enabled ? Neon.White : Neon.Faint, TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
             }
         }
     }

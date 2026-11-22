@@ -204,3 +204,18 @@ Running on this PC	この PC で実行中
 NORMAL	通常
 OFF	オフ
 Local server address	ローカルサーバーのアドレス
+Remember panel position	パネルの位置を記憶
+Custom colours	カスタムカラー
+Custom colours...	カスタムカラー...
+Choose	選択
+Hers	彼女の色
+Quiet	静か
+Quiet min	静か min
+Quiet max	静か max
+Until I turn it off	自分でオフにするまで
+Quiet on calls	通話中は静か
+Quiet in videos	動画中は静か
+Quiet until {n}:{n}	{n}:{n}まで静か
+Quiet until turned off	オフにするまで静か
+Export settings	設定をエクスポート
+Import settings	設定をインポート

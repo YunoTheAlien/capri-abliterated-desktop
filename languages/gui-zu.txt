@@ -204,3 +204,18 @@ Running on this PC	Isebenza kule PC
 NORMAL	OLUJWAYELEKILE
 OFF	VALIWE
 Local server address	Ikheli leseva yendawo
+Remember panel position	Khumbula indawo yephaneli
+Custom colours	Imibala yakho
+Custom colours...	Imibala yakho...
+Choose	Khetha
+Hers	Okwakhe
+Quiet	Thula
+Quiet min	Thula min
+Quiet max	Thula max
+Until I turn it off	Ngize ngiyicishe
+Quiet on calls	Thula ngesikhathi sezingcingo
+Quiet in videos	Thula kumavidiyo
+Quiet until {n}:{n}	Thula kuze kube ngu-{n}:{n}
+Quiet until turned off	Thula kuze kucishwe
+Export settings	Thumela izilungiselelo
+Import settings	Ngenisa izilungiselelo

@@ -204,3 +204,18 @@ Running on this PC	Beží na tomto PC
 NORMAL	NORMÁLNE
 OFF	VYPNUTÉ
 Local server address	Adresa lokálneho servera
+Remember panel position	Pamätať si polohu panela
+Custom colours	Vlastné farby
+Custom colours...	Vlastné farby...
+Choose	Vybrať
+Hers	Jej
+Quiet	Ticho
+Quiet min	Ticho min
+Quiet max	Ticho max
+Until I turn it off	Kým to nevypnem
+Quiet on calls	Ticho počas hovorov
+Quiet in videos	Ticho pri videách
+Quiet until {n}:{n}	Ticho do {n}:{n}
+Quiet until turned off	Ticho do vypnutia
+Export settings	Exportovať nastavenia
+Import settings	Importovať nastavenia

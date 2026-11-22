@@ -84,23 +84,9 @@ namespace CapriDesktop
         IMixCable OpenCable(MixDevice cable);
     }
 
-    // Her voice in your mic (F66, Lachy: "OPTION B!!"). Windows can't make a new mic without a driver, so she plays into a
-    // virtual cable: VB-CABLE when it's there, else Steam's own virtual mic, which Steam puts on many gamers' PCs. Without either,
-    // Settings runs VB-Audio's own VB-CABLE setup from the copy she carries (CableSetup). While the switch is on she plays their
-    // real mic plus her voice into the cable, they pick its far end (CABLE Output, or Steam Streaming Microphone) as the mic in
-    // Discord or Roblox, and friends hear them both, her at a steady speaking level whatever her speakers' volume. Her voice
-    // still plays on their speakers, her sound effects stay out, and
-    // her own ears never listen to the cable's far end. Steam's far end turns everything up 30 dB through Windows' own volume on
-    // it, so she plays under by whatever that volume adds, read four times a second. A cable whose far end is turned off in
-    // Windows can't reach Discord or Roblox, so one with its far end on comes first, and Settings says to turn it on.
-    //
-    // One thread does it all. Each wake it takes the mic's new packets, resampled to the cable's rate into a short queue, then
-    // tops the cable up to two of Windows' periods with that queue and her voice added in, through a soft limiter. The queue
-    // holds a packet and a half, counting what the mic has heard since its last packet, so the mic path is about 40 to 45 ms:
-    // that, the two periods on the cable, and Windows taking a period at a time. The mic's resampler is nudged a hair faster or
-    // slower to hold that level, so the mic's clock and the cable's never drift apart, and a packet that comes late waits on
-    // the cable's spare period instead of leaving a gap. A device that goes away is closed and looked for again every second,
-    // and every two seconds she checks they still have the mic and cable she should be using.
+    // Her voice in your mic (Lachy): their mic plus her voice mixed on one thread through a soft limiter into a virtual
+    // cable (VB-CABLE, else Steam's mic) picked as the mic in Discord or Roblox, about 40 ms behind. Her effects stay
+    // out and her ears never hear the cable.
     internal sealed class MicAnswer
     {
         private static int next, writing;
@@ -164,15 +150,14 @@ namespace CapriDesktop
         // How often she reads Windows' volume on the cable's far end, in seconds, so turning it up can't blast friends for long,
         // and what Steam's far end adds, in dB, while Windows won't say.
         internal const double TrimGap = 0.25, SteamBoost = 30;
-        // Her voice goes in at a steady speaking level whatever her speakers' volume: her voiced moments (20 ms pieces over 1% of
-        // full scale) are brought to about -17 dBFS, by a quarter to four times her own level, and the limiter keeps her peaks
-        // under full scale (Lachy, 3 Nov: friends on Discord found her "too quiet for it to come through legible" at volume 50).
+        // Her voice goes in at a steady speaking level whatever her speakers' volume (Lachy): her voiced 20 ms pieces
+        // brought to about -17 dBFS, between a quarter and four times her level, with the limiter keeping peaks under
+        // full scale.
         internal const double Speaking = 0.14, Voiced = 0.01, LeastLift = 0.25, MostLift = 4;
         // Her voice waits at most this many seconds for the cable, so a stalled cable can't pile it up.
         private const int MostWaiting = 120;
-        // How the mic's clock is steered to keep its queue level: as a part of its rate for each second of audio the level is
-        // off, straight away (Pull) and building up each second it stays off (Lasting); over how many seconds the level is
-        // smoothed; and the most it's ever steered.
+        // How the mic's clock is steered to keep its queue level: a share of its rate per second the level is off, at
+        // once (Pull) and building while it stays off (Lasting); the smoothing window; and the most it's ever steered.
         private const double Pull = 0.4, Lasting = 0.04, Settle = 0.5, MostSteer = 0.002;
         private readonly IMixDevices devices;
         private readonly Func<double> clock;
@@ -263,9 +248,9 @@ namespace CapriDesktop
         // How far the mic's clock is being steered, as a part of its rate, for the smoke test.
         internal double Steered { get { MixResampler resampler = micRate; return resampler == null ? 0 : resampler.Step / resampler.Ratio - 1; } }
 
-        // VB-CABLE's two ends: CABLE Input, which she plays into, and CABLE Output, which Discord or Roblox hears. A renamed one still
-        // has VB-Audio's own name for the cable in brackets after it. Steam's virtual mic has the same name on both ends, "Speakers
-        // (Steam Streaming Microphone)" to play into and "Microphone (Steam Streaming Microphone)" to hear.
+        // VB-CABLE's two ends: CABLE Input she plays into and CABLE Output that Discord or Roblox hears, a renamed one
+        // keeping VB-Audio's name in brackets. Steam's virtual mic uses the same name on both, as Speakers and
+        // Microphone.
         private static readonly Regex InputName = new Regex(@"\bCABLE\s+Input\b|VB-Audio Virtual Cable", RegexOptions.IgnoreCase);
         private static readonly Regex OutputName = new Regex(@"\bCABLE(?:-\w+)?\s+Output\b|VB-Audio Virtual Cable|Steam Streaming Microphone", RegexOptions.IgnoreCase);
         private static readonly Regex VbOutput = new Regex(@"\bCABLE\s+Output\b|VB-Audio Virtual Cable", RegexOptions.IgnoreCase);
@@ -290,9 +275,9 @@ namespace CapriDesktop
         // Settings' note for an end, short enough for its column.
         internal static string PickLine(string end) { return "Calls only. Pick " + end + "."; }
 
-        // The cable from Windows' active speakers and mics, with its far end: the one they picked on Settings' Output while it's
-        // there, else VB-CABLE's before Steam's, since they installed it for this, and either with its far end on before one
-        // Windows has turned off. Without a far end it's still the cable, for Settings to say to turn it on. Null when there's no cable.
+        // The cable from Windows' active devices with its far end: the one picked in Settings' Output, else VB-CABLE
+        // before Steam's, either with its far end on first. Without a far end it's still the cable, so Settings can say
+        // to enable it; null with none.
         internal static MixDevice CableFor(List<MixDevice> speakers, List<MixDevice> mics, string chosen = null)
         {
             List<MixDevice> cables = Cables(speakers, mics);
@@ -423,7 +408,7 @@ namespace CapriDesktop
             worker = null;
             if (running == null) { Close(); return; }
             stopping = true;
-            // Nothing more of hers goes in from here, even while the worker's stuck in a device call (Codex review, 2 Nov).
+            // Nothing more of hers goes in from here, even while the worker's stuck in a device call.
             open = false;
             lock (gate) { foreach (Lane lane in lanes) lane.Clear(); lanes.Clear(); }
             wake.Set();
@@ -498,9 +483,8 @@ namespace CapriDesktop
             else cableLogged = null;
         }
 
-        // The cable that's open is still the one to use and the mic is still the one to hear: a new pick, a new Windows default,
-        // their own mic plugged back in or VB-CABLE newly installed over Steam's moves her to it. A far end turned on or off in
-        // Windows is picked up too.
+        // The open cable is still the one to use and the mic still the one to hear: a new pick, default, replugged mic
+        // or newly installed VB-CABLE moves her to it, and a far end turned on or off is picked up too.
         private void Look(double now)
         {
             MixDevice wantCable, wantMic;
@@ -526,9 +510,9 @@ namespace CapriDesktop
             else if (mic == null && wantMic != null) micAt = now;
         }
 
-        // A far end Windows turns up, like Steam's mic at its +30 dB, would play their mic and her voice that much too loud, so
-        // the mix goes in that much under. One turned down is left alone, since they chose it. A read that fails keeps the last
-        // trim, or before any read plays Steam's under by its usual +30 dB.
+        // A far end Windows turns up, like Steam's mic at +30 dB, would make the mix that much too loud, so it goes in
+        // that much under; one turned down is theirs and left. A failed read keeps the last trim, or Steam's usual 30
+        // dB before any read.
         private void Trim(double now)
         {
             trimAt = now + TrimGap;
@@ -761,13 +745,9 @@ namespace CapriDesktop
             finally { foreach (Share share in shares) share.Answer.Reach(wrote && spoke ? share.Seconds : 0, share.Last); }
         }
 
-        // Keeps a packet and a half of the mic queued after each top-up, counting what the mic has heard since its last packet,
-        // so the level doesn't jump by a packet as the mic's packets slide past the cable's periods. More, and the mic's clock
-        // runs fast, so it's resampled a hair faster until the level's back; less, a hair slower. Part of that nudge comes
-        // straight from how far off the level is and part builds up while it stays off, which ends up matching the two clocks
-        // exactly instead of settling a little short. While the mic warms up, or after it sent nothing for a while, the cable
-        // gets silence until enough is queued, then what's over is dropped and it starts from there; a pile-up of 40 ms is
-        // dropped too. False while it warms up.
+        // Keeps a packet and a half of mic queued after each top-up, nudging the mic's resampler faster or slower so
+        // its clock matches the cable's. Silence while it warms up or after a gap; a 40 ms pile-up is dropped. False
+        // while warming.
         private bool Steer(int want, double now)
         {
             double packet = (double)cushion / cable.Rate;
@@ -1020,9 +1000,9 @@ namespace CapriDesktop
         }
     }
 
-    // A windowed sinc like VoiceFx's, for a stream: samples go in as they come and come out at another rate. Going down in rate
-    // it filters first, so nothing aliases, and going up it keeps the images out. Its step can be nudged a hair while it runs,
-    // which is how her mic mix keeps a mic's clock and the cable's together.
+    // A windowed sinc for a stream: samples in as they come, out at another rate, filtering first going down and
+    // keeping images out going up. Its step can be nudged while running, which keeps the mic's and the cable's clocks
+    // together.
     internal sealed class MixResampler
     {
         private const int Phases = 256;

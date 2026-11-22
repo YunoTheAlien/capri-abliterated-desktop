@@ -204,3 +204,18 @@ Running on this PC	Kan PC-kan ku shaqeynaya
 NORMAL	CAADI
 OFF	DEMAN
 Local server address	Cinwaanka server-ka maxalliga ah
+Remember panel position	Xasuuso meesha guddiga
+Custom colours	Midabo gaar ah
+Custom colours...	Midabo gaar ah...
+Choose	Dooro
+Hers	Keeda
+Quiet	Aamusnaan
+Quiet min	Aamusnaan min
+Quiet max	Aamusnaan max
+Until I turn it off	Ilaa aan damiyo
+Quiet on calls	Aamusnaan wicitaannada
+Quiet in videos	Aamusnaan muuqaallada
+Quiet until {n}:{n}	Aamusnaan ilaa {n}:{n}
+Quiet until turned off	Aamusnaan ilaa la damiyo
+Export settings	Dhoofi dejinta
+Import settings	Soo deji dejinta

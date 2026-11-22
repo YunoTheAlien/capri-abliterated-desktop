@@ -8,10 +8,9 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
-    // What a brain writes for itself and not for them: its thinking, and its tool calls written out as words. Testers saw both in
-    // her chat (Lachy, 12 Nov: "AI's are leaking their thought processes or their tool use into the chat"). Thinking comes out
-    // before anything reads a reply. Written calls come out only of what she shows and says, so her hands still read them and
-    // run them. Code in ``` or ` is left as it was written, so a reply about JSON, XML or <think> tags keeps its examples.
+    // What a brain writes for itself, not for them: its thinking, and tool calls written as words (Lachy). Thinking
+    // goes before anything reads a reply; written calls only from what she shows and says. Code in ``` or ` stays as
+    // written.
     internal static class Leaks
     {
         // Which brain the last ask on this thread went to, for her log.
@@ -29,6 +28,7 @@ namespace CapriDesktop
                 List<string> all = new List<string>();
                 for (int i = 0; i < Hands.Count; i++) all.Add(Hands.Name(i));
                 all.Add("mod");
+                all.Add("plugin");
                 all.Sort(delegate(string a, string b) { return b.Length.CompareTo(a.Length); });
                 return names = string.Join("|", all.ConvertAll(Regex.Escape).ToArray());
             }
@@ -57,10 +57,8 @@ namespace CapriDesktop
         private static readonly Regex Mistral = new Regex(@"\[TOOL_CALLS\]\s*", RegexOptions.IgnoreCase);
         private static readonly Regex CallFence = new Regex(@"\A\s*(?:tool_code|tool_calls?|tool_use|function_calls?|functions?)\s*\z", RegexOptions.IgnoreCase);
 
-        // Thinking with no tags, in plain words: a brain talking about "the user" or its tools to itself, never to them (PR 245:
-        // "The user is asking me to close discord ... the correct tool call would be app_window"). Plenty of honest answers talk
-        // about "the user" too (a sign-up page, an error, a game's rules), so a paragraph only counts when it also talks to itself
-        // about its own reply. After one that does, the paragraphs that carry on about the user or its tools go with it.
+        // Untagged thinking in plain words: a brain talking to itself about "the user" or its tools. A paragraph counts
+        // only when it also talks about its own reply, and the ones carrying on after it go with it.
         private static readonly Regex Musing = new Regex(
             @"\bthe user(?:['’]s)?\s+(?:is|was|has|had|just|now|seems|might|may|probably|likely|clearly|wants?|wanted|asks?|asked|asking|says?|said|mentions?|mentioned|requests?|requested|types?|typed|wrote|writes|greets?|greeted|sent|message|request|question|input|query)\b" +
             @"|\b(?:correct|right|appropriate|best|proper) (?:tool|function)(?: call)? (?:would be|is|here is|to (?:use|call))\b" +
@@ -206,13 +204,8 @@ namespace CapriDesktop
             return text;
         }
 
-        // Her reply without the calls a brain wrote out as text or the chat template's own tokens: what she shows and says.
-        // Her screen glances answer in "SAW: ... SAY: ..." and the labels belong to that path only. A small brain
-        // that has seen the format copies it into ordinary replies, which then get spoken whole, screen description
-        // and all. Reported in chat as "SAW: A second window with pink headers running code, time at 00:38:09".
-        //
-        // A SAW block in a normal reply is machine formatting, never speech: it and everything after it goes, and a
-        // leading SAY label is dropped.
+        // Her reply without written-out calls or the chat template's tokens. A SAW block in an ordinary reply is copied
+        // screen-glance formatting, never speech: it and what follows go, and a leading SAY label is dropped.
         private static readonly Regex Watched = new Regex(@"(?<![\p{L}\p{N}'])SAW[*_]*\s*[:\p{Pd}].*\z", Loose);
         private static readonly Regex Saying = new Regex(@"\A\s*(?<![\p{L}\p{N}'])SAY[*_]*\s*[:\p{Pd}]\s*", RegexOptions.IgnoreCase);
 

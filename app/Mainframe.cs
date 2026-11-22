@@ -10,10 +10,9 @@ namespace CapriDesktop
 {
     internal sealed partial class Mainframe : Form, IMessageFilter, LookWindow
     {
-        // Her Mainframe's own look, after Cyberpunk 2077's settings screen (Lachy, 30 Oct): near black with a wine glow at the
-        // top, sections on dark bands under a teal rule, setting names in red, values in cyan, and boxes with a dark red rim and
-        // clipped corners. The colours come from Neon, which her menus, type box, installer and notices share too; her bubbles
-        // keep Look's.
+        // Her Mainframe's look (Lachy): near black with a wine glow, sections on dark bands under a teal rule, names in
+        // red, values in cyan, boxes with clipped corners. Colours come from Neon, shared with her menus, type box,
+        // installer and notices.
         private static Color Ground { get { return Neon.Ground; } }
         private static Color Glow { get { return Neon.Glow; } }
         private static Color Band { get { return Neon.Band; } }
@@ -47,7 +46,7 @@ namespace CapriDesktop
         private const int SetupHeight = 118;
         // The left column is the taller one, and CLIPS' note at its foot sets this, with Free voice in games showing.
         private const int PageTall = 2048;
-        // Settings scrolls at this height rather than filling a tall screen (Lachy, 31 Oct).
+        // Settings scrolls at this height rather than filling a tall screen (Lachy).
         private const int MostView = 820;
         // Settings opens a second column to the right, so every setting shows at once.
         private const int Column = 380;
@@ -95,12 +94,8 @@ namespace CapriDesktop
         private const int KeyFold = 36;
         private const int HearingFixAt = 474;
         private const int HearingFixRow = 35;
-        // BRAIN's rungs and the key row under them, spaced as one block. The three rungs are 24 apart from
-        // RungTop, so they end at RungsEnd; the key box takes a clear gap under them and the free-key warning a
-        // smaller one, because a warning belongs to the box above it. Every row under the box is placed off the
-        // one before it, and KeyRow is worked out from whichever of them is showing, so moving one number moves
-        // the rest and the panel grows to match. Reported as crammed at 6 px under the rungs and 4 above the
-        // warning.
+        // BRAIN's rungs and key row spaced as one block: rungs 24 apart from RungTop, a clear gap under them for the
+        // key box, a smaller one above its warning. KeyRow follows whichever rows show, and the panel grows to match.
         private const int RungTop = 184;
         private const int RungTall = 24;
         private const int RungsEnd = RungTop + RungTall * 3;
@@ -316,6 +311,8 @@ namespace CapriDesktop
         internal bool Quitting;
         private readonly Key more;
         private readonly Key minimize;
+        // The lock beside minimise: locked, Settings' panels stay where they are; open, their headings can be dragged.
+        private readonly Key lockKey;
         private readonly Key close;
         private readonly Label build;
         private readonly List<KeyValuePair<Control, int>> mainLeft = new List<KeyValuePair<Control, int>>();
@@ -328,16 +325,14 @@ namespace CapriDesktop
         private readonly Dictionary<Control, int> tops = new Dictionary<Control, int>();
         private int pageView = PageTall;
         private int pageScroll;
-        // Settings opens simple: the rows most people never need are hidden and the gaps closed, and Advanced Settings brings
-        // them back. These are stretches of each column as built, by Top.
-        // Simple Settings keeps Her voice in your mic's rows, between Free voice in games and MOVES.
-        private static readonly int[][] FoldedLeft = { new[] { 232, 338 }, new[] { 366, 394 }, new[] { 616, 1086 }, new[] { 1225, 1277 }, new[] { 1277, 1305 } };
-        // Power saver's and Music app's rows stay in Simple Settings, so the right column's last band starts two rows lower, at Perch.
-        // SOUNDS, under HABITS, stays in Simple Settings too, so that band ends above it.
-        // The four rows under Local servers (Local fallback, Fallback brain, Brains in use, Local priority) fold with it,
-        // and so does the Fallback list row above them, so everything under them sits Row * 5 lower than when these bands
-        // were measured.
-        private static readonly int[][] FoldedRight = { new[] { 138, 362 }, new[] { 390, 418 }, new[] { 876, 1370 + Row * 5 }, new[] { 1622 + Row * 5, 1810 + Row * 5 } };
+        // Settings opens simple: rarely needed rows hidden and gaps closed, until Advanced Settings brings them back.
+        // Stretches of each column as built, by Top.
+        private const int KeysNoteRow = 22;
+        private static readonly int[][] FoldedLeft = { new[] { 232, 338 }, new[] { 366, 394 }, new[] { 616, 1086 + KeysNoteRow }, new[] { 1225 + KeysNoteRow, 1277 + KeysNoteRow }, new[] { 1277 + KeysNoteRow, 1305 + KeysNoteRow } };
+        // The rows that stay in Simple Settings, and the offsets every row added above the band moves it by
+        // (SettingsDrop, Hologram's row, QuietRows).
+        private const int QuietRows = 5;
+        private static readonly int[][] FoldedRight = { new[] { 138 + Row, 166 + Row }, new[] { 138 + SettingsDrop + Row + Row * QuietRows, 362 + SettingsDrop + Row + Row * QuietRows }, new[] { 876 + SettingsDrop - Row * 3 + Row * QuietRows, 1370 + Row * 5 + SettingsDrop - Row * 3 + Row * QuietRows }, new[] { 1622 + Row * 5 + SettingsDrop - Row * 3 + Row * QuietRows, 1810 + Row * 5 + SettingsDrop - Row * 3 + Row * QuietRows } };
         private readonly Dictionary<Control, int> built = new Dictionary<Control, int>();
         private bool simple;
         private Key advancedKey;
@@ -350,18 +345,23 @@ namespace CapriDesktop
         private const int SimpleTall = 1198;
         private int simpleTall;
         private int wheel;
-        // A wheel turn glides the page to where it's headed over a few frames, instead of jumping a row at a time (Lachy, 3 Nov).
+        // A wheel turn glides the page to where it's headed over a few frames, instead of jumping a row at a time (Lachy).
         private const double GlideMs = 140;
         private readonly Timer glide = new Timer { Interval = 10 };
         private readonly System.Diagnostics.Stopwatch glideClock = new System.Diagnostics.Stopwatch();
         private int glideFrom, glideTo;
-        // Support's heart beats twice every 7 seconds while her main page shows, and its rim lights with it (Lachy, 4 Nov).
+        // Support's heart beats twice every 7 seconds while her main page shows, and its rim lights with it (Lachy).
         // It holds still with her moves off.
         private const double BeatMs = 7000;
         private readonly Timer heartbeat = new Timer { Interval = 33 };
         private readonly System.Diagnostics.Stopwatch beatClock = System.Diagnostics.Stopwatch.StartNew();
         private Key support;
         private readonly Rim topRim = new Rim();
+        // Her title bar stays at the top while Settings scrolls under it: this band, in her own ground and edge, sits over
+        // the page and under the title's keys. TitleTall is its height in design px.
+        private readonly Rim titleBand = new Rim();
+        private const int TitleTall = 48;
+        private readonly List<Control> titleRow = new List<Control>();
         private readonly Rim bottomRim = new Rim();
         // Smoke tests pretend the screen's working area is this many px tall, before scaling; 0 uses the real one.
         internal int ShortScreen;
@@ -389,21 +389,21 @@ namespace CapriDesktop
         private readonly Toggle typing;
         private readonly Toggle listenCapri;
         private readonly Toggle hdGames;
-        // Her voice in your mic (F66): the switch, the line saying to pick CABLE Output, and a line under it that says when it
+        // Her voice in your mic: the switch, the line saying to pick CABLE Output, and a line under it that says when it
         // needs VB-CABLE, beside a button to VB-CABLE's page, or what's wrong while it's on. They sit under Free voice in games.
         private readonly Toggle voiceInMic;
         private readonly Label voiceInMicNote;
         private readonly Label voiceInMicState;
         private readonly Key cableKey;
-        // Its Input and Output (Lachy, 3 Nov: "we need to be able to change the input and output for the mixer"), and How to,
-        // which opens its setup steps: "make it clear how to set it up too".
+        // Its Input and Output (Lachy), and How to,
+        // which opens its setup steps.
         private readonly Key mixInput, mixOutput, mixHow;
         private readonly Slider micLoudness;
         private readonly Label micLoudnessName;
         private readonly ContextMenuStrip mixInputMenu, mixOutputMenu;
         private MixSheet mixSheet;
         private readonly Toggle callMode;
-        // The call app menu moved to her call panel (Lachy, 6 Nov), so her voice in your mic sits right under Call mode.
+        // The call app menu moved to her call panel (Lachy), so her voice in your mic sits right under Call mode.
         private const int MixAt = 422;
         private const int MixRows = 212;
         private readonly Toggle miniPlayer;
@@ -415,7 +415,7 @@ namespace CapriDesktop
         private readonly Readout popsName;
         private readonly Key popTimes, gameNotes, miniGames;
         private ContextMenuStrip miniMenu;   // kept like the other menus; disposing it in its own Closed crashed WinForms
-        private readonly Key notesKey, memoriesKey, filesKey;
+        private readonly Key notesKey, memoriesKey, vaultKey, filesKey;
         internal void PressFiles() { InvokeOnClick(filesKey, EventArgs.Empty); }
         private readonly Toggle dance;
         private readonly Slider replies;
@@ -462,6 +462,7 @@ namespace CapriDesktop
             Icon = icon;
             ShowInTaskbar = true;
             FormBorderStyle = FormBorderStyle.None;
+            Neon.NeverFullScreen(this);
             StartPosition = FormStartPosition.CenterScreen;
             AutoScaleMode = AutoScaleMode.None;
             Font = Type(9.5f);
@@ -480,10 +481,16 @@ namespace CapriDesktop
             more = Make("Settings", 146, 20, 84, 22, delegate { if (modded) ShowMods(false); else ShowSettings(!paged); });
             more.Accent = Cyan;
             more.Loud = true;
-            // Mods sits right beside Settings in her title bar (Lachy, 4 Nov: "I like mods better next to settings").
+            // Mods sits right beside Settings in her title bar (Lachy).
             modsKey = Make("Mods", 234, 20, 56, 22, delegate { ShowMods(!modded); });
+            lockKey = Make("", 270, 20, 26, 22, delegate { TogglePanelLock(); }, "Panel lock");
+            lockKey.Glyph = 3;
+            lockKey.AccessibleName = "Panels locked. Open the lock to drag Settings' panels to other places";
+            lockKey.Visible = false;
+            BuildSearch();
             int header = Controls.Count;
-            for (int i = 0; i < header; i++) Scrolls(Controls[i]);
+            // Her title bar does not scroll: MAINFRAME, Settings and Mods, the search, the lock, minimise and close.
+            for (int i = 0; i < header; i++) titleRow.Add(Controls[i]);
             Section("BRAIN >", 0, 58);
             MakeWorkspaceKey();
             brainName = Caption("", 28, 79, Type(11f, true), White);
@@ -521,7 +528,7 @@ namespace CapriDesktop
             }
             rungs[0].Flag = "Start with this!";
             rungs[0].FlagFont = Type(9f);
-            // No AI (Lachy, 12 Nov), drawn like VOICE's OFF row: no brain at all. Picking any brain under it switches one back on.
+            // No AI (Lachy), drawn like VOICE's OFF row: no brain at all. Picking any brain under it switches one back on.
             offRung = new Rung();
             offRung.AutoCheck = false;
             offRung.TabStop = true;
@@ -547,7 +554,7 @@ namespace CapriDesktop
             freeKey = Make("Free key", 266, RungTop + RungTall + 1, 90, 22, delegate { ShowFreeKeys(); });
             freeKey.Chevron = true;
             freeKey.AccessibleName = "Free key: NVIDIA, Google AI Studio (Gemini) or OpenRouter";
-            // Their own Claude or ChatGPT plan in place of a key, through Claude Code or Codex on this PC (Lachy, 6 Nov).
+            // Their own Claude or ChatGPT plan in place of a key, through Claude Code or Codex on this PC (Lachy).
             planMenu = Dropdown();
             planMenu.AccessibleName = "Your plan";
             ToolStripMenuItem claudePlan = Choice("Claude plan · runs Claude Code on this PC", false, delegate { capri.UsePlan("claudecode"); });
@@ -691,7 +698,7 @@ namespace CapriDesktop
             installNote.Visible = false;
             int v = VoiceHeight;
             Lower(Section("CAPRI >", 0, 184 + v));
-            // Shorter than a band's other keys and level with CAPRI, so its lit rim stays off the band's teal rule (Lachy, 4 Nov).
+            // Shorter than a band's other keys and level with CAPRI, so its lit rim stays off the band's teal rule (Lachy).
             support = Lower(Make("Support", 268, 183 + v, 88, 18, delegate { capri.OpenSupport(); }));
             support.Heart = true;
             support.AccessibleName = "Support Capri: opens Lachy's Ko-fi in your browser";
@@ -702,11 +709,8 @@ namespace CapriDesktop
             build.TextAlign = ContentAlignment.MiddleRight;
             // The Store copy's "Store 0.8.9" is wider, so it takes the gap up to Remote.
             build.Bounds = Packaged.Is ? new Rectangle(190, 183 + v, 76, 18) : new Rectangle(196, 183 + v, 66, 18);
-            // And it outgrew that gap. "Store 0.9.399" is 85 px of her mono against the 76 it has, so the
-            // caption has been clipped on every Store copy since the build number reached three digits, and
-            // it is right aligned, so what goes is the word Store. There is nowhere to widen into: Remote
-            // ends two pixels to its left and Support starts two to its right. So it shrinks to fit, which
-            // also holds when the number grows again.
+            // The caption shrinks to fit the gap between Remote and Support, so a longer build number never clips the
+            // word Store.
             build.Font = Narrowed(version, build.Width - 2, build.Font);
             showHide = Lower(Make("Hide Capri", 28, 206 + v, 104, 28, delegate { capri.ToggleHidden(); }));
             Lower(Make("Bring here", 140, 206 + v, 104, 28, delegate { capri.BringHere(); }));
@@ -735,9 +739,9 @@ namespace CapriDesktop
             for (int i = header; i < Controls.Count; i++) mainLeft.Add(new KeyValuePair<Control, int>(Controls[i], Controls[i].Left));
             int first = Controls.Count;
             // Settings: a setting to a row, its name on the left in red and its value in a box on the right, as on Cyberpunk
-            // 2077's settings screen (Lachy, 30 Oct). A section's own buttons, like Layers, sit at the right of its band.
+            // 2077's settings screen (Lachy). A section's own buttons, like Layers, sit at the right of its band.
             const int c = Column;
-            // Up by Back and named for what it does: Lachy (31 Oct) missed a small All settings key in the CAPRI band.
+            // Up by Back and named for what it does, since a small All settings key in the CAPRI band was easy to miss (Lachy).
             advancedKey = Make("Advanced Settings", 238, 20, 136, 22, delegate { capri.ToggleAdvancedSettings(); ShowSettings(true); });
             advancedKey.Accent = Cyan;
             advancedKey.Loud = true;
@@ -831,7 +835,7 @@ namespace CapriDesktop
                 hearingMenu.Items.Add(Choice(HearingStatus.Choices[i], false, delegate { capri.ChooseHearing(choice); }));
                 hearingMenu.Items[i].AccessibleName = HearingStatus.Choices[i];
             }
-            // The row under Listen for Capri, shown only while her HD voice is on (Lachy, 29 Oct). Off out of the box.
+            // The row under Listen for Capri, shown only while her HD voice is on (Lachy). Off out of the box.
             hdGames = Switch("Free voice in games", 0, 366, delegate { if (!syncing) capri.ToggleHdGameRest(); });
             hdGames.AccessibleName = "Free voice in games: while a game or video is full screen, her free voice talks instead of her HD voice, so the game gets the graphics card";
             hdGames.Visible = false;
@@ -926,8 +930,13 @@ namespace CapriDesktop
             clearKeys = Make("Off", 160, 645, 46, 20, delegate { ClearPush(); });
             clearKeys.AccessibleName = "Turn her push-to-talk key off";
             confirmKeys.Visible = cancelKeys.Visible = clearKeys.Visible = false;
+            // One line under the Mainframe key's row, with a row of its own before GAMES (KeysNoteRow): a note that wrapped
+            // ran into GAMES' heading. A longer one ends in "..." and the whole of it shows on hover, as the voice note does.
             keysNote = Caption("", 28, 900, small, Faint);
-            keysNote.MaximumSize = new Size(328, 0);
+            keysNote.AutoSize = false;
+            keysNote.AutoEllipsis = true;
+            keysNote.Size = new Size(328, 20);
+            ((Note)keysNote).Hovers = true;
             for (int i = afterVoice; i < Controls.Count; i++)
             {
                 Controls[i].Top += Row * 2 + 22 + MixRows - Row * 4;
@@ -935,7 +944,37 @@ namespace CapriDesktop
             }
             foreach (Control mixRow in MixControls) underVoice.Add(new KeyValuePair<Control, int>(mixRow, mixRow.Top));
             underVoice.Add(new KeyValuePair<Control, int>(callMode, callMode.Top));
-            Section("CAPRI >", c, 58);
+            // SETTINGS, the top of the right column: how the Mainframe itself opens and looks. Built at the column's top, and
+            // CAPRI and everything under it moved down below it once the column is built (SettingsDrop).
+            settingsHead = Section("GENERAL SETTINGS >", c, 58);
+            int settingsRows = Controls.Count;
+            rememberPanel = Switch("Remember panel position", c, 82, delegate { if (!syncing) capri.ToggleRememberPanel(); });
+            // A narrower switch, as the jealousy rows have, so the long name fits in Windows' fallback font too.
+            rememberPanel.Switch = 68;
+            onTop = Switch("Always on top", c, 110, delegate { if (!syncing) capri.ToggleOnTop(); });
+            // Under Virtual Super Resolution her Mainframe came out tiny (Zenni). Auto grows it by how much bigger
+            // the desktop is than the panel showing it; 100% to 200% sizes it by hand.
+            frameSize = Setting("Mainframe size", FrameSizeNames, c, 138, "Mainframe size. Auto makes it bigger when Virtual Super Resolution or DSR shrinks a big desktop onto a smaller screen");
+            frameSizeName = new Readout(frameSize);
+            frameSize.Changed += delegate { if (!syncing) ShowFrameSize(); };
+            frameSize.Released += delegate { if (!syncing) { capri.SetMainframeSize(FrameSizes[frameSize.Value]); Rezoom(Wanted()); ShowFrameSize(); } };
+            frameColours = Setting("Mainframe colours", Neon.LookNames, c, 166, "Mainframe colours. Night City is red and cyan; Black, White and Grey change the Mainframe, her menus, the Type box and her notes");
+            frameColours.Changed += delegate { if (!syncing) capri.SetMainframeColours(frameColours.Value); };
+            // Each colour of layout.md, in a window of its own: zones down the left, a picker, the last colours used and presets.
+            customColours = Make("Custom colours...", 28 + c, 197, 328, 22, delegate { OpenColours(); });
+            customColours.AccessibleName = "Custom colours: set each colour of her interface, saved in layout.md";
+            // Export and Import go right under the title, and the rest of SETTINGS a row lower for them.
+            for (int below = settingsRows; below < Controls.Count; below++) Controls[below].Top += Row;
+            BuildTransfer(c, 82);
+            int capriAt = Controls.Count;
+            capriHead = Section("CAPRI >", c, 58);
+            // Hologram heads CAPRI, and everything else in it sits a row lower for it. It stays reversible here even while
+            // clicks pass through her body (Lachy).
+            hologram = Switch("Hologram", c, 82, delegate { if (!syncing) capri.ToggleHologram(); });
+            hologram.AccessibleName = "Hologram. Clicks pass through her body, talk pill and bubble. Turn this off to give her clicks back";
+            // Her quiet under it: the switch, its min and max hours, and quiet on calls and in videos.
+            BuildQuiet(c, 82 + Row);
+            int afterHologram = Controls.Count;
             sizeSlider = Setting("Size", SizeNames, c, 82, "Her size");
             sizeName = new Readout(sizeSlider);
             sizeSlider.Changed += delegate
@@ -964,41 +1003,29 @@ namespace CapriDesktop
             careEdit = Make("Edit check-in lines", 28 + c, 338, 328, 20, delegate { capri.OpenCare(); });
             careEdit.AccessibleName = "Check in on me: edit her check-in lines in check-ins.md; remove lines to silence a check-in";
             int afterCare = Controls.Count;
-            onTop = Switch("Always on top", c, 138, delegate { if (!syncing) capri.ToggleOnTop(); });
-            // Zenni's ask (30 Oct): under Virtual Super Resolution her Mainframe came out tiny. Auto grows it by how much bigger
-            // the desktop is than the panel showing it; 100% to 200% sizes it by hand.
-            frameSize = Setting("Mainframe size", FrameSizeNames, c, 166, "Mainframe size. Auto makes it bigger when Virtual Super Resolution or DSR shrinks a big desktop onto a smaller screen");
-            frameSizeName = new Readout(frameSize);
-            frameSize.Changed += delegate { if (!syncing) ShowFrameSize(); };
-            frameSize.Released += delegate { if (!syncing) { capri.SetMainframeSize(FrameSizes[frameSize.Value]); Rezoom(Wanted()); ShowFrameSize(); } };
-            frameColours = Setting("Mainframe colours", Neon.LookNames, c, 194, "Mainframe colours. Night City is red and cyan; Black, White and Grey change the Mainframe, her menus, the Type box and her notes");
-            frameColours.Changed += delegate { if (!syncing) capri.SetMainframeColours(frameColours.Value); };
-            headPats = Switch("Head pats", c, 222, delegate { if (!syncing) capri.ToggleHeadPats(); });
+            headPats = Switch("Head pats", c, 138, delegate { if (!syncing) capri.ToggleHeadPats(); });
             headPats.AccessibleName = "Head pats. Rubbing the cursor over her gets a grin and a line";
-            // A longer Pat stroke keeps the cursor brushing past her from counting as a pat (issue #222).
-            patStroke = Setting("Pat stroke", Lengths, c, 250, "How long a stroke over her a head pat needs");
+            // A longer Pat stroke keeps the cursor brushing past her from counting as a pat.
+            patStroke = Setting("Pat stroke", Lengths, c, 166, "How long a stroke over her a head pat needs");
             patStroke.Changed += delegate { if (!syncing) capri.SetPatStroke(patStroke.Value); };
-            upsetChaos = Switch("Chaos when upset", c, 278, delegate { if (!syncing) capri.ToggleUpsetChaos(); });
+            upsetChaos = Switch("Chaos when upset", c, 194, delegate { if (!syncing) capri.ToggleUpsetChaos(); });
             upsetChaos.AccessibleName = "Chaos when upset. Insulting her can set her clones off until you hold Esc";
-            // Hologram stays reversible here even while clicks pass through her body (Lachy, 2 Nov).
-            hologram = Switch("Hologram", c, 306, delegate { if (!syncing) capri.ToggleHologram(); });
-            hologram.AccessibleName = "Hologram. Clicks pass through her body, talk pill and bubble. Turn this off to give her clicks back";
-            legacyStand = Switch("Legacy stand", c, 334, delegate { if (!syncing) capri.ToggleLegacyStand(); });
+            legacyStand = Switch("Legacy stand", c, 222, delegate { if (!syncing) capri.ToggleLegacyStand(); });
             legacyStand.AccessibleName = "Legacy stand. She goes back to her old stand";
-            jealousAIs = Switch("Jealous of other AIs", c, 362, delegate { if (!syncing) capri.ToggleJealousAIs(); });
+            jealousAIs = Switch("Jealous of other AIs", c, 250, delegate { if (!syncing) capri.ToggleJealousAIs(); });
             jealousAIs.AccessibleName = "Jealous of other AIs. Teases when another AI comes to the front";
-            jealousNote = Caption("Teases when another AI comes to the front.", 28 + c, 390, small, Faint);
+            jealousNote = Caption("Teases when another AI comes to the front.", 28 + c, 278, small, Faint);
             jealousNote.AutoSize = false;
             jealousNote.Size = new Size(328, 20);
-            closeAIs = Switch("Close other AIs for me", c, 418, delegate { if (!syncing) capri.ToggleCloseAIs(); });
+            closeAIs = Switch("Close other AIs for me", c, 306, delegate { if (!syncing) capri.ToggleCloseAIs(); });
             closeAIs.AccessibleName = "Close other AIs for me. Asks before closing only the apps you choose";
             jealousAIs.Switch = closeAIs.Switch = 68;
-            closeAIsNote = Caption("Asks before closing only the apps you choose.", 28 + c, 446, small, Faint);
+            closeAIsNote = Caption("Asks before closing only the apps you choose.", 28 + c, 334, small, Faint);
             closeAIsNote.AutoSize = false;
             closeAIsNote.Size = new Size(328, 20);
-            Named("Apps she may close", c, 474);
+            Named("Apps she may close", c, 362);
             jealousMenu = Dropdown();
-            jealousApps = Make("Choose apps", ValueAt + c, 477, ValueWide, 22, delegate { jealousMenu.Show(jealousApps, new Point(0, jealousApps.Height)); }, "Apps she may close");
+            jealousApps = Make("Choose apps", ValueAt + c, 365, ValueWide, 22, delegate { jealousMenu.Show(jealousApps, new Point(0, jealousApps.Height)); }, "Apps she may close");
             jealousApps.Chevron = true;
             jealousApps.AccessibleName = "Choose which other AIs she may ask to close";
             foreach (JealousApp app in Jealous.Apps)
@@ -1107,6 +1134,8 @@ namespace CapriDesktop
             fallbackMenu.Opening += delegate { FillFallback(); };
             fallbackBrain = Make("None", ValueAt + c, 705, ValueWide, 22, delegate { ShowTimed(fallbackMenu, fallbackBrain, "Fallback brain"); }, "Fallback brain");
             fallbackBrain.Chevron = true;
+            // A model's name is as long as whoever named it made it, so it trails off like a mic's does.
+            fallbackBrain.Ellipsis = true;
             fallbackBrain.AccessibleName = "Fallback brain";
             // Which brains are in use right now, lit when they are, and which of the two goes first. The order only
             // means something with both, so it stays dimmed until there is a cloud brain and a local fallback.
@@ -1123,15 +1152,19 @@ namespace CapriDesktop
             foreach (Key choice in new[] { cloudPriority, localPriority }) choice.StateValue = true;
             int afterFallback = Controls.Count;
             Section("HABITS >", c, 656);
-            Make("Obsidian vault", 104 + c, 653, 112, 20, delegate { ShowMemoryVault(); }).AccessibleName = "Obsidian vault: keep her notes in your Obsidian vault";
-            memoriesKey = Make("Open her memories", 220 + c, 653, 136, 20, delegate { EditNotes(true); });
-            memoriesKey.AccessibleName = "Open her memories: edit memories.md here";
+            vaultKey = Make("Obsidian vault", 104 + c, 653, 112, 20, delegate { ShowMemoryVault(); });
+            vaultKey.AccessibleName = "Obsidian vault: keep her notes in your Obsidian vault";
+            memoriesKey = Make("Open her memories", 220 + c, 653, 136, 20, delegate { OpenMemory(); });
+            memoriesKey.AccessibleName = "Open her memories: what she keeps about you, to edit, forget, add to or undo";
+            // Her GIFs sits on the heading row with the other two keys; Settings gives the three a row of their own.
+            gifsKey = Make("Her GIFs", 298 + c, 653, 58, 20, delegate { OpenGifs(); });
+            gifsKey.AccessibleName = "Her GIFs: add and name GIFs for her to send";
             startup = Switch("Start with Windows", c, 680, delegate { if (!syncing) capri.ToggleStartup(); });
             discord = Switch("Show on Discord", c, 708, delegate { if (!syncing) capri.ToggleDiscord(); });
             cursor = Switch("Use her cursor", c, 736, delegate { if (!syncing) capri.ToggleCursor(); });
             remembering = Switch("Remember our chats", c, 764, delegate { if (!syncing) capri.ToggleRemembering(); });
             remembering.AccessibleName = "Remember our chats. She keeps daily transcripts and memories.md on this PC, never uploaded";
-            // SECURITY took Blackwall mode's place (Lachy, 29 Oct): its button opens her SECURITY window, and the line under it
+            // SECURITY took Blackwall mode's place (Lachy): its button opens her SECURITY window, and the line under it
             // says what the preset does. Blackwall mode is its Blackwall preset now.
             security = Make("Security: " + Security.PresetName, 28 + c, 795, 328, 22, delegate { OpenSecurity(); });
             security.AccessibleName = "Security: what she does on your PC without asking first";
@@ -1139,7 +1172,7 @@ namespace CapriDesktop
             blackwallNote.AutoSize = false;
             blackwallNote.TextAlign = ContentAlignment.MiddleRight;
             blackwallNote.Bounds = new Rectangle(28 + c, 819, 328, 18);
-            // Power saver: Off, In games or Always (issue #111). Simple Settings keeps it; the rows from Perch down fold under it.
+            // Power saver: Off, In games or Always. Simple Settings keeps it; the rows from Perch down fold under it.
             powerSaver = Setting("Power saver", SaverNames, c, 840, "Power saver: how lightly she runs in games, or always");
             powerSaverName = new Readout(powerSaver);
             powerSaver.Changed += delegate { if (syncing) return; powerSaverName.Text = SaverNames[powerSaver.Value]; capri.SetPowerSaver(powerSaver.Value); };
@@ -1172,7 +1205,7 @@ namespace CapriDesktop
                 if (Controls[belowSaver].Left >= c) Controls[belowSaver].Top += Row * 2;
             BuildSounds(c, exploreAfter.Top - 3);
             int gamesFrom = Controls.Count;
-            Section("GAMES >", 0, 914);
+            gamesHead = Section("GAMES >", 0, 914);
             miniGames = Make("Play...", 140, 911, 96, 20, delegate { ShowMiniGames(); });
             miniGames.AccessibleName = "Play a mini-game with Capri";
             gameNotes = Make("Controls", 244, 911, 112, 20, delegate { ShowGameNotes(); });
@@ -1181,10 +1214,10 @@ namespace CapriDesktop
             comments = Setting("Comments", Commentary.PaceNames, 0, 938, "Game comments run separately from Watch my screen. Off stops them, in Gaming Mode too; Events only and Chatty let her watch your game");
             commentsName = new Readout(comments);
             comments.Changed += delegate { if (syncing) return; commentsName.Text = Commentary.PaceNames[comments.Value]; capri.SetCommentPace(comments.Value); };
-            // Her live reactions (F67), on by default, under Comments since they only run while her comments do.
+            // Her live reactions, on by default, under Comments since they only run while her comments do.
             liveReactions = Switch("Live reactions", 0, 966, delegate { if (!syncing) capri.ToggleReactions(); });
             liveReactions.AccessibleName = "Live reactions. Quick lines on the right of a full-screen game when something happens, while her game comments run. Mute her keeps them as text";
-            // Game sounds (#234), on by default, under Live reactions: off, big bursts of a game's sound stop counting, and hits,
+            // Game sounds, on by default, under Live reactions: off, big bursts of a game's sound stop counting, and hits,
             // deaths and kills still count.
             gameSounds = Switch("Game sounds", 0, 994, delegate { if (!syncing) capri.ToggleGameSounds(); });
             gameSounds.AccessibleName = "Game sounds. Big bursts of your game's sound count as moments for her reactions and comments. Off, she ignores them and still reacts to hits, deaths and kills";
@@ -1195,7 +1228,7 @@ namespace CapriDesktop
             Caption("Works best on MAX INTELLIGENCE.", 28, 1080, small, Faint);
             fastHands = Switch("Fast hands in games", 0, 1102, delegate { if (!syncing) capri.ToggleFastHands(); });
             hdGames.Switch = intro.Switch = caughtUp.Switch = fastHands.Switch = 68;
-            gameMute = Switch("Mute her", 0, 1130, delegate { if (!syncing) capri.ToggleShush(); });
+            gameMute = Switch("Mute her", 0, 1130, delegate { if (!syncing) capri.SetQuiet(gameMute.Checked); });
             gameMute.AccessibleName = "Mute her. She stops talking on her own and only answers when you talk to her, the same as her Quiet key";
             fastHands.AccessibleName = "Fast hands in games. On a Claude key she plays games on Claude Haiku, which moves about three times faster and costs far less. When she's stuck she asks the brain you picked, or Claude Sonnet if that's Haiku, and chat stays on the brain you picked";
             clipHead = Section("CLIPS >", 0, 1186);
@@ -1232,15 +1265,18 @@ namespace CapriDesktop
                 if (Controls[huskRow].Left >= c) Controls[huskRow].Top += Row * 3;
             for (int belowVerbosity = afterVerbosity; belowVerbosity < Controls.Count; belowVerbosity++)
                 if (Controls[belowVerbosity].Left >= c) Controls[belowVerbosity].Top += Row;
-            // Mainframe colours, Head pats, Pat stroke, Chaos when upset, Hologram, Legacy stand and the five jealousy rows each take a row under Mainframe size.
+            // Head pats, Pat stroke, Chaos when upset, Legacy stand and the five jealousy rows each take a row under the check-ins.
             for (int belowPats = afterPats; belowPats < Controls.Count; belowPats++)
-                if (Controls[belowPats].Left >= c) Controls[belowPats].Top += Row * 11;
+                if (Controls[belowPats].Left >= c) Controls[belowPats].Top += Row * 7;
             for (int belowCare = afterCare; belowCare < Controls.Count; belowCare++)
                 if (Controls[belowCare].Left >= c) Controls[belowCare].Top += Row * 8;
-            // GAMES takes a different push from the rows above it, and picks up another 56 on the way from the talk
-            // settings loop, so the two bands drifted apart every time either one changed. Measured off the last key
-            // row instead: a section header sits 42 under the row above it, the same as every other band here.
-            int gamesShift = frameKeys.Top + 42 - Controls[gamesFrom].Top;
+            for (int belowHologram = afterHologram; belowHologram < Controls.Count; belowHologram++)
+                if (Controls[belowHologram].Left >= c) Controls[belowHologram].Top += Row * (1 + QuietRows);
+            for (int belowSettings = capriAt; belowSettings < Controls.Count; belowSettings++)
+                if (Controls[belowSettings].Left >= c) Controls[belowSettings].Top += SettingsDrop;
+            // GAMES is measured off the last key row, a section header 42 under the row above it like every other band,
+            // so it no longer drifts from the talk settings above.
+            int gamesShift = frameKeys.Top + 42 + KeysNoteRow - Controls[gamesFrom].Top;
             for (int gameRow = gamesFrom; gameRow < gamesTo; gameRow++)
             {
                 Controls[gameRow].Top += gamesShift;
@@ -1252,15 +1288,23 @@ namespace CapriDesktop
                 pageLeft.Add(new KeyValuePair<Control, int>(control, control.Left));
                 built[control] = control.Top;
                 if (control.Top + control.Height + 24 > pageTall) pageTall = control.Top + control.Height + 24;
-                int simpleTop = SimpleTop(control.Top, control.Left >= Column);
-                if (simpleTop >= 0 && simpleTop + control.Height + 24 > simpleTall) simpleTall = simpleTop + control.Height + 24;
                 Scrolls(control);
                 control.Left += Far;
                 Reachable(control, false);
                 // Clicking into anything else while a key is being picked keeps the old key, so typing in a box is never swallowed.
                 control.Enter += delegate { if (capturing != 0 && control != confirmKeys && control != cancelKeys && control != clearKeys && control != PickedKey) CancelKeys(); };
             }
+            // The page as built, cut into panels and regrouped; its heights are measured off where its panels stack.
+            Carve();
+            Regroup();
+            pageTall = PageReachOf(false);
+            simpleTall = PageReachOf(true);
             BuildMods();
+            // Advanced Settings is in her title bar too, though it is built with the page.
+            scrolled.Remove(advancedKey);
+            titleRow.Add(advancedKey);
+            Controls.Add(titleBand);
+            TitleToFront();
             Controls.Add(topRim);
             Controls.Add(bottomRim);
             topRim.BringToFront();
@@ -1285,7 +1329,7 @@ namespace CapriDesktop
             {
                 // me.md is one of her own files, so it opens in her editor on its own tab like the rest. Only her
                 // memories still use the plain window, since that one is not in the editor's list.
-                if (!memories) { capri.OpenFiles(1); return; }
+                if (!memories) { capri.OpenFiles("me.md"); return; }
                 using (NoteWindow dialog = new NoteWindow(Brain.OpenNote(memories), "Her memories")) dialog.ShowDialog(this);
             }
             catch (System.IO.IOException) { Notice.Tell(this, "Couldn't read this note. Try opening it again.", "Her notes", true); }
@@ -1815,11 +1859,8 @@ namespace CapriDesktop
         private readonly List<KeyValuePair<Control, int>> underVoice = new List<KeyValuePair<Control, int>>();
         private int lifted;
 
-        // Without a cable the switch can't go on: the note credits VB-CABLE with a link to its page, and the line under it says it's
-        // needed, then where VB-Audio's setup is at. With Steam's mic only, the note says VB-CABLE usually sounds better and Get
-        // VB-CABLE stays (a tester's Steam mic sounded bad to their friends, 4 Nov). With VB-CABLE, the note says to pick CABLE
-        // Output, and the line says to turn it on when Windows has it off, or while it's on what's wrong, if anything. The switch
-        // still goes off if the cable went away while it was on.
+        // Without a cable the switch can't go on: the note credits VB-CABLE and says where its setup is. With Steam's
+        // mic only, Get VB-CABLE stays, since it usually sounds better. The switch goes off if the cable goes away.
         internal void ShowVoiceInMic()
         {
             bool was = syncing, cable = capri.CableReady, on = capri.VoiceInMic;
@@ -1866,7 +1907,7 @@ namespace CapriDesktop
 
         internal void SlideMicLoudness(int index) { micLoudness.Slide(index); }
 
-        // Her mix's Input and Output menus open at once and look in the background too, like VOICE's Mic menu (#100).
+        // Her mix's Input and Output menus open at once and look in the background too, like VOICE's Mic menu.
         private bool mixInputsWaiting, mixOutputsWaiting;
         internal const string CheckingCables = "Still checking your virtual mics...";
 
@@ -1955,10 +1996,11 @@ namespace CapriDesktop
 
         internal void FlipMix() { if (mixSheet != null && !mixSheet.IsDisposed) mixSheet.Flip(); }
 
-        internal string MixSheetAt(float zoom, string picture)
+        internal string MixSheetAt(float zoom, string picture, float grow = 1f)
         {
             using (MixSheet drawn = new MixSheet(this, zoom))
             {
+                if (grow != 1f) { Grow(drawn, grow); FitText(drawn); }
                 drawn.Show(this);
                 drawn.Sync();
                 string crowded = drawn.Crowded(), size = " (" + drawn.ClientSize.Width + " x " + drawn.ClientSize.Height + " at " + zoom + ")";
@@ -1993,10 +2035,11 @@ namespace CapriDesktop
         internal string VoiceInMicFits()
         {
             Rectangle page = PageArea;
-            int column = Scaled(356);
+            // A pixel past is the rounding of a scaled row against a scaled column (at Auto 142%, 507 against 506).
+            int column = Scaled(356) + 1;
             if (TextRenderer.MeasureText(voiceInMic.Text, voiceInMic.Font, Size.Empty, TextFormatFlags.NoPadding).Width > voiceInMic.NameRoom) return "the switch's name doesn't fit";
             foreach (Control row in MixControls)
-                if (row.Visible && !(row is Label && row.Text.Length == 0) && (!page.Contains(row.Bounds) || row.Right > column)) return (row.Text.Length > 0 ? row.Text : row.AccessibleName) + " pokes out";
+                if (row.Visible && !(row is Label && row.Text.Length == 0) && (!page.Contains(row.Bounds) || row.Right > column)) return (row.Text.Length > 0 ? row.Text : row.AccessibleName) + " pokes out (" + row.Bounds + " in " + page + ", column ends " + column + ")";
             if (voiceInMicNote.Top < voiceInMic.Bottom || voiceInMicState.Top < voiceInMicNote.Bottom) return "the note or the line overlaps the row above it";
             if (cableKey.Visible && (cableKey.Left < mixInput.Right + Scaled(4) || cableKey.Top < voiceInMicState.Bottom || TextRenderer.MeasureText(cableKey.Text, cableKey.Font).Width + Scaled(12) > cableKey.Width)) return "the button covers Input or doesn't fit";
             if (mixInput.Top < voiceInMicState.Bottom || mixOutput.Top < Math.Max(mixInput.Bottom, cableKey.Bottom) || mixHow.Top < mixInput.Bottom || mixHow.Left < mixOutput.Right) return "Input, Output or How to overlaps a row";
@@ -2084,10 +2127,10 @@ namespace CapriDesktop
             wheel = 0;
             CloseGaps();
             Arrange(expanded);
-            Rectangle area = Screen.FromControl(this).WorkingArea;
-            if (on && Right > area.Right) Left = Math.Max(area.Left, area.Right - Width);
-            // She opens centred on the shorter main page, so the taller Settings page can hang off the bottom.
-            if (on && Bottom > area.Bottom) Top = Math.Max(area.Top, area.Bottom - Height);
+            // Either page kept on its screen, since the taller Settings page or a short screen's main page can hang off
+            // the bottom. One not shown yet still has its Settings page placed, so a wheel turn aims at the right spot.
+            if (Visible) KeepOnScreen();
+            else { Rectangle area = Screen.FromControl(this).WorkingArea; if (on) Location = KeptIn(Bounds, area); }
             if (on) PictureOpened(); else pictureForget.Start();
         }
 
@@ -2098,45 +2141,42 @@ namespace CapriDesktop
             foreach (KeyValuePair<Control, int> entry in mainLeft) entry.Key.Left = Scaled(entry.Value) + (paged || modded ? Far : 0);
             foreach (KeyValuePair<Control, int> entry in pageLeft) entry.Key.Left = Scaled(entry.Value) + (paged && !Folded(entry.Key) ? 0 : Far);
             foreach (KeyValuePair<Control, int> entry in modLeft) entry.Key.Left = Scaled(entry.Value) + (modded ? 0 : Far);
+            PlaceModRows();
             int edge = paged ? Column : 0;
-            // On Settings, Mods sits right of Advanced Settings rather than in its place by Back.
-            modsKey.Left = Scaled(paged ? 382 : 234);
+            // On Settings, Mods sits right of Advanced Settings rather than in its place by Back. On the Mods page it isn't
+            // there at all: Back is the way out, and a key to the page you're on goes nowhere.
+            modsKey.Left = Scaled(paged ? 382 : 234) + (modded ? Far : 0);
+            // How to ends on the column's edge at every scale: its left and width rounded apart could put it a px past.
+            mixHow.Width = Scaled(356) - Scaled(280);
             minimize.Left = Scaled(300 + edge);
+            lockKey.Left = Scaled(270 + edge);
+            lockKey.Visible = paged;
+            PlaceSearch();
             close.Left = Scaled(330 + edge);
         }
 
-        private bool Folded(Control control)
+        private bool Folded(Control control) { return FoldedIn(control, simple); }
+
+        // Whether Simple Settings hides a row: its folds are stretches of the column it was built in.
+        private bool FoldedIn(Control control, bool simpleView)
         {
             int top;
-            if (!simple || control == advancedKey || !built.TryGetValue(control, out top)) return false;
+            if (!simpleView || control == advancedKey || !built.TryGetValue(control, out top)) return false;
+            Panel panel;
+            if (panelOf.TryGetValue(control, out panel)) return FoldedInPanel(panel, control);
             foreach (int[] band in pageLeft.Exists(entry => entry.Key == control && entry.Value >= Column) ? FoldedRight : FoldedLeft)
                 if (top >= band[0] && top < band[1]) return true;
             return false;
         }
 
-        // Where a row built at this top sits in Simple Settings, or -1 when Simple hides it.
-        private static int SimpleTop(int top, bool right)
-        {
-            int gone = 0;
-            foreach (int[] band in right ? FoldedRight : FoldedLeft)
-            {
-                if (top >= band[0] && top < band[1]) return -1;
-                if (top >= band[1]) gone += band[1] - band[0];
-            }
-            return top - gone;
-        }
-
-        // Moves what's left up over the rows Settings hides while it's simple, or back where it was built.
+        // Every row where its panel stacks it: up over the rows Simple hides, and over Free voice in games' row when it's
+        // gone, or where it was built.
         private void CloseGaps()
         {
             foreach (KeyValuePair<Control, int> entry in pageLeft)
             {
-                int top;
-                if (!built.TryGetValue(entry.Key, out top) || Folded(entry.Key)) continue;
-                int gone = 0;
-                if (simple) foreach (int[] band in entry.Value >= Column ? FoldedRight : FoldedLeft) if (top >= band[1]) gone += band[1] - band[0];
-                bool lifts = underVoice.Exists(moved => moved.Key == entry.Key);
-                entry.Key.Top = Scaled(top - gone - (lifts && !simple ? lifted : 0));
+                if (!built.ContainsKey(entry.Key) || Folded(entry.Key) || dropped.Contains(entry.Key)) continue;
+                entry.Key.Top = PlacedTop(entry.Key, simple);
             }
         }
 
@@ -2154,14 +2194,22 @@ namespace CapriDesktop
             if (!paged || pageView >= PageNow || Control.MouseButtons != MouseButtons.None) return;
             EndSlide();
             float s = Unit();
-            int edge = Scaled(8);
-            // Near the top it goes all the way up, so the header shows too.
-            int up = pageScroll - (int)Math.Ceiling((edge - control.Top) / s);
-            if (control.Top < edge) ScrollPage(up < 2 * ScrollRow ? 0 : up);
+            int edge = Scaled(8), top = Scaled(TitleTall + 8);
+            // Under her title bar, which stays put. Near the top it goes all the way up.
+            int up = pageScroll - (int)Math.Ceiling((top - control.Top) / s);
+            if (control.Top < top) ScrollPage(up < 2 * ScrollRow ? 0 : up);
             else if (control.Bottom > ClientSize.Height - edge) ScrollPage(pageScroll + (int)Math.Ceiling((control.Bottom - ClientSize.Height + edge) / s));
         }
 
-        // Moves the page and its header up by `to` px, as far as the page runs past the screen. Off Settings it's always 0.
+        // Her title band over the page, and her title's keys over it.
+        private void TitleToFront()
+        {
+            titleBand.BringToFront();
+            foreach (Control control in titleRow) control.BringToFront();
+            if (searchList != null && searchList.Visible) searchList.BringToFront();
+        }
+
+        // Moves the page up by `to` px under her title bar, as far as the page runs past the screen. Off Settings it's always 0.
         private void ScrollPage(int to)
         {
             glide.Stop();
@@ -2189,6 +2237,8 @@ namespace CapriDesktop
         {
             if (pageScroll == 0) foreach (Control control in scrolled) tops[control] = control.Top;
             pageScroll = next;
+            // The band only covers something once the page has moved under it; at the top it stays out of pictures.
+            titleBand.Visible = paged && next > 0;
             int shift = Scaled(next);
             pictureQuiet = true;
             // Every control moves at once, in one batch Windows applies together, and the page paints once after.
@@ -2462,6 +2512,8 @@ namespace CapriDesktop
                 BeginInvoke((MethodInvoker)delegate { if (IsDisposed) return; try { MakeServer(); Ready(sheet); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
                 BeginInvoke((MethodInvoker)delegate { if (IsDisposed) return; try { MakeLayers(); Ready(layered); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
                 BeginInvoke((MethodInvoker)delegate { if (IsDisposed) return; try { MakeMix(); Ready(mixSheet); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
+                BeginInvoke((MethodInvoker)delegate { if (IsDisposed) return; try { MakeRemote(); Ready(remoteSheet); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
+                BeginInvoke((MethodInvoker)delegate { if (IsDisposed) return; try { MakeMods(); Ready(browser); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
                 foreach (ContextMenuStrip strip in Dropdowns)
                 {
                     if (strip.IsDisposed) continue;
@@ -2478,19 +2530,9 @@ namespace CapriDesktop
         // Her Mainframe at the size her settings tool just picked, as its own slider does.
         internal void ResizeSettings() { Rezoom(Wanted()); ShowFrameSize(); }
 
-        // Never taller than the screen it is on.
-        //
-        // The auto zoom only ever grew her panel: it was clamped to 1.0 at the bottom, because it exists to undo a
-        // desktop being larger than the monitor showing it. On a short screen that ran the bottom of the panel off
-        // the desktop, with no way to reach it, and the move-up afterwards cannot help when the window is taller
-        // than the working area. A picked size is held to the same limit, since a panel cut in half is worse than
-        // one smaller than asked for.
-        // The largest size of her mono that fits the room, down to something still readable. Whatever is
-        // handed in is kept when it already fits, so nothing changes for a caption that was never tight.
-        // A font's size in points, worked out rather than asked for. SizeInPoints goes to a screen device for
-        // any font not already in Points and throws "Parameter is not valid" when it cannot have one, which is
-        // the fault that took her whole layout down once. Her layout is built on 96 to the inch everywhere
-        // else, so working it out here is both consistent and exact against Pixels.
+        // Never taller than the screen it is on: a picked size is held to the room too, since a cut panel is worse than
+        // a smaller one. Font sizes are worked out at 96 to the inch rather than asked of a screen device, which can
+        // throw.
         internal static float Points(Font one)
         {
             if (one == null) return 0;
@@ -2533,7 +2575,47 @@ namespace CapriDesktop
         }
 
         // What her Mainframe needs at 100%, which is what the fit is measured against.
-        internal int NeedsTall { get { return Tall + (expanded ? SetupHeight : 0) + KeyRow + (voiceFilled >= 0 ? InstallRow : 0); } }
+        internal int NeedsTall { get { return MainTall(expanded); } }
+
+        // Her main page's height at 100%, the one sum both Arrange and the fit use, so the window is never taller than
+        // the room it was fitted to.
+        private int MainTall(bool setupShown)
+        {
+            bool ownBuilds = false;
+            try { ownBuilds = Brain.SenpaiOn; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            int hearing = hearingActions.Length == 0 ? HearingFixRow : 0, locked = ownBuilds ? 0 : AbliteratedRow;
+            return Tall + (setupShown ? SetupHeight : 0) + KeyRow + ResourcesRow + (voiceFilled >= 0 ? InstallRow : 0) - Fold - hearing - locked;
+        }
+
+        // For checks: the main page's space under its lowest shown control, in 100% px, and that control.
+        internal KeyValuePair<int, string> MainGap()
+        {
+            List<Control> shown = new List<Control>();
+            foreach (Control control in Controls)
+                if (control.Visible && control.Left < ClientSize.Width && control.Right > 0 && control.Bottom <= ClientSize.Height + 2) shown.Add(control);
+            shown.Sort(delegate(Control x, Control y) { return y.Bottom.CompareTo(x.Bottom); });
+            int lowest = shown.Count == 0 ? 0 : shown[0].Bottom;
+            string name = shown.Count == 0 ? "nothing" : shown[0].Text.Length > 0 ? shown[0].Text : "the update line";
+            return new KeyValuePair<int, string>((int)Math.Round((ClientSize.Height - lowest) / unit), name);
+        }
+
+        // Where a window of these bounds sits to be wholly inside the area: moved up and left only as far as it hangs off, never
+        // past the area's top or left. A spot that fits is kept.
+        internal static Point KeptIn(Rectangle bounds, Rectangle area)
+        {
+            int left = bounds.Left, top = bounds.Top;
+            if (bounds.Right > area.Right) left = Math.Max(area.Left, area.Right - bounds.Width);
+            if (bounds.Bottom > area.Bottom) top = Math.Max(area.Top, area.Bottom - bounds.Height);
+            return new Point(left, top);
+        }
+
+        // Kept wholly on the screen it is on, after anything that changes its size or brings it up.
+        private void KeepOnScreen()
+        {
+            if (!Visible || WindowState != FormWindowState.Normal) return;
+            Point kept = KeptIn(Bounds, Screen.FromControl(this).WorkingArea);
+            if (kept != Location) Location = kept;
+        }
 
         private float Fitted(float want)
         {
@@ -2544,16 +2626,15 @@ namespace CapriDesktop
                 if (room <= 0 || per <= 0) return want;
                 // The same height Arrange sizes the frame from, not the worst case: capping against the worst
                 // case would shrink her on an ordinary 1080p screen that has room for her as she is.
-                int needs = Tall + (expanded ? SetupHeight : 0) + KeyRow + (voiceFilled >= 0 ? InstallRow : 0);
+                int needs = MainTall(expanded);
                 if (needs <= 0) return want;
                 return Math.Max(0.6f, Math.Min(want, room / (float)needs / per));
             }
             catch (Exception) { return want; }
         }
 
-        // Her Mainframe size as picked, or for Auto what her screen needs: how much bigger its desktop is than the panel showing
-        // it, less what Windows' own scaling already makes up, to the nearest 5% from 100% to 200%. Zenni's Virtual Super
-        // Resolution, a 3840 x 2160 desktop on a 1920 x 1080 screen at 100%, gets 200%.
+        // Her Mainframe size as picked, or for Auto how much bigger the desktop is than its panel, less Windows' own
+        // scaling, to the nearest 5% from 100% to 200%: a 3840 x 2160 desktop on a 1920 x 1080 panel gets 200%.
         private float Wanted()
         {
             // GitHub's virtual screen says its panel is narrower than the desktop her test needs, which isn't a shrunken monitor.
@@ -2606,6 +2687,7 @@ namespace CapriDesktop
                 DescribeHints();
             }
             finally { ResumeLayout(true); sizing = false; }
+            KeepOnScreen();
         }
 
         private readonly List<LayoutItem> layout = new List<LayoutItem>();
@@ -2625,15 +2707,8 @@ namespace CapriDesktop
 
         private sealed class LayoutItem : IDisposable
         {
-            // Fonts a layout has replaced. They are let go one layout later, not the moment they are swapped.
-            //
-            // A paint already on its way still draws with the font the control had when it was asked to paint,
-            // and a font disposed under it throws "Parameter is not valid." from inside Windows. In a
-            // measurement that is a failed check; in a paint it lands in a Windows callback where nothing can
-            // catch it and the process is ended outright. It only fires when a paint arrives between the swap
-            // and the dispose, which is why one machine saw it twelve times in a run and another never has.
-            //
-            // One layout's worth is held, so nothing is leaked: the next layout frees the last one's.
+            // Fonts a layout replaced, let go one layout later: a paint already under way still draws with the old
+            // font, and one disposed under it ends the process.
             private static readonly List<Font> retired = new List<Font>();
 
             // Nothing is retired any more: her fonts come from one cache that frees none, so a replaced
@@ -2652,20 +2727,12 @@ namespace CapriDesktop
             private readonly Font font;
             private readonly Font hint;
             private readonly Font flag;
-            // The size each of those was designed at, taken once and kept as a number.
-            //
-            // Asking a font for its size in points looks free and is not: Font.SizeInPoints hands back the
-            // size directly only for a font measured in points, and for any other unit it converts, which
-            // means building a Graphics against the screen to find the resolution. A layout that asks it
-            // once per control per rescale is opening a screen device that many times, in the middle of a
-            // measurement, and that is where a run of these fell over.
-            //
-            // It cannot be avoided by only ever handing in point fonts either: a layout item captures the
-            // control's font as it finds it, and after one rescale that is the pixel font the last one
-            // made. So the size is converted here, with the same 96 the scaling uses on the way back up,
-            // which makes the round trip exact and needs no device at all.
+            // The size each font was designed at, taken once: Font.SizeInPoints builds a screen Graphics for any other
+            // unit. Converted here at the same 96 the scaling uses, so the round trip is exact and needs no device.
             private readonly float fontPoints, hintPoints, flagPoints;
             private Font scaledFont, scaledHint, scaledFlag;
+
+            internal Control Control { get { return control; } }
 
             internal LayoutItem(Control control)
             {
@@ -2722,10 +2789,8 @@ namespace CapriDesktop
                     if (face) { points -= points >= 15 ? 3f : 0.5f; style = FontStyle.Regular; }
                     return Fonts.Mono(points * 96f / 72f * scale, style, GraphicsUnit.Pixel);
                 }
-                // From the cache, and never freed. A font handed to a control is held by the control, by its
-                // menus, by whatever is measuring it and by any paint already on its way, and there is no
-                // moment when all of them have finished with it. Fonts drawn with inside a using are a
-                // different thing and are still made and freed on the spot.
+                // From the cache and never freed: a control's font is held by too many things for any one moment to be
+                // safe. Fonts drawn with inside a using are still made and freed on the spot.
                 return Fonts.Of(original.FontFamily, points * 96f / 72f * scale, style, GraphicsUnit.Pixel);
             }
 
@@ -2777,6 +2842,10 @@ namespace CapriDesktop
 
         internal void SizeMainframe(int size) { frameSize.Slide(Math.Max(0, Array.IndexOf(FrameSizes, size))); }
 
+        // Fitted again to the room there is now: a check that changes the room it is given while the size picked stays the same
+        // (Auto, picked already) has nothing else to make it look again.
+        internal void Refit() { Rezoom(Wanted()); }
+
         // Every control's own type grown or shrunk by this much, children first, so each reads its parent's before that changes.
         private static void Grow(Control control, float factor)
         {
@@ -2791,7 +2860,60 @@ namespace CapriDesktop
         private void Fit(Form sheet)
         {
             new Rescaler(sheet, DeviceScale(), TextScale(), layoutFallback);
+            FitText(sheet);
+            // Its headings once it shows, when what is folded away is known not to be there.
+            sheet.VisibleChanged += delegate { if (sheet.Visible) FitHeadings(sheet); };
             sheet.Location = new Point(Left + (Width - sheet.Width) / 2, Top + (Height - sheet.Height) / 2);
+        }
+
+        // A heading drawn taller than the gap above the row under it (a denser screen draws its type larger) is drawn a half
+        // point smaller until it clears whatever it ran into, as the window's own check sees it: shown, and with words.
+        internal static void FitHeadings(Control parent)
+        {
+            foreach (Control control in parent.Controls)
+            {
+                Head head = control as Head;
+                if (head == null || !head.Visible) continue;
+                for (int tries = 0; tries < 16 && head.Font.Size > 5.5f; tries++)
+                {
+                    bool clear = true;
+                    foreach (Control other in parent.Controls)
+                        if (other != head && other.Visible && !(other is Label && other.Text.Length == 0) && head.Bounds.IntersectsWith(other.Bounds)) { clear = false; break; }
+                    if (clear) break;
+                    head.Font = new Font(head.Font.FontFamily, head.Font.Size - 0.5f, head.Font.Style, head.Font.Unit);
+                }
+            }
+        }
+
+        // Boxes follow her zoom but text follows the screen's DPI, so on a denser screen a name, word or line too wide
+        // for its place is drawn a half point smaller until it fits.
+        internal static void FitText(Control parent)
+        {
+            float s = ScaleOf(parent);
+            int right = parent.ClientSize.Width - (int)(16 * s);
+            foreach (Control control in parent.Controls)
+            {
+                if (control.Text.Length == 0) continue;
+                Toggle toggle = control as Toggle;
+                if (toggle != null) { toggle.Font = Shrunk(toggle.Text, toggle.Font, toggle.NameRoom); continue; }
+                Key key = control as Key;
+                if (key != null) { key.Font = Shrunk(key.Text, key.Font, key.Width - (int)Math.Ceiling(12 * s)); continue; }
+                Label label = control as Label;
+                if (label != null && label.AutoSize && label.Right > right) label.Font = Shrunk(label.Text, label.Font, right - label.Left);
+            }
+        }
+
+        // The font itself when the text fits, else the same face a half point smaller at a time until it does.
+        internal static Font Shrunk(string text, Font font, int room)
+        {
+            if (string.IsNullOrEmpty(text) || room <= 0 || TextRenderer.MeasureText(text, font).Width <= room) return font;
+            for (float size = font.Size - 0.5f; size >= 5f; size -= 0.5f)
+            {
+                Font made = new Font(font.FontFamily, size, font.Style, font.Unit);
+                if (TextRenderer.MeasureText(text, made).Width <= room) return made;
+                made.Dispose();
+            }
+            return new Font(font.FontFamily, 5f, font.Style, font.Unit);
         }
 
         private sealed class Rescaler : NativeWindow
@@ -2830,9 +2952,8 @@ namespace CapriDesktop
                 };
             }
 
-            // A sheet's menus aren't its controls, so it hands them over here to follow its scale: each gets its own copy of
-            // the sheet's font, now and after every move to a screen with different scaling. A copy made here is disposed when
-            // the next one replaces it or the sheet goes, and Dropdown's first copy goes with its menu.
+            // A sheet's menus follow its scale here: each gets its own copy of the sheet's font, now and after a move
+            // to a screen with other scaling. Each copy is disposed when replaced or when the sheet goes.
             internal void Follow(params ContextMenuStrip[] strips)
             {
                 foreach (ContextMenuStrip strip in strips)
@@ -2883,9 +3004,9 @@ namespace CapriDesktop
 
         private static Font Bigger(Font font, float factor) { return font == null ? null : new Font(font.FontFamily, Points(font) * factor, font.Style, GraphicsUnit.Point); }
 
-        // How much bigger a screen's desktop is than the panel showing it, from Windows' display paths: 2 for a 3840 x 2160
-        // desktop that AMD's Virtual Super Resolution or NVIDIA's DSR draws onto a 1920 x 1080 screen, 1 for an ordinary one.
-        // The panel's width is the smaller of the picture sent to it and the mode it prefers, which is its own.
+        // How much bigger a screen's desktop is than its panel, from Windows' display paths: 2 for a 3840 x 2160
+        // desktop drawn on a 1920 x 1080 screen (VSR, DSR), else 1. The panel's width is the smaller of the picture
+        // sent and its preferred mode.
         private static class Panels
         {
             [StructLayout(LayoutKind.Sequential)] private struct Luid { internal uint Low; internal int High; }
@@ -2928,7 +3049,7 @@ namespace CapriDesktop
             [DllImport("user32.dll")] private static extern int DisplayConfigGetDeviceInfo(ref PreferredMode request);
 
             // Asking the display driver about a panel while a game runs full screen on it may upset the game, and the answer
-            // only changes with the displays, so each screen is asked once until they change (john_sandevistan, 2 Nov).
+            // only changes with the displays, so each screen is asked once until they change (john_sandevistan).
             private static readonly Dictionary<string, float> asked = new Dictionary<string, float>();
             internal static Func<Screen, float> Read = Measure;
 
@@ -3158,9 +3279,8 @@ namespace CapriDesktop
             int off = NoAiRowShown ? 24 : 0;
             top += off;
             tierNote.Top = Scaled(168 + top - off);
-            // Each tier row reaches down to the next row's top. Their heights were rounded once where they were first laid out
-            // and their tops are rounded here, and with OFF above them at some sizes (text 225%, size 175%) the two roundings
-            // disagreed and a row poked a pixel into the one below. At 100% every row is 24 px, as before.
+            // Each tier row reaches down to the next row's top, so two roundings can't leave a pixel overlap at odd
+            // sizes. At 100% every row is 24 px.
             offRung.Top = Scaled(RungTop + top - off);
             offRung.Height = Scaled(RungTop + RungTall + top - off) - offRung.Top;
             offRung.Visible = NoAiRowShown;
@@ -3194,9 +3314,8 @@ namespace CapriDesktop
             foreach (Label step in steps) step.Visible = setupShown;
             setup.Visible = setupShown;
             refresh.Top = Scaled(setupShown ? 226 : 134);
-            // The Ollama hint belongs to the setup block, under Set up and Refresh. It was the one control here
-            // never placed, so with the block folded it stayed where the block had put it and lay across MAX
-            // INTELLIGENCE, which the OFF row pushes down into that spot. Folded, there is no setup to hint at.
+            // The Ollama hint belongs to the setup block under Set up and Refresh, so it folds away with the block
+            // instead of lying across MAX INTELLIGENCE.
             hint.Top = Scaled(264);
             if (!setupShown) hint.Visible = false;
             brainNote.MaximumSize = new Size(Scaled(328), 0);
@@ -3211,11 +3330,12 @@ namespace CapriDesktop
                 senpaiNote.Text = senpai ? "INTERESTS ON  ·  sys.md" : "";
                 senpaiNote.ForeColor = Hot;
             }
-            if (keysNote != null) keysNote.MaximumSize = new Size(Scaled(328), 0);
             if (paged) pageView = Fit();
-            ClientSize = new Size(Scaled(paged ? Wide + Column : Wide), Scaled(paged ? pageView : Tall + shift + ResourcesRow + below - fold - hearingFold - abliteratedFold));
+            ClientSize = new Size(Scaled(paged ? Wide + Column : Wide), Scaled(paged ? pageView : MainTall(setupShown)));
             ScrollPage(ShownScroll);
             bool scrolls = paged && pageView < PageNow;
+            titleBand.Bounds = new Rectangle(0, 0, ClientSize.Width, Scaled(TitleTall));
+            titleBand.Visible = paged && pageScroll > 0;
             topRim.Visible = bottomRim.Visible = scrolls;
             if (scrolls)
             {
@@ -3245,6 +3365,21 @@ namespace CapriDesktop
 
         private bool restoringFullScreen;
 
+        // Where it sits when not minimised. Location of a minimised window is Windows' -32000 spot, and putting that back
+        // after leaves it to come up on no screen.
+        internal Point Spot { get { return WindowState == FormWindowState.Normal ? Location : RestoreBounds.Location; } }
+
+        // On no screen at all, or brought up there from its spot before it was minimised.
+        internal bool Lost
+        {
+            get
+            {
+                Rectangle at = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
+                foreach (Screen screen in Screen.AllScreens) if (screen.WorkingArea.IntersectsWith(at)) return false;
+                return true;
+            }
+        }
+
         internal void Restore()
         {
             bool busy = restoringFullScreen;
@@ -3253,6 +3388,13 @@ namespace CapriDesktop
             {
                 if (!Visible) Show();
                 if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;
+                // A spot on no screen (a screen unplugged, or one saved while it was minimised) comes up where they are.
+                if (WindowState == FormWindowState.Normal && Lost)
+                {
+                    Rectangle area = Screen.FromPoint(Cursor.Position).WorkingArea;
+                    Location = new Point(area.Left + Math.Max(0, (area.Width - Width) / 2), area.Top + Math.Max(0, (area.Height - Height) / 2));
+                }
+                KeepOnScreen();
                 Activate();
             }
             finally { restoringFullScreen = busy; }
@@ -3311,6 +3453,7 @@ namespace CapriDesktop
             sizeName.Text = SizeNames[Math.Max(0, Math.Min(SizeNames.Length - 1, near))];
             checkIns.Checked = capri.CheckIns;
             onTop.Checked = capri.OnTop;
+            rememberPanel.Checked = capri.RememberPanel;
             startup.Checked = capri.StartsWithWindows;
             discord.Checked = capri.OnDiscord;
             cursor.Checked = capri.UsesCursor;
@@ -3383,7 +3526,7 @@ namespace CapriDesktop
             clipPath.Text = recording.Folder;
             clipPath.AccessibleName = "Clips saved in " + recording.Folder;
             fastHands.Checked = capri.FastHandsOn;
-            gameMute.Checked = capri.Shushed;
+            gameMute.Checked = capri.QuietOn;
             frameSize.Value = Math.Max(0, Array.IndexOf(FrameSizes, capri.MainframeSize));
             ShowFrameSize();
             frameColours.Value = capri.MainframeColours;
@@ -3452,6 +3595,7 @@ namespace CapriDesktop
             SyncSounds();
             SyncWeather();
             SyncDoomscroll();
+            SyncQuiet();
             syncing = false;
         }
 
@@ -3571,8 +3715,9 @@ namespace CapriDesktop
             }
             if (Hidden(careEdit) != simple || careEdit.TabStop == simple || !careEdit.Enabled || careEdit.Dimmed != !capri.CheckIns) return "Edit check-in lines has the wrong view or dimming";
             if (!(careEdit.AccessibleName ?? "").StartsWith("Check in on me: ", StringComparison.Ordinal)) return "Edit check-in lines has lost its parent name";
-            if (!simple && (careEdit.Top < above.Bottom || careEdit.Bottom > onTop.Top || careEdit.Left != checkIns.Left)) return "Edit check-in lines is out of place";
-            if (simple && Math.Abs(onTop.Top - checkIns.Top - Scaled(Row)) > 1) return "Simple Settings left a gap under Check in on me";
+            // Head pats is the row under the check-ins.
+            if (!simple && (careEdit.Top < above.Bottom || careEdit.Bottom > headPats.Top || careEdit.Left != checkIns.Left)) return "Edit check-in lines is out of place";
+            if (simple && Math.Abs(headPats.Top - checkIns.Top - Scaled(Row)) > 1) return "Simple Settings left a gap under Check in on me";
             string tip = checkIns.AccessibleDescription ?? "";
             foreach (string kind in new[] { "visits", "attention", "cheers", "busy-PC", "water", "stretch", "look away", "sleep", "meals", "game breaks", "boredom" })
                 if (!tip.Contains(kind)) return "Check in on me's tip missed " + kind;
@@ -3694,6 +3839,8 @@ namespace CapriDesktop
                     Control a = Controls[i], b = Controls[j];
                     if (Hidden(a) || Hidden(b)) continue;
                     if (!a.Visible || !b.Visible || (a is Label && a.Text.Length == 0) || (b is Label && b.Text.Length == 0)) continue;
+                    // A page row scrolled under her title bar is covered by its band, not overlapping its keys.
+                    if (titleRow.Contains(a) != titleRow.Contains(b) && (scrolled.Contains(a) || scrolled.Contains(b)) && Math.Min(a.Top, b.Top) < titleBand.Bottom && titleBand.Visible) continue;
                     if (a.Bounds.IntersectsWith(b.Bounds)) return a.Text + " / " + b.Text;
                 }
             return null;
@@ -3910,6 +4057,8 @@ namespace CapriDesktop
 
         // Drags one of her voice's sliders and lets go there, as they would: 0 pitch, 1 speed, 2 glitch, 3 robot.
         internal void SlideVoice(int which, int index) { (which == 0 ? pitchSlider : which == 1 ? paceSlider : which == 2 ? glitchSlider : robotSlider).Slide(index); }
+        // For her checks: where her voice sliders sit, and whether the page is being synced so their moves are ignored.
+        internal string VoiceSlidersAt { get { return "pitch at " + pitchSlider.Value + ", pace at " + paceSlider.Value + (syncing ? ", syncing" : ""); } }
 
         internal string GapShown { get { return gapName.Text; } }
 
@@ -4049,9 +4198,9 @@ namespace CapriDesktop
             }
         }
 
-        // For the smoke test, checks a 100% screen can still fail: a provider sheet and a voice sheet at this Mainframe size
-        // grow their boxes, Connect and text with it, the voice sheet's menus each hold their own copy of its font, and a move
-        // to a screen 1.5 times as dense grows the sheet's text and both menus with it. Null when all of that holds.
+        // For the smoke test, what a 100% screen can still fail: provider and voice sheets grow their boxes and text
+        // with this Mainframe size, the voice sheet's menus hold their own fonts, and a 1.5x denser screen grows them.
+        // Null when it holds.
         internal string SheetsAt(float zoom)
         {
             using (ServerSheet server = new ServerSheet(this, zoom))
@@ -4089,12 +4238,8 @@ namespace CapriDesktop
 
         internal void PickBrain(int index) { ((ToolStripMenuItem)modelMenu.Items[index]).PerformClick(); }
 
-        // Thinking is always about the brain she's on, so a new brain or model refills its row and greys what that model can't take.
-        // The local brains she can fall back to, found the way Refresh finds them. With none, the one row sets her
-        // own brain up to be the backup.
-        // A dropdown shown under its key. An empty one still opens, saying so, rather than a click doing nothing; and the
-        // time from click to open goes in her log when it is slow, split into filling and drawing, so a lag can be
-        // told apart from a lookup.
+        // Thinking follows the brain she's on, so a new brain or model refills its row. A dropdown under its key; an
+        // empty one still opens saying so, and a slow open is logged as filling against drawing.
         private void ShowTimed(ContextMenuStrip menu, Control under, string named)
         {
             System.Diagnostics.Stopwatch took = System.Diagnostics.Stopwatch.StartNew();
@@ -4123,10 +4268,8 @@ namespace CapriDesktop
             finally { menu.Opening -= opening; }
         }
 
-        // The list comes from her library, so it opens at once with nothing looked up. Opened while Refresh is still
-        // looking, it shows a spinning row and fills in when the look is done.
-        // What the rows were last made from: the library and the pick. The same again keeps the rows it has, so a list
-        // that has not changed is not built again on every open.
+        // The list comes from her library, so it opens at once; opened while Refresh is still looking, it spins and
+        // fills in. Rows built from the same library and pick are kept rather than rebuilt.
         private string fallbackRowsFrom;
 
         private void FillFallback()
@@ -4265,9 +4408,9 @@ namespace CapriDesktop
             models.Visible = remote.Model != null;
             hint.Visible = false;
             if (remote.Kind == "local") { LocalMenu(null, remote); Arrange(false); return; }
-            // OpenRouter lists hundreds of models and NVIDIA over a hundred, and adding them one at a time laid the whole menu out
-            // again for each: about 20 s frozen on every OpenRouter pick (NoxEterna, 1 Nov), and seconds after a slow NVIDIA reply,
-            // which shows this again (Mika). The same list only moves its tick, and a new one goes in all at once.
+            // OpenRouter and NVIDIA list hundreds of models, and adding them one at a time relaid the menu each time,
+            // freezing it for seconds (NoxEterna, Mika). The same list only moves its tick; a new one goes in all at
+            // once.
             string[] listed = (remote.Code ? new List<string> { Brain.Fastest } : found ?? (remote.Model == null ? new List<string>() : new List<string> { remote.Model })).ToArray();
             if (remote == menuRemote && menuModels != null && modelMenu.Items.Count == listed.Length && System.Linq.Enumerable.SequenceEqual(menuModels, listed))
             {
@@ -4298,9 +4441,8 @@ namespace CapriDesktop
             Arrange(false);
         }
 
-        // The room BRAIN needs under its heading, which is what everything below it is pushed down by. Measured off
-        // the bottom of whatever is actually showing plus the gap above the next section, so a number moved in the
-        // key row's block moves this with it. No brain picked means no key row, and the rungs are the end of it.
+        // The room BRAIN needs under its heading, which pushes everything below: measured off whatever is showing plus
+        // the gap above the next section. No brain picked means no key row; the rungs end it.
         private int KeyRow
         {
             get
@@ -4336,9 +4478,9 @@ namespace CapriDesktop
             syncing = false;
             string tail = tier == 1 ? nvidiaTail : tier == 2 ? paidTail : null;
             textSaved = tail != null;
-            textEntry.Box.AccessibleName = tier == 1 ? "NVIDIA, Google AI Studio (Gemini) or OpenRouter API key" : "Google AI, OpenRouter, NVIDIA, OpenAI, Anthropic or DeepSeek API key";
+            textEntry.Box.AccessibleName = tier == 1 ? "NVIDIA, Google AI Studio (Gemini) or OpenRouter API key" : "Google AI, OpenRouter, NVIDIA, OpenAI, Anthropic, DeepSeek or xAI API key";
             textEntry.AccessibleName = textEntry.Box.AccessibleName;
-            tierNote.Text = tier == 1 ? mediumKind == "nvidia" ? "Most NVIDIA models can't see your screen." : "NVIDIA, Gemini, OpenRouter" : tier == 2 ? "Gemini, OpenRouter, ChatGPT, Claude, DeepSeek" : "Pick one. Only one brain runs at a time.";
+            tierNote.Text = tier == 1 ? mediumKind == "nvidia" ? "Most NVIDIA models can't see your screen." : "NVIDIA, Gemini, OpenRouter" : tier == 2 ? "Gemini, OpenRouter, ChatGPT, Claude, DeepSeek, Grok" : "Pick one. Only one brain runs at a time.";
             textEntry.Cue = textSaved ? (tier == 2 && paidPlan ? "Using your " + tail : "Key saved, ends " + tail) : tier == 1 ? "NVIDIA / Google AI Studio / OpenRouter" : "Paste a brain API key";
             RelabelText();
             Arrange(expanded);
@@ -4687,6 +4829,15 @@ namespace CapriDesktop
                 string name = style.Name;
                 freeMenu.Items.Add(Choice(name, name == chosen, delegate { capri.ChooseVoiceStyle(name); }));
             }
+            // Her three models, under her styles: the one in use ticked, and what one not here yet costs to get.
+            freeMenu.Items.Add(new ToolStripSeparator());
+            foreach (string quality in VoiceQuality.All)
+            {
+                string picked = quality;
+                long size = capri.HasQuality(quality) ? 0 : VoiceQuality.Download(quality);
+                string label = VoiceQuality.Label(quality) + (size > 0 ? " \u00b7 " + (size >> 20) + " MB to get" : "");
+                freeMenu.Items.Add(Choice(label, quality == capri.FreeQuality && served == null && !hd, delegate { capri.ChooseQuality(picked); }));
+            }
             // A Latin-script language her free voice has no dictionary for reads in her English voice, unless they want the
             // Windows voice for it, which says it properly but sounds robotic.
             string tongue = Brain.LanguageCode(Brain.Language);
@@ -4853,6 +5004,94 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
+        // Her kept windows for the smoke test: each made by the pass after her first frame (Workspace by its own warm, which
+        // runs a little after), hidden on close, the same window on its second open and quick to show, in the colours and
+        // language picked while it was hidden.
+        internal void CheckKeptWindows(List<string> checks, Action openWorkspace, Func<Form> workspace, Action warmWorkspace)
+        {
+            string[] names = { "Brain provider", "Thinking", "SECURITY", "EXTRAS", "voice server", "VOICE LAYERS", "mic mix", "Remote", "Mods", "Workspace" };
+            Func<Form>[] slots = { () => providerSheet, () => thinkingSheet, () => guard, () => extras, () => sheet, () => layered, () => mixSheet, () => remoteSheet, () => browser, workspace };
+            Action[] opens = { OpenProvider, OpenThinkingExtra, OpenSecurity, ShowExtras, () => OpenServer(false, null), OpenLayers, OpenMix, OpenRemote, () => { MakeMods(); if (!browser.Visible) browser.Show(this); browser.Activate(); }, openWorkspace };
+            const int made = 10;
+            for (int one = 0; one < made; one++)
+            {
+                Form had = slots[one]();
+                if (had != null && !had.IsDisposed) had.Dispose();
+            }
+            WarmDropdowns();
+            warmWorkspace();
+            Func<string> missing = delegate
+            {
+                List<string> not = new List<string>();
+                for (int one = 0; one < made; one++)
+                {
+                    Form ready = slots[one]();
+                    if (ready == null || ready.IsDisposed || !ready.IsHandleCreated || ready.Visible) not.Add(names[one]);
+                }
+                return not.Count == 0 ? null : string.Join(", ", not.ToArray());
+            };
+            System.Diagnostics.Stopwatch waited = System.Diagnostics.Stopwatch.StartNew();
+            while (missing() != null && waited.ElapsedMilliseconds < 5000) { Application.DoEvents(); System.Threading.Thread.Sleep(5); }
+            if (missing() != null) throw new Exception("The pass after her first frame did not make these ahead, unseen: " + missing());
+            checks.Add("PASS her windows made ahead: the pass after her first frame makes the " + string.Join(", ", names, 0, made) + " windows, unseen");
+
+            int look = Neon.ClampLook(capri.MainframeColours), other = look == 0 ? 1 : 0;
+            Color[] before = Neon.LookColours(look), after = Neon.LookColours(other);
+            string languageWas = Brain.Language;
+            Brain.Language = "French";
+            bool french = Gui.T("Hide Capri") != "Hide Capri";
+            Brain.Language = languageWas;
+            List<string> times = new List<string>(), slow = new List<string>();
+            try
+            {
+                for (int one = 0; one < names.Length; one++)
+                {
+                    string name = names[one];
+                    opens[one]();
+                    Form first = slots[one]();
+                    if (first == null || first.IsDisposed || !first.Visible) throw new Exception("The " + name + " window did not open.");
+                    Label probe = new Label { Text = "Hide Capri", Visible = false, AutoSize = false, Size = new Size(1, 1) };
+                    first.Controls.Add(probe);
+                    Gui.Window(first);
+                    int ground = Array.FindIndex(before, colour => colour.ToArgb() == first.BackColor.ToArgb());
+                    first.Close();
+                    if (first.IsDisposed || first.Visible) throw new Exception("Closing the " + name + " window " + (first.IsDisposed ? "threw it away" : "left it showing") + " rather than hiding it.");
+                    try
+                    {
+                        Neon.Repaint(other);
+                        if (french) { Brain.Language = "French"; Gui.Windows(); }
+                        System.Diagnostics.Stopwatch took = System.Diagnostics.Stopwatch.StartNew();
+                        opens[one]();
+                        long ms = took.ElapsedMilliseconds;
+                        Form second = slots[one]();
+                        if (!ReferenceEquals(first, second)) throw new Exception("The " + name + " window was made again on its second open.");
+                        if (!second.Visible) throw new Exception("The " + name + " window did not show on its second open.");
+                        if (ground >= 0 && second.BackColor.ToArgb() != after[ground].ToArgb()) throw new Exception("The " + name + " window kept the colours it was hidden in.");
+                        if (french && probe.Text == "Hide Capri") throw new Exception("The " + name + " window stayed in the language it was hidden in.");
+                        times.Add(name + " " + ms + " ms");
+                        if (ms > 150) slow.Add(name + " " + ms + " ms");
+                    }
+                    finally
+                    {
+                        Neon.Repaint(look);
+                        if (french) { Brain.Language = languageWas; Gui.Windows(); }
+                    }
+                    if (french && languageWas == null && probe.Text != "Hide Capri") throw new Exception("The " + name + " window did not come back to English: " + probe.Text);
+                    first.Controls.Remove(probe);
+                    probe.Dispose();
+                    first.Close();
+                }
+            }
+            finally
+            {
+                Brain.Language = languageWas;
+                Neon.Repaint(look);
+            }
+            if (slow.Count > 0) throw new Exception("A kept window was slow on its second open: " + string.Join(", ", slow.ToArray()));
+            checks.Add("PASS her kept windows: each hides on close and is the same window on its second open, in the colours picked while hidden" + (french ? " and in French picked while hidden, English again after" : "") + " (" + string.Join(", ", times.ToArray()) + ")");
+            if (!french) checks.Add("LIMIT kept windows' language: this build carries no French file, so there was nothing to read");
+        }
+
         // Made now, while nothing waits on it: its window and layout, not shown.
         private static void Ready(Form sheet)
         {
@@ -4931,10 +5170,11 @@ namespace CapriDesktop
             return null;
         }
 
-        internal string LayersAt(float zoom, string picture)
+        internal string LayersAt(float zoom, string picture, float grow = 1f)
         {
             using (LayersSheet drawn = new LayersSheet(this, zoom))
             {
+                if (grow != 1f) { Grow(drawn, grow); FitText(drawn); }
                 drawn.Show(this);
                 string crowded = drawn.Crowded(), size = " (" + drawn.ClientSize.Width + " x " + drawn.ClientSize.Height + " at " + zoom + ")";
                 if (picture != null) drawn.Picture(picture);
@@ -4967,12 +5207,14 @@ namespace CapriDesktop
 
         internal string SecurityCrowded { get { return guard == null || guard.IsDisposed ? "not open" : guard.Crowded(); } }
 
-        // Her SECURITY window drawn at a scale of the screen's own (1.5 for 150% on a 100% screen), checked for overlaps and
-        // text that doesn't fit, with its picture saved. Null when it all fits.
-        internal string SecurityAt(float zoom, string picture)
+        // Her SECURITY window drawn at a scale of the screen's own (1.5 for 150% on a 100% screen), checked for
+        // overlaps and text that doesn't fit, picture saved; null when it fits. grow: her text that much larger against
+        // the same boxes.
+        internal string SecurityAt(float zoom, string picture, float grow = 1f)
         {
             using (SecuritySheet drawn = new SecuritySheet(this, zoom))
             {
+                if (grow != 1f) { Grow(drawn, grow); drawn.FitText(); }
                 drawn.Show(this);
                 string crowded = drawn.Crowded(), size = " (" + drawn.ClientSize.Width + " x " + drawn.ClientSize.Height + " at " + zoom + ")";
                 if (picture != null) drawn.Picture(picture);
@@ -5202,6 +5444,11 @@ namespace CapriDesktop
 
         private static bool WinHeld() { return (Native.GetKeyState(0x5B) & 0x8000) != 0 || (Native.GetKeyState(0x5C) & 0x8000) != 0; }
 
+        // The keyboard's Ctrl, Alt and Shift, and Win, as a mouse button is picked; the checks hold them up, so a key the
+        // person at this PC happens to be pressing doesn't change the button a check picks.
+        internal Func<Keys> HeldModifiers = delegate { return ModifierKeys; };
+        internal Func<bool> HeldWin = WinHeld;
+
         // A key change answers where it was made: under the KEYS row in Settings, or under VOICE on the main page.
         private void KeysNote(string text, bool problem)
         {
@@ -5211,6 +5458,26 @@ namespace CapriDesktop
         }
 
         internal string KeysNoteText { get { return keysNote.Text; } }
+
+        private Head gamesHead;
+
+        // Null when the KEYS note, saying the longest it says, keeps to one line on its own row: under the Mainframe key and
+        // clear of GAMES' heading and the band behind it.
+        internal string KeysNoteFits()
+        {
+            if (!paged || Folded(keysNote)) return null;
+            string was = keysNote.Text;
+            try
+            {
+                keysNote.Text = "Saved. Ctrl + Alt + Shift + Scroll Lock keeps her quiet, and lets her talk again. It won't type in other apps while she runs.";
+                if (keysNote.Top < frameKeys.Bottom) return "the KEYS note sits on the Mainframe key's row";
+                // Into the panel under KEYS in its column, whichever that is; the last panel's note has the page under it.
+                Head below = HeadBelow(keysNote);
+                if (below != null && keysNote.Bottom > below.Top - Scaled(8)) return "the KEYS note runs into " + PanelId(below) + " (note ends " + keysNote.Bottom + ", " + PanelId(below) + "'s band starts " + (below.Top - Scaled(8)) + ")";
+                return null;
+            }
+            finally { keysNote.Text = was; }
+        }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
@@ -5229,9 +5496,9 @@ namespace CapriDesktop
         {
             FilterHints(ref m);
             if (HeldEnter(m)) return true;
-            // An open menu takes the wheel before the page does (Ashy, 6 Nov).
+            // An open menu takes the wheel before the page does (Ashy).
             if (MenuLook.Wheel(m)) return true;
-            // A wheel turn over Mainframe belongs to it, including at either end of the page (Lachy, 2 Nov).
+            // A wheel turn over Mainframe belongs to it, including at either end of the page (Lachy).
             if (m.Msg == 0x020A)
             {
                 Control wheelOver = Control.FromChildHandle(m.HWnd);
@@ -5247,7 +5514,7 @@ namespace CapriDesktop
             Control over = Control.FromChildHandle(m.HWnd);
             if (over == null || over.FindForm() != this) return false;
             Keys button = m.Msg == 0x0207 || m.Msg == 0x0209 ? Keys.MButton : ((m.WParam.ToInt64() >> 16) & 0xFFFF) == 2 ? Keys.XButton2 : Keys.XButton1;
-            TakeKeys(button | ModifierKeys, WinHeld());
+            TakeKeys(button | HeldModifiers(), HeldWin());
             return true;
         }
 
@@ -5307,7 +5574,7 @@ namespace CapriDesktop
             if (speakersWaiting) SpeakerChoices(capri.SpeakerDevices);
         }
 
-        // VOICE's Mic and Her speaker menus open at once and look up your devices in the background (#100). Until that look is
+        // VOICE's Mic and Her speaker menus open at once and look up your devices in the background. Until that look is
         // back, a menu says she's still checking, and picking from it or closing it stops the wait.
         private bool micsWaiting, speakersWaiting;
         internal const string CheckingSpeakers = "Still checking your speakers...", CheckingMics = "Still checking your mics...";
@@ -5384,7 +5651,7 @@ namespace CapriDesktop
         internal void PickSpeakerChoice(int at) { capri.RefreshSpeakers(); SpeakerChoices(capri.SpeakerDevices); speakerMenu.Items[at == 0 ? 0 : at + 1].PerformClick(); }
 
         // The sound page's device menus opened as a click opens them and read as they show now, for the smoke test's slow
-        // devices (#100). DeviceMenuOpen goes by number: Her speaker, Mic, her mix's Input, then its Output.
+        // devices. DeviceMenuOpen goes by number: Her speaker, Mic, her mix's Input, then its Output.
         internal void OpenSpeakerMenu() { ShowSpeakers(); }
         internal void OpenMixInputs() { ShowMixInputs(mixInput); }
         internal void OpenMixOutputs() { ShowMixOutputs(mixOutput); }
@@ -5568,6 +5835,99 @@ namespace CapriDesktop
             personalityMenu.Show(personalityKey, new Point(0, personalityKey.Height));
         }
 
+        // Its personality menu opened, as a click on its key opens it; for pictures.
+        internal ContextMenuStrip OpenPersonalityMenu() { ShowPersonalityMenu(); return personalityMenu; }
+
+        // Each time a dropdown opens it takes the Mainframe's text size as it is now, its submenus with it, so a
+        // rescale or a row from her own menu never leaves it at another size.
+        private readonly Dictionary<ToolStrip, Font> fitted = new Dictionary<ToolStrip, Font>();
+
+        private void FitText(ToolStrip strip)
+        {
+            if (strip == null || strip.IsDisposed || SizesItself(strip)) return;
+            Font now = Font;
+            if (Math.Abs(strip.Font.SizeInPoints - now.SizeInPoints) > 0.05f || strip.Font.FontFamily.Name != now.FontFamily.Name)
+            {
+                // Its own copy: the Mainframe's goes at the next rescale, and a menu holding it throws.
+                Font own = new Font(now, now.Style), was;
+                bool known = fitted.TryGetValue(strip, out was);
+                strip.Font = own;
+                fitted[strip] = own;
+                if (was != null) was.Dispose();
+                if (!known)
+                    strip.Disposed += delegate
+                    {
+                        Font last;
+                        if (fitted.TryGetValue(strip, out last)) { fitted.Remove(strip); last.Dispose(); }
+                    };
+            }
+            foreach (ToolStripItem item in strip.Items)
+            {
+                ToolStripDropDownItem holder = item as ToolStripDropDownItem;
+                if (holder != null && holder.HasDropDownItems) FitText(holder.DropDown);
+            }
+        }
+
+        // The language menu and its groups size their own text to fit the screen, so they keep it.
+        private bool SizesItself(ToolStrip strip)
+        {
+            for (ToolStrip at = strip; at != null; )
+            {
+                if (at == languageMenu) return true;
+                ToolStripDropDown drop = at as ToolStripDropDown;
+                at = drop != null && drop.OwnerItem != null ? drop.OwnerItem.Owner : null;
+            }
+            return false;
+        }
+
+        // Every dropdown opened at the scale set now: its text, and its open submenus' text, at the Mainframe's size.
+        // Null when they all are, else the first that isn't. The personality menu with its Mood row open is pictured.
+        internal string DropdownTextAt(int percent, string picture)
+        {
+            float want = Font.SizeInPoints;
+            Func<ToolStrip, string> off = null;
+            off = delegate(ToolStrip strip)
+            {
+                if (Math.Abs(strip.Font.SizeInPoints - want) > 0.05f)
+                    return (strip.AccessibleName ?? (strip.Items.Count > 0 ? strip.Items[0].Text : "a dropdown")) + " at " + strip.Font.SizeInPoints.ToString("0.#") + "pt, not " + want.ToString("0.#");
+                foreach (ToolStripItem item in strip.Items)
+                {
+                    ToolStripDropDownItem holder = item as ToolStripDropDownItem;
+                    if (holder == null || !holder.HasDropDownItems) continue;
+                    string under = off(holder.DropDown);
+                    if (under != null) return under + " (under " + item.Text + ")";
+                }
+                return null;
+            };
+            ShowPersonalityMenu();
+            try
+            {
+                Application.DoEvents();
+                ToolStripMenuItem mood = null;
+                foreach (ToolStripItem item in personalityMenu.Items)
+                    if (item is ToolStripMenuItem && item.Text.StartsWith("Mood:", StringComparison.Ordinal)) mood = (ToolStripMenuItem)item;
+                if (mood != null) { mood.Select(); mood.ShowDropDown(); Application.DoEvents(); }
+                if (picture != null)
+                {
+                    if (mood != null) WindowPicture.Together(picture, this, personalityMenu, mood.DropDown);
+                    else WindowPicture.Together(picture, this, personalityMenu);
+                }
+                string first = off(personalityMenu);
+                if (first != null) return first;
+            }
+            finally { personalityMenu.Close(); }
+            foreach (ContextMenuStrip strip in Dropdowns)
+            {
+                if (SizesItself(strip) || strip == personalityMenu) continue;
+                strip.Show(this, Point.Empty);
+                Application.DoEvents();
+                string wrong = strip.Items.Count == 0 ? null : off(strip);
+                strip.Close();
+                if (wrong != null) return wrong;
+            }
+            return null;
+        }
+
         internal string PersonalityShown { get { return personalityKey.Text + (Brain.PersonalityNote.Length > 0 ? " | " + Brain.PersonalityNote : ""); } }
 
         // Clicks its menu item that starts with this text, as they would. False if it isn't there or can't be clicked.
@@ -5618,7 +5978,7 @@ namespace CapriDesktop
             strip.Renderer = new MenuLook();
             strip.BackColor = Ground;
             strip.ForeColor = White;
-            // Its own copy: rescaling disposes the Mainframe's font, and a menu holding that one throws the next time it draws (nathanZW, #78).
+            // Its own copy: rescaling disposes the Mainframe's font, and a menu holding that one throws the next time it draws (nathanZW).
             Font own = new Font(Font, Font.Style);
             strip.Font = own;
             strip.Disposed += delegate { own.Dispose(); };
@@ -5626,9 +5986,10 @@ namespace CapriDesktop
             strip.ShowCheckMargin = true;
             // How long it takes to show, named in her log when slow, so any dropdown's lag can be found.
             System.Diagnostics.Stopwatch took = null;
-            strip.Opening += delegate { took = System.Diagnostics.Stopwatch.StartNew(); };
+            strip.Opening += delegate { took = System.Diagnostics.Stopwatch.StartNew(); FitText(strip); };
             strip.Opened += delegate
             {
+                FitText(strip);
                 if (took != null && took.ElapsedMilliseconds > 150) Brain.Log("mainframe", took.ElapsedMilliseconds, "The " + (strip.AccessibleName ?? "Mainframe") + " dropdown took " + took.ElapsedMilliseconds + " ms to show, " + strip.Items.Count + " rows.");
                 took = null;
             };
@@ -5696,9 +6057,9 @@ namespace CapriDesktop
             }
         }
 
-        // A section's title on its band: a dark strip under a teal rule, with a red tick and the title in white. Every control in
-        // its row draws the band behind itself too. Span is the band's width in design px, from 14 px left of the title; a
-        // window's own title, like MAINFRAME's on a sheet, has none. A heading's " >" stays in its text but isn't drawn.
+        // A section's title on its band: a dark strip under a teal rule, red tick, white title; every control in the
+        // row draws the band too. Span is its width in design px from 14 left of the title. A heading's " >" stays in
+        // its text, undrawn.
         private sealed class Head : Label
         {
             internal int Span;
@@ -5716,6 +6077,9 @@ namespace CapriDesktop
 
             internal string Shown { get { return Text.EndsWith(" >", StringComparison.Ordinal) ? Text.Substring(0, Text.Length - 2) : Text; } }
 
+            // While Settings' panels are unlocked, a heading takes the mouse so its panel can be dragged by it.
+            internal bool Draggable;
+
             public override Size GetPreferredSize(Size proposed)
             {
                 Size text = TextRenderer.MeasureText(Shown, Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
@@ -5731,7 +6095,7 @@ namespace CapriDesktop
 
             protected override void WndProc(ref Message message)
             {
-                if (message.Msg == 0x0084) { message.Result = new IntPtr(-1); return; }
+                if (message.Msg == 0x0084 && !Draggable) { message.Result = new IntPtr(-1); return; }
                 base.WndProc(ref message);
             }
         }
@@ -5764,15 +6128,9 @@ namespace CapriDesktop
             }
         }
 
-        // A button: a dark box with a red rim and its bottom right corner clipped. Cyan ones are the step to take, like
-        // Settings or Use this server; a picked one, like Layers while they're on, is solid cyan; red ones end something.
-        // A chevron makes it a dropdown, its choice in cyan beside a ▽.
-        // One name in the voice window's left column.
-        //
-        // Two hit areas, because the two things you do with this list are different. The tab down the left
-        // ticks it and leaves everything else alone, so several can be set at once and all of them can be
-        // cleared. The rest of the row switches to that one on its own, which is what you want nearly all of
-        // the time and should not need the other rows unticking first.
+        // A button: dark box, red rim, clipped corner; cyan for the step to take, solid cyan when picked, red to end
+        // something, a chevron for a dropdown. In the voice list the left tab ticks a name and the rest of the row
+        // picks only it.
         private sealed class WhoRow : Control
         {
             internal bool Ticked;
@@ -5887,7 +6245,7 @@ namespace CapriDesktop
             // Heart puts a beating heart before its text, like Support's; Swell is the heart's size and Beat how lit its rim is.
             internal bool Heart;
             internal float Swell = 1, Beat;
-            // Phone puts a little phone before its text, like Remote's, in the text's own colour (Lachy, 12 Nov).
+            // Phone puts a little phone before its text, like Remote's, in the text's own colour (Lachy).
             internal bool Phone;
             private bool hot;
             private bool down;
@@ -5934,12 +6292,55 @@ namespace CapriDesktop
                 RectangleF box = new RectangleF(line / 2, line / 2, Width - line, Height - line);
                 float x = Width / 2f;
                 float y = Height / 2f;
+                if (Glyph >= 6 && Glyph <= 8)
+                {
+                    // A plug-in setting's cell: a slash follows SECURITY, a tick allows, a cross denies.
+                    Color cellInk = Dimmed ? Neon.Tone(70, 50, 60) : Glyph == 7 ? Cyan : Glyph == 8 ? Hot : hot ? White : Faint;
+                    using (GraphicsPath plate = Cut(box, 0, 0, 4 * s, 0)) using (Brush fill = new SolidBrush(hot && !Dimmed ? Hover : Field)) graphics.FillPath(fill, plate);
+                    using (Pen cellRim = new Pen(Dimmed ? Neon.Tone(52, 22, 32) : Glyph == 6 ? Edge : cellInk, line)) graphics.DrawRectangle(cellRim, box.X, box.Y, box.Width, box.Height);
+                    using (Pen pen = new Pen(cellInk, 1.8f * s))
+                    {
+                        if (Glyph == 6) graphics.DrawLine(pen, x + 3.5f * s, y - 5.5f * s, x - 3.5f * s, y + 5.5f * s);
+                        else if (Glyph == 7) graphics.DrawLines(pen, new[] { new PointF(x - 5f * s, y), new PointF(x - 1.5f * s, y + 4f * s), new PointF(x + 5.5f * s, y - 4.5f * s) });
+                        else
+                        {
+                            graphics.DrawLine(pen, x - 4.5f * s, y - 4.5f * s, x + 4.5f * s, y + 4.5f * s);
+                            graphics.DrawLine(pen, x - 4.5f * s, y + 4.5f * s, x + 4.5f * s, y - 4.5f * s);
+                        }
+                    }
+                    if (Marked) FocusMark(graphics, new RectangleF(0, 0, Width, Height), s, 0, 4 * s, 0);
+                    return;
+                }
                 if (Glyph != 0)
                 {
                     if (hot) using (GraphicsPath plate = Cut(box, 0, 0, 4 * s, 0)) using (Brush fill = new SolidBrush(down ? Pressed : Hover)) graphics.FillPath(fill, plate);
-                    using (Pen pen = new Pen(hot ? (Glyph == 2 ? Hot : Cyan) : Faint, 1.5f * s))
+                    using (Pen pen = new Pen(hot || Glyph == 4 ? (Glyph == 2 ? Hot : Cyan) : Faint, 1.5f * s))
                     {
                         if (Glyph == 1) graphics.DrawLine(pen, x - 5 * s, y, x + 5 * s, y);
+                        else if (Glyph == 5)
+                        {
+                            // A cog in a box, the same size as the lock: a plug-in's settings.
+                            using (Pen boxPen = new Pen(pen.Color, line)) graphics.DrawRectangle(boxPen, box.X, box.Y, box.Width, box.Height);
+                            graphics.DrawEllipse(pen, x - 3.5f * s, y - 3.5f * s, 7 * s, 7 * s);
+                            for (int tooth = 0; tooth < 8; tooth++)
+                            {
+                                double angle = tooth * Math.PI / 4;
+                                float cos = (float)Math.Cos(angle), sin = (float)Math.Sin(angle);
+                                graphics.DrawLine(pen, x + cos * 3.5f * s, y + sin * 3.5f * s, x + cos * 6f * s, y + sin * 6f * s);
+                            }
+                        }
+                        else if (Glyph >= 3)
+                        {
+                            // A padlock in a box: shut while the panels are locked, its shackle up and open while they move.
+                            using (Pen boxPen = new Pen(pen.Color, line)) graphics.DrawRectangle(boxPen, box.X, box.Y, box.Width, box.Height);
+                            graphics.DrawRectangle(pen, x - 4.5f * s, y - 0.5f * s, 9 * s, 6.5f * s);
+                            if (Glyph == 3) graphics.DrawArc(pen, x - 3 * s, y - 6.5f * s, 6 * s, 8 * s, 180, 180);
+                            else
+                            {
+                                graphics.DrawArc(pen, x - 3 * s, y - 8.5f * s, 6 * s, 8 * s, 180, 180);
+                                graphics.DrawLine(pen, x - 3 * s, y - 4.5f * s, x - 3 * s, y - 0.5f * s);
+                            }
+                        }
                         else
                         {
                             graphics.DrawLine(pen, x - 4.5f * s, y - 4.5f * s, x + 4.5f * s, y + 4.5f * s);
@@ -6105,14 +6506,8 @@ namespace CapriDesktop
                 Box.SetBounds(left, (Height - height) / 2, Math.Max(1, Width - left - right), height);
             }
 
-            // How tall one line of her text is in this box. A text box works its own preferred height out against
-            // a device, and on at least one machine that throws "Parameter is not valid." from inside Windows,
-            // which is five words naming neither the box nor the reason.
-            //
-            // The way back must not need a device either, or it fails for the same reason it is standing in for:
-            // Font.GetHeight() with no argument measures against the screen, so only the overload that takes a
-            // resolution answers from the font's own metrics alone. Measured both ways where a device works, they
-            // give the same number. The rest is what Windows adds itself: the borders and the gap.
+            // One line's height in this box, from the font's own metrics at a given resolution: a text box's own
+            // measurement needs a device, which can throw. Plus what Windows adds: the borders and the gap.
             private int OneLine()
             {
                 try { return Box.PreferredHeight; }
@@ -6178,6 +6573,7 @@ namespace CapriDesktop
                 StartPosition = FormStartPosition.CenterParent;
                 ShowInTaskbar = false;
                 MinimizeBox = false;
+                Neon.NeverFullScreen(this);
                 BackColor = Ground;
                 ForeColor = White;
                 Font = Look.Mono(10f, FontStyle.Regular, GraphicsUnit.Point);
@@ -6307,9 +6703,8 @@ namespace CapriDesktop
             public override Color SeparatorLight { get { return Back; } }
         }
 
-        // Her menus, the right-click one and the Mainframe's dropdowns: a dark wine panel cut at the corners with a red rim and
-        // hot red strokes over the two big corners, like her windows. The choice under the mouse sits on a band with a red tick
-        // and its words go cyan, ticks are small cyan boxes, a submenu has a ▷, and a menu's title, like CAPRI / 0.7.7, is rose.
+        // Her menus: a dark wine panel cut at the corners with a red rim and hot strokes. The hovered choice sits on a
+        // band with a red tick and cyan words; ticks are small cyan boxes, a submenu has a ▷, and a title is rose.
         internal sealed class MenuLook : ToolStripProfessionalRenderer
         {
             internal static readonly object Title = new object();
@@ -6324,11 +6719,8 @@ namespace CapriDesktop
             protected override void Initialize(ToolStrip strip)
             {
                 base.Initialize(strip);
-                // Her colours go on the strip here rather than at the place that made it. WinForms hands a submenu
-                // the manager's renderer instead of its parent's, so a drop-down under an item came up in Windows'
-                // own colours and its words were drawn in black on her dark panel. Every menu this renderer touches
-                // is dressed, its submenus are handed this renderer so they come back through here, and an item
-                // added later is caught on the way in.
+                // Her colours go on the strip here, since WinForms hands a submenu the manager's renderer. Every menu
+                // this renderer touches is dressed, and its submenus come back through here.
                 strip.ForeColor = Ink;
                 strip.BackColor = Panel;
                 Dress(strip);
@@ -6372,10 +6764,8 @@ namespace CapriDesktop
                 Neon.Clip(drop, 10 * s, 4 * s);
             }
 
-            // A menu taller than its screen: WinForms fits it to the screen with scroll buttons, but on .NET Framework they're 9 px
-            // strips with a black arrow, lost on her dark panel, and the wheel scrolled the Mainframe behind it instead, so a long
-            // model list looked cut off at the bottom of the screen (Ashy, 6 Nov). Her menus get her own arrows, scroll on the
-            // wheel and while the mouse rests on an arrow, and open with the ticked choice in view.
+            // A menu taller than its screen gets her own scroll arrows, scrolls on the wheel and while the mouse rests
+            // on an arrow, and opens with the ticked choice in view (Ashy).
             private const System.Reflection.BindingFlags Inner = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
             private static readonly System.Reflection.PropertyInfo NeedsScroll = typeof(ToolStripDropDownMenu).GetProperty("RequiresScrollButtons", Inner);
             private static readonly System.Reflection.PropertyInfo UpButton = typeof(ToolStripDropDownMenu).GetProperty("UpScrollButton", Inner);
@@ -6443,7 +6833,9 @@ namespace CapriDesktop
                     PlaceButtons.Invoke(menu, null);
                     ShowTicked(menu);
                 };
-                menu.Closed += delegate { open.Remove(menu); };
+                // A menu shown again while it was still open has its Closed come after its Opened, so it is taken off
+                // only once it is really closed, or the wheel would lose it.
+                menu.Closed += delegate { if (!menu.Visible) open.Remove(menu); };
             }
 
             // A scroll button is as tall as its picture and 4 px, so a clear picture sizes it to her scale.
@@ -6537,6 +6929,10 @@ namespace CapriDesktop
             {
                 if (m.Msg != 0x020A || open == null) return false;
                 open.RemoveAll(delegate(ToolStripDropDownMenu menu) { return menu.IsDisposed || !menu.Visible; });
+                // Any of hers showing that the list lost track of is taken back in.
+                if (scrolling != null)
+                    foreach (ToolStripDropDownMenu menu in scrolling)
+                        if (!menu.IsDisposed && menu.Visible && !open.Contains(menu)) open.Add(menu);
                 if (open.Count == 0) return false;
                 long at = m.LParam.ToInt64();
                 Point point = new Point(unchecked((short)(at & 0xFFFF)), unchecked((short)((at >> 16) & 0xFFFF)));
@@ -6612,9 +7008,8 @@ namespace CapriDesktop
             {
                 ToolStripItem item = e.Item;
                 Color colour = item.Tag == Title ? Rose : !item.Enabled ? Faint : (item.Selected || item.Pressed) && e.ToolStrip is ToolStripDropDown ? Cyan : e.TextColor;
-                // Whatever the item was handed, it is drawn in something that can be read on her panel. An item
-                // that nobody dressed arrives holding Windows' own black, which on a dark wine menu is a row of
-                // words nobody can see, and that has happened once too often to leave to the place that made it.
+                // Whatever an item was handed, it is drawn in something readable on her panel: an undressed item
+                // arrives in Windows' black, invisible on her dark menu.
                 TextRenderer.DrawText(e.Graphics, e.Text, e.TextFont, e.TextRectangle, Legible(colour, Panel), e.TextFormat);
             }
 
@@ -6722,6 +7117,7 @@ namespace CapriDesktop
                 Icon = owner.Icon;
                 ShowInTaskbar = false;
                 FormBorderStyle = FormBorderStyle.None;
+                Neon.NeverFullScreen(this);
                 StartPosition = FormStartPosition.Manual;
                 AutoScaleMode = AutoScaleMode.None;
                 Font = Mainframe.Type(9.5f);
@@ -6786,7 +7182,7 @@ namespace CapriDesktop
                     e.Cancel = true;
                     Hide();
                 };
-                // Like the other sheets since #78: her Mainframe size first, then the screen it's on, and again on a move to
+                // Like the other sheets: her Mainframe size first, then the screen it's on, and again on a move to
                 // a screen with different scaling. OnLoad still places it under the Mainframe's top edge.
                 if (zoom != 1f) { Grow(this, zoom); Scale(new SizeF(zoom, zoom)); }
                 owner.Fit(this);
@@ -6927,10 +7323,9 @@ namespace CapriDesktop
                 owner.capri.UseProvider(url, secret);
             }
 
-            // Ollama in one button. Its port is fixed at 11434 unless OLLAMA_HOST says otherwise, so where it lives can
-            // be worked out rather than typed. /api/tags both proves something is answering and says which models are
-            // installed, so a blank model list is told apart from Ollama not running at all.
-            // The light: running with its model count, installed and not running, or not on this PC.
+            // Ollama in one button: its port is 11434 unless OLLAMA_HOST says otherwise, and /api/tags tells a blank
+            // model list from Ollama not running. The light: running with its model count, installed but stopped, or
+            // not here.
             private void Light()
             {
                 string[] models = owner.OllamaModelsShown;
@@ -7135,6 +7530,7 @@ namespace CapriDesktop
                 Icon = owner.Icon;
                 ShowInTaskbar = false;
                 FormBorderStyle = FormBorderStyle.None;
+                Neon.NeverFullScreen(this);
                 StartPosition = FormStartPosition.Manual;
                 AutoScaleMode = AutoScaleMode.None;
                 Font = Mainframe.Type(9.5f);
@@ -7279,6 +7675,7 @@ namespace CapriDesktop
                 Icon = owner.Icon;
                 ShowInTaskbar = false;
                 FormBorderStyle = FormBorderStyle.None;
+                Neon.NeverFullScreen(this);
                 StartPosition = FormStartPosition.Manual;
                 AutoScaleMode = AutoScaleMode.None;
                 Font = Mainframe.Type(9.5f);
@@ -7365,7 +7762,7 @@ namespace CapriDesktop
             private static bool Cloudy(VoiceServer.Service choice) { return choice.Url != null && VoiceServer.InCloud(choice.Url, choice.Api); }
 
             // Fish Audio's and OpenAI's own servers never change address, so CLOUD VOICE hides the Address row and moves the rest
-            // up into its place (Lachy, 29 Oct). The address is still filled in underneath. The row is 56 px at 96 DPI, scaled
+            // up into its place (Lachy). The address is still filled in underneath. The row is 56 px at 96 DPI, scaled
             // like the boxes in it.
             private void ShowAddress(bool shown)
             {
@@ -7377,9 +7774,8 @@ namespace CapriDesktop
                 ClientSize = new Size(ClientSize.Width, ClientSize.Height + step);
             }
 
-            // A hint longer than its four lines, like Fish Audio's with its consent line, moves Voice from and the rows under it
-            // down, keeping the gap a four-line hint leaves, instead of running under them, and a shorter one brings them back up.
-            // Hints only wrap once OnLoad has set their width, so before that it changes nothing.
+            // A hint over four lines, like Fish Audio's consent line, moves Voice from and the rows under it down by
+            // the extra, and a shorter one brings them back. Hints wrap only once OnLoad has set their width.
             private void FitHint()
             {
                 int top = Math.Max(hint.Top + (int)Math.Round(64f * url.Height / 28), hint.Bottom + (int)Math.Round(8f * url.Height / 28));
@@ -7744,14 +8140,11 @@ namespace CapriDesktop
             }
         }
 
-        // Her SECURITY window, in Settings' look (Lachy, 29 Oct): a slider of four presets, Lockdown, Guarded, Trusted and
-        // Blackwall, that sets the toggles under it, and a toggle with a plain line for each kind of thing she does on their PC.
-        // Flipping one makes it Custom, and a click on the slider puts the preset under its knob back. Her hands' toggles are on
-        // the left with HER MEMORY's under them, and her jobs' and listening's on the right. It opens from Settings > HABITS,
-        // where Blackwall mode was. Zoom is 1 except in the smoke test, which draws it at 150% and 200% too.
+        // Her SECURITY window (Lachy): four presets on a slider set the toggles under it, one per kind of thing she
+        // does on their PC; flipping one makes it Custom. Opens from Settings > HABITS.
         private sealed class SecuritySheet : Form, LookWindow, Tinted
         {
-            internal const int Wide = 900, Tall = 590, Column = 410;
+            internal const int Wide = 900, Tall = 636, Column = 410;
             internal readonly float Zoom;
             private readonly Mainframe owner;
             private readonly Slider presets;
@@ -7759,6 +8152,7 @@ namespace CapriDesktop
             private readonly Readout presetName;
             private readonly Label presetLine;
             private readonly Toggle[] toggles = new Toggle[Security.Count];
+            private readonly Label[] lines = new Label[Security.Count];
             private bool syncing;
 
             internal SecuritySheet(Mainframe owner, float zoom)
@@ -7770,6 +8164,7 @@ namespace CapriDesktop
                 Icon = owner.Icon;
                 ShowInTaskbar = false;
                 FormBorderStyle = FormBorderStyle.None;
+                Neon.NeverFullScreen(this);
                 StartPosition = FormStartPosition.Manual;
                 AutoScaleMode = AutoScaleMode.None;
                 Font = Type(9f * zoom);
@@ -7806,7 +8201,7 @@ namespace CapriDesktop
                 for (int i = 0; i < Security.Count; i++)
                 {
                     int x = i <= Security.Mouse || i == Security.Personal ? 28 : 52 + Column;
-                    int y = i == Security.ModTools ? 522 : i == Security.Personal ? 478 : i <= Security.Mouse ? 168 + 46 * i : i < Security.Wake ? 168 + 46 * (i - Security.Sends) : 386 + 46 * (i - Security.Wake);
+                    int y = i == Security.PluginTools ? 568 : i == Security.ModTools ? 522 : i == Security.Personal ? 478 : i <= Security.Mouse ? 168 + 46 * i : i < Security.Wake ? 168 + 46 * (i - Security.Sends) : 386 + 46 * (i - Security.Wake);
                     int toggle = i;
                     Toggle box = new Toggle();
                     box.Text = Security.Names[i];
@@ -7817,10 +8212,20 @@ namespace CapriDesktop
                     box.CheckedChanged += delegate { if (!syncing) Security.Set(toggle, toggles[toggle].Checked); };
                     Controls.Add(box);
                     toggles[i] = box;
-                    Caption(Security.Lines[i], x, y + 24, small, Faint);
+                    lines[i] = Caption(Security.Lines[i], x, y + 24, small, Faint);
                 }
                 owner.Fit(this);
                 Sync();
+                FitText();
+            }
+
+            // Each toggle's name and line on its column at the screen's text size: boxes follow zoom but text follows
+            // DPI, so a name too long for its room is drawn a half point smaller until it fits.
+            internal void FitText()
+            {
+                Mainframe.FitText(this);
+                int column = Z(Column);
+                foreach (Label line in lines) line.Font = Shrunk(line.Text, line.Font, column);
             }
 
             private int Z(int value) { return (int)Math.Round(value * Zoom); }
@@ -7965,9 +8370,8 @@ namespace CapriDesktop
             }
         }
 
-        // Her EXTRAS window, in SECURITY's look, over the Mainframe on a new install's first launch (Lachy, 31 Oct: so many cool
-        // ones were off with nothing pointing at them). Each costs something or uses the mic, so they start off and it's their
-        // pick, and all four are in Settings too.
+        // Her EXTRAS window, in SECURITY's look, over the Mainframe on a new install's first launch (Lachy). Each costs
+        // something or uses the mic, so they start off as their pick; all four are in Settings too.
         private sealed class ExtrasSheet : Form, LookWindow
         {
             internal const int Wide = 600, Tall = 366;
@@ -7987,6 +8391,7 @@ namespace CapriDesktop
                 // She's always on top, and on a new install she arrives in the middle of the screen, right where this opens.
                 TopMost = true;
                 FormBorderStyle = FormBorderStyle.None;
+                Neon.NeverFullScreen(this);
                 StartPosition = FormStartPosition.Manual;
                 AutoScaleMode = AutoScaleMode.None;
                 Font = Type(9f * zoom);
@@ -8135,11 +8540,8 @@ namespace CapriDesktop
             }
         }
 
-        // Her VOICE LAYERS window, in SECURITY's look (Lachy, 29 Oct): a switch, then MAIN, her voice itself, whose pitch is
-        // Settings > VOICE > Pitch and moves with it, and LAYER 1 and LAYER 2, copies of her mixed in under her, each with its
-        // own pitch (half steps from -12 to +12 semitones off hers) and delay (0 to 250 ms). Letting go of a slider has her say
-        // a line in it, and so does the switch. It opens from the Layers button in VOICE's heading. Zoom is 1 except in the smoke
-        // test, which draws it at 150% and 200% too.
+        // Her VOICE LAYERS window (Lachy): MAIN is her voice, and LAYER 1 and 2 are copies of her under it, each with
+        // its own pitch (-12 to +12) and delay (0 to 250 ms). Letting go of a slider has her say a line in it.
         private sealed class LayersSheet : Form, LookWindow
         {
             // Left column picks who, right column is the settings. Everything to do with her voice is in
@@ -8178,6 +8580,7 @@ namespace CapriDesktop
                 Icon = owner.Icon;
                 ShowInTaskbar = false;
                 FormBorderStyle = FormBorderStyle.None;
+                Neon.NeverFullScreen(this);
                 StartPosition = FormStartPosition.Manual;
                 AutoScaleMode = AutoScaleMode.None;
                 Font = Type(9.5f * zoom);
@@ -8199,7 +8602,8 @@ namespace CapriDesktop
                 onOff.Text = "Voice layers";
                 onOff.Font = Font;
                 onOff.Switch = 120;
-                onOff.Bounds = Box(Right, 362, 220, 22);
+                // In the VOICE LAYERS band at its right end, three above the title as a section's key sits, not on the title.
+                onOff.Bounds = Box(Right + Panel - 242, 357, 220, 22);
                 onOff.AccessibleName = "Voice layers. Off, she sounds as she always has";
                 onOff.CheckedChanged += delegate
                 {
@@ -8386,9 +8790,8 @@ namespace CapriDesktop
                 y += 24;
             }
 
-            // A label between the two kinds, so the list does not read as one long run of names, with an All on
-            // the end of it. Giving one voice to every personality at once was ten ticks and giving it to every
-            // mood was eighteen, which is what the ticking was for in the first place.
+            // A label between the two kinds so the list doesn't read as one run of names, each with an All to give one
+            // voice to every personality or every mood at once.
             private void Divider(string text, ref int y, bool mood)
             {
                 y += 6;
@@ -8490,10 +8893,7 @@ namespace CapriDesktop
             }
 
             private static readonly string[] PitchShift = ShiftNames(-VoiceFx.MostPitch, VoiceFx.MostPitch, "");
-            // Each of these covers exactly what the setting underneath it accepts, no more. A slider that offers
-            // a number the setting clamps away is a slider that moves and springs back, which is how the robot
-            // and glitch ones read when they were writing nowhere: loudness goes down to silence, her speed
-            // stops where her voice stops.
+            // Each slider covers exactly what its setting accepts, so none moves past a value the setting clamps away.
             private static readonly string[] Loudness = ShiftNames(0, 150, "%");
             private static readonly string[] Pace = ShiftNames(VoiceFx.Slowest, VoiceFx.Fastest, "%");
             private static readonly string[] Amount = ShiftNames(0, 100, "%");
@@ -8701,9 +9101,8 @@ namespace CapriDesktop
             }
         }
 
-        // Her voice in your mic's setup in a window of its own (Lachy, 3 Nov: "make it clear how to set it up too"): the switch,
-        // the mix's Input and Output, then Discord's steps with the exact name to pick there, and whether Discord hears it yet,
-        // read from Windows each second.
+        // Her voice in your mic's setup in its own window (Lachy): the switch, the mix's Input and Output, Discord's
+        // steps with the exact name to pick, and whether Discord hears it yet, read from Windows each second.
         private sealed class MixSheet : Form, LookWindow
         {
             internal const int Wide = 620, Tall = 478;
@@ -8729,6 +9128,7 @@ namespace CapriDesktop
                 Icon = owner.Icon;
                 ShowInTaskbar = false;
                 FormBorderStyle = FormBorderStyle.None;
+                Neon.NeverFullScreen(this);
                 StartPosition = FormStartPosition.Manual;
                 AutoScaleMode = AutoScaleMode.None;
                 Font = Type(9.5f * zoom);
@@ -8785,7 +9185,7 @@ namespace CapriDesktop
                 elsewhere.AutoEllipsis = true;
                 elsewhere.Size = new Size(Z(Wide - 56), Z(22));
                 ((Note)elsewhere).Hovers = true;
-                // Every second it asks again who hears her. Her looks at Windows run in the background, so it never waits (#100).
+                // Every second it asks again who hears her. Her looks at Windows run in the background, so it never waits.
                 ticks.Interval = 1000;
                 ticks.Tick += delegate { Sync(); };
                 owner.Fit(this);
@@ -8867,6 +9267,7 @@ namespace CapriDesktop
                 else if (!on) said = Off;
                 else { said = "On: your mic and her voice are going in."; colour = Cyan; }
                 Retext(state, said);
+                state.Font = StateFont(said);
                 state.ForeColor = colour;
                 List<string> hearing = cable && on && there.Far != null ? capri.MixListeners : new List<string>();
                 bool discord = hearing.Exists(delegate(string process) { return app.Has(process); });
@@ -8933,11 +9334,23 @@ namespace CapriDesktop
                 string vb = "CABLE Output (VB-Audio Virtual Cable)";
                 foreach (string text in new[] { NoOutput, vb, "Microphone (" + MicMix.SteamEnd + ")" })
                     if (TextRenderer.MeasureText(text, output.Font).Width + (int)Math.Ceiling(28 * s) > output.Width) return "doesn't fit: " + text + " in Output";
+                // Each line as the state line draws it: in the window's font, made smaller to fit as StateFont does.
                 List<string> cableLines = new List<string>(CableSetup.Lines);
                 cableLines.AddRange(new[] { "2   Input Device: " + vb, "Roblox or any other app: pick " + vb + " as its mic.", NoCable, MicMix.Missing, MicMix.Unopened, MicMix.ListFailed, MicMix.NoMic, MicMix.MicGone, MicMix.MutedLine(MicMix.CableEnd), MicMix.MutedLine(MicMix.SteamEnd), MicMix.OffLine(MicMix.CableEnd), MicMix.OffLine(MicMix.SteamEnd), Off, "Discord, OBS and Roblox hear it now.", "OBS and Roblox hear it now. Discord doesn't yet.", NotYet });
                 foreach (string line in cableLines)
-                    if (state.Left + TextRenderer.MeasureText(line, Font).Width + (int)(24 * s) > ClientSize.Width - (int)(16 * s)) return "doesn't fit: " + line;
+                {
+                    Font drawn = StateFont(line);
+                    if (state.Left + TextRenderer.MeasureText(line, drawn).Width + (int)(24 * s) > ClientSize.Width - (int)(16 * s)) return "doesn't fit: " + line;
+                }
                 return null;
+            }
+
+            // The state line's type for a line: the window's own, a half point smaller at a time while the line would run past
+            // the window's edge (a denser screen draws it larger than its room).
+            private Font StateFont(string line)
+            {
+                float s = ScaleOf(this);
+                return Shrunk(line, Font, ClientSize.Width - (int)(16 * s) - (int)(24 * s) - state.Left);
             }
 
             internal void Picture(string path)
@@ -9003,9 +9416,8 @@ namespace CapriDesktop
             }
         }
 
-        // A row's value, in a box of its own. Up to seven steps it's a selector, ◁ value ▷ with a red dash under the value
-        // marking where it is among them; past that, a bar whose red handle slides along under the value. Both step with the
-        // arrow keys, and say what they're on to a screen reader.
+        // A row's value in its own box: up to seven steps a ◁ value ▷ selector with a red dash marking its place, past
+        // that a bar with a red sliding handle. Both step with the arrow keys and speak to a screen reader.
         private sealed class Slider : Control, Tinted
         {
             public void Recolour(Func<Color, Color> swap) { ink = swap(ink); }
@@ -9021,7 +9433,7 @@ namespace CapriDesktop
             private Color ink = Color.Empty;
             // A tick under every step, or every few on a slider with many, like her voice layers' pitch and delay.
             internal int TickEvery = 1;
-            // Blackwall's preset: red, torn and never quite still while it's picked (Lachy, 1 Nov).
+            // Blackwall's preset: red, torn and never quite still while it's picked (Lachy).
             internal bool Torn;
             private System.Windows.Forms.Timer storm;
             private readonly Random tears = new Random();
@@ -9341,9 +9753,8 @@ namespace CapriDesktop
             }
         }
 
-        // A setting that's on or off: its name on the left of its row and a pair of buttons on the right, OFF and ON, with the
-        // one it's set to lit, solid cyan for ON and red for OFF. A click on either picks it; a click on the name, or Space,
-        // flips it.
+        // An on or off setting: its name on the left, OFF and ON on the right with the set one lit, cyan for ON and red
+        // for OFF. A click on either picks it; a click on the name, or Space, flips it.
         private sealed class Toggle : CheckBox
         {
             private bool dimmed;

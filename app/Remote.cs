@@ -8,9 +8,9 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
-    // Capri Remote (remote/PROTOCOL.md): Lachy chats with her from his phone through a relay that only ever sees sealed
-    // envelopes. This file is the PC's protocol plumbing with no window or brain in it, so app/RemoteTests can run it on its
-    // own against the real relay: JSON, the messages and what's kept in settings. The connection is app/RemoteLink.cs.
+    // Capri Remote (remote/PROTOCOL.md): chatting with her from a phone through a relay that only sees sealed
+    // envelopes. The PC's protocol plumbing with no window or brain, so app/RemoteTests runs it alone; the connection
+    // is RemoteLink.cs.
 
     internal sealed class RemotePicture
     {

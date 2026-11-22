@@ -47,7 +47,7 @@ namespace CapriDesktop
 
         private static string Bare(string name) { return Key(Regex.Replace(Regex.Replace(Key(name), @"\s+(?:web\s?site|site)$", ""), @"^(?:my|the)\s+", "")); }
 
-        // Her saved name wins first; "my school website" can then mean "school" (john_sandevistan, B88).
+        // Her saved name wins first; "my school website" can then mean "school" (john_sandevistan).
         internal string Nickname(string name)
         {
             string key = Key(name);

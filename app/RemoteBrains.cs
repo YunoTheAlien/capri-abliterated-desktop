@@ -6,11 +6,8 @@ using System.Windows.Forms;
 
 namespace CapriDesktop
 {
-    // Capri Remote and her brains, her side (remote/PROTOCOL.md section 8.1). A paired phone sees which brain she uses, picks
-    // another rung and sends a brain's key. The key goes in exactly as if it was typed in her Mainframe's key box: the same
-    // ConnectText, so the same checks, the same notes and the same DPAPI storage, and BRAIN shows it all as usual. Keys only
-    // come in: the phone hears whether a brain has one, never the key. A saved key gets a short notice on the PC. The
-    // protocol's share, which app/RemoteTests runs too, is app/RemoteBrainKeys.cs.
+    // Capri Remote and her brains, her side (remote/PROTOCOL.md 8.1): a phone sees and picks her brain and sends a key,
+    // saved exactly as her key box saves one. The phone only hears whether a brain has a key.
     internal sealed partial class Companion
     {
         // The phone's key being checked: at most one at a time, like the key box.
@@ -211,9 +208,9 @@ namespace CapriDesktop
 
         // ---------- Smoke ----------
 
-        // A phone's brain asks through her real key path, with stand-in providers: what the phone sees, a key checked, saved
-        // with DPAPI and used exactly as the key box does it, with notes and the notice; a key that isn't one, a paid key under
-        // MEDIUM, a rejected key, one key at a time, a rung picked, malformed asks, and no key ever going back.
+        // A phone's brain asks through her real key path with stand-in providers: the key checked, saved with DPAPI and
+        // used as the key box does; bad, paid-under-MEDIUM and rejected keys, one at a time, rung picks, malformed
+        // asks, and no key going back.
         private void SmokeRemoteBrains(List<string> checks)
         {
             SmokeRemoteLateBrain(checks);

@@ -59,12 +59,12 @@ namespace CapriDesktop
         internal string OpenedId { get { return openedId; } }
         internal volatile bool Muted;
         internal volatile string Chosen;
-        // Power saver over a game (issue #111): her mics are polled and their routes checked less often. Every chunk still gets
+        // Power saver over a game: her mics are polled and their routes checked less often. Every chunk still gets
         // heard and decoded, so Hey Capri and Listen for Capri keep working; she might just take a moment longer to hear you.
         internal static volatile bool Gentle;
         // In ms: her WASAPI mic's and her beat listener's sleep between looks, and how often an open mic's route is checked.
         internal static int MicPollMs { get { return Gentle ? 30 : 15; } }
-        internal static int BeatPollMs { get { return Gentle ? 30 : 10; } }
+        internal static int BeatPollMs { get { return Gentle ? 30 : 5; } }
         internal static int RouteMs { get { return Gentle ? 6000 : 2000; } }
         private IntPtr device;
         private IntPtr[] headers;
@@ -130,7 +130,7 @@ namespace CapriDesktop
         private volatile int lastChunk;
 
         // The mics they can pick: Windows' own list less VB-CABLE's output, which carries her voice while it's in their mic, so
-        // she never hears herself through it (F66).
+        // she never hears herself through it.
         internal static List<Mic> List() { return Pickable(All()); }
 
         internal static List<Mic> Pickable(List<Mic> all) { return all.FindAll(delegate(Mic mic) { return !MicMix.IsCableOut(mic.Name); }); }
@@ -215,9 +215,8 @@ namespace CapriDesktop
             return null;
         }
 
-        // Which wave API mic Start opens: the picked one while it's plugged in, else Windows' default (-1). Never VB-CABLE's
-        // output, which has her own voice in it while her voice is in their mic (F66): when Windows' default is the cable, the
-        // first other mic, or -2 when there's no other.
+        // Which wave API mic Start opens: the picked one while plugged in, else Windows' default (-1). Never VB-CABLE's
+        // output, which carries her own voice: then the first other mic, or -2 with none.
         internal static int Opening(List<Mic> all, string chosen, string defaultName)
         {
             int first = -2;
@@ -342,7 +341,7 @@ namespace CapriDesktop
                 if (Changed != null) Changed(Dictation.MicBlocked);
                 throw new VoiceException(Dictation.MicBlocked);
             }
-            // Never VB-CABLE's output, which has her own voice in it while her voice is in their mic (F66).
+            // Never VB-CABLE's output, which has her own voice in it while her voice is in their mic.
             if (!fake && Opening(All(), Chosen, DefaultName()) == -2)
             {
                 Brain.Log("ears", -1, OnlyCable);
@@ -352,7 +351,7 @@ namespace CapriDesktop
             string previous = openedId;
             string opening = resolve(Chosen);
             // The mics can change between that check and this one, so what she's about to open is checked too: no safe mic left
-            // means Windows' default, and that or the pick itself can be the cable by now (Codex review, 2 Nov).
+            // means Windows' default, and that or the pick itself can be the cable by now.
             if (!fake && MicMix.IsCableOut(opening == null ? DefaultName() : FullName(opening)))
             {
                 Brain.Log("ears", -1, OnlyCable);
@@ -824,7 +823,7 @@ namespace CapriDesktop
         }
 
         // Windows' outputs: the last read, or a fresh one. A fresh read happens outside the lock, so a speaker that's slow to answer,
-        // like a Bluetooth headset waking up, never holds up her voice, which takes the last read meanwhile (#100).
+        // like a Bluetooth headset waking up, never holds up her voice, which takes the last read meanwhile.
         internal static List<Output> List(bool fresh = false)
         {
             Func<List<Output>> read;
@@ -1024,7 +1023,7 @@ namespace CapriDesktop
             leftover.RemoveRange(0, at);
             if (!Plain)
             {
-                // Her voice in their mic (F66): everything she says goes into the cable too while the switch is on, at her own
+                // Her voice in their mic: everything she says goes into the cable too while the switch is on, at her own
                 // level rather than her speakers' volume, for the mix to bring to a speaking level. Her sound effects play
                 // through Plain speakers, so they stay out.
                 if (answer == null) BeginAnswer();
@@ -1115,7 +1114,7 @@ namespace CapriDesktop
         }
 
         // Sound dropped before it played goes in errors.txt with what dropped it, so a report of her voice stopping mid-reply says
-        // which part of her did it (ticket 35, #158). A stream cleared in the second after its sound also lost the rest of its turn.
+        // which part of her did it. A stream cleared in the second after its sound also lost the rest of its turn.
         private void Clear(bool cut, string reason, bool recent)
         {
             if (!string.IsNullOrEmpty(Name))
@@ -1169,9 +1168,9 @@ namespace CapriDesktop
         public void Dispose() { Close(); }
     }
 
-    // A WASAPI stream on the default speakers in shared mode, with Windows converting her 16-bit mono to the speakers' own format.
-    // Every COM call happens on its own thread; Write and Clear only queue for it. It stops for good if the speakers go away,
-    // and the Speaker opens a new one next time.
+    // A WASAPI stream on the default speakers in shared mode, Windows converting her 16-bit mono. Every COM call is on
+    // its own thread; Write and Clear only queue. It stops for good if the speakers go, and the Speaker opens a new
+    // one.
     internal sealed class SoundOut : IDisposable
     {
         internal const int ConvertFlags = unchecked((int)0x88000000);
@@ -1812,7 +1811,7 @@ namespace CapriDesktop
         }
     }
 
-    // Her own tar reader, for a Windows without tar.exe or one whose tar can't read the archive (a modified Windows 10, #60).
+    // Her own tar reader, for a Windows without tar.exe or one whose tar can't read the archive (a modified Windows 10).
     // Only files and folders come out, and only inside the folder she's unpacking into.
     internal static class TarReader
     {
@@ -2005,8 +2004,8 @@ namespace CapriDesktop
     // They hear whichever mic is picked, offline, without Windows' online speech setting.
     internal sealed class LocalEars : IDisposable
     {
-        // Capri's own copies of the exact packs she was tested on. sherpa-onnx re-uploaded theirs on 7 Nov 2026, and a changed
-        // file can't pass the size and hash pinned here, so every copy of Capri lost her ears at once.
+        // Capri's own copies of the exact packs she was tested on. sherpa-onnx can re-upload theirs, and a changed
+        // file can't pass the size and hash pinned here, which would cost every copy of Capri her ears.
         internal const string Hosted = "https://github.com/lachydotmcg/capri-desktop/releases/download/ears-pack-1/";
         internal const string Pack = "parakeet-tdt-0.6b-v2-int8";
         internal static string PackUrl = Hosted + "sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8.tar.bz2";
@@ -2097,8 +2096,8 @@ namespace CapriDesktop
         internal static Func<ProcessStartInfo, Process> StartTar = Process.Start;
         internal static string TarPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "tar.exe");
 
-        // Windows 10 and 11 ship bsdtar, but only Windows 11's reads bzip2. When tar can't, she unpacks the bzip2 layer herself and tar gets the plain archive.
-        // With no tar.exe, or one that fails on the plain archive, her own reader unpacks it. The checksum was already matched, so this is the known archive.
+        // Only Windows 11's bsdtar reads bzip2, so she unpacks that layer herself when tar can't, and her own reader
+        // unpacks the rest when tar is missing or fails. The checksum already matched, so it is the known archive.
         internal static void Untar(string tarball, string into)
         {
             string tar = TarPath;
@@ -2309,7 +2308,12 @@ namespace CapriDesktop
         internal const int Rate = 100;
         internal const double Slowest = 70;
         internal const double Fastest = 140;
-        internal const double Clear = 2.3;
+        // How far the beat has to stand out of the onsets around it: against their spread, and in loudness rise itself, so a
+        // held chord or quiet hiss never makes a beat.
+        internal const double Clear = 2.0;
+        internal const double Rise = 0.5;
+        // Each beat further back counts this much less when placing the beat.
+        private const double Recent = 0.9;
 
         internal static double Fold(double bpm)
         {
@@ -2327,6 +2331,8 @@ namespace CapriDesktop
             return bpm;
         }
 
+        // The tempo from the onsets' autocorrelation, summed over four multiples of the beat and leaning toward 120 bpm; the
+        // beat from a comb on the beats alone. A comb that also counts the half beat reads 128 bpm as 96.
         internal static bool Find(float[] onsets, int count, out double bpm, out double lastBeat, out double strength)
         {
             bpm = 0;
@@ -2334,51 +2340,66 @@ namespace CapriDesktop
             strength = 0;
             if (count < Rate * 4) return false;
             double[] onset = new double[count];
+            for (int i = 0; i < count; i++) onset[i] = onsets[i];
+            // A running mean over a quarter second taken away, so a slow swell counts less than a hit.
+            double[] around = new double[count];
             double sum = 0;
-            for (int i = 0; i < count; i++) { onset[i] = onsets[i]; sum += onset[i]; }
-            double spread = 0;
-            for (int i = 0; i < count; i++) { onset[i] -= sum / count; spread += onset[i] * onset[i]; }
-            spread = Math.Sqrt(spread / count);
-            if (spread <= 1e-9) return false;
-            double best = 0, bestScore = double.MinValue, phase;
-            for (double period = Rate * 60.0 / 200; period <= Rate * 60.0 / 50; period += 0.5)
+            int lo = 0, hi = -1, held = 0;
+            for (int i = 0; i < count; i++)
+            {
+                while (hi < Math.Min(count - 1, i + 12)) { hi++; sum += onset[hi]; held++; }
+                while (lo < i - 12) { sum -= onset[lo]; lo++; held--; }
+                around[i] = sum / held;
+            }
+            double mean = 0;
+            for (int i = 0; i < count; i++) { onset[i] = Math.Max(0, onset[i] - around[i]); mean += onset[i]; }
+            mean /= count;
+            double zero = 0;
+            for (int i = 0; i < count; i++) { onset[i] -= mean; zero += onset[i] * onset[i]; }
+            if (zero <= 1e-12) return false;
+            double[] lags = new double[Math.Min(count - 1, 4 * 110 + 2)];
+            for (int lag = 1; lag < lags.Length; lag++)
+            {
+                double s = 0;
+                for (int i = lag; i < count; i++) s += onset[i] * onset[i - lag];
+                lags[lag] = s / zero * count / (count - lag);
+            }
+            double best = 0, bestScore = double.MinValue;
+            for (double period = Rate * 60.0 / 200; period <= Rate * 60.0 / 55; period += 0.25)
             {
                 double octaves = Math.Log(Rate * 60.0 / period / 120, 2);
-                double score = Pulses(onset, period, 1, 0.5, out phase) * Math.Exp(-0.5 * octaves * octaves);
+                double score = Repeats(lags, period) * Math.Exp(-0.5 * octaves * octaves);
                 if (score > bestScore) { bestScore = score; best = period; }
             }
             double fine = best, fineScore = double.MinValue;
-            for (double period = best - 0.5; period <= best + 0.5; period += 0.05)
+            for (double period = best - 0.5; period <= best + 0.5; period += 0.02)
             {
-                double score = Pulses(onset, period, 1, 0.5, out phase);
+                double score = Repeats(lags, period);
                 if (score > fineScore) { fineScore = score; fine = period; }
             }
-            Pulses(onset, fine, 0, 0, out phase);
+            double top = double.MinValue, phase = 0, all = 0;
+            int tried = 0;
+            for (double k = 0; k < fine; k += 0.25)
+            {
+                double s = 0, weight = 1, weights = 0;
+                for (double at = count - 1 - k; at >= 0; at -= fine) { s += weight * At(onset, at); weights += weight; weight *= Recent; }
+                s /= weights;
+                all += s;
+                tried++;
+                if (s > top) { top = s; phase = k; }
+            }
+            double rise = top - all / tried;
             bpm = Rate * 60.0 / fine;
             lastBeat = phase / Rate;
-            strength = fineScore / spread;
-            return strength >= Clear;
+            strength = rise / Math.Sqrt(zero / count);
+            return strength >= Clear && rise >= Rise;
         }
 
-        private static double Pulses(double[] onset, double period, double half, double quarter, out double phase)
+        private static double Repeats(double[] lags, double period)
         {
-            int count = onset.Length;
-            double top = double.MinValue;
-            phase = 0;
-            for (int k = 0; k < period; k++)
-            {
-                double sum = 0;
-                int beats = 0;
-                for (double at = count - 1 - k; at >= 0; at -= period)
-                {
-                    sum += At(onset, at) + half * At(onset, at - period / 2);
-                    if (quarter > 0) sum += quarter * (At(onset, at - period / 4) + At(onset, at - period * 3 / 4));
-                    beats++;
-                }
-                sum /= beats;
-                if (sum > top) { top = sum; phase = k; }
-            }
-            return top;
+            double s = 0;
+            for (int k = 1; k <= 4; k++) s += At(lags, period * k);
+            return s / 4;
         }
 
         private static double At(double[] onset, double x)
@@ -2427,39 +2448,81 @@ namespace CapriDesktop
         }
     }
 
+    // Onsets, 100 a second: how much each band's loudness rose, the low band weighted most since the kick is the beat.
+    // Power smoothed over 10 ms, so a held chord doesn't read as hits; a band far below the music counts as silent.
     internal sealed class Onset
     {
         private const double Floor = 1e-4;
+        private const double Smooth = 0.010;
+        private const double Quiet = 0.05;
+        private const double Fade = 0.997;
+        private static readonly double[][] Bands = { new double[] { 0, 150, 2 }, new double[] { 300, 3000, 1 }, new double[] { 5000, 0, 0.5 } };
         internal readonly int Block;
-        private readonly Biquad bass, midLow, midHigh, treble;
-        private readonly double[] energy = new double[3];
-        private readonly double[] before = new double[3];
+        private readonly Biquad[][] filters;
+        private readonly double[] power, energy, before;
+        private readonly double pull;
+        private double loud;
         internal int Filled;
         private bool primed;
+        // The kick drum's band, 40 to 150 Hz, over the same blocks, against its own last second and a half: 1 is as loud
+        // as usual, a kick is well over it.
+        private const double KickAverage = 1.5, KickSmooth = 0.004;
+        private readonly Biquad[] kickFilters;
+        private readonly double kickPull, kickQuick;
+        private double kickPower, kickEnergy, kickUsual;
+        internal double Kick;
 
         internal Onset(int rate)
         {
             Block = Math.Max(1, rate / Tempo.Rate);
-            bass = Biquad.Low(rate, 150);
-            midLow = Biquad.High(rate, 300);
-            midHigh = Biquad.Low(rate, 3000);
-            treble = Biquad.High(rate, 5000);
+            pull = 1 - Math.Exp(-1 / (Smooth * rate));
+            filters = new Biquad[Bands.Length][];
+            power = new double[Bands.Length];
+            energy = new double[Bands.Length];
+            before = new double[Bands.Length];
+            for (int i = 0; i < Bands.Length; i++)
+            {
+                List<Biquad> band = new List<Biquad>();
+                if (Bands[i][0] > 0) { band.Add(Biquad.High(rate, Bands[i][0])); band.Add(Biquad.High(rate, Bands[i][0])); }
+                if (Bands[i][1] > 0) { band.Add(Biquad.Low(rate, Bands[i][1])); band.Add(Biquad.Low(rate, Bands[i][1])); }
+                filters[i] = band.ToArray();
+            }
+            kickFilters = new[] { Biquad.High(rate, 40), Biquad.High(rate, 40), Biquad.Low(rate, 150), Biquad.Low(rate, 150) };
+            kickPull = 1 - Math.Exp(-1 / (KickAverage * Tempo.Rate));
+            // Quicker than the onset bands' smoothing: measured on drum tracks, it brings the kick's peak 6 ms sooner.
+            kickQuick = 1 - Math.Exp(-1 / (KickSmooth * rate));
         }
 
         internal bool Add(double sample, out float strength)
         {
-            double low = bass.Run(sample), mid = midHigh.Run(midLow.Run(sample)), high = treble.Run(sample);
-            energy[0] += low * low;
-            energy[1] += mid * mid;
-            energy[2] += high * high;
+            for (int i = 0; i < filters.Length; i++)
+            {
+                double y = sample;
+                foreach (Biquad filter in filters[i]) y = filter.Run(y);
+                power[i] += pull * (y * y - power[i]);
+                energy[i] += power[i];
+            }
+            double low = sample;
+            foreach (Biquad filter in kickFilters) low = filter.Run(low);
+            kickPower += kickQuick * (low * low - kickPower);
+            kickEnergy += kickPower;
             strength = 0;
             if (++Filled < Block) return false;
+            double kickLevel = Math.Sqrt(kickEnergy / Block);
+            kickUsual = kickUsual <= 0 ? kickLevel : kickUsual + kickPull * (kickLevel - kickUsual);
+            Kick = kickLevel / Math.Max(Floor, kickUsual);
+            kickEnergy = 0;
+            double total = 0;
+            for (int i = 0; i < filters.Length; i++) total += energy[i];
+            double level = Math.Sqrt(total / Block);
+            loud = loud <= 0 ? level : loud * Fade + (1 - Fade) * level;
+            double floor = Math.Max(Floor, Quiet * loud);
             double rise = 0;
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < filters.Length; i++)
             {
-                double level = Math.Log(Floor + Math.Sqrt(energy[i] / Block));
-                if (primed) rise += Math.Max(0, level - before[i]);
-                before[i] = level;
+                double now = Math.Log(floor + Math.Sqrt(energy[i] / Block));
+                if (primed) rise += Bands[i][2] * Math.Max(0, now - before[i]);
+                before[i] = now;
                 energy[i] = 0;
             }
             strength = (float)rise;
@@ -2778,9 +2841,8 @@ namespace CapriDesktop
                             }
                     }
                     long duration = frames * 10000000L / Rate;
-                    // Counting samples keeps blocks exactly end to end, but a sound card's clock isn't the PC's: over a long game
-                    // the count walks away from the real time. So the clock is set again from the packet's own time once it is
-                    // 20 ms out, or 3 ms out while the packet is silent, where the join can't be heard.
+                    // A sound card's clock drifts from the PC's, so the sample count is set again from the packet's own
+                    // time once 20 ms out, or 3 ms out during silence, where the join can't be heard.
                     if (timed && time > 0 && (flags & 4) == 0 && position >= nextPosition)
                     {
                         long off = Math.Abs(firstAt + (position - firstPosition) * 10000000 / Rate - time);
@@ -2975,6 +3037,14 @@ namespace CapriDesktop
         private BeatLock beat = new BeatLock();
         private volatile int playing;
         private int started;
+        // The kick drum, as visualisers find it: its band against its own recent level, up at once on a kick and down
+        // over KickFall. Her swell follows this for any app but her own playlist, and the tempo lock only carries the
+        // quiet bars between.
+        internal static double KickFrom = 1.3, KickSpan = 1.2, KickFall = 0.15;
+        private double kickLevel, kickAt = -10, kickHeardAt = -10;
+
+        // Told on the beat thread the moment a new kick is read, so her frame can be drawn then rather than on its timer.
+        internal Action Kicked;
 
         internal Groove(Func<double> now) { this.now = now; }
 
@@ -2999,6 +3069,23 @@ namespace CapriDesktop
 
         internal void Pretend(double bpm, double beatAt) { lock (gate) { beat = new BeatLock(); beat.Bpm = bpm; beat.BeatAt = beatAt; } }
 
+        // The kick as the tap last heard it, 0 to 1, fallen away since then; and whether a kick has been heard in the
+        // last two seconds.
+        internal bool Kick(double at, out double level)
+        {
+            lock (gate)
+            {
+                level = at <= kickAt ? kickLevel : kickLevel * Math.Exp(-(at - kickAt) / KickFall);
+                return at - kickHeardAt < 2;
+            }
+        }
+
+        // For her checks: a kick of this level heard at this time, or none with a level of 0 and a time long ago.
+        internal void PretendKick(double level, double at) { lock (gate) { kickLevel = level; kickAt = at; kickHeardAt = level > 0.3 ? at : -10; } }
+
+        // A block's kick against its usual level, as 0 to 1.
+        internal static double KickStrength(double ratio) { return Math.Max(0, Math.Min(1, (ratio - KickFrom) / KickSpan)); }
+
         internal static string Probe()
         {
             string format = null;
@@ -3022,12 +3109,19 @@ namespace CapriDesktop
             float[] ordered = new float[Window];
             int head = 0, count = 0, pushed = 0;
             Onset onset = null;
+            double kick = 0;
+            bool heard = false, rose = false;
+            double fall = Math.Exp(-Step / KickFall);
             Action<float> push = delegate(float level)
             {
                 ring[head] = level;
                 head = (head + 1) % Window;
                 if (count < Window) count++;
                 pushed++;
+                double strength = KickStrength(onset.Kick);
+                if (strength > 0.3 && strength > kick + 0.2) rose = true;
+                kick = strength > kick ? strength : kick * fall;
+                if (strength > 0.3) heard = true;
             };
             try
             {
@@ -3058,6 +3152,14 @@ namespace CapriDesktop
                     double clockAt = at;
                     if (newest > 0) clockAt = newest * 1e-7 + at - Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency - onset.Filled / (double)tap.Rate;
                     if (Math.Abs(clockAt - at) > 0.2) clockAt = at;
+                    if (pushed != before) lock (gate) { kickLevel = kick; kickAt = clockAt; if (heard) kickHeardAt = clockAt; }
+                    heard = false;
+                    if (rose)
+                    {
+                        rose = false;
+                        Action kicked = Kicked;
+                        if (kicked != null) kicked();
+                    }
                     if (pushed != before) heardAt = at;
                     else for (; at - heardAt > 0.05; heardAt += Step) push(0);
                     if (at < estimateAt || count < Tempo.Rate * 6) continue;
@@ -3085,10 +3187,8 @@ namespace CapriDesktop
         private const string Inside = "sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01";
         private const string Encoder = "encoder-epoch-12-avg-2-chunk-16-left-64.int8.onnx", Decoder = "decoder-epoch-12-avg-2-chunk-16-left-64.onnx", Joiner = "joiner-epoch-12-avg-2-chunk-16-left-64.int8.onnx";
         internal static readonly string[] Needed = { Encoder, Decoder, Joiner, "tokens.txt" };
-        // HEY CAPRI in the model's BPE pieces, from its own bpe.model. The boost and threshold were tuned on 918 clips of her
-        // four free voices and Windows' two, clean, under noise and from across the room: about 97% of clean and quiet
-        // "Hey Capri"s and 72% under noise fired, and none of 594 other lines or 10 minutes of talk did. A boost of 3 fired
-        // on "a caprese salad".
+        // HEY CAPRI in the model's BPE pieces. Boost and threshold tuned on 918 clips of six voices, clean, noisy and
+        // far: about 97% of quiet calls fire and none of 594 other lines; a boost of 3 fired on "a caprese salad".
         internal static string[] Phrases = { "▁HE Y ▁CA P RI" };
         internal static float Boost = 2f;
         internal static float Threshold = 0.1f;
@@ -3213,10 +3313,8 @@ namespace CapriDesktop
                 }
                 // What she half-heard before she spoke is dropped, so the end of her line can't finish a keyword.
                 if (heldWas) { heldWas = false; Fresh(); }
-                // A quiet room isn't decoded: only sound over three times the room's own hiss is, from half a second before
-                // it to two seconds after, so a quiet day costs almost nothing. The room's level sinks quickly, rises with the
-                // hiss over seconds, and only creeps up under talking, so a soft "Hey Capri" after loud talk still gets through.
-                // A muted or gated mic's dead silence says nothing about the room, so it's left out.
+                // Only sound over three times the room's hiss is decoded, so a quiet day costs almost nothing. The room
+                // level sinks fast and creeps up under talk, so a soft "Hey Capri" after loud talk gets through.
                 double level = Speaker.Loudness(chunk, 0, chunk.Length);
                 if (level < Hiss / 50) { }
                 else if (room < 0) room = level;
@@ -3328,10 +3426,8 @@ namespace CapriDesktop
             string tuning = " :" + Boost.ToString("0.###", CultureInfo.InvariantCulture) + " #" + Threshold.ToString("0.###", CultureInfo.InvariantCulture) + " @HEY_CAPRI";
             byte[] keywords = Encoding.UTF8.GetBytes(string.Join("\n", Array.ConvertAll(Phrases, delegate(string phrase) { return phrase + tuning; })));
             string folder = Folder;
-            // SherpaOnnxKeywordSpotterConfig from sherpa-onnx 1.13.8 on 64-bit Windows, written by offset: feat_config at 0,
-            // model_config at 8 (transducer, paraformer, zipformer2_ctc, tokens at 56, num_threads at 64, provider at 72, ...,
-            // ending at 144), then max_active_paths, num_trailing_blanks, keywords_score, keywords_threshold, keywords_file,
-            // keywords_buf at 168 and keywords_buf_size at 176. Zero leaves the library's default.
+            // SherpaOnnxKeywordSpotterConfig from sherpa-onnx 1.13.8 on 64-bit Windows, by offset: model_config at 8,
+            // keywords_buf at 168, keywords_buf_size at 176. Zero leaves the library's default.
             IntPtr config = Marshal.AllocHGlobal(ConfigBytes);
             try
             {

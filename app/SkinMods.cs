@@ -302,9 +302,9 @@ namespace CapriDesktop
         }
     }
 
-    // What a whole skin stacked over another changes from her own art, shared by Windows and the Mac and Linux app: pixels are
-    // ARGB ints, unpremultiplied. Clear, unless the skin really changed it: tiny specks of difference are dropped, soft edges
-    // next to a change are kept, and holes enclosed by a change are filled, so cat ears come out whole and her outline doesn't.
+    // What a whole skin stacked over another changes from her art, shared with Mac and Linux: ARGB pixels,
+    // unpremultiplied. Tiny specks dropped, soft edges beside a change kept, enclosed holes filled, so cat ears come
+    // out whole and her outline doesn't.
     internal static class SkinLayers
     {
         internal static int[] Changed(int[] top, int[] under, int width, int height)
@@ -524,9 +524,9 @@ namespace CapriDesktop
             return pixels;
         }
 
-        // The pixels of skin that clearly differ from own: specks under 24 pixels dropped, a soft edge two pixels out where it
-        // still differs a little, and enclosed holes filled only where they changed too, so ears drawn over her hair keep the
-        // outfit's hair inside them but a hat close to her hair colour stays solid. The same rules as the Skin Kit's.
+        // Pixels of skin clearly differing from own: specks under 24 pixels dropped, a two-pixel soft edge kept,
+        // enclosed holes filled only where they changed too, so ears over her hair keep the hair inside but a hat near
+        // her hair colour stays solid. As the Skin Kit's.
         private static Bitmap Changed(Bitmap skin, Bitmap own)
         {
             int width = skin.Width, height = skin.Height, count = width * height;
@@ -1188,7 +1188,7 @@ namespace CapriDesktop
                 preferences.Motion = true;
                 preferences.PowerSaver = 2;
                 // Earlier sections run on real time, so notes still in the air, a dizzy spell, a sulk or a chat still open (her TYPE box
-                // up, talk Online on GitHub's runner, 8 Nov) can outlast them. She starts from standing still, with nothing to say.
+                // up, talk Online on a slow runner) can outlast them. She starts from standing still, with nothing to say.
                 notes.Clear();
                 dizzyFrom = dizzyUntil = -1;
                 sulkSince = -1;

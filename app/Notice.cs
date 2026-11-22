@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Media;
@@ -126,9 +127,28 @@ namespace CapriDesktop
         }
     }
 
-    // A yes-or-no question in the same look as her notice, for the one Windows asked with a warning: its title in hot red
-    // behind a red warning mark, the message under it, then Yes and No. No is picked, so Enter, Esc, the close key and
-    // Alt+F4 all answer No, and Y or N answer like Windows' own box. A message taller than the screen scrolls inside it.
+    // Markup a message to her question may carry, at a line's start: [[H]] [[M]] [[L]] a row in that group, [[h]] [[m]]
+    // [[l]] its heading, [[c]] the counts line, [[f+]] [[f-]] a fold's handle open or shut, [[e]] the fold's end.
+    internal static partial class Marked
+    {
+        // Each group's colour: her Night City look has its own red, amber and cyan. Black, White and Grey are grey all
+        // through, so there severity takes its own red, amber and teal, chosen to read on that look's ground.
+        internal static Color Severity(char group)
+        {
+            Color high = Neon.Hot, medium = Neon.Amber, low = Neon.Cyan;
+            if (high.GetSaturation() <= 0.3f || medium.GetSaturation() <= 0.3f || low.GetSaturation() <= 0.3f)
+            {
+                float light = Neon.Ground.GetBrightness();
+                if (light > 0.7f) { high = Color.FromArgb(0xC6, 0x28, 0x28); medium = Color.FromArgb(0xA8, 0x5A, 0x00); low = Color.FromArgb(0x00, 0x7C, 0x89); }
+                else if (light > 0.2f) { high = Color.FromArgb(0xFF, 0x9E, 0x9E); medium = Color.FromArgb(0xFF, 0xE0, 0x82); low = Color.FromArgb(0x84, 0xFF, 0xFF); }
+                else { high = Color.FromArgb(0xFF, 0x5C, 0x5C); medium = Color.FromArgb(0xFF, 0xD5, 0x4F); low = Color.FromArgb(0x4D, 0xD0, 0xE1); }
+            }
+            return group == 'H' ? high : group == 'M' ? medium : low;
+        }
+    }
+
+    // A yes-or-no question in her notice's look: hot red title behind a warning mark, the message, Yes and No. No is
+    // picked, so Enter, Esc, close and Alt+F4 answer No, and Y or N work as in Windows' box. A tall message scrolls.
     internal sealed class Question : Form, LookWindow
     {
         private const int Wide = 440;
@@ -162,6 +182,7 @@ namespace CapriDesktop
             {
                 if (answer == DialogResult.None)
                 {
+                    message = Marked.Plain(message);
                     if (owner == null) answer = MessageBox.Show(message, caption, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
                     else answer = MessageBox.Show(owner, message, caption, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
                 }
@@ -213,7 +234,7 @@ namespace CapriDesktop
             AcceptButton = no;
             CancelButton = no;
             ActiveControl = no;
-            Lay(Screen.PrimaryScreen.WorkingArea, Rectangle.Empty);
+            Lay(Displays.Home.WorkingArea, Rectangle.Empty);
         }
 
         private Plate Key(string name, Color accent, DialogResult result)
@@ -224,6 +245,8 @@ namespace CapriDesktop
             key.Accent = accent;
             key.Font = keys;
             key.DialogResult = result;
+            // Windows can hide focus marks again as the box activates, after its own mouse use, so the keys keep theirs.
+            key.Cued = true;
             key.TabIndex = Controls.Count;
             Controls.Add(key);
             return key;
@@ -284,10 +307,43 @@ namespace CapriDesktop
         internal Button YesKey { get { return yes; } }
         internal Button NoKey { get { return no; } }
         internal Button CloseKey { get { return close; } }
-        internal string Said { get { return title.Text + "\n" + body.Text; } }
         internal bool Scrolls { get { return body.Content > body.Height; } }
         internal int ScrolledTo { get { return body.Offset; } }
         internal int Unseen { get { return Math.Max(0, body.Content - body.Height); } }
+        internal string Said { get { return title.Text + "\n" + body.Text; } }
+        internal bool FoldOpen { get { return body.Open; } }
+        internal bool Folds { get { return body.Folds; } }
+
+        // The fold opened or shut: laid out again where it stands, never past her working area.
+        internal void Refold()
+        {
+            if (!body.Folds) return;
+            body.Open = !body.Open;
+            Point at = Location;
+            Rectangle area = Screen.FromControl(this).WorkingArea;
+            Lay(area, Rectangle.Empty);
+            Location = new Point(Math.Max(area.Left, Math.Min(area.Right - Width, at.X)), Math.Max(area.Top, Math.Min(area.Bottom - Height, at.Y)));
+        }
+
+        // The handle on screen, for the click and the hand cursor.
+        private bool OnHandle(Point client)
+        {
+            if (!body.Folds || body.Handle.IsEmpty) return false;
+            Rectangle handle = new Rectangle(body.Left + body.Handle.Left, body.Top + body.Handle.Top - body.Offset, body.Handle.Width, body.Handle.Height);
+            return handle.Contains(client) && body.Bounds.Contains(client);
+        }
+
+        protected override void OnMouseUp(MouseEventArgs e)
+        {
+            base.OnMouseUp(e);
+            if (e.Button == MouseButtons.Left && OnHandle(e.Location)) Refold();
+        }
+
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            base.OnMouseMove(e);
+            Cursor = OnHandle(e.Location) ? Cursors.Hand : Cursors.Default;
+        }
 
         // Nothing clipped: the title fits beside the close key, every line of the message fits its width and is in the box
         // or reachable by scrolling, and both keys sit whole under it, side by side.
@@ -336,6 +392,7 @@ namespace CapriDesktop
             if ((ModifierKeys & Keys.Control) != 0) return false;
             if (key == 'y' || key == 'Y') { yes.PerformClick(); return true; }
             if (key == 'n' || key == 'N') { no.PerformClick(); return true; }
+            if ((key == 'd' || key == 'D') && body.Folds) { Refold(); return true; }
             return false;
         }
 
@@ -370,17 +427,21 @@ namespace CapriDesktop
         {
             if (e.Control && e.KeyCode == Keys.C)
             {
-                try { Clipboard.SetText(caption + Environment.NewLine + Environment.NewLine + message); } catch (System.Runtime.InteropServices.ExternalException) { }
+                try { Clipboard.SetText(caption + Environment.NewLine + Environment.NewLine + Marked.Plain(message)); } catch (System.Runtime.InteropServices.ExternalException) { }
                 e.Handled = true;
             }
             base.OnKeyDown(e);
         }
 
-        // It drags from anywhere that isn't a key.
+        // It drags from anywhere that isn't a key or the fold's handle.
         protected override void WndProc(ref Message message)
         {
             base.WndProc(ref message);
-            if (message.Msg == 0x0084 && message.Result == new IntPtr(1)) message.Result = new IntPtr(2);
+            if (message.Msg == 0x0084 && message.Result == new IntPtr(1))
+            {
+                Point at = PointToClient(new Point(unchecked((short)(message.LParam.ToInt64() & 0xFFFF)), unchecked((short)((message.LParam.ToInt64() >> 16) & 0xFFFF))));
+                if (!OnHandle(at)) message.Result = new IntPtr(2);
+            }
         }
 
         protected override void OnPaintBackground(PaintEventArgs e) { Neon.Backdrop(e.Graphics, ClientSize, 210 * s); }
@@ -413,16 +474,20 @@ namespace CapriDesktop
             keys.Dispose();
         }
 
-        // The message, wrapped to its width (a word longer than a line, like the file fingerprint, breaks inside itself), and
-        // scrolled when it's taller than its room, with the Mainframe's own thin thumb on its right. The mouse goes through
-        // it to the box, so the box drags from the words too and the wheel reaches it.
+        // The message wrapped to its width and scrolled with the Mainframe's thin thumb when tall; the mouse passes
+        // through to the box. A Marked message draws its rows in their group's colour and shape, a counts line and one
+        // fold.
         private sealed class Lines : Control
         {
             private const TextFormatFlags Flow = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix;
             private readonly float s;
+            private readonly List<Marked.Line> lines;
             internal int Wrap;
             internal int Content;
             internal int Offset;
+            internal bool Open;
+            // Where the fold's handle sits, in the message's own coordinates (before scrolling); empty when there is none.
+            internal Rectangle Handle;
 
             internal Lines(string message, Font font, float scale)
             {
@@ -430,15 +495,57 @@ namespace CapriDesktop
                 SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
                 SetStyle(ControlStyles.Selectable, false);
                 TabStop = false;
-                Text = message;
+                lines = Marked.Parse(message);
+                foreach (Marked.Line line in lines) if (line.Kind == 'f') Open = line.Open;
+                Text = Marked.Plain(message);
                 Font = font;
-                AccessibleName = message;
+                AccessibleName = Text;
                 AccessibleRole = AccessibleRole.StaticText;
             }
 
-            internal int Measure(int width) { return TextRenderer.MeasureText(Text, Font, new Size(Math.Max(1, width), int.MaxValue), Flow).Height; }
+            internal bool Folds { get { return lines.Exists(line => line.Kind == 'f'); } }
 
-            internal int Widest() { return TextRenderer.MeasureText(Text, Font, new Size(Math.Max(1, Wrap), int.MaxValue), Flow).Width; }
+            private int Indent { get { return (int)Math.Round(16 * s); } }
+
+            // The lines that show: everything, less the fold's rows while it is shut.
+            private IEnumerable<Marked.Line> Shown()
+            {
+                bool inside = false;
+                foreach (Marked.Line line in lines)
+                {
+                    if (line.Kind == 'f') { inside = true; yield return line; continue; }
+                    if (line.Kind == 'e') { inside = false; continue; }
+                    if (inside && !Open) continue;
+                    yield return line;
+                }
+            }
+
+            private int Tall(Marked.Line line, int width)
+            {
+                string text = line.Text.Length == 0 ? " " : line.Text;
+                bool row = char.IsUpper(line.Kind);
+                int tall = TextRenderer.MeasureText(text, Font, new Size(Math.Max(1, width - (row || line.Kind == 'f' ? Indent : 0)), int.MaxValue), Flow).Height;
+                return line.Kind == 'c' && line.Counts.Count > 0 ? tall + Font.Height : tall;
+            }
+
+            internal int Measure(int width)
+            {
+                int tall = 0;
+                foreach (Marked.Line line in Shown()) tall += Tall(line, width);
+                return tall;
+            }
+
+            internal int Widest()
+            {
+                int widest = 0;
+                foreach (Marked.Line line in Shown())
+                {
+                    bool row = char.IsUpper(line.Kind) || line.Kind == 'f';
+                    int width = TextRenderer.MeasureText(line.Text.Length == 0 ? " " : line.Text, Font, new Size(Math.Max(1, Wrap - (row ? Indent : 0)), int.MaxValue), Flow).Width + (row ? Indent : 0);
+                    widest = Math.Max(widest, width);
+                }
+                return widest;
+            }
 
             internal void Fill(int wrap, int content)
             {
@@ -457,8 +564,75 @@ namespace CapriDesktop
             protected override void OnPaint(PaintEventArgs e)
             {
                 Neon.Behind(e.Graphics, this, 210 * s);
-                TextRenderer.DrawText(e.Graphics, Text, Font, new Rectangle(0, -Offset, Wrap, Content), Neon.White, Flow);
+                Graphics graphics = e.Graphics;
+                Color plain = Neon.White;
+                int y = -Offset;
+                Handle = Rectangle.Empty;
+                foreach (Marked.Line line in Shown())
+                {
+                    int tall = Tall(line, Wrap);
+                    char kind = line.Kind;
+                    if (char.IsUpper(kind))
+                    {
+                        Shape(graphics, kind, new Rectangle(0, y, Indent, Font.Height));
+                        TextRenderer.DrawText(graphics, line.Text, Font, new Rectangle(Indent, y, Wrap - Indent, tall), plain, Flow);
+                    }
+                    else if (kind == 'h' || kind == 'm' || kind == 'l')
+                        TextRenderer.DrawText(graphics, line.Text, Font, new Rectangle(0, y, Wrap, tall), Marked.Severity(char.ToUpperInvariant(kind)), Flow);
+                    else if (kind == 'f')
+                    {
+                        Handle = new Rectangle(0, y + Offset, Wrap, tall);
+                        Fold(graphics, new Rectangle(0, y, Indent, Font.Height), Open);
+                        TextRenderer.DrawText(graphics, line.Text, Font, new Rectangle(Indent, y, Wrap - Indent, tall), Neon.Cyan, Flow);
+                    }
+                    else if (kind == 'c')
+                    {
+                        int head = tall - (line.Counts.Count > 0 ? Font.Height : 0);
+                        TextRenderer.DrawText(graphics, line.Text, Font, new Rectangle(0, y, Wrap, head), plain, Flow);
+                        int x = 0;
+                        for (int i = 0; i < line.Counts.Count; i++)
+                        {
+                            KeyValuePair<char, string> count = line.Counts[i];
+                            Shape(graphics, count.Key, new Rectangle(x, y + head, Indent, Font.Height));
+                            x += Indent;
+                            string said = count.Value + (i < line.Counts.Count - 1 ? "," : "");
+                            TextRenderer.DrawText(graphics, said, Font, new Point(x, y + head), plain, TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
+                            x += TextRenderer.MeasureText(graphics, said + " ", Font, Size.Empty, TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width;
+                        }
+                    }
+                    else TextRenderer.DrawText(graphics, line.Text, Font, new Rectangle(0, y, Wrap, tall), plain, Flow);
+                    y += tall;
+                }
                 if (Content > Height) WorkPaint.Rail(e.Graphics, new RectangleF(Width - 2 * s, 0, 2 * s, Height), Height, Content, Offset);
+            }
+
+            // A group's mark beside its row: a square for high, a diamond for medium, a circle for low, so the groups read
+            // apart without colour too.
+            private void Shape(Graphics graphics, char group, Rectangle room)
+            {
+                int dot = Math.Max(5, (int)Math.Round(7 * s));
+                int left = room.Left + (int)Math.Round(2 * s), top = room.Top + (room.Height - dot) / 2;
+                System.Drawing.Drawing2D.SmoothingMode was = graphics.SmoothingMode;
+                graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                using (SolidBrush paint = new SolidBrush(Marked.Severity(group)))
+                {
+                    if (group == 'H') graphics.FillRectangle(paint, left, top, dot, dot);
+                    else if (group == 'M') graphics.FillPolygon(paint, new[] { new Point(left + dot / 2, top - 1), new Point(left + dot + 1, top + dot / 2), new Point(left + dot / 2, top + dot + 1), new Point(left - 1, top + dot / 2) });
+                    else graphics.FillEllipse(paint, left, top, dot, dot);
+                }
+                graphics.SmoothingMode = was;
+            }
+
+            // The handle's mark: a triangle pointing right while shut, down while open, in cyan.
+            private void Fold(Graphics graphics, Rectangle room, bool open)
+            {
+                float x = room.Left + 3 * s, y = room.Top + room.Height / 2f, half = 4 * s;
+                PointF[] mark = open ? new[] { new PointF(x, y - half / 2), new PointF(x + 2 * half, y - half / 2), new PointF(x + half, y + half) }
+                    : new[] { new PointF(x + half / 2, y - half), new PointF(x + half / 2, y + half), new PointF(x + 2 * half, y) };
+                System.Drawing.Drawing2D.SmoothingMode was = graphics.SmoothingMode;
+                graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                using (SolidBrush paint = new SolidBrush(Neon.Cyan)) graphics.FillPolygon(paint, mark);
+                graphics.SmoothingMode = was;
             }
 
             protected override void WndProc(ref Message message)

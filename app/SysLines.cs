@@ -7,15 +7,8 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
-    // The little grey labels she shows after "> sys: ": "pets you", "settings", "brain online" and the rest. They were
-    // twelve hardcoded strings, so the one part of her voice nobody could change was the part that narrates her.
-    //
-    // Every label already passes through one place on its way to the bubble, so this is a lookup in front of that with
-    // the author's text as the fallback. A file that is missing, empty, mistyped or half-deleted degrades to stock
-    // rather than to blank, which matters because a blank label would read as a bug in her rather than in the file.
-    //
-    // Same shape as twitch.md: read when it changes, UTF-8 with no byte order mark, and written once with every line
-    // already in it so there is nothing to guess at.
+    // The little grey labels after "> sys: ", from a file with her text as the fallback, so a missing or broken file
+    // falls back to stock, never blank. Same shape as twitch.md: re-read on change, UTF-8 with no BOM.
     internal static class SysLines
     {
         internal const string FileName = "sys.md";
@@ -24,10 +17,8 @@ namespace CapriDesktop
         // What the key used to be called. Still read, so a file written before this keeps its answer rather
         // than being treated as unanswered and asking again.
 
-        // Programs she will not look at with Watch my screen on. Comma separated, matched against the program's
-        // own name and its window title, so "brave" covers brave.exe and "qview" covers the image viewer whatever
-        // it calls its window. Her screen watching is the one feature that reads whatever happens to be in front,
-        // so the list of what it must not read belongs with her other settings and not buried in a menu.
+        // Programs she won't look at with Watch my screen on, comma separated, matched against the program's name and
+        // window title.
         internal const string ExcludedKey = "never watch";
 
         // Her calendar, by opening the one they use. Nothing signs in anywhere: she opens the app and reads what
@@ -37,9 +28,12 @@ namespace CapriDesktop
 
         // Her quiet: how long the quiet asked for in words lasts, and what makes her quiet on her own.
         internal const string QuietHeading = "## Her quiet";
-        internal const string QuietTimeKey = "quiet time";
         internal const string QuietCallsKey = "quiet on calls";
         internal const string QuietVideoKey = "quiet on videos";
+        // Each quiet lasts a random time between these, in hours; max 0 is until they turn it off. They replaced quiet time.
+        internal const string QuietMinKey = "quiet min hours";
+        internal const string QuietMaxKey = "quiet max hours";
+        internal const int QuietMostHours = 9;
         internal const string CallAppsKey = "call apps";
         // Titles a window carries only while a call is on, not while the app merely sits open: Zoom's meeting
         // window, a Google Meet tab, a Slack huddle, a Webex meeting, Teams' meeting and call windows.
@@ -51,32 +45,100 @@ namespace CapriDesktop
             {
                 QuietHeading,
                 "",
-                ">! quiet time:      minutes she keeps to herself when you ask for quiet in words. Talking to her ends it.",
-                ">! quiet on calls:  1 and she goes quiet by herself while a call app below has a window open.",
-                ">! quiet on videos: 1 and she goes quiet by herself while a video plays full screen.",
-                ">! call apps:       comma separated, matched on any window's title or program. These are titles a",
-                ">!                  window has only during a call, so an app sitting open does not count.",
-                ">! Asked for quiet during a game, she stays quiet in that game until you tell her she can talk.",
+                ">! quiet min hours: the shortest her quiet lasts, 1 to 8. Each quiet lasts a random time up to the max.",
+                ">! quiet max hours: the longest, from min + 1 to 9, or 0 until you turn it off. A time you ask for wins.",
+                ">! quiet on calls:  1 is quiet during a call in an app below.",
+                ">! quiet on videos: 1 is quiet during a full screen video.",
+                ">! call apps:       window titles seen only during a call, comma separated.",
+                ">! Asked for quiet in a game, she stays quiet in it until told otherwise.",
                 "",
-                Line(QuietTimeKey, "120"),
+                Line(QuietMinKey, "1"),
+                Line(QuietMaxKey, "3"),
                 Line(QuietCallsKey, "1"),
                 Line(QuietVideoKey, "1"),
                 Line(CallAppsKey, CallAppsStock)
             };
         }
 
-        internal static double QuietMinutes
+        internal static int QuietMinHours { get { return Math.Max(1, Math.Min(QuietMostHours - 1, WholeHours(Of(QuietMinKey), 1))); } }
+
+        // 0 is until they turn it off; otherwise never under min + 1.
+        internal static int QuietMaxHours
         {
             get
             {
-                double minutes;
-                if (!double.TryParse((Of(QuietTimeKey) ?? "").Trim(), System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out minutes) || minutes <= 0) minutes = 120;
-                return Math.Max(5, Math.Min(1440, minutes));
+                int hours = WholeHours(Of(QuietMaxKey), 3);
+                return hours <= 0 ? 0 : Math.Max(QuietMinHours + 1, Math.Min(QuietMostHours, hours));
             }
         }
 
+        private static int WholeHours(string said, int stock)
+        {
+            double hours;
+            if (!double.TryParse((said ?? "").Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out hours)) return stock;
+            return (int)Math.Round(hours);
+        }
+
         internal static bool QuietOnCalls { get { return Yes(Of(QuietCallsKey), true); } }
+
+        // Load untested mods was a line here before it was the switch in Mainframe > Mods, which keeps it in her settings. The
+        // names stay so a sys.md from before can be read once and tidied.
+        internal const string UntestedKey = "load untested mods";
+        internal const string UntestedHeading = "## Untested mods";
+
+        // A sys.md from before the switch: its answer handed back and the line taken out, with the section's heading and notes
+        // when nothing of theirs is under it. Every other line stays. Null when it had none.
+        internal static bool? TakeUntested(string path)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
+                string text = CapriDesktop.Notes.ReadAll(path);
+                string newline = text.Contains("\r\n") ? "\r\n" : "\n";
+                List<string> rows = new List<string>(text.Replace("\r\n", "\n").Split('\n'));
+                bool? said = null;
+                for (int at = 0; at < rows.Count; at++)
+                {
+                    Match key = Regex.Match(rows[at].Trim(), @"^" + Regex.Escape(UntestedKey) + @"[ \t]*:[ \t]*(.*)$", RegexOptions.IgnoreCase);
+                    if (!key.Success) continue;
+                    if (said == null) said = Yes(key.Groups[1].Value.Trim(), false);
+                    rows.RemoveAt(at);
+                    at--;
+                }
+                if (said == null) return null;
+                int head = rows.FindIndex(row => row.Trim() == UntestedHeading);
+                if (head >= 0)
+                {
+                    int end = head + 1;
+                    bool theirs = false;
+                    for (; end < rows.Count && !rows[end].TrimStart().StartsWith("#", StringComparison.Ordinal); end++)
+                        if (rows[end].Trim().Length > 0 && !rows[end].TrimStart().StartsWith(">", StringComparison.Ordinal)) theirs = true;
+                    if (!theirs) rows.RemoveRange(head, end - head);
+                }
+                Notes.Put(path, string.Join(newline, rows.ToArray()));
+                lock (writing) { read = DateTime.MinValue; wasLong = -1; }
+                return said;
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return null; }
+        }
+
+        // Every sys.md in her settings folder, the one in use first: the other side's, and a loose one from before the split.
+        internal static string[] Copies()
+        {
+            List<string> found = new List<string>();
+            try
+            {
+                if (string.IsNullOrEmpty(Kept)) return found.ToArray();
+                string here = Path.GetFullPath(Kept);
+                found.Add(here);
+                string side = Path.GetDirectoryName(here), settings = side == null ? null : Path.GetDirectoryName(side);
+                if (settings == null || !string.Equals(Path.GetFileName(settings), Personalities.SettingsName, StringComparison.OrdinalIgnoreCase)) return found.ToArray();
+                foreach (string other in new[] { Path.Combine(settings, Personalities.PlainName, FileName), Path.Combine(settings, Personalities.SenpaiName, FileName), Path.Combine(settings, FileName) })
+                    if (!string.Equals(Path.GetFullPath(other), here, StringComparison.OrdinalIgnoreCase)) found.Add(other);
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            return found.ToArray();
+        }
 
         internal static bool QuietOnVideos { get { return Yes(Of(QuietVideoKey), true); } }
 
@@ -110,10 +172,8 @@ namespace CapriDesktop
         private static DateTime read = DateTime.MinValue;
         private static long wasLong = -1;
 
-        // The author's labels, in the order Said.Labels registers them. The left side is the name used in code and must
-        // not change; the right side is only what is shown.
-        // Labels that only mean anything with the switch on. They are not written into a file on the other
-        // side of it, and one already there is taken out, the same as the moods.
+        // Her labels in Said.Labels order: the left name is code's and never changes, the right is shown. Labels that
+        // only mean anything with the switch on aren't written on the other side, and are taken out if there.
         internal static bool SenpaiLabel(string named)
         {
             return !string.IsNullOrEmpty(named) && (named == Extended.Get("click.heard") || Legacy.WasLabel(named));
@@ -140,9 +200,8 @@ namespace CapriDesktop
             { "error", "error" }
         };
 
-        // Lines she actually says, as opposed to the labels above. Several can be offered at once, split on "|", and she
-        // takes one at random. Her hellos were picked by the hour out of three fixed strings, so the first thing she ever
-        // said was the one thing nobody could rewrite.
+        // Lines she actually says, as opposed to the labels above; several can be offered split on "|", and she takes
+        // one at random, so even her hellos can be rewritten.
         internal static readonly string[,] Spoken =
         {
             { "hello morning", "Good morning, choom." },
@@ -194,18 +253,21 @@ namespace CapriDesktop
                 if (!File.Exists(Kept)) { Write(false); }
                 string had = CapriDesktop.Notes.ReadAll(Kept);
                 // Yes unlocks it. It ships No, so a fresh install has answered nothing.
-                string want = SenpaiKey + ": " + (on ? "Yes" : "No");
-                Match found = Regex.Match(had, @"(?mi)^[ \t]*" + Regex.Escape(SenpaiKey) + @"[ \t]*:[ \t]*.*$");
+                string want = Line(SenpaiKey, on ? "Yes" : "No");
+                // To the end of the line and no further: ".*" took the carriage return with it.
+                Match found = Regex.Match(had, @"(?mi)^[ \t]*" + Regex.Escape(SenpaiKey) + @"[ \t]*:[^\r\n]*");
                 if (found.Success) had = had.Substring(0, found.Index) + want + had.Substring(found.Index + found.Length);
                 else
                 {
                     if (had.Length > 0 && !had.EndsWith("\n")) had += Environment.NewLine;
-                    // The terms, then the question.
-                    had += Environment.NewLine + SenpaiHeading + Environment.NewLine + Environment.NewLine
-                        + string.Join(Environment.NewLine, DealLines(), 1, DealLines().Length - 1) + Environment.NewLine + Environment.NewLine + want + Environment.NewLine;
+                    // The terms, unless the file has them already (a second copy was added under the first), then the
+                    // question.
+                    bool terms = Regex.IsMatch(had, @"(?mi)^[ \t]*" + Regex.Escape(SenpaiHeading) + @"[ \t]*\r?$");
+                    had += Environment.NewLine + (terms ? "" : string.Join(Environment.NewLine, DealLines()) + Environment.NewLine + Environment.NewLine) + want + Environment.NewLine;
                 }
                 Notes.Put(Kept, had);
                 lock (writing) { read = DateTime.MinValue; wasLong = -1; }
+                SenpaiLast();
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
@@ -284,7 +346,7 @@ namespace CapriDesktop
             return parts[(luck ?? new Random()).Next(parts.Count)];
         }
 
-        // The author's own text for a name, so a caller can fall back without holding its own copy.
+        // The stock text for a name (Lachy), so a caller can fall back without holding its own copy.
         internal static string Stocked(string name)
         {
             for (int line = 0; line < Spoken.GetLength(0); line++)
@@ -293,13 +355,6 @@ namespace CapriDesktop
                 if (string.Equals(Stock[line, 0], name, StringComparison.OrdinalIgnoreCase)) return Stock[line, 1];
             return null;
         }
-
-        // The four colours of her bubble, theirs to set. Named here rather than in the window that paints them,
-        // because the names are what people type into sys.md and a setting's name is not a painting detail.
-        internal const string InkKey = "bubble text";
-        internal const string TitleKey = "bubble title";
-        internal const string EdgeKey = "bubble outline";
-        internal const string BackKey = "bubble background";
 
         // Her screensaver, named here with the rest of what people type into this file.
         internal const string SaverKey = "screensaver";
@@ -327,10 +382,8 @@ namespace CapriDesktop
             }
         }
 
-        // The .wav they pointed at, found whether they wrote a whole path or just a name beside her files.
-        // Null when there is none, which is how it ships: nothing like this comes with her.
-        // A screensaver sound that sys.md points at outside her folder, copied into sounds and the line rewritten to the copy,
-        // so the file it names is one a backup of her folder carries.
+        // The .wav they named, found by whole path or name beside her files; null when none. A sound sys.md names
+        // outside her folder is copied into sounds and the line pointed at the copy, so backups carry it.
         internal static void KeepSaverSound()
         {
             try
@@ -343,6 +396,21 @@ namespace CapriDesktop
                 string text = CapriDesktop.Notes.ReadAll(Kept);
                 string made = Regex.Replace(text, @"(?mi)^([ \t]*" + Regex.Escape(SaverSoundKey) + @"[ \t]*:[ \t]*)[^\r\n]*", "${1}" + relative.Replace("$", "$$"));
                 if (made != text) Notes.Put(Kept, made);
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+        }
+
+        // One of her settings rewritten in place, as the Mainframe sets it. A line missing from an older file is left alone.
+        internal static void SetValue(string name, string value)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
+                string text = CapriDesktop.Notes.ReadAll(Kept);
+                string made = Regex.Replace(text, @"(?mi)^([ \t]*" + Regex.Escape(name) + @"[ \t]*:[ \t]*)[^\r\n]*", "${1}" + (value ?? "").Replace("$", "$$"));
+                if (made == text) return;
+                Notes.Put(Kept, made);
+                lock (writing) { read = DateTime.MinValue; wasLong = -1; }
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
@@ -407,26 +475,18 @@ namespace CapriDesktop
             {
                 SaverHeading,
                 "",
-                ">! What fills the screen while the PC is left alone. 1 is on, 0 is off. Spacebar ends it, or",
-                ">! Escape, and it never covers a game, a full screen app or a stream. Her right-click menu shows",
-                ">! any of them straight away without changing this.",
-                ">",
-                ">! style:       terminals, little windows writing their own output. hexes, flashing hexagons.",
-                ">!              code, lines written down columns. rain, characters falling.",
-                ">! colour:      a name like blue or a hex code, the same as her bubble's. Blank is hers, and red",
-                ">!              for hexes. background: what is behind it. Blank is near black.",
-                ">! size:        small, normal, large, or a number where 1 is normal and 2 is twice.",
-                ">! speed:       slow, normal, fast, or a number the same way.",
-                ">! see through: 0 to 100, how much of the desktop shows through it. 0 is solid.",
-                ">! screens:     all, or main for only the screen she is on.",
-                ">! flashing:    on, gentle or off. Gentle slows it right down and off holds everything steady.",
-                ">! sound:       a .wav to loop while it is shown from her menu or sounded as her red alert. Blank",
-                ">!              is silent.",
-                ">!              It never plays when the screensaver comes up by itself, since that is an alarm at an",
-">!              empty chair. Nothing of the sort ships with her: this is for a file of your own.",
-                ">! volume:      0 to 100, how loud that is against her sound volume. A looping alarm wants far",
-                ">!              less than her chimes do, so it starts at 20.",
-                ">! after:       minutes, and it takes a fraction, so 0.2 is twelve seconds.",
+                ">! Shows while the PC is idle. 1 is on, 0 is off. Space or Esc ends it. Never over games or full screen.",
+                ">! style:       terminals, hexes, code or rain.",
+                ">! colour:      a name or hex code. Blank is hers.",
+                ">! background:  blank is near black.",
+                ">! size:        small, normal, large, or a number. 1 is normal.",
+                ">! speed:       slow, normal, fast, or a number. 1 is normal.",
+                ">! see through: 0 to 100. 0 is solid.",
+                ">! screens:     all, or main.",
+                ">! flashing:    on, gentle or off.",
+                ">! sound:       your own .wav, for her menu and red alert only. Blank is silent.",
+                ">! volume:      0 to 100.",
+                ">! after:       idle minutes. 0.2 is twelve seconds.",
                 ""
             };
         }
@@ -455,44 +515,8 @@ namespace CapriDesktop
             }
         }
 
-        // The section as it is written into the file, used both by the file she ships and by the top up that puts
-        // it into a sys.md written before it existed. One copy, because two drift and the quiet one is the one
-        // nobody reads.
-        // Her bubble's colours lived here and in layout.md, and the pair here won, so the same four colours
-        // sat in two files with one set doing nothing. They are layout.md's now. Whatever is set here is
-        // carried across first, so nobody's bubble changes colour under them, and then the section goes.
-        internal const string ColourHeading = "## Her bubble's colours";
-
-        private static readonly string[,] WentToLayout =
-        {
-            { InkKey, "bubble text" },
-            { TitleKey, "bubble title" },
-            { EdgeKey, "bubble outline" },
-            { BackKey, "bubble background" },
-        };
-
-        private static void Painted()
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-                string had = CapriDesktop.Notes.ReadAll(Kept);
-                if (had.IndexOf(ColourHeading, StringComparison.OrdinalIgnoreCase) < 0) return;
-                for (int one = 0; one < WentToLayout.GetLength(0); one++)
-                {
-                    string said = Of(WentToLayout[one, 0]);
-                    if (!string.IsNullOrEmpty(said)) Layout.Carry(WentToLayout[one, 1], said);
-                }
-                Unheaded(ColourHeading);
-            }
-            catch (Exception bad) { Notes.Failed("carrying her bubble colours into layout.md", bad); }
-        }
-
-        // A colour they wrote, or hers when the line is blank or not a colour at all. Names like "blue" and hex
-        // like #1affd5 both work, with or without the hash, and three digits as well as six. Eight digits set
-        // how solid it is, since her bubble is drawn over whatever is behind her.
-        //
-        // A wrong one is ignored rather than refused: a typo in a colour must not take her bubble away.
+        // A colour they wrote, or hers: a name or hex with or without #, three, six or eight digits (eight sets alpha).
+        // A wrong one is ignored, so a typo never takes her bubble away.
         internal static Color Colour(string name, Color hers)
         {
             string said = Of(name);
@@ -532,8 +556,58 @@ namespace CapriDesktop
             catch (Exception) { return null; }
         }
 
-        // Their text for a label, or null when they have not set one. Null rather than the stock string, so the caller
-        // can still send an unchanged label through her translator the way it always did.
+        // Their text for a label, or null so an unchanged label still goes through her translator. Every "|"
+        // alternative under "What she says herself", so her translator knows them ahead; their wording is never
+        // rewritten.
+        internal static List<string> SpokenLines()
+        {
+            List<string> found = new List<string>();
+            for (int line = 0; line < Spoken.GetLength(0); line++)
+                foreach (string said in new[] { Of(Spoken[line, 0]), Spoken[line, 1] })
+                    if (!string.IsNullOrEmpty(said))
+                        foreach (string piece in said.Split('|'))
+                            if (piece.Trim().Length > 0 && !found.Contains(piece.Trim())) found.Add(piece.Trim());
+            return found;
+        }
+
+        // Her prompt lines in another language: the ">!=" line above "sys prompt" and "you prompt" holds "> sys:" or
+        // "> you:" in its words, and must never be read as a setting, a switched-off line or a note, while the setting under
+        // it keeps its value with the trailing space.
+        internal static void PromptCheck(List<string> checks, string folder)
+        {
+            string was = Kept;
+            string path = Path.Combine(folder, "sys-prompts-" + Guid.NewGuid().ToString("N").Substring(0, 6) + ".md");
+            try
+            {
+                Kept = path;
+                Write(true);
+                Dictionary<string, string> lines = new Dictionary<string, string>
+                {
+                    { Line("sys prompt", SysMark).Trim(), "Ustawienia: sys prompt: > sys: (przed jej wierszami)" },
+                    { Line("you prompt", YouMark).Trim(), "Ustawienia: you prompt: > you: (przed twoimi)" },
+                };
+                CapriDesktop.Notes.Explained(path, lines);
+                lock (writing) { read = DateTime.MinValue; wasLong = -1; }
+                CapriDesktop.Notes.Remark(path);
+                CapriDesktop.Notes.Refresh(path, Text);
+                TopUp();
+                string after = CapriDesktop.Notes.ReadAll(path);
+                lock (writing) { read = DateTime.MinValue; wasLong = -1; }
+                bool explained = after.Contains(CapriDesktop.Notes.SettingMark + " Ustawienia: sys prompt: > sys:") && after.Contains(CapriDesktop.Notes.SettingMark + " Ustawienia: you prompt: > you:");
+                bool values = Of("sys prompt") == SysMark.Trim() || Regex.IsMatch(after, @"(?m)^sys prompt:[ \t]+> sys: ?\r?$");
+                bool kept = Regex.IsMatch(after, @"(?m)^sys prompt:[ \t]+> sys: \r?$") && Regex.IsMatch(after, @"(?m)^you prompt:[ \t]+> you: \r?$");
+                bool unread = !theirs.ContainsKey("Ustawienia") && !Regex.IsMatch(after, @"(?m)^>![ ]Ustawienia");
+                if (!explained || !values || !kept || !unread) throw new Exception("Her prompt lines in another language went wrong: explained " + explained + ", read " + values + ", trailing space kept " + kept + ", the line above read as nothing else " + unread);
+                checks.Add("PASS in another language the line above \"sys prompt\" and \"you prompt\" holds \"> sys:\" and \"> you:\" and is never read as a setting, note or switched-off line, and both settings keep their value with its trailing space");
+            }
+            finally
+            {
+                Kept = was;
+                lock (writing) { read = DateTime.MinValue; wasLong = -1; }
+                try { File.Delete(path); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            }
+        }
+
         internal static string Of(string name)
         {
             if (string.IsNullOrEmpty(name)) return null;
@@ -544,7 +618,7 @@ namespace CapriDesktop
                 if (!theirs.TryGetValue(name, out said)) return null;
                 said = (said ?? "").Trim();
                 if (said.Length == 0) return null;
-                // Unchanged from stock is not an override: it should still be translated like the author's own line.
+                // Unchanged from stock is not an override: it should still be translated like a stock line.
                 return string.Equals(said, name, StringComparison.Ordinal) ? null : said;
             }
         }
@@ -582,17 +656,12 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
-        // The switch is the last thing in the file and has to stay there. It is the one switch in here with a
-        // consequence, so it wants reading deliberately at the bottom rather than coming upon it halfway down
-        // between two label rows.
-        //
-        // It did not stay there on its own: every name added by a later build was appended to the end of the file,
-        // which put it after this block and left the switch stranded in the middle of the file it was meant to end.
+        // The switch is the last thing in the file and kept there, since it is the one setting with a consequence;
+        // later names are added above it.
         internal const string SenpaiHeading = "## End User Licence Agreement";
 
-        // The terms, last but one. Nobody reads the top of a settings file for these, and putting them beside her
-        // calendar only buries the calendar; down here they sit where the file has already ended for most people,
-        // with the senpai switch under them. Plain words, and short enough to be read if anyone does.
+        // The terms, last but one: down here, out of the calendar's way, where the file has ended for most people, with
+        // the senpai switch under them. Plain words, short enough to read.
         internal const string DealHeading = "## End User Licence Agreement";
 
         internal static string[] DealLines()
@@ -623,13 +692,8 @@ namespace CapriDesktop
             };
         }
 
-        // The note that goes with it, so a block that has to be rebuilt still carries one.
-        private static readonly string[] SenpaiNote = { };
-
-        // Every line of the file written out with CRLF stripped, which is the whole reason this is done by line
-        // rather than by one regex over the text: an earlier attempt anchored its heading match with "$", which
-        // cannot match the carriage return the file actually has, so the heading was never found and only the key
-        // moved, leaving the warning stranded halfway up the file away from the switch it warns about.
+        // Each line written with CRLF stripped, so a "$" anchor can match the heading, and the warning stays beside its
+        // switch.
         private static List<string> Rows(string had)
         {
             return new List<string>((had ?? "").Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'));
@@ -674,76 +738,8 @@ namespace CapriDesktop
             return rest;
         }
 
-        // The switch is the last thing in the file and stays there. It is the one switch in here with a consequence,
-        // so it wants reading deliberately at the end rather than being come upon halfway down between two label
-        // rows. It did not stay there on its own: every name a later build added was appended to the end of the
-        // file, which pushed it up into the middle.
-        //
-        // Rebuilt rather than nudged, so a file where the heading and the key have already drifted apart is put
-        // back together instead of being left as it is.
-        // Nothing may be in this file twice.
-        //
-        // Keys are read into a dictionary as the file is walked, so the last one wins, and a top up appends at
-        // the end. An edited line near the top was therefore quietly overridden by the stock copy added below
-        // it, and their edit looked like it had done nothing. The edit is the one above, so the first of each
-        // key is kept and every later copy goes, with any heading left empty going too.
-        private static void Tidy()
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-                string[] rows = CapriDesktop.Notes.ReadAll(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-                Dictionary<string, bool> had = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
-                List<string> kept = new List<string>();
-                bool dropped = false;
-                foreach (string raw in rows)
-                {
-                    string line = raw.Trim();
-                    int mark = line.IndexOf(':');
-                    if (line.Length == 0 || line.StartsWith("#", StringComparison.Ordinal) || line.StartsWith(">", StringComparison.Ordinal) || mark <= 0)
-                    { kept.Add(raw); continue; }
-                    string name = line.Substring(0, mark).Trim();
-                    if (name.Length == 0) { kept.Add(raw); continue; }
-                    if (had.ContainsKey(name)) { dropped = true; continue; }
-                    had[name] = true;
-                    kept.Add(raw);
-                }
-                if (!dropped) return;
-                List<string> made = new List<string>();
-                for (int at = 0; at < kept.Count; at++)
-                {
-                    if (!kept[at].TrimStart().StartsWith("##", StringComparison.Ordinal)) { made.Add(kept[at]); continue; }
-                    bool anything = false;
-                    for (int look = at + 1; look < kept.Count; look++)
-                    {
-                        string next = kept[look].Trim();
-                        if (next.StartsWith("##", StringComparison.Ordinal)) break;
-                        if (next.Length > 0 && !next.StartsWith(">", StringComparison.Ordinal)) { anything = true; break; }
-                    }
-                    if (anything) made.Add(kept[at]);
-                    else while (at + 1 < kept.Count && !kept[at + 1].TrimStart().StartsWith("##", StringComparison.Ordinal)) at++;
-                }
-                while (made.Count > 0 && made[made.Count - 1].Trim().Length == 0) made.RemoveAt(made.Count - 1);
-                Notes.Put(Kept, string.Join(Environment.NewLine, made.ToArray()) + Environment.NewLine);
-                lock (writing) { read = DateTime.MinValue; wasLong = -1; }
-            }
-            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-        }
-
-        // The two headings a name belongs under, with the note that goes with each. A file written before a
-        // heading existed has the names and not the heading, which is the whole fault below.
-        private const string LabelHeading = "The labels after it", SpeechHeading = "What she says herself";
-        private static readonly string[] LabelNote = { ">! Taglines, not speech. They name what just happened." };
-        private static readonly string[] SpeechNote = { ">! Real speech, not labels. Offer several with \"|\" between them and she picks one." };
-
-        // Every name filed under its own heading. A top up appends a missing name as a bare line and Fitted
-        // files it under whatever heading is above the append point, so nine of them sat under the wrong one
-        // and "The labels after it" was in no file at all. Moved exactly as written, so an edited value stays
-        // theirs, and a name already under its own heading is left alone.
-        // A file written before the rename still names what it unlocks, in its heading and in its key. Both
-        // are swapped in place, keeping their answer, so an existing install stops saying it too.
-        // The group banners, for a file written before they existed. Inserted above the section each group
-        // starts with, so an existing file reads the way a fresh one does without its sections being moved.
+        // Every name filed under its own heading, moved exactly as written; one already in place stays. Renamed
+        // headings and keys are swapped in place, keeping their answer, and group banners go above their first section.
         private static readonly string[,] Banners =
         {
             { "############### app settings", IntroHeading },
@@ -751,154 +747,6 @@ namespace CapriDesktop
             { "############### colour settings", "Her screensaver" },
             { "### EULA: default blurb ###", "End User Licence Agreement" },
         };
-
-        // Which sections sit under each banner, in the order a fresh file writes them.
-        private static string[] Grouping(int banner)
-        {
-            if (banner == 0) return new[] { IntroHeading, "Never watch these", "Her calendar" };
-            if (banner == 1) return new[] { "What goes in front of a line", "What she says herself", "How she comes and goes", "The labels after it" };
-            if (banner == 2) return new[] { "Her screensaver", "Her bubble's colours" };
-            return new[] { SenpaiHeading.TrimStart('#').Trim() };
-        }
-
-        // A block with its trailing blank lines off, so a second pass cannot pile more on.
-        private static List<string> Tight(List<string> block)
-        {
-            List<string> made = new List<string>(block);
-            while (made.Count > 0 && made[made.Count - 1].Trim().Length == 0) made.RemoveAt(made.Count - 1);
-            return made;
-        }
-
-        private static void Grouped()
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-                string was = CapriDesktop.Notes.ReadAll(Kept);
-                List<string> rows = Rows(was);
-                for (int at = 0; at < Banners.GetLength(0); at++)
-                {
-                    string banner = Banners[at, 0], under = Banners[at, 1];
-                    if (rows.Exists(delegate(string row) { return row.Trim() == banner; })) continue;
-                    int where = rows.FindIndex(delegate(string row)
-                    {
-                        string one = row.Trim();
-                        return one.StartsWith("##", StringComparison.Ordinal) && !one.StartsWith("###", StringComparison.Ordinal)
-                            && string.Equals(one.TrimStart('#').Trim(), under, StringComparison.OrdinalIgnoreCase);
-                    });
-                    if (where < 0) continue;
-                    rows.InsertRange(where, new[] { banner, "" });
-                }
-                // And each section inside the banner it belongs to. Inserting banners into a file whose
-                // sections are in another order leaves the calendar inside convo settings, which is worse than
-                // no banner at all. Sections keep their own lines; only their place changes.
-                List<string> made = new List<string>();
-                List<string> loose = new List<string>();
-                Dictionary<string, List<string>> held = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-                List<string> order = new List<string>();
-                string inside = null;
-                foreach (string row in rows)
-                {
-                    string one = row.Trim();
-                    if (one.StartsWith("##", StringComparison.Ordinal) && !one.StartsWith("###", StringComparison.Ordinal))
-                    {
-                        inside = one.TrimStart('#').Trim();
-                        if (!held.ContainsKey(inside)) { held[inside] = new List<string>(); order.Add(inside); }
-                        held[inside].Add(row);
-                        continue;
-                    }
-                    if (one.StartsWith("###", StringComparison.Ordinal)) { inside = null; continue; }
-                    if (inside == null) loose.Add(row); else held[inside].Add(row);
-                }
-                made.AddRange(Tight(loose));
-                for (int at = 0; at < Banners.GetLength(0); at++)
-                {
-                    made.Add("");
-                    made.Add(Banners[at, 0]);
-                    foreach (string name in Grouping(at))
-                    {
-                        if (!held.ContainsKey(name)) continue;
-                        made.Add("");
-                        made.AddRange(Tight(held[name]));
-                        held.Remove(name);
-                    }
-                }
-                // Anything this build does not know about keeps its place at the end rather than being lost.
-                foreach (string name in order)
-                    if (held.ContainsKey(name)) { made.Add(""); made.AddRange(Tight(held[name])); }
-                rows = made;
-
-                // The pass puts the blank line in front of a section itself, so a file it has already been
-                // over comes out the same. Writing only on a change keeps it off a file that is already right.
-                string want = string.Join(Environment.NewLine, rows.ToArray()).TrimEnd() + Environment.NewLine;
-                if (want == was) return;
-                Notes.Put(Kept, want);
-                lock (writing) { read = DateTime.MinValue; wasLong = -1; }
-            }
-            catch (Exception bad) { Notes.Failed("the grouping pass in SysLines.cs", bad); }
-        }
-
-        private static void Plainer()
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-                string had = CapriDesktop.Notes.ReadAll(Kept), made = had;
-                made = Regex.Replace(made, @"(?m)^[ \t]*##[ \t]*([^\r\n]+?)[ \t]*(?=\r?$)", m => Legacy.WasSysHead(m.Groups[1].Value) ? SenpaiHeading : m.Value);
-                // A label that only means something with the switch on, taken out of a file on the other side.
-                // The switch alone: this deletes from disk, and going off air would not put them back.
-                if (!Brain.SenpaiOn)
-                    made = Regex.Replace(made, @"(?m)^[ \t]*([^:\r\n#>]+?)[ \t]*:[^\r\n]*\r?\n?", m => SenpaiLabel(m.Groups[1].Value.Trim()) ? "" : m.Value);
-                made = Regex.Replace(made, @"(?m)^([ \t]*)([^:\r\n#>]+?)([ \t]*:)", m => Legacy.WasSysKey(m.Groups[2].Value) ? m.Groups[1].Value + SenpaiKey + m.Groups[3].Value : m.Value);
-                if (made == had) return;
-                Notes.Put(Kept, made);
-                lock (writing) { read = DateTime.MinValue; wasLong = -1; }
-            }
-            catch (Exception bad) { Notes.Failed("the plainer pass in SysLines.cs", bad); }
-        }
-
-        private static void Filed()
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-                Dictionary<string, string> belongs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                for (int line = 0; line < Stock.GetLength(0); line++) belongs[Stock[line, 0]] = LabelHeading;
-                for (int line = 0; line < Spoken.GetLength(0); line++) belongs[Spoken[line, 0]] = SpeechHeading;
-
-                string had = CapriDesktop.Notes.ReadAll(Kept);
-                List<string> rows = Rows(had), kept = new List<string>();
-                Dictionary<string, List<string>> moved = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-                moved[LabelHeading] = new List<string>();
-                moved[SpeechHeading] = new List<string>();
-                string under = "";
-                foreach (string row in rows)
-                {
-                    string one = (row ?? "").Trim();
-                    if (one.StartsWith("#", StringComparison.Ordinal)) { under = one.TrimStart('#').Trim(); kept.Add(row); continue; }
-                    string name = Named(one), wants;
-                    if (name == null || !belongs.TryGetValue(name, out wants) || string.Equals(under, wants, StringComparison.OrdinalIgnoreCase))
-                    {
-                        kept.Add(row);
-                        continue;
-                    }
-                    moved[wants].Add(row);
-                }
-                if (moved[LabelHeading].Count == 0 && moved[SpeechHeading].Count == 0) return;
-
-                // Each one back under its heading, which is created where it is missing. In the shipped order:
-                // what she says herself, then the labels.
-                Refile(kept, SpeechHeading, SpeechNote, moved[SpeechHeading]);
-                Refile(kept, LabelHeading, LabelNote, moved[LabelHeading]);
-                while (kept.Count > 0 && kept[kept.Count - 1].Trim().Length == 0) kept.RemoveAt(kept.Count - 1);
-                string made = string.Join(Environment.NewLine, kept.ToArray()) + Environment.NewLine;
-                if (made == had) return;
-                Notes.Put(Kept, made);
-                lock (writing) { read = DateTime.MinValue; wasLong = -1; }
-                Notes.Refresh(Kept, Text);
-            }
-            catch (Exception bad) { Notes.Failed("the filing pass in SysLines.cs", bad); }
-        }
 
         // The name in front of the colon on a setting line, or null when the line is not one. A note line and a
         // blank line are not, and neither is a value holding a colon of its own, since only the first counts.
@@ -910,138 +758,13 @@ namespace CapriDesktop
             return one.Substring(0, colon).Trim();
         }
 
-        // Lines back under their heading, after its note and whatever is already there, or as a new section at
-        // the end when the file has no such heading. SenpaiLast and DealLast run after this and hold the two
-        // sections that have to stay at the bottom, so the end is a safe place to add one.
-        private static void Refile(List<string> kept, string heading, string[] note, List<string> lines)
-        {
-            if (lines.Count == 0) return;
-            int at = -1, after = -1;
-            for (int i = 0; i < kept.Count; i++)
-            {
-                string one = (kept[i] ?? "").Trim();
-                if (!one.StartsWith("#", StringComparison.Ordinal)) continue;
-                if (at < 0 && string.Equals(one.TrimStart('#').Trim(), heading, StringComparison.OrdinalIgnoreCase)) { at = i; continue; }
-                if (at >= 0) { after = i; break; }
-            }
-            if (at < 0)
-            {
-                kept.Add("");
-                kept.Add("## " + heading);
-                kept.Add("");
-                kept.AddRange(note);
-                kept.Add("");
-                kept.AddRange(lines);
-                return;
-            }
-            // The last filled line of that section, so they go under what is already there rather than above it.
-            int end = after < 0 ? kept.Count : after;
-            while (end > at + 1 && kept[end - 1].Trim().Length == 0) end--;
-            kept.InsertRange(end, lines);
-        }
-
-        // That every name ends up under its own heading, against a file shaped like the one this was found on:
-        // the hellos and five taglines stranded under her personality-lines switch, and one tagline sitting
-        // with her real speech. Their edited values have to come across untouched.
+        // A fresh sys.md, and the end every sys.md keeps: the terms, then the switch.
         internal static void FileCheck(System.Collections.Generic.List<string> checks, string folder)
         {
             string was = Kept;
             try
             {
                 Kept = Path.Combine(folder, "sys-filed.md");
-                string[] stranded =
-                {
-                    "# Her settings", "",
-                    "## How she comes and goes", "",
-                    ">! 1: her hello and goodbye come from her personality file. 0: from the lines above.", "",
-                    "personality lines:    1", "",
-                    "hello morning:        Good morning, mate.",
-                    "goodbye:              Later, mate.", "",
-                    "high five:            high five!!!",
-                    "clang:                clang", "",
-                    "## What she says herself", "",
-                    ">! Real speech, not labels. Offer several with \"|\" between them and she picks one.", "",
-                    "broken:               There's something seriously broken with my code.",
-                    "error:                error", "",
-                    SenpaiHeading, "",
-                    "confirm:              No",
-                };
-                Notes.Put(Kept, string.Join(Environment.NewLine, stranded) + Environment.NewLine);
-                Filed();
-                List<string> rows = Rows(CapriDesktop.Notes.ReadAll(Kept));
-
-                string under = "";
-                Dictionary<string, string> sits = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                Dictionary<string, string> value = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                foreach (string row in rows)
-                {
-                    string one = (row ?? "").Trim();
-                    if (one.StartsWith("#", StringComparison.Ordinal)) { under = one.TrimStart('#').Trim(); continue; }
-                    string name = Named(one);
-                    if (name == null) continue;
-                    sits[name] = under;
-                    value[name] = one.Substring(one.IndexOf(':') + 1).Trim();
-                }
-                string[,] wanted =
-                {
-                    { "personality lines", "How she comes and goes" },
-                    { "hello morning", SpeechHeading },
-                    { "goodbye", SpeechHeading },
-                    { "broken", SpeechHeading },
-                    { "high five", LabelHeading },
-                    { "clang", LabelHeading },
-                    { "error", LabelHeading },
-                    { SenpaiKey, SenpaiHeading.TrimStart('#').Trim() },
-                };
-                List<string> wrong = new List<string>();
-                for (int at = 0; at < wanted.GetLength(0); at++)
-                {
-                    string name = wanted[at, 0], want = wanted[at, 1], got;
-                    if (!sits.TryGetValue(name, out got)) { wrong.Add(name + " is gone from the file"); continue; }
-                    if (!string.Equals(got, want, StringComparison.OrdinalIgnoreCase)) wrong.Add(name + " sits under \"" + got + "\" and belongs under \"" + want + "\"");
-                }
-                // Their words, not the stock ones.
-                if (value["hello morning"] != "Good morning, mate.") wrong.Add("their hello was rewritten: " + value["hello morning"]);
-                if (value["high five"] != "high five!!!") wrong.Add("their tagline was rewritten: " + value["high five"]);
-                string text = CapriDesktop.Notes.ReadAll(Kept);
-                if (text.IndexOf("## " + LabelHeading, StringComparison.Ordinal) < 0) wrong.Add("the labels heading was never written");
-                if (text.IndexOf(LabelNote[0], StringComparison.Ordinal) < 0) wrong.Add("the labels heading went in without its note");
-                if (wrong.Count > 0) throw new Exception("The filing pass left names in the wrong place: " + string.Join(" | ", wrong.ToArray()));
-
-                // Run twice: a file already filed is left exactly as it is.
-                string once = CapriDesktop.Notes.ReadAll(Kept);
-                Filed();
-                if (CapriDesktop.Notes.ReadAll(Kept) != once) throw new Exception("The filing pass moved something on a file it had already filed.");
-                // The grouping pass over a file it has already grouped. It once added a blank line in front of
-                // every section each time, so the file grew a little on every start.
-                Kept = Path.Combine(folder, "sys-grouped.md");
-                string[] jumbled =
-                {
-                    "# Her settings", "",
-                    "## Her calendar", "",
-                    "calendar:             1", "",
-                    "## What goes in front of a line", "",
-                    "prompt:               say something", "",
-                    "## Her start-up intro", "",
-                    "intros:", "> wake", "",
-                    "## Her bubble's colours", "",
-                    "bubble:               black", "",
-                    SenpaiHeading, "",
-                    SenpaiKey + ":              No",
-                };
-                Notes.Put(Kept, string.Join(Environment.NewLine, jumbled) + Environment.NewLine);
-                Grouped();
-                string grouped = CapriDesktop.Notes.ReadAll(Kept);
-                if (grouped.IndexOf(Banners[0, 0], StringComparison.Ordinal) < 0) throw new Exception("The grouping pass wrote no banner.");
-                if (grouped.IndexOf("## Her calendar", StringComparison.Ordinal) < grouped.IndexOf("## " + IntroHeading, StringComparison.Ordinal))
-                    throw new Exception("The grouping pass left the calendar above her intro.");
-                Grouped();
-                if (CapriDesktop.Notes.ReadAll(Kept) != grouped) throw new Exception("The grouping pass changed a file it had already grouped, so the file grows on every start.");
-                Grouped();
-                if (CapriDesktop.Notes.ReadAll(Kept) != grouped) throw new Exception("The grouping pass changed a file it had already grouped twice over.");
-                checks.Add("PASS the grouping pass puts a jumbled sys.md in its groups and leaves one it has already been over exactly as it is");
-                Kept = Path.Combine(folder, "sys-filed.md");
-
                 // Nothing in a file anybody may open says what the answer unlocks.
                 string fresh2 = Text;
                 if (Legacy.SaysUnsaid(fresh2)) throw new Exception("A fresh sys.md says a word it must never say.");
@@ -1051,64 +774,102 @@ namespace CapriDesktop
                 if (!Regex.IsMatch(fresh2, "(?mi)^[ \t]*" + Regex.Escape(SenpaiKey) + "[ \t]*:[ \t]*No[ \t\r]*$"))
                     throw new Exception("A fresh sys.md does not ship the answer as No.");
                 checks.Add("PASS a fresh sys.md names nothing of what the answer unlocks, carries the question under the terms, and ships it as No");
-
-                checks.Add("PASS every name in sys.md is filed under its own heading, with \"" + LabelHeading + "\" and its note written into a file that never had them, their edited values carried across word for word, and a file already filed left alone");
+                EndCheck(checks, folder);
             }
             finally { Kept = was; }
         }
 
-        // Her intro is the first section in the file. A sys.md that gained it later has it further down, so it
-        // is moved up once, the same way the switch is held at the bottom.
-        private static void IntroFirst()
+        // Null when the file ends with the banner (if it has one) right above the terms, the terms once, and the switch once
+        // as the last line, answered "want".
+        private static string EndsRight(string text, string want)
         {
-            if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-            try
+            List<string> rows = Rows(text);
+            while (rows.Count > 0 && rows[rows.Count - 1].Trim().Length == 0) rows.RemoveAt(rows.Count - 1);
+            int heads = rows.FindAll(IsSenpaiHead).Count, keys = rows.FindAll(IsSenpaiKey).Count, banners = rows.FindAll(row => row.Trim() == EulaBanner).Count;
+            if (heads != 1 || keys != 1 || banners > 1) return heads + " headings, " + keys + " switches, " + banners + " banners";
+            string last = rows.Count == 0 ? "" : rows[rows.Count - 1].Trim();
+            if (!IsSenpaiKey(last) || !last.EndsWith(want, StringComparison.OrdinalIgnoreCase)) return "it ends with \"" + last + "\", not the switch answered " + want;
+            int head = rows.FindIndex(IsSenpaiHead);
+            for (int at = head + 1; at < rows.Count - 1; at++)
             {
-                string[] rows = CapriDesktop.Notes.ReadAll(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-                int from = -1, to = rows.Length, first = -1;
-                for (int row = 0; row < rows.Length; row++)
-                {
-                    string one = rows[row].Trim();
-                    if (!one.StartsWith("##", StringComparison.Ordinal)) continue;
-                    // A ############### group banner is not a section. Counting it as the first one put her
-                    // intro above the banner instead of inside the group it belongs to.
-                    if (one.StartsWith("###", StringComparison.Ordinal)) continue;
-                    if (first < 0) first = row;
-                    if (string.Equals(one.TrimStart('#').Trim(), IntroHeading, StringComparison.OrdinalIgnoreCase)) { from = row; continue; }
-                    if (from >= 0) { to = row; break; }
-                }
-                if (from < 0 || first < 0) return;
-                // A refresh once wrote her switch names into the note block, so any that sit above the key
-                // line go: the ones under it are the real setting.
-                int key = -1;
-                for (int row = from; row < to; row++)
-                    if (rows[row].Trim().StartsWith("intros:", StringComparison.OrdinalIgnoreCase)) { key = row; break; }
-                bool trimmed = false;
-                if (key > 0)
-                    for (int row = from; row < key; row++)
-                    {
-                        string one = rows[row].Trim();
-                        if (!one.StartsWith(">", StringComparison.Ordinal)) continue;
-                        if (Known(one.TrimStart('>').Trim()) == null) continue;
-                        rows[row] = null;
-                        trimmed = true;
-                    }
-                if (from == first && !trimmed) return;
-                List<string> block = new List<string>();
-                for (int row = from; row < to; row++) if (rows[row] != null) block.Add(rows[row]);
-                while (block.Count > 0 && block[block.Count - 1].Trim().Length == 0) block.RemoveAt(block.Count - 1);
-                List<string> made = new List<string>();
-                for (int row = 0; row < rows.Length; row++)
-                {
-                    if (row == first) { made.AddRange(block); made.Add(""); }
-                    if (row >= from && row < to) continue;
-                    if (rows[row] != null) made.Add(rows[row]);
-                }
-                Notes.Put(Kept, string.Join(Environment.NewLine, made.ToArray()));
-                read = DateTime.MinValue;
-                wasLong = -1;
+                string one = rows[at].Trim();
+                if (one.Length > 0 && !one.StartsWith(">", StringComparison.Ordinal) && !one.StartsWith(CleanupKey, StringComparison.OrdinalIgnoreCase)) return "\"" + one + "\" sits between the terms and the switch";
             }
-            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            if (banners == 1)
+            {
+                int banner = rows.FindIndex(row => row.Trim() == EulaBanner);
+                for (int at = banner + 1; at < head; at++) if (rows[at].Trim().Length > 0) return "the banner is not right above the terms";
+            }
+            return null;
+        }
+
+        // Every shape a sys.md has been found in, or could be: each ends with the terms and the switch once, their answer
+        // kept, and stays that way on the next start.
+        private static void EndCheck(System.Collections.Generic.List<string> checks, string folder)
+        {
+            string newline = Environment.NewLine, fresh = Text;
+            string body = fresh.Substring(0, fresh.IndexOf(EulaBanner, StringComparison.Ordinal)).TrimEnd() + newline;
+            string terms = string.Join(newline, DealLines()) + newline;
+            int firstHeading = body.IndexOf(newline + "## ", StringComparison.Ordinal);
+            int afterFirst = body.IndexOf(newline + newline, firstHeading + 4, StringComparison.Ordinal);
+            // Name, file, the answer they gave SetSenpai when the file had none, the answer it must end with.
+            string[,] shapes =
+            {
+                { "a fresh file", fresh, "", "No" },
+                { "an old \"The deal\" section with the switch inside it", body + newline + "## The deal" + newline + newline + ">! Old terms." + newline + newline + SenpaiKey + ": Yes" + newline, "", "Yes" },
+                { "no terms and no switch", body, "Yes", "Yes" },
+                { "the terms with no switch", body + newline + terms, "No", "No" },
+                { "the switch with no terms", body + newline + SenpaiKey + ": Yes" + newline, "", "Yes" },
+                { "the switch halfway up", body.Substring(0, afterFirst) + newline + newline + SenpaiKey + ": Yes" + body.Substring(afterFirst) + newline + terms, "", "Yes" },
+                { "a section added under the switch", body + newline + terms + newline + SenpaiKey + ": Yes" + newline + newline + "## Something new" + newline + newline + "new thing: 1" + newline, "", "Yes" },
+                { "Linux line ends", (body + newline + terms + newline + SenpaiKey + ": Yes" + newline).Replace("\r\n", "\n"), "", "Yes" },
+                { "two copies of the terms", body + newline + terms + newline + SenpaiKey + ": Yes" + newline + newline + terms, "", "Yes" },
+                { "terms quoted the old way", body + newline + terms.Replace(">!", ">") + newline + SenpaiKey + ": Yes" + newline, "", "Yes" },
+                { "a blank answer", body + newline + terms + newline + SenpaiKey + ":" + newline, "No", "No" },
+            };
+            for (int i = 0; i < shapes.GetLength(0); i++)
+            {
+                Kept = Path.Combine(folder, "sys-end-" + i + ".md");
+                File.WriteAllText(Kept, shapes[i, 1], new System.Text.UTF8Encoding(false));
+                lock (writing) { read = DateTime.MinValue; wasLong = -1; }
+                Write(false);
+                TopUp();
+                if (Senpai == null) SetSenpai(shapes[i, 2] == "Yes");
+                string once = CapriDesktop.Notes.ReadAll(Kept);
+                string wrong = EndsRight(once, shapes[i, 3]);
+                if (wrong != null) throw new Exception("A sys.md with " + shapes[i, 0] + " didn't end with the terms and the switch once, answer kept: " + wrong);
+                // The next starts keep it so. A file a top up added sections to can take one more start to settle its blank
+                // lines (a grouping pass that predates this), so it is the second and third that must match.
+                TopUp();
+                string twice = CapriDesktop.Notes.ReadAll(Kept);
+                TopUp();
+                wrong = EndsRight(twice, shapes[i, 3]);
+                if (wrong != null || CapriDesktop.Notes.ReadAll(Kept) != twice) throw new Exception("A sys.md with " + shapes[i, 0] + " didn't stay put on the next starts: " + (wrong ?? "it changed again"));
+            }
+            checks.Add("PASS every sys.md ends with the terms and the switch, once each and their answer kept, from a fresh file, an old \"The deal\" section holding the switch, no terms or no switch, the switch halfway up, a section added under it, Linux line ends, two copies of the terms, old quoting and a blank answer, and stays so on the next start");
+
+            // The other copies in her folder: the other side's, with no switch, takes this side's answer; a loose one from
+            // before the split keeps its own.
+            string settings = Path.Combine(folder, "end-" + Guid.NewGuid().ToString("N").Substring(0, 6), Personalities.SettingsName);
+            Directory.CreateDirectory(Path.Combine(settings, Personalities.PlainName));
+            Directory.CreateDirectory(Path.Combine(settings, Personalities.SenpaiName));
+            string other = Path.Combine(settings, Personalities.SenpaiName, FileName), loose = Path.Combine(settings, FileName);
+            File.WriteAllText(other, body + newline + "## Something new" + newline + newline + "new thing: 1" + newline);
+            File.WriteAllText(loose, body + newline + terms + newline + SenpaiKey + ": No" + newline + newline + "## Old leftovers" + newline + newline + "old thing: 2" + newline);
+            Kept = Path.Combine(settings, Personalities.PlainName, FileName);
+            File.WriteAllText(Kept, body + newline + terms + newline + SenpaiKey + ": Yes" + newline);
+            lock (writing) { read = DateTime.MinValue; wasLong = -1; }
+            TopUp();
+            string otherWrong = EndsRight(CapriDesktop.Notes.ReadAll(other), "Yes"), looseWrong = EndsRight(CapriDesktop.Notes.ReadAll(loose), "No");
+            if (otherWrong != null || looseWrong != null) throw new Exception("The other copies of sys.md didn't end right: the other side's " + otherWrong + ", the loose one " + looseWrong);
+            checks.Add("PASS the other side's sys.md and a loose one from before the split end with the terms and the switch too: one with no switch takes this side's answer, one with a switch keeps its own");
+
+            // Reset to stock keeps their answer.
+            Kept = Path.Combine(folder, "sys-end-stock.md");
+            File.WriteAllText(Kept, body + newline + terms + newline + SenpaiKey + ": Yes" + newline);
+            string stocked = StockKeeping(Kept);
+            if (EndsRight(stocked, "Yes") != null) throw new Exception("Reset to stock wrote over their answer: " + EndsRight(stocked, "Yes"));
+            checks.Add("PASS reset to stock writes her stock sys.md with their answer kept at the bottom");
         }
 
         // Yes deletes the senpai side's own files when the switch goes off.
@@ -1138,33 +899,15 @@ namespace CapriDesktop
             }
         }
 
+        // Hard rule: the terms and the switch under them end every sys.md, once each. Run after every pass that writes
+        // the file, and on a file whose switch line is missing too, so nothing appended meanwhile sits under the terms.
         private static void SenpaiLast()
         {
             try
             {
                 if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
                 string had = CapriDesktop.Notes.ReadAll(Kept);
-                List<string> block, rows = Rows(had);
-                string key;
-                List<string> rest = WithoutSenpai(rows, out block, out key);
-                if (key == null) return;
-                if (block.Count == 0) { block.Add(SenpaiHeading); block.AddRange(SenpaiNote); }
-                // A blank line under the heading, like every other section in the file has.
-                if (block.Count > 1 && block[1].Length > 0) block.Insert(1, "");
-                // The cleanup choice sits under the terms and above the answer, on the senpai side only.
-                string cleanup = null;
-                for (int at = rest.Count - 1; at >= 0; at--)
-                    if (Regex.IsMatch(rest[at], @"^[ \t]*" + Regex.Escape(CleanupKey) + @"[ \t]*:", RegexOptions.IgnoreCase))
-                    {
-                        if (cleanup == null) cleanup = rest[at].Trim();
-                        rest.RemoveAt(at);
-                    }
-                if (OnFullSide) { if (cleanup == null) cleanup = CleanupKey + ": No"; }
-                else cleanup = null;
-                string made = string.Join(Environment.NewLine, rest.ToArray()).TrimEnd()
-                            + Environment.NewLine + Environment.NewLine
-                            + string.Join(Environment.NewLine, block.ToArray())
-                            + Environment.NewLine + Environment.NewLine + (cleanup == null ? "" : cleanup + Environment.NewLine) + key + Environment.NewLine;
+                string made = Ended(had, null, OnFullSide);
                 if (made == had) return;
                 Notes.Put(Kept, made);
                 lock (writing) { read = DateTime.MinValue; wasLong = -1; }
@@ -1172,328 +915,166 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
-        private static bool IsDealHead(string row)
-        {
-            return Regex.IsMatch(row ?? "", @"^[ \t]*" + Regex.Escape(DealHeading) + @"[ \t]*$", RegexOptions.IgnoreCase);
-        }
-
-        // The terms go directly above the switch, which SenpaiLast then puts under them. Their last line says the
-        // section below unlocks senpai content, and on a file from an older build it did not: a top up appends at
-        // the end, so the colours and the screensaver went in under them and the sentence pointed at the wrong one.
-        //
-        // Moved, not rewritten. Every line taken out goes back in, so a reworded copy of theirs is kept as theirs.
-        private static void DealLast()
+        // Any other sys.md (the other side's copy, or a loose one from before the split) ended the same way. Its switch is
+        // kept as it is; one with no switch line gets keyIfMissing, the one the side in use has. True when it was written.
+        internal static bool EnsureEnd(string path, string keyIfMissing)
         {
             try
             {
-                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-                string had = CapriDesktop.Notes.ReadAll(Kept);
-                List<string> block, rest = WithoutDeal(Rows(had), out block);
-                if (block.Count == 0) return;
-                if (block.Count > 1 && block[1].Length > 0) block.Insert(1, "");
-                string made = string.Join(Environment.NewLine, rest.ToArray()).TrimEnd()
-                            + Environment.NewLine + Environment.NewLine
-                            + string.Join(Environment.NewLine, block.ToArray()) + Environment.NewLine;
-                if (made == had) return;
-                Notes.Put(Kept, made);
-                lock (writing) { read = DateTime.MinValue; wasLong = -1; }
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return false;
+                string had = CapriDesktop.Notes.ReadAll(path);
+                string made = Ended(had, keyIfMissing, null);
+                if (made == had) return false;
+                Notes.Put(path, made);
+                if (string.Equals(Path.GetFullPath(path), string.IsNullOrEmpty(Kept) ? "" : Path.GetFullPath(Kept), StringComparison.OrdinalIgnoreCase))
+                    lock (writing) { read = DateTime.MinValue; wasLong = -1; }
+                return true;
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return false; }
+        }
+
+        private static string EulaBanner { get { return Banners[Banners.GetLength(0) - 1, 0]; } }
+
+        // Banner, terms, cleanup choice and switch taken out and put back as its end, in that order, one copy of the
+        // terms. fullSide true adds the cleanup choice, false drops it, null leaves it; with no switch and no
+        // keyIfMissing the terms end it.
+        private static string Ended(string had, string keyIfMissing, bool? fullSide)
+        {
+            List<string> block, rows = Rows(had);
+            string key;
+            List<string> rest = WithoutSenpai(rows, out block, out key);
+            if (key == null) key = keyIfMissing;
+            if (key != null) key = Answered(key);
+            int second = block.Count > 1 ? block.FindIndex(1, IsSenpaiHead) : -1;
+            if (second > 0) block.RemoveRange(second, block.Count - second);
+            if (block.Count <= 1) block = new List<string>(DealLines());
+            // A blank line under the heading, like every other section in the file has.
+            if (block.Count > 1 && block[1].Length > 0) block.Insert(1, "");
+            string banner = EulaBanner;
+            bool bannered = rest.RemoveAll(row => row.Trim() == banner) > 0;
+            // The cleanup choice sits under the terms and above the answer, on the senpai side only.
+            string cleanup = null;
+            for (int at = rest.Count - 1; at >= 0; at--)
+                if (Regex.IsMatch(rest[at], @"^[ \t]*" + Regex.Escape(CleanupKey) + @"[ \t]*:", RegexOptions.IgnoreCase))
+                {
+                    if (cleanup == null) cleanup = rest[at].Trim();
+                    rest.RemoveAt(at);
+                }
+            // What the block left behind where it was taken from is at most the two blank lines a group ends with, so moving it
+            // again on the next start finds nothing to change.
+            for (int at = rest.Count - 1; at >= 2; at--)
+                if (rest[at].Trim().Length == 0 && rest[at - 1].Trim().Length == 0 && rest[at - 2].Trim().Length == 0) rest.RemoveAt(at);
+            if (fullSide == true) { if (cleanup == null) cleanup = CleanupKey + ": No"; }
+            else if (fullSide == false) cleanup = null;
+            string tail = (cleanup == null ? "" : cleanup + Environment.NewLine) + (key == null ? "" : key + Environment.NewLine);
+            return string.Join(Environment.NewLine, rest.ToArray()).TrimEnd()
+                 + Environment.NewLine + Environment.NewLine
+                 + (bannered ? banner + Environment.NewLine + Environment.NewLine : "")
+                 + string.Join(Environment.NewLine, block.ToArray()).TrimEnd() + Environment.NewLine
+                 + (tail.Length > 0 ? Environment.NewLine + tail : "");
+        }
+
+        // Reset to stock, keeping their answer: the stock file ships "No", and writing that over their "Yes" turned the
+        // switch off under them. The cleanup choice they made is kept the same way.
+        internal static string StockKeeping(string path)
+        {
+            string text = Text;
+            try
+            {
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return text;
+                string key = null, cleanup = null;
+                foreach (string row in Rows(CapriDesktop.Notes.ReadAll(path)))
+                {
+                    if (IsSenpaiKey(row) && key == null) key = Answered(row);
+                    else if (cleanup == null && Regex.IsMatch(row, @"^[ \t]*" + Regex.Escape(CleanupKey) + @"[ \t]*:", RegexOptions.IgnoreCase)) cleanup = row.Trim();
+                }
+                if (key != null && key.Length > SenpaiKey.Length + 2) text = Regex.Replace(text, @"(?mi)^[ \t]*" + Regex.Escape(SenpaiKey) + @"[ \t]*:[^\r\n]*", key.Replace("$", "$$"));
+                if (cleanup != null) text = Regex.Replace(text, @"(?mi)^[ \t]*" + Regex.Escape(CleanupKey) + @"[ \t]*:[^\r\n]*", cleanup.Replace("$", "$$"));
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            return text;
         }
 
-        // The terms block pulled out of the file: its heading and the note under it. What comes back is the rest,
-        // and the block through "block". Two copies of the heading come out as one block rather than being thinned,
-        // since nothing here decides what to drop.
-        private static List<string> WithoutDeal(List<string> rows, out List<string> block)
+        // A sys.md written new on an update keeps the answer in force, on either side: an update never asks again, and the
+        // switch stays as it was. A new install's is written as stock, which says No.
+        internal static string OnUpdate(bool on) { return WithAnswer(Text, on); }
+
+        // Read the file again on the next look, for a file swapped under her.
+        internal static void ForgetRead() { lock (writing) { read = DateTime.MinValue; wasLong = -1; } }
+
+        // An update over a sys.md answered Yes, and edited, writes it new still answered Yes and reads as on; one answered No
+        // stays No; a new install's says No.
+        internal static void CheckOnUpdate(List<string> checks, string output)
         {
-            block = new List<string>();
-            List<string> rest = new List<string>();
-            for (int at = 0; at < rows.Count; at++)
+            string keptWas = Kept;
+            string file = System.IO.Path.Combine(output, "sys-update-" + Guid.NewGuid().ToString("N").Substring(0, 6) + ".md");
+            try
             {
-                string row = rows[at];
-                if (!IsDealHead(row)) { rest.Add(row); continue; }
-                block.Add(row.Trim());
-                int look = at + 1;
-                while (look < rows.Count)
-                {
-                    string next = rows[look];
-                    if (next.Trim().Length == 0) { look++; continue; }
-                    if (!next.TrimStart().StartsWith(">", StringComparison.Ordinal)) break;
-                    block.Add(next.Trim());
-                    look++;
-                }
-                at = look - 1;
+                Kept = file;
+                Func<string, bool?> read = delegate(string text) { File.WriteAllText(file, text); ForgetRead(); return Senpai; };
+                bool? before = read(WithAnswer(Text, true) + "their own line" + Environment.NewLine);
+                bool? after = read(Notes.Marked(OnUpdate(before == true)));
+                bool? stayedNo = read(Notes.Marked(OnUpdate(false)));
+                bool? fresh = read(Text);
+                if (before != true || after != true || stayedNo != false || fresh != false)
+                    throw new Exception("The terms answer didn't carry over an update: Yes before " + before + ", after the update " + after + ", No kept " + stayedNo + ", a new install " + fresh);
+                checks.Add("PASS an update writes sys.md new keeping the terms answer in force: answered Yes it stays Yes and the switch stays on, No stays No, and a new install still says No");
             }
-            return rest;
+            finally
+            {
+                Kept = keptWas;
+                ForgetRead();
+                try { File.Delete(file); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            }
         }
 
-        // A file written by an older build has none of the names added since, and "write only if missing" means it never
-        // gets them: the setting is in the code, documented, and absent from the one file that is meant to expose it. So
-        // every name the build knows is appended to a file that lacks it, with their own edits left exactly as they are.
+        // Her stock sys.md with the switch answered: a side written new while the switch it carries is on keeps the answer that
+        // turned it on, or she would read No from it and switch straight back off.
+        internal static string WithAnswer(string text, bool on)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            return Regex.Replace(text, @"(?mi)^[ \t]*" + Regex.Escape(SenpaiKey) + @"[ \t]*:[^\r\n]*", Line(SenpaiKey, on ? "Yes" : "No").Replace("$", "$$"));
+        }
+
+        // The switch line with its answer at the column the other settings use, whatever spacing it was written with.
+        private static string Answered(string row)
+        {
+            int colon = (row ?? "").IndexOf(':');
+            string said = colon < 0 ? "" : row.Substring(colon + 1).Trim();
+            return said.Length == 0 ? SenpaiKey + ":" : Line(SenpaiKey, said);
+        }
+
+        // A sys.md is written new from stock on each version (Renew), so between versions nothing is added to it. The terms
+        // and the switch under them stay the end of every sys.md, on both sides.
         internal static void TopUp()
         {
             if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-            IntroTopUp();
             try
             {
-                Fresh();
-                List<string> adding = new List<string>();
-                lock (writing)
-                {
-                    if (!theirs.ContainsKey("sys prompt") || !theirs.ContainsKey("you prompt"))
-                    {
-                        adding.Add("");
-                        adding.Add("## What goes in front of a line");
-                        adding.Add("");
-                        adding.Add(">! Change these to anything. A trailing space is added for you.");
-                        adding.Add("");
-                        if (!theirs.ContainsKey("sys prompt")) adding.Add(Line("sys prompt", SysMark));
-                        if (!theirs.ContainsKey("you prompt")) adding.Add(Line("you prompt", YouMark));
-                    }
-                    List<string> words = new List<string>();
-                    for (int line = 0; line < Spoken.GetLength(0); line++)
-                        if (!theirs.ContainsKey(Spoken[line, 0])) words.Add(Line(Spoken[line, 0], Spoken[line, 1]));
-                    if (words.Count > 0)
-                    {
-                        adding.Add("");
-                        adding.Add("## What she says herself");
-                        adding.Add("");
-                        adding.Add(">! Real speech, not labels. Offer several with \"|\" between them and she picks one.");
-                        adding.Add("");
-                        adding.AddRange(words);
-                    }
-                    if (!theirs.ContainsKey(ExcludedKey))
-                    {
-                        adding.Add("");
-                        adding.Add("## Never watch these");
-                        adding.Add("");
-                        adding.Add(">! Programs Watch my screen skips. Comma separated, and a partial name is enough:");
-                        adding.Add(">! \"brave\" covers brave.exe. Matched on the program and on its window title.");
-                        adding.Add(">! She says nothing at all while one of these is in front.");
-                        adding.Add("");
-                        adding.Add(Line(ExcludedKey, ""));
-                    }
-                    if (!theirs.ContainsKey(CalendarKey))
-                    {
-                        adding.Add("");
-                        adding.Add("## Her calendar");
-                        adding.Add("");
-                        adding.Add(">! The app she opens to read your calendar. Blank and she uses the one you open most.");
-                        adding.Add(">! She opens it and reads the screen. Nothing signs in and nothing is sent anywhere.");
-                        adding.Add("");
-                        adding.Add(Line(CalendarKey, ""));
-                    }
-                    if (!theirs.ContainsKey(Doomscroll.ListKey))
-                    {
-                        adding.Add("");
-                        adding.Add("## Doomscroll guard");
-                        adding.Add("");
-                        adding.Add(">! Sites and apps Doomscroll guard keeps time on, once it's on in Mainframe > Settings > DOOMSCROLL.");
-                        adding.Add(">! Comma separated, matched on the window title: tiktok, youtube shorts, instagram, reddit and x");
-                        adding.Add(">! are known, and any other word counts when it's in the title or the program's name.");
-                        adding.Add("");
-                        adding.Add(Line(Doomscroll.ListKey, Doomscroll.Stock));
-                    }
-                    if (!theirs.ContainsKey(QuietTimeKey))
-                    {
-                        adding.Add("");
-                        adding.AddRange(QuietLines());
-                    }
-                    // A file from the two builds where that section was headed "The deal" loses it, so the one
-                    // below replaces it rather than sitting beside it. It was notes only and never held a
-                    // setting, so nothing of theirs can be inside it.
-                    Unheaded("## The deal");
-                    // The terms, for a sys.md written before they existed. Added above the switch, which SenpaiLast
-                    // puts back at the bottom whatever else goes in, so they end up last but one.
-                    if (!Regex.IsMatch(CapriDesktop.Notes.ReadAll(Kept), @"(?mi)^[ \t]*" + Regex.Escape(DealHeading) + @"[ \t\r]*$"))
-                    {
-                        adding.Add("");
-                        foreach (string row in DealLines()) adding.Add(row);
-                    }
-                    // The intro list, for a sys.md written before it existed. Added above the switch, which
-                    // SenpaiLast puts back at the bottom whatever else goes in.
-                    if (!Regex.IsMatch(CapriDesktop.Notes.ReadAll(Kept), @"(?mi)^[ \t]*##[ \t]*" + Regex.Escape(IntroHeading) + @"[ \t\r]*$"))
-                    {
-                        adding.Add("");
-                        foreach (string row in IntroBlock().Replace("\r\n", "\n").TrimEnd('\n').Split('\n')) adding.Add(row);
-                    }
-                    // Her screensaver, for a sys.md written before it existed. A file that has the switch but
-                    // none of the rest is from the build where it had three lines: that whole section goes and
-                    // the full one replaces it, so their switch is the only thing read back out of it.
-                    bool saverShort = false;
-                    for (int one = 0; one < SaverStock.GetLength(0); one++)
-                        if (!theirs.ContainsKey(SaverStock[one, 0])) saverShort = true;
-                    // The note itself, not only the settings under it. A file with every line in it is never
-                    // rebuilt, so a note reworded later reached new installs and nobody else: one written before
-                    // the spacebar went on it kept telling them to move the mouse for the rest of its life. Any
-                    // note line this build ships that the file does not have is the test, so this holds for the
-                    // next rewording as well. Their values are read out and put back either way.
-                    bool saverNoteOld = false;
-                    if (!saverShort)
-                    {
-                        string whole = CapriDesktop.Notes.ReadAll(Kept);
-                        if (Regex.IsMatch(whole, @"(?mi)^[ \t]*" + Regex.Escape(SaverHeading) + @"[ \t\r]*$"))
-                            foreach (string row in SaverNotes())
-                                if (row.StartsWith(">", StringComparison.Ordinal) && row.Trim().Length > 2 && !whole.Contains(row))
-                                { saverNoteOld = true; break; }
-                    }
-                    if (saverShort || saverNoteOld)
-                    {
-                        // Read before the old section is taken out, since taking it out is what loses it.
-                        Dictionary<string, string> kept = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                        bool any = false;
-                        for (int one = 0; one < SaverStock.GetLength(0); one++)
-                        {
-                            string said;
-                            if (!theirs.TryGetValue(SaverStock[one, 0], out said)) continue;
-                            kept[SaverStock[one, 0]] = said;
-                            any = true;
-                        }
-                        if (any) Unheaded(SaverHeading);
-                        adding.Add("");
-                        adding.AddRange(SaverLines(kept));
-                    }
-                    if (!theirs.ContainsKey(OwnLinesKey))
-                    {
-                        adding.Add("");
-                        adding.Add("## How she comes and goes");
-                        adding.Add("");
-                        adding.Add(">! 1: her hello and goodbye come from her personality file. 0: from the lines above.");
-                        adding.Add(">! Her error line is never affected either way.");
-                        adding.Add("");
-                        adding.Add(Line(OwnLinesKey, "1"));
-                    }
-                    // With their heading, as the speech block above does. Bare lines were the fault Filed cleans
-                    // up: Fitted puts a line with no heading after the last filled line of whatever section it
-                    // lands in, so a tagline added by a later build was filed under her hellos.
-                    List<string> tags = new List<string>();
-                    for (int line = 0; line < Stock.GetLength(0); line++)
-                        // The switch alone, like the pass that takes them out again.
-                        if (!theirs.ContainsKey(Stock[line, 0]) && (Brain.SenpaiOn || !SenpaiLabel(Stock[line, 0])))
-                            tags.Add(Line(Stock[line, 0], Stock[line, 1]));
-                    string clickLabel = Extended.Get("click.heard");
-                    if (Brain.SenpaiOn && clickLabel != null && !theirs.ContainsKey(clickLabel)) tags.Add(Line(clickLabel, clickLabel));
-                    if (tags.Count > 0)
-                    {
-                        adding.Add("");
-                        adding.Add("## " + LabelHeading);
-                        adding.Add("");
-                        adding.AddRange(LabelNote);
-                        adding.Add("");
-                        adding.AddRange(tags);
-                    }
-                }
-                if (adding.Count == 0) { Painted(); Plainer(); Filed(); Grouped(); Empties(); Tidy(); IntroFirst(); DealLast(); SenpaiLast(); return; }
-                Notes.Put(Kept, Fitted(CapriDesktop.Notes.ReadAll(Kept), adding));
-                read = DateTime.MinValue;
-                wasLong = -1;
-                Notes.Refresh(Kept, Text);
-                Painted();
-                Plainer();
-                Filed();
-                Grouped();
-                Empties();
-                Tidy();
-                IntroFirst();
-                DealLast();
                 SenpaiLast();
+                EndOthers();
             }
-            catch (Exception bad) { Notes.Failed("a top up in SysLines.cs", bad); }
+            catch (Exception bad) { Notes.Failed("keeping the end of sys.md in SysLines.cs", bad); }
         }
 
-        // A name added by a later build goes under the heading it belongs to, when the file already has that
-        // heading. Appending a second copy reads the same to her, but it leaves sys.md with two sections of the
-        // same name and the settings for one thing in two places, which is exactly what makes a file unreadable.
-        // Takes one whole section out of her file, heading and all, up to the next heading. For a section that
-        // was renamed: nothing here is theirs to keep, or it would not be safe to cut.
-        private static void Unheaded(string heading)
+        // The other sys.md files end the same way: the other side's copy, topped up only while that side runs, and a
+        // loose one from before the split. Their own switch stays; one with none takes this side's answer.
+        private static void EndOthers()
         {
             try
             {
                 if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-                string had = CapriDesktop.Notes.ReadAll(Kept);
-                if (had.IndexOf(heading, StringComparison.OrdinalIgnoreCase) < 0) return;
-                List<string> made = new List<string>();
-                bool cutting = false;
-                foreach (string raw in had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
-                {
-                    string one = (raw ?? "").Trim();
-                    if (one.StartsWith("#", StringComparison.Ordinal))
-                        cutting = string.Equals(one, heading, StringComparison.OrdinalIgnoreCase);
-                    if (!cutting) made.Add(raw);
-                }
-                while (made.Count > 0 && made[made.Count - 1].Trim().Length == 0) made.RemoveAt(made.Count - 1);
-                Notes.Put(Kept, string.Join(Environment.NewLine, made.ToArray()) + Environment.NewLine);
-                read = DateTime.MinValue;
-                wasLong = -1;
+                string here = Path.GetFullPath(Kept);
+                string side = Path.GetDirectoryName(here), settings = side == null ? null : Path.GetDirectoryName(side);
+                if (settings == null || !string.Equals(Path.GetFileName(settings), Personalities.SettingsName, StringComparison.OrdinalIgnoreCase)) return;
+                string key = null;
+                foreach (string row in Rows(CapriDesktop.Notes.ReadAll(Kept)))
+                    if (IsSenpaiKey(row)) key = Answered(row);
+                if (key != null && key.Length <= SenpaiKey.Length + 2) key = null;
+                foreach (string other in new[] { Path.Combine(settings, FileName), Path.Combine(settings, Personalities.PlainName, FileName), Path.Combine(settings, Personalities.SenpaiName, FileName) })
+                    if (!string.Equals(Path.GetFullPath(other), here, StringComparison.OrdinalIgnoreCase)) EnsureEnd(other, key);
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-        }
-
-        private static string Fitted(string body, List<string> adding)
-        {
-            List<string> heads = new List<string>();
-            Dictionary<string, List<string>> want = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-            Dictionary<string, List<string>> whole = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-            string under = "";
-            heads.Add(under);
-            want[under] = new List<string>();
-            whole[under] = new List<string>();
-            foreach (string row in adding)
-            {
-                string one = (row ?? "").Trim();
-                if (one.StartsWith("##", StringComparison.Ordinal))
-                {
-                    under = one.TrimStart('#').Trim();
-                    if (!want.ContainsKey(under)) { heads.Add(under); want[under] = new List<string>(); whole[under] = new List<string>(); }
-                }
-                whole[under].Add(row);
-                if (one.Length > 0 && !one.StartsWith("#", StringComparison.Ordinal) && !one.StartsWith(">", StringComparison.Ordinal))
-                    want[under].Add(row);
-            }
-
-            // Walk their file, and each heading we have something for takes its keys straight after its last filled line.
-            string[] rows = body.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-            List<string> made = new List<string>();
-            List<string> loose = want[""];
-            string at = null;
-            int after = 0;
-            foreach (string row in rows)
-            {
-                string one = (row ?? "").Trim();
-                if (one.StartsWith("#", StringComparison.Ordinal))
-                {
-                    after = Put(made, at, after, want, heads);
-                    at = one.TrimStart('#').Trim();
-                    made.Add(row);
-                    after = made.Count;
-                    continue;
-                }
-                made.Add(row);
-                if (one.Length > 0) after = made.Count;
-            }
-            after = Put(made, at, after, want, heads);
-            while (made.Count > 0 && made[made.Count - 1].Trim().Length == 0) made.RemoveAt(made.Count - 1);
-
-            // Anything left has no heading in their file yet, so it keeps its own, notes and all. Asked by
-            // whether the heading is there rather than by whether the section has keys: a section that is all
-            // notes has none to place, and was dropped for having none. The terms are exactly that section.
-            foreach (string name in heads)
-            {
-                if (name.Length == 0) continue;
-                bool there = false;
-                foreach (string row in made)
-                {
-                    string one = (row ?? "").Trim();
-                    if (!one.StartsWith("#", StringComparison.Ordinal)) continue;
-                    if (string.Equals(one.TrimStart('#').Trim(), name, StringComparison.OrdinalIgnoreCase)) { there = true; break; }
-                }
-                if (there) continue;
-                made.Add("");
-                made.AddRange(whole[name]);
-            }
-            if (loose.Count > 0 && want.ContainsKey("")) { made.Add(""); made.AddRange(loose); }
-            return string.Join(Environment.NewLine, made.ToArray()) + Environment.NewLine;
         }
 
         private static int Put(List<string> made, string at, int after, Dictionary<string, List<string>> want, List<string> heads)
@@ -1503,56 +1084,6 @@ namespace CapriDesktop
             want[at] = new List<string>();
             made.InsertRange(after, rows);
             return after + rows.Count;
-        }
-
-        // One heading per name. Earlier builds appended a second copy whenever a name was added, so a file that has
-        // been through a few of those carries empty duplicates. Only a heading with nothing under it goes.
-        private static void Empties()
-        {
-            if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-            try
-            {
-                string[] rows = CapriDesktop.Notes.ReadAll(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-
-                // Which block each line belongs to, how many keys each block holds, and how many each name holds
-                // across the whole file. A block with no keys whose name has keys somewhere else is the spare one.
-                int[] block = new int[rows.Length];
-                List<string> named = new List<string>();
-                List<int> held = new List<int>();
-                int now = -1;
-                for (int at = 0; at < rows.Length; at++)
-                {
-                    string one = (rows[at] ?? "").Trim();
-                    if (one.StartsWith("##", StringComparison.Ordinal))
-                    {
-                        named.Add(one.TrimStart('#').Trim());
-                        held.Add(0);
-                        now = named.Count - 1;
-                    }
-                    block[at] = now;
-                    if (now < 0 || one.Length == 0) continue;
-                    if (one.StartsWith("#", StringComparison.Ordinal) || one.StartsWith(">", StringComparison.Ordinal)) continue;
-                    held[now] = held[now] + 1;
-                }
-                Dictionary<string, int> all = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-                for (int one = 0; one < named.Count; one++)
-                {
-                    int sum;
-                    all[named[one]] = all.TryGetValue(named[one], out sum) ? sum + held[one] : held[one];
-                }
-                bool[] goes = new bool[named.Count];
-                bool cut = false;
-                for (int one = 0; one < named.Count; one++)
-                    if (held[one] == 0 && all[named[one]] > 0) { goes[one] = true; cut = true; }
-                if (!cut) return;
-                List<string> made = new List<string>();
-                for (int at = 0; at < rows.Length; at++)
-                    if (block[at] < 0 || !goes[block[at]]) made.Add(rows[at]);
-                Notes.Put(Kept, string.Join(Environment.NewLine, made.ToArray()));
-                read = DateTime.MinValue;
-                wasLong = -1;
-            }
-            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         internal static void Write(bool over)
@@ -1568,9 +1099,9 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
-        // Her start-up intro. The names sit under the key with a ">" in front, the way a interest does: take the
-        // ">" off one to switch it on, and with more than one on she picks at random. The switch still goes
-        // after this, because the switch is always the last thing in the file.
+        // Her start-up intro: the names sit under the key with ">" in front, like an interest; take the ">" off to
+        // switch one on, and with several on she picks at random. The switch still comes after, as the file's last
+        // line.
         internal const string IntroHeading = "Her start-up intro";
         internal static readonly string[] IntroNames = { "shatter", "hijack", "wake", "door", "door2" };
 
@@ -1618,45 +1149,6 @@ namespace CapriDesktop
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return on.ToArray();
-        }
-
-        // A name added to the intro list later, for a sys.md that already has the section: put in under the last
-        // one, switched off, so it is there to take the ">" off.
-        private static void IntroTopUp()
-        {
-            try
-            {
-                string[] rows = CapriDesktop.Notes.ReadAll(Kept).Replace("\r\n", "\n").Split('\n');
-                int start = -1, last = -1;
-                List<string> seen = new List<string>();
-                for (int at = 0; at < rows.Length; at++)
-                {
-                    string one = rows[at].Trim();
-                    if (one.StartsWith("#", StringComparison.Ordinal))
-                    {
-                        if (start >= 0) break;
-                        if (string.Equals(one.TrimStart('#').Trim(), IntroHeading, StringComparison.OrdinalIgnoreCase)) start = at;
-                        continue;
-                    }
-                    if (start < 0) continue;
-                    string bare = one.TrimStart('>').Trim();
-                    if (bare.StartsWith("intros:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        last = at;
-                        foreach (string part in bare.Substring(7).Split(',')) if (Known(part.Trim()) != null) seen.Add(Known(part.Trim()));
-                        continue;
-                    }
-                    if (Known(bare) != null) { seen.Add(Known(bare)); last = at; }
-                }
-                if (start < 0 || last < 0) return;
-                List<string> missing = new List<string>();
-                foreach (string one in IntroNames) if (!seen.Contains(one)) missing.Add("> " + one);
-                if (missing.Count == 0) return;
-                List<string> made = new List<string>(rows);
-                made.InsertRange(last + 1, missing);
-                Notes.Put(Kept, string.Join(Environment.NewLine, made.ToArray()));
-            }
-            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         private static string Known(string said)
@@ -1708,8 +1200,7 @@ namespace CapriDesktop
                 made.AppendLine("## Doomscroll guard");
                 made.AppendLine();
                 made.AppendLine(">! Sites and apps Doomscroll guard keeps time on, once it's on in Mainframe > Settings > DOOMSCROLL.");
-                made.AppendLine(">! Comma separated, matched on the window title: tiktok, youtube shorts, instagram, reddit and x");
-                made.AppendLine(">! are known, and any other word counts when it's in the title or the program's name.");
+                made.AppendLine(">! Comma separated. Any word counts when it is in a window's title or the program's name.");
                 made.AppendLine();
                 made.AppendLine(Line(Doomscroll.ListKey, Doomscroll.Stock));
                 made.AppendLine();

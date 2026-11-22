@@ -9,14 +9,8 @@ using System.Threading;
 
 namespace CapriDesktop
 {
-    // Capri Remote's tests, run by app/RemoteTests/run.ps1. Not part of Capri.exe: it builds on its own from
-    // app/RemoteCrypto.cs, app/Remote.cs, app/RemoteLink.cs, app/RemoteQr.cs and app/RemoteVectors.cs.
-    //   RemoteTests vectors <vectors.json>          every crypto vector, byte for byte
-    //   RemoteTests units                           relay hosts, phone names and the DPAPI round trip
-    //   RemoteTests qr <folder>                     QR codes for every version and level, for check-qr.py to read back
-    //   RemoteTests pc <relay> <state> [beat ms]    the real RemoteLink, driven by JSON lines (remote-e2e.mjs)
-    //   RemoteTests forget <state> <device>         drops a phone from a saved state without telling the relay
-    //   RemoteTests live <relay> <state> [beat ms]  pc, with the screen view and call on a drawn desktop (RemoteLiveTests.cs)
+    // Capri Remote's tests, built apart from Capri.exe by run.ps1 from the Remote files. Modes: vectors <file>, units,
+    // qr <folder>, pc <relay> <state> [beat ms], forget <state> <device>, live <relay> <state> [beat ms].
     internal static partial class RemoteTests
     {
         private static int Main(string[] args)
@@ -232,9 +226,9 @@ namespace CapriDesktop
             return 0;
         }
 
-        // A stand-in for her BRAIN, answering a phone's brain asks as her side does (app/RemoteBrains.cs): the key is checked
-        // (a key with "rejected" in it fails), sealed with DPAPI into its own file, never sent back, and the PC hears a
-        // notice. Only a hash of each key ever reaches the test.
+        // A stand-in for her BRAIN answering a phone's brain asks as RemoteBrains.cs does: key checked ("rejected"
+        // fails), sealed with DPAPI into its own file, never sent back, and a PC notice. Only a hash of each key
+        // reaches the test.
         private static void BrainDesk(RemoteLink link, string keysPath, Action<RemoteJson.Writer> say)
         {
             object gate = new object();

@@ -204,3 +204,18 @@ Running on this PC	ഈ PC-യിൽ പ്രവർത്തിക്കുന�
 NORMAL	സാധാരണം
 OFF	ഓഫ്
 Local server address	ലോക്കൽ സർവർ വിലാസം
+Remember panel position	പാനലിന്റെ സ്ഥാനം ഓർമ്മിക്കുക
+Custom colours	ഇഷ്ടാനുസൃത നിറങ്ങൾ
+Custom colours...	ഇഷ്ടാനുസൃത നിറങ്ങൾ...
+Choose	തിരഞ്ഞെടുക്കുക
+Hers	അവളുടേത്
+Quiet	ശാന്തം
+Quiet min	ശാന്തം min
+Quiet max	ശാന്തം max
+Until I turn it off	ഞാൻ ഓഫാക്കുന്നതുവരെ
+Quiet on calls	കോളുകളിൽ ശാന്തം
+Quiet in videos	വീഡിയോകളിൽ ശാന്തം
+Quiet until {n}:{n}	{n}:{n} വരെ ശാന്തം
+Quiet until turned off	ഓഫാക്കുന്നതുവരെ ശാന്തം
+Export settings	ക്രമീകരണങ്ങൾ എക്സ്പോർട്ട് ചെയ്യുക
+Import settings	ക്രമീകരണങ്ങൾ ഇമ്പോർട്ട് ചെയ്യുക

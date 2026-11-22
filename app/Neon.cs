@@ -7,24 +7,49 @@ using System.Windows.Forms;
 
 namespace CapriDesktop
 {
-    // Her look, shared by Capri and her installer: her Mainframe's ground with a wine glow at the top, corners clipped big at
-    // the top left and bottom right with a red rim and hot red strokes over the two big corners, rose titles and Windows' own
-    // Bahnschrift. The Mainframe, her menus, her type box, the installer and her notices all draw from here.
+    // Her look, shared by Capri and her installer: the Mainframe's ground with a wine glow, big clipped corners with a
+    // red rim and hot strokes, rose titles and Bahnschrift. The Mainframe, menus, type box, installer and notices draw
+    // from here.
     internal static class Neon
     {
+        // Never full screen: a double-click on the top, Maximize or Win+Up leaves the window as it is. A window's own
+        // maximize key, like Workspace's, still works.
+        internal static void NeverFullScreen(Form window)
+        {
+            window.MaximizeBox = false;
+            new Unmaximized(window);
+        }
+
+        private sealed class Unmaximized : NativeWindow
+        {
+            internal Unmaximized(Form window)
+            {
+                if (window.IsHandleCreated) AssignHandle(window.Handle);
+                window.HandleCreated += delegate { if (Handle != IntPtr.Zero) ReleaseHandle(); AssignHandle(window.Handle); };
+                window.HandleDestroyed += delegate { if (Handle != IntPtr.Zero) ReleaseHandle(); };
+            }
+
+            protected override void WndProc(ref Message message)
+            {
+                if (message.Msg == 0x00A3 && message.WParam.ToInt64() == 2) return;
+                if (message.Msg == 0x0112 && (message.WParam.ToInt64() & 0xFFF0) == 0xF030) return;
+                base.WndProc(ref message);
+            }
+        }
         internal static readonly string[] LookNames = { "Night City", "Black", "White", "Grey" };
-        // No two slots in a look share a colour, even by one shade, or a live change can't tell them apart.
+        // No two slots a control keeps share a colour in a look, even by a shade, or a live change can't tell them
+        // apart. The player's five (PaintedOnly) are exempt: it paints them fresh each frame and keeps none.
         private static readonly Color[][] Looks =
         {
-            new[] { Color.FromArgb(10, 10, 16), Color.FromArgb(54, 14, 26), Color.FromArgb(16, 12, 20), Color.FromArgb(44, 122, 134), Color.FromArgb(255, 93, 102), Color.FromArgb(236, 236, 241), Color.FromArgb(146, 130, 140), Color.FromArgb(17, 16, 28), Color.FromArgb(30, 20, 36), Color.FromArgb(46, 22, 38), Color.FromArgb(92, 24, 36), Color.FromArgb(232, 66, 70), Color.FromArgb(94, 240, 246), Color.FromArgb(9, 30, 33), Color.FromArgb(40, 120, 132), Color.FromArgb(6, 14, 18), Color.FromArgb(78, 28, 40), Color.FromArgb(245, 90, 86), Color.FromArgb(120, 30, 44), Color.FromArgb(12, 11, 20), Color.FromArgb(72, 28, 40), Color.FromArgb(244, 214, 70), Color.FromArgb(9, 11, 15), Color.FromArgb(232, 236, 240), Color.FromArgb(122, 128, 138), Color.FromArgb(16, 13, 22), Color.FromArgb(58, 214, 235), Color.FromArgb(232, 36, 64), Color.FromArgb(56, 176, 255), Color.FromArgb(255, 46, 136) , Color.FromArgb(9, 11, 16) },
-            new[] { Gray(0), Gray(24), Gray(8), Gray(110), Gray(255), Gray(238), Gray(150), Gray(16), Gray(34), Gray(52), Gray(84), Gray(245), Gray(205), Gray(22), Gray(120), Gray(1), Gray(70), Gray(250), Gray(96), Gray(6), Gray(76), Gray(230), Gray(4), Gray(232), Gray(140), Gray(14), Gray(210), Gray(248), Gray(228), Gray(236) , Gray(5) },
-            new[] { Gray(255), Gray(236), Gray(248), Gray(120), Gray(0), Gray(20), Gray(96), Gray(244), Gray(230), Gray(214), Gray(170), Gray(30), Gray(64), Gray(238), Gray(110), Gray(254), Gray(190), Gray(10), Gray(150), Gray(250), Gray(180), Gray(60), Gray(252), Gray(26), Gray(104), Gray(243), Gray(70), Gray(18), Gray(44), Gray(31) , Gray(251) },
-            new[] { Gray(92), Gray(108), Gray(84), Gray(170), Gray(255), Gray(250), Gray(222), Gray(78), Gray(104), Gray(118), Gray(140), Gray(246), Gray(236), Gray(72), Gray(190), Gray(30), Gray(130), Gray(252), Gray(160), Gray(40), Gray(150), Gray(244), Gray(88), Gray(248), Gray(216), Gray(80), Gray(226), Gray(251), Gray(238), Gray(245) , Gray(89) }
+            new[] { Color.FromArgb(10, 10, 16), Color.FromArgb(54, 14, 26), Color.FromArgb(16, 12, 20), Color.FromArgb(44, 122, 134), Color.FromArgb(255, 93, 102), Color.FromArgb(236, 236, 241), Color.FromArgb(146, 130, 140), Color.FromArgb(17, 16, 28), Color.FromArgb(30, 20, 36), Color.FromArgb(46, 22, 38), Color.FromArgb(92, 24, 36), Color.FromArgb(232, 66, 70), Color.FromArgb(94, 240, 246), Color.FromArgb(9, 30, 33), Color.FromArgb(40, 120, 132), Color.FromArgb(6, 14, 18), Color.FromArgb(78, 28, 40), Color.FromArgb(245, 90, 86), Color.FromArgb(120, 30, 44), Color.FromArgb(12, 11, 20), Color.FromArgb(72, 28, 40), Color.FromArgb(244, 214, 70), Color.FromArgb(9, 11, 15), Color.FromArgb(232, 236, 240), Color.FromArgb(122, 128, 138), Color.FromArgb(16, 13, 22), Color.FromArgb(58, 214, 235), Color.FromArgb(232, 36, 64), Color.FromArgb(56, 176, 255), Color.FromArgb(255, 46, 136) , Color.FromArgb(9, 11, 16), Color.FromArgb(58, 214, 235), Color.FromArgb(255, 46, 136), Color.FromArgb(232, 36, 64), Color.FromArgb(58, 63, 74), Color.FromArgb(5, 6, 9), Color.FromArgb(242, 201, 76) },
+            new[] { Gray(0), Gray(24), Gray(8), Gray(110), Gray(255), Gray(238), Gray(150), Gray(16), Gray(34), Gray(52), Gray(84), Gray(245), Gray(205), Gray(22), Gray(120), Gray(1), Gray(70), Gray(250), Gray(96), Gray(6), Gray(76), Gray(230), Gray(4), Gray(232), Gray(140), Gray(14), Gray(210), Gray(248), Gray(228), Gray(236) , Gray(5), Gray(210), Gray(236), Gray(248), Color.FromArgb(58, 63, 74), Color.FromArgb(5, 6, 9), Gray(200) },
+            new[] { Gray(255), Gray(236), Gray(248), Gray(120), Gray(0), Gray(20), Gray(96), Gray(244), Gray(230), Gray(214), Gray(170), Gray(30), Gray(64), Gray(238), Gray(110), Gray(254), Gray(190), Gray(10), Gray(150), Gray(250), Gray(180), Gray(60), Gray(252), Gray(26), Gray(104), Gray(243), Gray(70), Gray(18), Gray(44), Gray(31) , Gray(251), Gray(70), Gray(31), Gray(18), Color.FromArgb(58, 63, 74), Color.FromArgb(5, 6, 9), Gray(80) },
+            new[] { Gray(92), Gray(108), Gray(84), Gray(170), Gray(255), Gray(250), Gray(222), Gray(78), Gray(104), Gray(118), Gray(140), Gray(246), Gray(236), Gray(72), Gray(190), Gray(30), Gray(130), Gray(252), Gray(160), Gray(40), Gray(150), Gray(244), Gray(88), Gray(248), Gray(216), Gray(80), Gray(226), Gray(251), Gray(238), Gray(245) , Gray(89), Gray(226), Gray(245), Gray(251), Color.FromArgb(58, 63, 74), Color.FromArgb(5, 6, 9), Gray(200) }
         };
         private static Color[] now = Looks[0];
         // Theirs, out of layout.md, over whichever look is picked. An entry nobody has set is null and the
         // look's own colour shows through, so a file naming one colour changes one colour.
-        private static readonly Color?[] theirs = new Color?[31];
+        private static readonly Color?[] theirs = new Color?[37];
 
         private static Color At(int one) { Color? set = theirs[one]; return set.HasValue ? set.Value : now[one]; }
 
@@ -35,10 +60,15 @@ namespace CapriDesktop
             "ground", "glow", "band", "rule", "rose", "text", "faint", "field", "hover", "pressed",
             "edge", "hot", "cyan", "deep", "deep edge", "on ink", "dash", "lit", "brim", "well",
             "well edge", "amber", "sheet", "sheet text", "sheet faint", "menu", "bubble outline",
-            "bubble title", "bubble text", "bubble accent", "bubble background"
+            "bubble title", "bubble text", "bubble accent", "bubble background", "player edge",
+            "player accent", "player title", "player rail", "player ground", "points"
         };
 
         internal static string[] Names { get { return (string[])Named.Clone(); } }
+
+        // The entries only ever painted, never kept by a control: her player's five. Every other one may be kept, and no
+        // two kept ones share a colour in a look.
+        internal static bool PaintedOnly(int one) { return one >= 31 && one <= 35; }
 
         internal static Color Stock(string name)
         {
@@ -63,39 +93,82 @@ namespace CapriDesktop
             if (one < 0) return false;
             Color? was = theirs[one];
             if (was.HasValue == colour.HasValue && (!colour.HasValue || was.Value.ToArgb() == colour.Value.ToArgb())) return false;
+            Painting();
             theirs[one] = colour;
             return true;
+        }
+
+        // The colour they set for this entry in layout.md, or null while it follows the look.
+        internal static Color? TheirOwn(string name)
+        {
+            int one = Which(name);
+            return one < 0 ? null : theirs[one];
+        }
+
+        // The colour this entry shows now: theirs, or the picked look's.
+        internal static Color Shown(string name)
+        {
+            int one = Which(name);
+            return one < 0 ? Color.Empty : At(one);
         }
 
         internal static bool NoneOfTheirs()
         {
             bool had = false;
-            for (int one = 0; one < theirs.Length; one++) { if (theirs[one].HasValue) had = true; theirs[one] = null; }
+            for (int one = 0; one < theirs.Length; one++) if (theirs[one].HasValue) had = true;
+            if (had) Painting();
+            for (int one = 0; one < theirs.Length; one++) theirs[one] = null;
             return had;
         }
+
+        // Every entry as it shows now, theirs over the look.
+        internal static Color[] Effective()
+        {
+            Color[] all = new Color[Named.Length];
+            for (int one = 0; one < all.Length; one++) all[one] = At(one);
+            return all;
+        }
+
+        // The palette her windows were last painted in. A live change swaps each stored colour from this to the new one,
+        // so a colour of theirs already on a control is found and changed too, not only the look's stock ones.
+        private static Color[] painted;
+
+        private static void Painting() { if (painted == null) painted = Effective(); }
 
         // Repaint with the look that is already picked, for when the overlay changed rather than the look.
 #if !CROSS
         internal static void Again(params Control[] also)
         {
-            Color[] was = now;
+            Color[] was = painted ?? Effective();
             now = Looks[shade];
-            Repaint(shade, also);
-            if (was == now) Recolour(was);
-        }
-
-        private static void Recolour(Color[] was)
-        {
-            System.Collections.Generic.List<Control> windows = new System.Collections.Generic.List<Control>();
-            foreach (Form form in Application.OpenForms) if (form is LookWindow && !form.InvokeRequired) windows.Add(form);
+            Color[] to = Effective();
             System.Collections.Generic.HashSet<object> done = new System.Collections.Generic.HashSet<object>();
-            foreach (Control window in windows)
+            foreach (Control window in Windows(also))
             {
-                try { Recolour(window, was, done); }
+                try { Recolour(window, was, to, done); }
                 catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 try { window.Invalidate(true); }
                 catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
+            painted = to;
+            Told();
+        }
+
+        // After any repaint, for a window that draws a picture of the palette, like Custom colours.
+        internal static event Action Repainted;
+
+        private static System.Collections.Generic.List<Control> Windows(Control[] also)
+        {
+            System.Collections.Generic.List<Control> windows = new System.Collections.Generic.List<Control>();
+            foreach (Form form in Application.OpenForms) if (form is LookWindow && !form.InvokeRequired) windows.Add(form);
+            foreach (Control control in also) if (control != null && !control.IsDisposed && !control.InvokeRequired && !windows.Contains(control)) windows.Add(control);
+            return windows;
+        }
+
+        private static void Told()
+        {
+            try { if (Repainted != null) Repainted(); }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 #endif
         private static int shade;
@@ -107,7 +180,7 @@ namespace CapriDesktop
                 unchecked
                 {
                     int stamp = 17;
-                    foreach (Color colour in now) stamp = stamp * 31 + colour.ToArgb();
+                    foreach (Color colour in Effective()) stamp = stamp * 31 + colour.ToArgb();
                     return stamp;
                 }
             }
@@ -148,6 +221,15 @@ namespace CapriDesktop
         internal static Color SpokenTitle { get { return At(27); } }
         internal static Color SpokenInk { get { return At(28); } }
         internal static Color SpokenAccent { get { return At(29); } }
+        // Her music player's own, split from her bubble's so either can change alone. Stocked to the bubble's and the two it
+        // drew fixed, so nobody's player changes.
+        internal static Color PlayerEdge { get { return At(31); } }
+        internal static Color PlayerAccent { get { return At(32); } }
+        internal static Color PlayerTitle { get { return At(33); } }
+        internal static Color PlayerRail { get { return At(34); } }
+        internal static Color PlayerGround { get { return At(35); } }
+        // Her Tamagotchi points and what each thing costs, in gold.
+        internal static Color Points { get { return At(36); } }
 
         private static Color Gray(int v) { return Color.FromArgb(v, v, v); }
 
@@ -180,12 +262,11 @@ namespace CapriDesktop
 
         internal static void Repaint(int look, params Control[] also)
         {
-            Color[] was = now;
+            Color[] lookWas = now, was = painted ?? Effective();
             UseLook(look);
-            if (was == now) return;
-            System.Collections.Generic.List<Control> windows = new System.Collections.Generic.List<Control>();
-            foreach (Form form in Application.OpenForms) if (form is LookWindow && !form.InvokeRequired) windows.Add(form);
-            foreach (Control control in also) if (control != null && !control.IsDisposed && !control.InvokeRequired && !windows.Contains(control)) windows.Add(control);
+            if (lookWas == now) return;
+            Color[] to = Effective();
+            System.Collections.Generic.List<Control> windows = Windows(also);
             // A menu can be reached twice, on its own and under the item it drops from, and a second swap would read the new
             // look's greys as the old look's, so each control and item is recoloured once.
             System.Collections.Generic.HashSet<object> done = new System.Collections.Generic.HashSet<object>();
@@ -193,7 +274,7 @@ namespace CapriDesktop
             {
                 bool batched = window.IsHandleCreated && window.Visible && !(window is ToolStrip);
                 if (batched) SendMessage(window.Handle, 0x000B, IntPtr.Zero, IntPtr.Zero);
-                try { Recolour(window, was, done); }
+                try { Recolour(window, was, to, done); }
                 finally
                 {
                     if (batched)
@@ -203,39 +284,41 @@ namespace CapriDesktop
                     }
                 }
             }
+            painted = to;
+            Told();
         }
 
-        private static Color Swapped(Color stored, Color[] was)
+        private static Color Swapped(Color stored, Color[] was, Color[] to)
         {
             if (stored.IsEmpty || stored.A != 255) return stored;
-            for (int i = 0; i < was.Length; i++) if (was[i].ToArgb() == stored.ToArgb()) return now[i];
+            for (int i = 0; i < was.Length; i++) if (!PaintedOnly(i) && was[i].ToArgb() == stored.ToArgb()) return to[i];
             return stored;
         }
 
-        private static void Recolour(Control control, Color[] was, System.Collections.Generic.HashSet<object> done)
+        private static void Recolour(Control control, Color[] was, Color[] to, System.Collections.Generic.HashSet<object> done)
         {
             if (!done.Add(control)) return;
-            foreach (Control child in control.Controls) Recolour(child, was, done);
+            foreach (Control child in control.Controls) Recolour(child, was, to, done);
             // A strip's items read its colours until they have their own, so like child controls they go before it.
             ToolStrip strip = control as ToolStrip;
-            if (strip != null) foreach (ToolStripItem item in strip.Items) Recolour(item, was, done);
-            Color fore = Swapped(control.ForeColor, was), back = Swapped(control.BackColor, was);
+            if (strip != null) foreach (ToolStripItem item in strip.Items) Recolour(item, was, to, done);
+            Color fore = Swapped(control.ForeColor, was, to), back = Swapped(control.BackColor, was, to);
             if (fore.ToArgb() != control.ForeColor.ToArgb()) control.ForeColor = fore;
             if (back.ToArgb() != control.BackColor.ToArgb()) control.BackColor = back;
             Button button = control as Button;
-            if (button != null && button.FlatStyle == FlatStyle.Flat && !button.FlatAppearance.BorderColor.IsEmpty) button.FlatAppearance.BorderColor = Swapped(button.FlatAppearance.BorderColor, was);
+            if (button != null && button.FlatStyle == FlatStyle.Flat && !button.FlatAppearance.BorderColor.IsEmpty) button.FlatAppearance.BorderColor = Swapped(button.FlatAppearance.BorderColor, was, to);
             Tinted tinted = control as Tinted;
-            if (tinted != null) tinted.Recolour(delegate(Color stored) { return Swapped(stored, was); });
+            if (tinted != null) tinted.Recolour(delegate(Color stored) { return Swapped(stored, was, to); });
             control.Invalidate();
         }
 
-        private static void Recolour(ToolStripItem item, Color[] was, System.Collections.Generic.HashSet<object> done)
+        private static void Recolour(ToolStripItem item, Color[] was, Color[] to, System.Collections.Generic.HashSet<object> done)
         {
             if (!done.Add(item)) return;
             ToolStripDropDownItem drop = item as ToolStripDropDownItem;
-            if (drop != null && drop.HasDropDownItems) Recolour(drop.DropDown, was, done);
-            item.ForeColor = Swapped(item.ForeColor, was);
-            item.BackColor = Swapped(item.BackColor, was);
+            if (drop != null && drop.HasDropDownItems) Recolour(drop.DropDown, was, to, done);
+            item.ForeColor = Swapped(item.ForeColor, was, to);
+            item.BackColor = Swapped(item.BackColor, was, to);
         }
 
         // The wine glow's falloff: strong at the top, gone well before the middle.
@@ -263,11 +346,8 @@ namespace CapriDesktop
             catch (ArgumentException) { return null; }
         }
 
-        // Bahnschrift's semi-condensed cut, or its semi-bold for buttons and labels. Windows without it get Segoe UI.
-        //
-        // Yours to free. This makes one each time, unlike Fonts, which keeps one and frees none. The two read
-        // alike at the call and the rule is the opposite, so say which: a font from here goes in a using or is
-        // disposed by whatever holds it. ci/audit-fonts.py checks nothing frees one it did not make.
+        // Bahnschrift's semi-condensed cut, or its semi-bold for buttons and labels; Segoe UI without it. Yours to
+        // free, unlike Fonts', which are never freed; ci/audit-fonts.py checks that.
         internal static Font Type(float size, bool bold = false, GraphicsUnit unit = GraphicsUnit.Point)
         {
             FontFamily family = bold ? Heavy : Plain;
@@ -368,8 +448,8 @@ namespace CapriDesktop
 #endif
     }
 
-    // A button in her look: a dark box with a red rim and its bottom right corner clipped. A cyan one is the step to take, and
-    // a solid one is the window's main step; a red one ends something. Glyph 1 or 2 makes it a bare minimize or close mark.
+    // A button in her look: a dark box with a red rim and a clipped bottom right corner. Cyan is the step to take,
+    // solid the window's main step, red ends something; Glyph 1 or 2 makes a bare minimize or close mark.
     internal interface LookWindow { }
 
     internal interface Tinted { void Recolour(Func<Color, Color> swap); }
@@ -408,6 +488,9 @@ namespace CapriDesktop
         internal bool Solid;
         internal int Glyph;
         internal float Unit;
+        // Shows its focus whatever Windows last decided about focus marks, for a box whose picked key must always show.
+        internal bool Cued;
+        protected override bool ShowFocusCues { get { return Cued || base.ShowFocusCues; } }
         private bool hot;
         private bool down;
 

@@ -7,18 +7,8 @@ using System.Text;
 
 namespace CapriDesktop
 {
-    // Which program they actually use for a thing, learned by watching rather than by asking.
-    //
-    // She knows a lot of programs and had no idea which of them is theirs. "Open my calendar" on a PC with three
-    // calendar apps was a guess, and a guess that is wrong once is worse than asking.
-    //
-    // Only what they put in front counts. Her own opening of something is one use of it on this PC and nothing
-    // more: if it counted, her first guess would reinforce itself and she would never learn she had it wrong.
-    // Being asked for a specific one still opens that one, and that does not change the default either.
-    //
-    // Counts decay like her hours do, so changing browser catches up in a fortnight instead of being outvoted by
-    // last month forever. Nothing here is sent anywhere: it is a list of program names in a file beside her
-    // settings.
+    // Which program they actually use for a thing, learned from what they put in front, never from her own openings, so
+    // a wrong guess can't reinforce itself. Counts decay like her hours; nothing here is sent anywhere.
     internal static class Favourites
     {
         internal const string FileName = "apps-used.txt";
@@ -47,7 +37,9 @@ namespace CapriDesktop
             { "calendar", new[] { "outlook", "calendar", "thunderbird", "em client", "emclient", "mailbird", "morgen", "notion" } },
             { "music", new[] { "spotify", "foobar", "musicbee", "winamp", "aimp", "itunes", "applemusic", "deezer", "tidal", "vlc" } },
             { "images", new[] { "qview", "irfanview", "xnview", "honeyview", "nomacs", "imageglass", "photos", "paint.net", "photoshop" } },
-            { "editor", new[] { "code", "codium", "notepad++", "sublime", "rider", "devenv", "idea", "pycharm", "notepad" } },
+            // Programming and plain text are two kinds, asked about apart.
+            { "code editor", new[] { "code", "codium", "sublime", "rider", "devenv", "idea", "pycharm" } },
+            { "text editor", new[] { "notepad++", "notepad" } },
             { "chat", new[] { "discord", "slack", "teams", "telegram", "signal", "whatsapp" } }
         };
 
@@ -55,7 +47,7 @@ namespace CapriDesktop
         private static readonly Dictionary<string, string> Called = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             { "browser", "browser" }, { "calendar", "calendar" }, { "music", "music player" },
-            { "images", "image viewer" }, { "editor", "editor" }, { "chat", "chat app" }
+            { "images", "image viewer" }, { "code editor", "code editor" }, { "text editor", "text editor" }, { "chat", "chat app" }
         };
 
         // What they might call a kind out loud, for "open my browser". The kind's own name and the friendly one
@@ -66,7 +58,7 @@ namespace CapriDesktop
             { "calendar", "calendar" }, { "diary", "calendar" }, { "schedule", "calendar" },
             { "music", "music" }, { "music player", "music" }, { "music app", "music" }, { "tunes", "music" },
             { "images", "images" }, { "image viewer", "images" }, { "photo viewer", "images" }, { "gallery", "images" },
-            { "editor", "editor" }, { "code editor", "editor" }, { "text editor", "editor" }, { "ide", "editor" },
+            { "editor", "editor" }, { "code editor", "code editor" }, { "text editor", "text editor" }, { "ide", "code editor" },
             { "chat", "chat" }, { "chat app", "chat" }, { "messenger", "chat" }
         };
 
@@ -176,6 +168,8 @@ namespace CapriDesktop
 
         internal static string Best(string kind)
         {
+            // "My editor" on its own is whichever of their code and text editors they use more.
+            if (string.Equals(kind, "editor", StringComparison.OrdinalIgnoreCase)) return EitherEditor();
             // Written down beats counted and beats picked: typing an app's name into a file of hers is the
             // most deliberate thing anybody can do about it, and it was being ignored entirely.
             string wrote = null;
@@ -198,6 +192,50 @@ namespace CapriDesktop
                 }
                 return best;
             }
+        }
+
+        private static string EitherEditor()
+        {
+            string code = Best("code editor"), text = Best("text editor");
+            if (code == null || text == null) return code ?? text;
+            lock (gate)
+            {
+                double codeUsed, textUsed;
+                counts.TryGetValue(code, out codeUsed);
+                counts.TryGetValue(text, out textUsed);
+                return textUsed > codeUsed ? text : code;
+            }
+        }
+
+        // An answer from before the split, "editor", goes to whichever kind its program is.
+        private static void SplitEditor()
+        {
+            string had;
+            if (picks.TryGetValue("editor", out had))
+            {
+                picks.Remove("editor");
+                string kind = KindHolding(had);
+                if (kind != null && !picks.ContainsKey(kind)) picks[kind] = had;
+            }
+            if (refused.TryGetValue("editor", out had))
+            {
+                refused.Remove("editor");
+                foreach (string one in had.Split('|'))
+                {
+                    string kind = KindHolding(one), kept;
+                    if (kind == null || one.Length == 0) continue;
+                    refused[kind] = refused.TryGetValue(kind, out kept) && kept.Length > 0 ? kept + "|" + one : one;
+                }
+            }
+        }
+
+        // The editor kind a program belongs to, or null.
+        private static string KindHolding(string program)
+        {
+            foreach (string kind in new[] { "text editor", "code editor" })
+                foreach (string name in Kinds[kind])
+                    if ((program ?? "").IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0) return kind;
+            return null;
         }
 
         // What is in front now. Called on her slow tick, not every frame.
@@ -351,6 +389,7 @@ namespace CapriDesktop
                         if (parts.Length == 2) refused[parts[0]] = parts[1];
                     }
                 }
+                SplitEditor();
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
@@ -375,7 +414,42 @@ namespace CapriDesktop
 
         internal static void Save() { lock (gate) { if (read) Write(); } }
 
-        // Everything let go, so the file at Kept is read afresh. For her checks.
+        // Everything let go, so the file at Kept is read afresh, for her checks. The editor split: "my editor", "code
+        // editor" and "text editor" each mean their kind; "my editor" opens whichever is used more, and an older answer
+        // keeps its program.
+        internal static void CheckEditors(List<string> checks, string output)
+        {
+            string keptWas = Kept;
+            string kept = System.IO.Path.Combine(output, "favourites-editors.txt");
+            try
+            {
+                File.WriteAllText(kept, "pick:editor\tcodium\nnotthat:editor\tnotepad\n");
+                Kept = kept;
+                Reload();
+                string fromBefore = Picked("code editor"), ruledOut = null;
+                lock (gate) refused.TryGetValue("text editor", out ruledOut);
+                bool kinds = KindOf("my editor") == "editor" && KindOf("code editor") == "code editor" && KindOf("the ide") == "code editor" && KindOf("text editor") == "text editor";
+                File.WriteAllText(kept, "");
+                Reload();
+                DateTime at = DateTime.UtcNow;
+                for (int i = 0; i < 6; i++) { Seen("Code.exe", at); Seen("explorer.exe", at); at = at.AddMinutes(10); }
+                for (int i = 0; i < 4; i++) { Seen("notepad.exe", at); Seen("explorer.exe", at); at = at.AddMinutes(10); }
+                string code = Best("code editor"), text = Best("text editor"), either = Best("editor");
+                for (int i = 0; i < 6; i++) { Seen("notepad.exe", at); Seen("explorer.exe", at); at = at.AddMinutes(10); }
+                string more = Best("editor");
+                if (fromBefore != "codium" || ruledOut != "notepad" || !kinds || code == null || code.IndexOf("code", StringComparison.OrdinalIgnoreCase) < 0
+                    || text == null || text.IndexOf("notepad", StringComparison.OrdinalIgnoreCase) < 0 || either != code || more != text)
+                    throw new Exception("The editor split went wrong: from before " + fromBefore + " / ruled out " + ruledOut + " / kinds " + kinds + " / code " + code + " / text " + text + " / editor " + either + " then " + more);
+                checks.Add("PASS code editors and text editors are two kinds: \"my editor\" opens whichever they use more, \"code editor\" and \"the IDE\" mean code, \"text editor\" means text, and an answer from before the split keeps its program under its own kind");
+            }
+            finally
+            {
+                Kept = keptWas;
+                Reload();
+                try { File.Delete(kept); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            }
+        }
+
         internal static void Reload()
         {
             lock (gate)

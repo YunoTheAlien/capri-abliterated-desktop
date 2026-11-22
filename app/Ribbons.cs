@@ -8,13 +8,9 @@ using System.Windows.Forms;
 
 namespace CapriDesktop
 {
-    // How she gets from one place to another. She comes apart into the ribbons she forms from: her hair's red with flecks of
-    // white in it, and thin lines of her green. They wind into a ball where she was and stream to where she's going (Lachy,
-    // 10 Nov: "lines of green and red, just like when she's forming"). Where she lands she forms from the transformation
-    // animation itself: the drawings by Qewiw (mix_qewiw1412_86144) in assets/sprites/form.png, played as drawn, back from
-    // the ball of ribbon to her. Lachy, 10 Nov: "id also like to respect the original work too". The ribbons on the way
-    // follow those drawings' look and are drawn by this code, afresh on every frame: no picture is slid across the screen.
-    // Hiding and quitting have nowhere to go, so they still shatter.
+    // How she gets from place to place: she comes apart into her red and green ribbons, which wind into a ball and
+    // stream to where she's going (Lachy), and forms there from Qewiw's transformation drawings. Hiding and quitting
+    // still shatter.
     internal sealed class Ribbons : Overlay
     {
         // One trip. Every place is in screen pixels and every time is in seconds since she left.
@@ -34,11 +30,9 @@ namespace CapriDesktop
             internal bool FormTurned;      // mirrored. The animation is drawn on her facing left, so this is her facing right
         }
 
-        // wide: how broad it is beside the others. leaves: how long after the first one it sets off, in travel times.
-        // lasts: how long it is, as the time its tail follows its head. twists: how many times it turns over along its
-        // length. around: where it starts in the bundle. The rest is the loop it winds into where she was: how big, how many
-        // times round, how flat, how tipped, and how far off the middle. No two are alike, so the loops read as a ball of
-        // ribbon and not as rings. The red ones carry her hair's white flecks.
+        // wide, leaves, lasts, twists and around: a ribbon's breadth, start delay, length, turns and place in the
+        // bundle. The rest shapes the loop it winds where she was, each one different so they read as a ball; red ones
+        // carry white flecks.
         private sealed class Strand
         {
             internal readonly bool Hair;
@@ -71,9 +65,8 @@ namespace CapriDesktop
         internal const double Gather = 0.24;    // her picture goes and her ribbons wind into a ball
         internal const double Wait = 1.0;       // how long the ball waits to hear where she's going
         internal const double GiveUp = 0.18;    // and how long it takes to go if it never hears
-        // The drawings she forms from. The animation holds each for a thirtieth of a second; here it's a twenty-fourth, so
-        // they can be seen. The first five are the ball of ribbon, back to front. The last four are its ribbons alone as they
-        // leave her, and by then her own window is showing under them.
+        // The drawings she forms from, held a twenty-fourth of a second each so they can be seen: the first five are
+        // the ribbon ball back to front, the last four its ribbons leaving her over her own window.
         internal const int Drawings = 9, Ball = 5;
         internal const double Drawn = 1 / 24.0;
         internal const double Handoff = Ball * Drawn;   // from her first ribbon landing to her own window taking over
@@ -132,9 +125,9 @@ namespace CapriDesktop
             ticks.Start();
         }
 
-        // Tells her waiting ribbons where she lands. middle is where the ball she forms from goes; form is the strip of
-        // drawings, each pixel of the animation scale pixels on the screen, mirrored when turned. They take the seconds this
-        // gives back to get there, and her own window takes over Handoff after that.
+        // Tells her waiting ribbons where she lands: middle is the ball's place, form the strip of drawings, scale
+        // screen pixels per animation pixel, mirrored when turned. They take the returned seconds; her window takes
+        // over Handoff after.
         internal double Go(PointF middle, Bitmap form, float scale, bool turned)
         {
             if (!Waiting) return 0;
@@ -218,7 +211,7 @@ namespace CapriDesktop
             return a + (b - a) * part * part * (3 - 2 * part);
         }
 
-        // Fairly quick (Lachy, 10 Nov), and a little longer the further she goes, so a hop along her window doesn't snap and a
+        // Fairly quick (Lachy), and a little longer the further she goes, so a hop along her window doesn't snap and a
         // trip across two monitors doesn't drag.
         internal static double TravelTime(double distance) { return Math.Max(0.22, Math.Min(0.42, 0.2 + distance / 5200)); }
 
@@ -254,9 +247,8 @@ namespace CapriDesktop
         // How much of her picture is still there where she left.
         private static double Leaving(double t) { return 1 - Smooth((t - 0.02) / 0.16); }
 
-        // How far along its way a point of a ribbon is, for how long ago it set off in travel times. -1 to 0 is the loop
-        // where she was, from its inner end to where it comes off over the top. 0 to 1 is the way across: easing off, quickest
-        // into where she lands, and there it stops, so a ribbon runs into the ball she forms from until its tail is in.
+        // How far along a ribbon a point is, by how long ago it set off in travel times: -1 to 0 is the loop where she
+        // was, 0 to 1 the way across, easing off and stopping where she lands until its tail is in.
         private static double Along(double since, double lasts)
         {
             if (since <= 0) return Math.Max(-1, since / lasts);
@@ -481,15 +473,12 @@ namespace CapriDesktop
             veilUntil = now + wait + Ribbons.Handoff;
         }
 
-        // Her ribbons: they wind into a ball where she was and stream to where she's going, in her hair's red with white
-        // flecks and her green; where they land she forms from Qewiw's drawings, the right way round for the way she faces;
-        // nothing is left once she's back; a hop takes well under a second; and her own teleport leaves as ribbons, lands
-        // where she went and holds her own window back until she has formed.
+        // Her ribbons: they ball up and stream in red and green, she forms from Qewiw's drawings facing the right way,
+        // nothing is left after, a hop is well under a second, and her own window waits until she has formed.
         private Func<string, string, string, ClaudeReply> driveTest;
 
-        // A computer job's teleport onto the task panel finishes by itself while her window's thread is kept busy with other
-        // work the whole time, the way a full-screen game job kept it on 12 Nov: her window timers never fired then, and she sat
-        // on the teleport's first frame, glitch bars and all, for the whole 22 s job until Esc stopped it.
+        // A computer job's teleport onto the task panel finishes by itself while her window's thread stays busy with
+        // other work, as a full-screen game job keeps it.
         private void SmokeJobTeleport(List<string> checks)
         {
             Func<bool> fullWas = FullScreen;
@@ -497,7 +486,7 @@ namespace CapriDesktop
             Picture shownWas = Computer.Shown;
             ThrowCheck(checks, delegate(List<string> list, List<short[]> sounds)
             {
-                Rectangle work = Screen.PrimaryScreen.WorkingArea;
+                Rectangle work = Displays.Home.WorkingArea;
                 StandForThrow(new Point(work.Left + work.Width / 3, work.Top + work.Height / 2));
                 RenderFrame();
                 instant = false;
@@ -682,10 +671,8 @@ namespace CapriDesktop
             }
         }
 
-        // Stand-ins for whatever kept her window's thread busy on 12 Nov, for the review of her beat. One is a window on her
-        // thread that never gets painted, so Windows hands it WM_PAINT for ever; the other is a posted message that posts the
-        // next. Both starve her window timers while posted work still runs. A window timer of the check's own counts its ticks
-        // too, so a stand-in that didn't really starve anything fails rather than passing for the wrong reason.
+        // Stand-ins for a starved window thread: a window never painted, so WM_PAINT never stops, and a message that
+        // posts the next. A window timer of the check's own counts too, so a stand-in that starves nothing fails.
         private void SmokeStarved(List<string> checks, bool paint)
         {
             Func<bool> fullWas = FullScreen;
@@ -694,7 +681,7 @@ namespace CapriDesktop
             string name = paint ? "a window that's never painted" : "a posted-message flood";
             ThrowCheck(checks, delegate(List<string> list, List<short[]> sounds)
             {
-                Rectangle work = Screen.PrimaryScreen.WorkingArea;
+                Rectangle work = Displays.Home.WorkingArea;
                 StandForThrow(new Point(work.Left + work.Width / 3, work.Top + work.Height / 2));
                 RenderFrame();
                 instant = false;
@@ -781,7 +768,7 @@ namespace CapriDesktop
         {
             ThrowCheck(checks, delegate(List<string> list, List<short[]> sounds)
             {
-                Rectangle work = Screen.PrimaryScreen.WorkingArea;
+                Rectangle work = Displays.Home.WorkingArea;
                 StandForThrow(new Point(work.Left + work.Width / 3, work.Top + work.Height / 2));
                 instant = false;
                 RenderFrame();
@@ -977,7 +964,7 @@ namespace CapriDesktop
             }
             ThrowCheck(checks, delegate(List<string> list, List<short[]> sounds)
             {
-                Rectangle work = Screen.PrimaryScreen.WorkingArea;
+                Rectangle work = Displays.Home.WorkingArea;
                 StandForThrow(new Point(work.Left + work.Width / 3, work.Top + work.Height / 2));
                 RenderFrame();
                 instant = false;

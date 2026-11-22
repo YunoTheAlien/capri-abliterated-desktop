@@ -6,21 +6,9 @@ using System.Text;
 
 namespace CapriDesktop
 {
-    // When they were away from the PC, and whether that was sleep or work.
-    //
-    // Hours counts which hours of the day they are about. That draws their routine but says nothing about one
-    // night: a machine left on all night counts those hours the same as a night at the desk, and nothing
-    // anywhere measured a gap. So she could not tell a full night's sleep from a nap, could not say whether
-    // they had had enough, and had no reason to ask about the one thing a gap cannot tell her apart.
-    //
-    // Keyboard and mouse decide it. A spell with no input at all is a spell they were not here. Short ones are
-    // ignored: a film, a meal and a long read are all away from the keyboard and none of them is sleep.
-    //
-    // A long spell is the ambiguous one. Seven hours and more is a night's sleep or a working day, and the two
-    // mean opposite things, so one of those gets a question rather than a guess.
-    //
-    // Nothing here is sent anywhere. It is a handful of lines in a file beside her settings, and what reaches
-    // her brain is prose with no numbers to read back.
+    // When they were away from the PC, and whether that was sleep or work: a spell with no keyboard or mouse input is
+    // time away. Short ones are ignored; seven hours or more is asked about, not guessed. Nothing here is sent
+    // anywhere.
     internal static class Away
     {
         internal const string FileName = "away.txt";
@@ -171,9 +159,9 @@ namespace CapriDesktop
             }
         }
 
-        // What a spell was, from the ones before it that they already placed: two or more at about the same time
-        // of day and about as long, all the same thing, and it is that again. A routine is asked about until she
-        // has seen it, then not, and a schedule that moves keeps being asked about because nothing matches.
+        // What a spell was, from the ones before it they placed: two or more at the same time of day and length, all
+        // one thing, make it that again. A routine stops being asked about once seen; a moving schedule keeps being
+        // asked.
         private static string Usually(Spell spell)
         {
             Dictionary<string, int> seen = new Dictionary<string, int>();

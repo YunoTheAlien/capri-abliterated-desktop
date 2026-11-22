@@ -23,8 +23,7 @@ namespace CapriDesktop
         // How a line names it, like "She hears you and your browser.": "Browser" alone reads oddly there.
         internal string Said { get { return Name == "Browser" ? "your browser" : Name; } }
         internal string NotOpen { get { return (Name == "Browser" ? "Your browser" : Name) + " isn't open."; } }
-        // Any other app in Windows' volume mixer, picked by its exe, like RobloxPlayerBeta.exe (Lachy, 5 Nov: "being able to
-        // select an app for audio to come from, like Roblox or something, would be good for call mode").
+        // Any other app in Windows' volume mixer, picked by its exe, like RobloxPlayerBeta.exe (Lachy).
         internal bool Other { get { return Choice.EndsWith(".exe", StringComparison.OrdinalIgnoreCase); } }
         // Browsers, Steam and other apps play videos and games all day, so Auto never takes them for a call: you pick them yourself.
         internal bool InAuto { get { return !Other && Name != "Browser" && Name != "Steam"; } }
@@ -51,7 +50,7 @@ namespace CapriDesktop
 
     internal static class CallApps
     {
-        // The call apps people here use (Lachy, 6 Nov: no one in the community calls on Telegram or Signal, and Skype is gone). Any
+        // The call apps people here use; nobody calls on Telegram or Signal, and Skype is gone (Lachy). Any
         // other app making sound is still in the menu, from Windows' volume mixer.
         internal static readonly CallApp[] Apps = {
             new CallApp("Discord", "Discord", "Discord", "DiscordPTB", "DiscordCanary"),
@@ -176,9 +175,8 @@ namespace CapriDesktop
             return path.Length == 0 ? null : FileVersionInfo.GetVersionInfo(path).FileDescription;
         }
 
-        // Every sound in Windows' volume mixer, playing or not, and the other apps among them, each exe once, never her own.
-        // Reading the mixer and exe files can stall, so it never runs on the UI thread: her call ears do it every second on a
-        // call, and the Call app menu on a worker when it opens.
+        // Every sound in Windows' volume mixer and the other apps among them, each exe once, never hers. Reading can
+        // stall, so it never runs on the UI thread: her call ears read it each second, the Call app menu on a worker.
         internal static List<AppSound> Look()
         {
             lock (lookGate)
@@ -383,10 +381,8 @@ namespace CapriDesktop
         }
     }
 
-    // The people on your call: Discord's own sound, which Windows hands her apart from everything else the PC plays (the
-    // per-app capture OBS's Application Audio Capture uses), so in call mode she hears them as well as you (Lachy, 3 Nov:
-    // "I don't think what they say is picked up rn"). Her voice reaches the call through your mic, and Discord never plays
-    // your own mic back to you, so she doesn't hear herself in it.
+    // The people on your call: Discord's own sound, captured apart from everything else the PC plays, so in call mode
+    // she hears them as well as you (Lachy). Discord never plays your mic back, so she doesn't hear herself.
     internal sealed class CallEars : IDisposable
     {
         internal const string NotOpen = "Discord isn't open.";
@@ -549,9 +545,8 @@ namespace CapriDesktop
             }
         }
 
-        // Your mic's chunk with the same stretch of Discord added to it, and how loud each was, to tell whose line it is. Anything
-        // older than the newest two chunks of Discord is dropped first, so it never falls behind your voice. Discord's stretch
-        // on its own goes in alone when it's given, for CallOver while she talks.
+        // Your mic's chunk with the same stretch of Discord mixed in, and each one's level, to tell whose line it is.
+        // Discord older than its newest two chunks is dropped first, so it never lags your voice.
         internal short[] Mix(short[] chunk, out double mine, out double theirs, short[] alone = null)
         {
             short[] mixed = new short[chunk.Length];
@@ -1324,9 +1319,8 @@ namespace CapriDesktop
                 int order = left.At.CompareTo(right.At);
                 return order == 0 ? left.FromCall.CompareTo(right.FromCall) : order;
             });
-            // Only stretches that agree on being echo join, so a stretch of a friend's echo after a pause can't be outvoted by
-            // your words before it and read as yours. Your stretch beside it still reads as yours, but it can't wake her or say
-            // yes, as when they joined: the echo check could have missed part of the friend.
+            // Only stretches that agree on being echo join, so a friend's echo after a pause can't be outvoted by your
+            // words before it. Your stretch beside it still reads as yours but can't wake her or say yes.
             for (int i = line.Parts.Count - 1; i > 0; i--)
             {
                 if (line.Parts[i - 1].FromCall != line.Parts[i].FromCall) continue;
@@ -1355,11 +1349,8 @@ namespace CapriDesktop
         }
     }
 
-    // Someone on the call talking over her. While she talks her ears get your mic alone, and Discord's sound waits here: once nine
-    // of its last twelve chunks are a voice's level, about a second of talking inside 1.2 s, she stops, and once she has her ears
-    // get its newest 1.4 s, the start of their line included. A laugh, a "yeah" or a "nah nah" is shorter, so it lets her finish
-    // (Lachy, 3 Nov: "maybe we need some interruption and stuff like that when someone talks over as well"; 4 Nov: half a second
-    // cut her off mid-answer on a real call).
+    // Someone on the call talking over her: once nine of Discord's last twelve chunks are a voice, about a second of
+    // talking, she stops and her ears get its last 1.4 s. A laugh or a "yeah" is shorter, so she finishes (Lachy).
     internal sealed class CallOver
     {
         internal const int Window = 12, Needs = 9, Kept = 14;

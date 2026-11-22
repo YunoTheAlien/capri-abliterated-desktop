@@ -204,3 +204,18 @@ Running on this PC	Radi na ovom PC-ju
 NORMAL	NORMALNO
 OFF	ISKLJ.
 Local server address	Adresa lokalnog servera
+Remember panel position	Zapamti položaj panela
+Custom colours	Prilagođene boje
+Custom colours...	Prilagođene boje...
+Choose	Izaberi
+Hers	Njene
+Quiet	Tiho
+Quiet min	Tiho min
+Quiet max	Tiho max
+Until I turn it off	Dok to ne isključim
+Quiet on calls	Tiho tokom poziva
+Quiet in videos	Tiho u video snimcima
+Quiet until {n}:{n}	Tiho do {n}:{n}
+Quiet until turned off	Tiho dok se ne isključi
+Export settings	Izvezi podešavanja
+Import settings	Uvezi podešavanja

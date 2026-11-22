@@ -3,14 +3,8 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
-    // Whether the thing in front of them is work.
-    //
-    // She treated every quiet hour the same. Someone in a spreadsheet all afternoon was ignoring her exactly as much
-    // as someone who walked away, so her needs ran down at the same rate and she sulked at a person who was sitting
-    // right there earning a living. Work is still attention, just not attention on her.
-    //
-    // It only ever slows things down. Nothing here makes her needier, and it never stops a check-in: being at work
-    // is the one time a reminder to drink something is worth most.
+    // Whether the thing in front of them is work: work slows her needs, since it is attention, just not on her. It
+    // never makes her needier and never stops a check-in.
     internal static class Working
     {
         // Matched against the program name, which is how Windows names the exe without its path.

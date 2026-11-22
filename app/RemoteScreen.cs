@@ -10,12 +10,8 @@ using System.Threading;
 
 namespace CapriDesktop
 {
-    // Capri Remote's screen view (remote/PROTOCOL.md section 8.2). A paired phone that asks watches one of the PC's monitors
-    // a few frames a second, shrunk to suit the phone and sealed like every other message. Nothing goes while the screen
-    // doesn't change, each frame is split into parts under the relay's frame cap, and at most two frames go ahead of the
-    // phone's last ack, so a slow phone gets fewer frames instead of a backlog. The monitor is the one the phone picked or,
-    // with Auto, the one she's looking at. There's no window or capture in here: Capri's own source is app/RemoteLive.cs
-    // (FrameGrab), and app/RemoteTests draws its own.
+    // Capri Remote's screen view (remote/PROTOCOL.md 8.2): the chosen monitor, or Auto's, a few frames a second, shrunk
+    // and sealed. Nothing goes while it doesn't change, and at most two frames ride ahead of the last ack.
 
     // A monitor a phone can pick: its number as Windows counts it ("2" for \\.\DISPLAY2), and where it sits.
     internal sealed class RemoteMonitor

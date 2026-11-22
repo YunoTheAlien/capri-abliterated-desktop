@@ -2,15 +2,8 @@ using System;
 
 namespace CapriDesktop
 {
-    // What she says over a chess board, in a file of hers rather than nine arrays in the source.
-    //
-    // She had four or five lines a moment, picked with a plain roll, so anybody who plays her more than
-    // twice hears the same taunt on the same move. Her other pools stopped being arrays for exactly this
-    // reason; this is the last of them.
-    //
-    // Nine moments, read through the same recency as everything else she says, so a line does not come back
-    // until its pool has been round. The lines the build ships are still in the source as the fallback, so
-    // an emptied section leaves her saying the shipped one rather than nothing at all.
+    // What she says over a chess board, from a file of hers, read through the same recency as everything else she says.
+    // The shipped lines stay in the source as the fallback for an emptied section.
     internal static class ChessTalk
     {
         internal const string FileName = "chess.md";

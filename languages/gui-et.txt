@@ -204,3 +204,18 @@ Running on this PC	Käib sellel arvutil
 NORMAL	TAVALINE
 OFF	VÄLJAS
 Local server address	Kohaliku serveri aadress
+Remember panel position	Jäta paneeli asukoht meelde
+Custom colours	Kohandatud värvid
+Custom colours...	Kohandatud värvid...
+Choose	Vali
+Hers	Tema omad
+Quiet	Vaikne
+Quiet min	Vaikne min
+Quiet max	Vaikne max
+Until I turn it off	Kuni ma selle välja lülitan
+Quiet on calls	Vaikne kõnede ajal
+Quiet in videos	Vaikne videote ajal
+Quiet until {n}:{n}	Vaikne kuni {n}:{n}
+Quiet until turned off	Vaikne kuni väljalülitamiseni
+Export settings	Ekspordi seaded
+Import settings	Impordi seaded

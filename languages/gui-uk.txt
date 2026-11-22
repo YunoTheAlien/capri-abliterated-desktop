@@ -204,3 +204,18 @@ Running on this PC	Працює на цьому ПК
 NORMAL	ЗВИЧАЙНИЙ
 OFF	ВИМК
 Local server address	Адреса локального сервера
+Remember panel position	Запам’ятовувати положення панелі
+Custom colours	Власні кольори
+Custom colours...	Власні кольори...
+Choose	Вибрати
+Hers	Її
+Quiet	Тиша
+Quiet min	Тиша min
+Quiet max	Тиша max
+Until I turn it off	Поки я не вимкну
+Quiet on calls	Тиша під час дзвінків
+Quiet in videos	Тиша під час відео
+Quiet until {n}:{n}	Тиша до {n}:{n}
+Quiet until turned off	Тиша до вимкнення
+Export settings	Експорт налаштувань
+Import settings	Імпорт налаштувань

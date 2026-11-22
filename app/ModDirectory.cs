@@ -28,7 +28,7 @@ namespace CapriDesktop
         internal long Size;
         internal int Downloads, Votes;
         internal double Rating;
-        // A colour set, like Colors: Bubblegum: a settings mod the index files with skins, so it shows under Skins (Lachy, 6 Nov).
+        // A colour set, like Colors: Bubblegum: a settings mod the index files with skins, so it shows under Skins (Lachy).
         internal bool Colours;
         internal string Title
         {
@@ -349,9 +349,9 @@ namespace CapriDesktop
             return found;
         }
 
-        // The first few useful lines of a mod's README for View (issue #221), read from raw.githubusercontent.com, which has
-        // no API rate limit, once a session. Null when the mod has no README. A read that fails throws and keeps nothing, so
-        // the next View tries again; a README with nothing useful is kept as no lines.
+        // The first useful lines of a mod's README for View, from raw.githubusercontent.com (no rate limit), once a
+        // session. Null with no README; a failed read keeps nothing, so View tries again; a README with nothing useful
+        // keeps no lines.
         internal static List<string> Readme(ModListing listing)
         {
             if (listing.ReadmeName == null) return null;
@@ -380,9 +380,9 @@ namespace CapriDesktop
             lock (Readmes) Readmes.Clear();
         }
 
-        // A README's opening as plain lines, at most 5 and 400 characters: paragraphs and list items joined into one line each,
-        // and headings only with a line under them. Badges, pictures, HTML, link-only lines, code, tables, comments, its own
-        // title and the directory template's Kind and Made by lines are left out, since the window shows those already.
+        // A README's opening as at most 5 plain lines and 400 characters: paragraphs and items one line each, headings
+        // only with a line under them. Badges, pictures, HTML, code, tables, its title and the template's Kind and Made
+        // by lines are dropped.
         internal static List<string> ReadmeLines(string text)
         {
             List<string> lines = new List<string>();
@@ -575,9 +575,9 @@ namespace CapriDesktop
             return sorted;
         }
 
-        // The directory's listings for installed mods it now has a different file for: same id and kind, and the installed copy's
-        // git fingerprint isn't the listing's. Settings and skill mods are saved as text without a byte order mark, so a copy
-        // that only lost one still counts as the same. Mods that aren't in the directory, or can't be read, are left out.
+        // Directory listings for installed mods it has a different file for: same id and kind, different git
+        // fingerprint. Settings and skill mods compare without a byte order mark; mods not in the directory or
+        // unreadable are left out.
         internal static List<ModListing> Updates(List<ModListing> listings, List<Mod> installed)
         {
             List<ModListing> found = new List<ModListing>();
@@ -613,9 +613,9 @@ namespace CapriDesktop
             return found;
         }
 
-        // Of the listings Updates found, the ones that are really newer: each is downloaded and checked, and one whose version
-        // isn't above the installed copy's, like someone's own mod that shares a directory mod's id, is dropped. When either
-        // side has no version, a different file counts as newer. Each kept listing holds its download in Fetched.
+        // Of those listings, the ones really newer: each downloaded and checked, dropped unless its version beats the
+        // installed copy's, as when someone's own mod shares an id. With no version either side, a different file
+        // counts as newer. Kept ones hold their download.
         internal static List<ModListing> Newer(List<ModListing> candidates, List<Mod> installed, string under)
         {
             List<ModListing> newer = new List<ModListing>();

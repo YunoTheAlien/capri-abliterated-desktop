@@ -204,3 +204,18 @@ Running on this PC	ఈ PCలో నడుస్తోంది
 NORMAL	సాధారణం
 OFF	ఆఫ్
 Local server address	లోకల్ సర్వర్ చిరునామా
+Remember panel position	ప్యానెల్ స్థానాన్ని గుర్తుంచుకో
+Custom colours	అనుకూల రంగులు
+Custom colours...	అనుకూల రంగులు...
+Choose	ఎంచుకో
+Hers	ఆమెవి
+Quiet	నిశ్శబ్దం
+Quiet min	నిశ్శబ్దం min
+Quiet max	నిశ్శబ్దం max
+Until I turn it off	నేను ఆఫ్ చేసే వరకు
+Quiet on calls	కాల్స్‌లో నిశ్శబ్దం
+Quiet in videos	వీడియోల్లో నిశ్శబ్దం
+Quiet until {n}:{n}	{n}:{n} వరకు నిశ్శబ్దం
+Quiet until turned off	ఆఫ్ చేసే వరకు నిశ్శబ్దం
+Export settings	సెట్టింగ్‌లను ఎగుమతి చేయి
+Import settings	సెట్టింగ్‌లను దిగుమతి చేయి

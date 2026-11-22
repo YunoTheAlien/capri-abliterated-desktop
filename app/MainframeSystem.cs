@@ -28,6 +28,8 @@ namespace CapriDesktop
             resourcesLine.AccessibleName = "CPU and RAM in use";
             resourcesClock.Tick += delegate { ShowResourcesLine(); };
             VisibleChanged += delegate { resourcesClock.Enabled = Visible; if (Visible) ShowResourcesLine(); };
+            // Brought back from minimised: filled at once rather than at the next tick.
+            Resize += delegate { if (WindowState != FormWindowState.Minimized && resourcesLine.Text.Length == 0) ShowResourcesLine(); };
         }
 
         private void ShowResourcesLine()

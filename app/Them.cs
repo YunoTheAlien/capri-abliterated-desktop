@@ -5,32 +5,13 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
-    // Who she is talking to, for the lines she says as written rather than through her brain.
-    //
-    // Her personality files are fixed text, so "good girl" is wrong for half the people who install her and writing
-    // "good boy. Or girl." is worse than either. The lines carry tokens instead and this fills them in
-    // from the "- Pronouns:" line already in me.md.
-    //
-    //   %boy%    boy / girl / one          %them%   him / her / them
-    //   %he%     he / she / they           %their%  his / her / their
-    //   %is%     is / is / are             %name%   what she calls them
-    //   %bits%   a zone by the pronouns in me.md (top mid, lower mid a or lower mid b), or shins while censored
-    //   %mate%   a neutral way to address them, from a shared pool
-    //
-    // %bits% is where she threatens to kick you. It is a zone by the pronouns in me.md, high, top mid, lower mid a,
-    // lower mid b or bottom, and what each zone is called comes from what attached; with nothing attached, or censored, it is
-    // "shins", so the same written line is fine in both modes.
-    //
-    // %is% exists because "they" takes a plural verb: "%He% %is% late" has to come out as "They are late", not
-    // "They is late".
-    //
-    // Anything it cannot work out goes neutral, which reads properly for everyone rather than guessing wrong.
+    // Fills the tokens in her written lines from me.md's "- Pronouns:" line: %boy% %them% %he% %their% %is% (they are)
+    // %name% %mate%, and %bits%, a zone by pronoun or "shins" while censored. Anything unclear goes neutral.
     internal static class Them
     {
         private static readonly object gate = new object();
         private static string path;
-        private static DateTime read = DateTime.MinValue;
-        private static long wasLong = -1;
+        private static long wasStamp = -1;
         private static string he = "they", them = "them", their = "their", boy = "one", isAre = "are", bits = "lower mid b", name = "", awake = "", pets = "";
 
         // What they wrote for awakeHours in me.md, or empty. Hours prefers this over what it counted.
@@ -39,7 +20,9 @@ namespace CapriDesktop
         // What they are called, from me.md. Used to take their name back out of anything written to a file.
         internal static string Called { get { Fresh(); lock (gate) return name; } }
 
-        internal static void Watch(string mePath) { lock (gate) { path = mePath; read = DateTime.MinValue; wasLong = -1; } }
+        internal static void Watch(string mePath) { lock (gate) { path = mePath; wasStamp = -1; } }
+
+        internal static string Watched { get { lock (gate) return path; } }
 
         // Replaces the tokens in a line she is about to say.
         internal static string Fill(string line)
@@ -69,12 +52,20 @@ namespace CapriDesktop
             while (at >= 0)
             {
                 string put = with;
-                if (put.Length > 0 && at + 1 < line.Length && char.IsUpper(line[at + 1]))
+                if (put.Length > 0 && ((at + 1 < line.Length && char.IsUpper(line[at + 1])) || Opens(line, at)))
                     put = char.ToUpperInvariant(put[0]) + put.Substring(1);
                 line = line.Substring(0, at) + put + line.Substring(at + token.Length);
                 at = line.IndexOf(token, at + put.Length, StringComparison.OrdinalIgnoreCase);
             }
             return line;
+        }
+
+        // The token begins the line or a sentence: only spaces back to the start or to a full stop, question or exclamation mark.
+        private static bool Opens(string line, int at)
+        {
+            int back = at - 1;
+            while (back >= 0 && line[back] == ' ') back--;
+            return back < 0 || ((line[back] == '.' || line[back] == '!' || line[back] == '?') && back < at - 1);
         }
 
         // Ways to address them that work for anyone. Her own "choom" leads, the rest keep it varied without
@@ -108,19 +99,8 @@ namespace CapriDesktop
         }
 
         // ---------- A fond name on the end, and how it is said ----------
-        //
-        // "You look busy, darling" is not said the way "You look busy" is. The fond part lands warmer and
-        // slower, dragged out, and praise does the opposite with its second word: good BOY, not good boy.
-        // Flat delivery over the whole line is what made her pet names read as a tic.
-        //
-        // Two things happen with this, because her voices are not alike:
-        //
-        //   a voice that performs cues gets "(tender)" put in front of the fond part, mid-line, and acts it
-        //   every other voice has the line's own pitch and pace, so the whole line is warmed by half a cue
-        //
-        // The second is weaker on purpose: nothing but a call voices one answer in pieces, so a tail cannot
-        // have a voice of its own without splitting every line she says. Half a cue over the line is honest
-        // and audible; a tail of its own would need her piece voicing generalised first.
+        // A fond tail lands warmer and slower. A voice that acts cues gets "(tender)" before it mid-line; every other
+        // voice warms the whole line by half a cue, since a tail can't be voiced apart.
         private static readonly string[] Common =
         {
             "darling", "darlin", "love", "lover", "babe", "baby", "honey", "hun", "sweetheart", "sweetie",
@@ -178,9 +158,8 @@ namespace CapriDesktop
             catch (Exception) { return null; }
         }
 
-        // The same thing for a voice that performs cues: the cue goes in front of the fond part, where it can
-        // act on it, rather than in front of the line. A line that is nothing but the fond name gets it at the
-        // front, which is the same place and still right. Left alone when a cue is already there.
+        // The same for a voice that acts cues: the cue goes before the fond part, where it can act on it, or at the
+        // front of a line that is only the fond name. Left alone when a cue is already there.
         internal static string Shaded(string text, string cue)
         {
             try
@@ -254,13 +233,8 @@ namespace CapriDesktop
             }
         }
 
-        // One keyed line out of me.md, written however they happened to write it.
-        //
-        // This file is edited by hand, so it comes back in every shape: with the bullet or without it, a dash or a
-        // star, spaces in front, a colon or an equals, "pet names" or "petNames". The readers each wanted one exact
-        // shape and quietly found nothing otherwise, which reads as her ignoring what they wrote.
-        //
-        // A line starting with ">" is a note to them, not data, so it never matches.
+        // One keyed line from me.md, however they wrote it: with or without a bullet, dash or star, colon or equals,
+        // spaced or camelCased. A ">" line is a note and never matches.
         internal static string Keyed(string notes, string key)
         {
             if (string.IsNullOrEmpty(notes)) return "";
@@ -280,9 +254,10 @@ namespace CapriDesktop
             if (string.IsNullOrEmpty(where)) return;
             try
             {
-                FileInfo about = new FileInfo(where);
-                if (!about.Exists) return;
-                lock (gate) { if (about.LastWriteTimeUtc == read && about.Length == wasLong) return; }
+                // Asked on every tick, so whether it changed comes from memory; it is read again only when it did.
+                long stamp = Stamps.Of(where);
+                if (stamp == 0) return;
+                lock (gate) { if (stamp == wasStamp) return; }
                 string notes = File.ReadAllText(where);
                 string said = Keyed(notes, @"pronouns?").ToLowerInvariant();
                 string called = Keyed(notes, @"name|call\s+(?:them|me)|they\s+go\s+by|go\s+by");
@@ -304,8 +279,7 @@ namespace CapriDesktop
                         { he = "she"; them = "her"; their = "her"; boy = "girl"; isAre = "is"; bits = "top mid"; }
                     // "any pronouns", anything unreadable, and nothing at all all land here on purpose.
                     else { he = "they"; them = "them"; their = "their"; boy = "one"; isAre = "are"; bits = "lower mid b"; }
-                    read = about.LastWriteTimeUtc;
-                    wasLong = about.Length;
+                    wasStamp = stamp;
                 }
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }

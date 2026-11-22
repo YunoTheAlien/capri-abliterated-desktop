@@ -36,9 +36,8 @@ namespace CapriDesktop
         // The hearing line fits about this many characters before it's cut off.
         internal const int LineRoom = 56;
 
-        // A line made from a reason: the lead, like "Mic failed: ", then the reason's first sentence, short enough for the line.
-        // A reason that names Windows speech itself needs no lead. Whatever the line leaves out, like the fix, goes in Full:
-        // the reason as it is when it stands on its own, or with the lead.
+        // A line made from a reason: a lead like "Mic failed: " and the reason's first sentence; a reason naming
+        // Windows speech needs no lead. What the line leaves out, like the fix, goes in Full.
         internal static HearingStatus Explained(string lead, string reason, bool alone, bool problem, params HearingAction[] actions)
         {
             string whole = Regex.Replace(reason ?? "", @"\s+", " ").Trim();
@@ -58,9 +57,9 @@ namespace CapriDesktop
 
         internal const string EarsUndownloaded = "Her ears didn't download: ";
         internal static readonly string[] Choices = { "Auto", "Her own ears", "Windows speech" };
-        // VB-CABLE's input as Windows' default speakers sends every app's sound into the cable, where nobody hears it, and its
-        // setup can leave it that way (Neco Arc, 3 Nov: "I stop hear everything else"). Voicemeeter's input is meant to be the
-        // default, and Steam's is only while it streams, so only VB-Audio's cables count.
+        // VB-CABLE's input as Windows' default speakers swallows every app's sound, and its setup can leave it that way
+        // (Neco Arc). Only VB-Audio's cables count: Voicemeeter's input is meant to be default, and Steam's only while
+        // streaming.
         internal const string CableSpeakers = "Default speakers are CABLE Input";
         internal const string CableNotice = "Your PC's sound is going into CABLE Input, so you can't hear your other apps. Pick your speakers or headphones in Windows Sound settings.";
         // A Bluetooth headset's mic puts it on a call, which quiets everything else it plays. She still hears, so it's only a note.
@@ -176,7 +175,7 @@ namespace CapriDesktop
         private readonly DeviceLook micLook;
         private int micsAsked, micsTaken;
 
-        // Coming back to the Mainframe and Windows saying a device changed look in the background too (#100): her speakers and her
+        // Coming back to the Mainframe and Windows saying a device changed look in the background too: her speakers and her
         // mics each on their own, so a device that's slow to answer, like a Bluetooth headset waking up, only holds up its own line.
         internal void LookHearingDevices()
         {
@@ -184,7 +183,7 @@ namespace CapriDesktop
             LookMics();
         }
 
-        // VOICE's mic menus look in the background (#100), so a mic that's slow to answer only holds up its own line.
+        // VOICE's mic menus look in the background, so a mic that's slow to answer only holds up its own line.
         internal void LookMics()
         {
             if (mainframe == null || mainframe.IsDisposed) return;
@@ -324,7 +323,7 @@ namespace CapriDesktop
                 if (settingUpEars || SettingUpVoice) return windows && earsReady ? new HearingStatus("Her ears are downloading: " + progress + " · Windows speech on", false) : new HearingStatus("Her ears are downloading: " + progress, false, HearingAction.Type);
                 return new HearingStatus("Her ears aren't installed", true, HearingAction.Own, HearingAction.Windows);
             }
-            // Shut on purpose, "ready" read as if she was listening (6 Nov).
+            // Shut on purpose, "ready" read as if she was listening.
             if (earsClosed && !chatting) return new HearingStatus("Her ears are off: click her wave to open them", false);
             // Only once nothing's wrong, so it never hides a problem.
             Mic device = HearingMic(windows);
@@ -386,9 +385,9 @@ namespace CapriDesktop
             }
         }
 
-        // A quiet mic is far more often them not talking than a broken one, and a noise gate or noise suppression sends nothing at
-        // all between lines. So silence, a quiet mic and lines with no words only show on the hearing line under VOICE, with its
-        // Test and Pick buttons, and she never says them (Lachy, 2 Nov: warned after a quiet spell, while talking, and over her).
+        // A quiet mic is usually them not talking, and a noise gate sends nothing between lines, so silence and
+        // wordless lines only show on the hearing line under VOICE, with Test and Pick, and she never says them
+        // (Lachy).
         private void CheckHearingSignal(double now)
         {
             if (!chatting || !(local ? earsReady : ears.Listening) || ears.Muted || talkState == TalkState.Thinking) return;
@@ -911,10 +910,8 @@ namespace CapriDesktop
         public int OnPropertyValueChanged(string id, HearingProperty key) { changed(); return 0; }
     }
 
-    // Windows can tell of a change many times a second: a driver rewriting a headset's properties, any app opening a mic, a
-    // Bluetooth headset going on a call. Each one read every mic again on her window's thread, so a burst of them could hold
-    // her up (Neco Arc, 3 Nov: she lagged and froze with Mainframe half drawn). A burst now settles and comes as one, at most
-    // once a second, and her look at the devices runs in the background (#100).
+    // Windows can report device changes many times a second, so a burst settles into one look at most once a second,
+    // and the look runs in the background off her window's thread.
     internal sealed class HearingWatch : IDisposable
     {
         internal int Settle = 300, Spacing = 1000;
@@ -1014,11 +1011,8 @@ namespace CapriDesktop
         }
     }
 
-    // One kind of look at Windows' sound devices for her sound page (#100), like who hears her voice in your mic. Windows can
-    // take a moment to answer, so it reads in the background and hands what it found back on her window's thread, one look at
-    // a time: a device that's slow to answer, like a Bluetooth headset waking up, only holds up its own line, and asking while
-    // it's looking makes one more look once it's done, with what was asked last. Before her window is up, and in the smoke
-    // test, it looks in place, so a check reads what it asked for straight away.
+    // One kind of look at Windows' sound devices, read in the background and handed back on her window's thread, so a
+    // slow device only holds up its own line. Before her window is up, and in the smoke test, it looks in place.
     internal sealed class DeviceLook
     {
         // The smoke test's. Its own section turns it off to check the background.

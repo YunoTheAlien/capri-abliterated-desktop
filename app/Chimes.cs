@@ -5,15 +5,12 @@ using System.Threading;
 
 namespace CapriDesktop
 {
-    // Her little sounds that say she got you (Lachy, 12 Nov: "a nice sound to signify" when you finish speaking): your typed
-    // message went, she heard you, and she's listening after Hey Capri. They play dozens of times a day, so each is short and
-    // soft, two never stack, and the same one never repeats fast. Every one is made here from sine waves and a breath of noise,
-    // so there's no sample anyone else owns.
+    // Her little sounds that say she got you (Lachy): sent, heard, and listening after Hey Capri. Short and soft, never
+    // stacked or repeated fast, and made here from sine waves and noise, so no sample is anyone else's.
     internal enum Chime { Sent, Heard, Listening }
 
-    // Her ears through a chime. Its echo rises while the chime plays, a little late through Bluetooth, and only fades after,
-    // so sound past that which is louder than the echo could still be, twice running, is someone talking over it. From then
-    // until the mask ends everything counts as them. Until then what the mic hears is held, never thrown away.
+    // Her ears through a chime: the echo rises while it plays and fades after, so sound louder than the echo could be,
+    // twice running, is them talking over it. Until then the mic is held, never thrown away.
     internal sealed class EchoGate
     {
         // Bluetooth plays up to about 400 ms late, and a mic chunk is 100 ms long.
@@ -47,8 +44,8 @@ namespace CapriDesktop
     internal static class Chimes
     {
         internal const int Rate = 48000;
-        // Six sets to pick from by ear under SOUNDS > Sound set, Glass until they pick (Lachy, 12 Nov: he'd rather hear them in
-        // use than in a video). Their numbers are fixed; Picked is the order SOUNDS steps through them.
+        // Six sets to pick from by ear under SOUNDS > Sound set, Glass until they pick (Lachy).
+        // Their numbers are fixed; Picked is the order SOUNDS steps through them.
         internal static readonly string[] Sets = { "glass", "pulse", "air", "shard", "burst", "crush" };
         internal static readonly string[] Titles = { "Glass", "Pulse", "Air", "Shard", "Burst", "Crush" };
         internal static readonly string[] Names = { "sent", "heard", "listening" };
@@ -321,7 +318,7 @@ namespace CapriDesktop
             }
         }
 
-        // Her glitch sets (Lachy, 12 Nov: "actually glitchy audio effects"): the faults are the sound, the way she glitches in
+        // Her glitch sets (Lachy): the faults are the sound, the way she glitches in
         // and out on screen. Each still ends soft, and every fault is filtered so it never bites.
 
         // Shard: Glass's notes, struck the way a skipping buffer would. Sent stutters its first note and snaps up into the
@@ -357,9 +354,9 @@ namespace CapriDesktop
             return Finish(buffer, 0.42, 7000);
         }
 
-        // Burst: a little packet of data. Sent is a stepped chirp climbing out, Heard is two FM blips coming down with the second
-        // repeating like a skipped buffer, Listening is a quick two-tone handshake that speeds up. Its steps are one unbroken
-        // wave that jumps pitch, so the packet sounds digital without clicking at every step.
+        // Burst, a little packet of data: Sent is a climbing stepped chirp, Heard two falling FM blips, Listening a
+        // quickening two-tone handshake. Each is one unbroken wave that jumps pitch, so it sounds digital without
+        // clicks.
         private static float[] MakeBurst(Chime chime)
         {
             double[] buffer = new double[Samples(0.34)];

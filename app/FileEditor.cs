@@ -12,15 +12,12 @@ using System.Windows.Forms;
 
 namespace CapriDesktop
 {
-    // Her artist's second panel, drawn in code from what the art's 60 frames measure (PanelArt), so its text stays sharp at any scale and
-    // it can be big enough to edit in, dressed like the Arasaka ID panel in Cyberpunk 2077 that Lachy sent (8 Nov). Three windows make
-    // it up and always move together. This one is see-through and holds the spine, the sheet, the rule, the labels and the shadow, and
-    // it plays the animation. The page above it holds the text box, tabs and buttons with nothing behind them, so the sheet shows
-    // between the words; Windows draws no controls on a see-through window, so the page draws itself. The frost under the panel blurs
-    // whatever is behind the sheet.
+    // Her artist's second panel, drawn in code from the art's measurements (PanelArt) so text stays sharp and big
+    // enough to edit (Lachy). Three windows move together: this one plays the art, the page above draws the text, and
+    // the frost under it blurs.
     internal sealed class FileEditor : Form
     {
-        // Lachy's open questions, a line each.
+        // The panel's names, a line each (Lachy).
         internal const string PanelName = "CAPRI";                  // Her artist's NAME HERE. The file's name is the title.
         internal const string ProjectName = "HER FILES";            // Her artist's PROJECT NOTES NAME.
         internal const string TitleFace = "Capri.Font.Title.ttf";   // Capri Mainframe Bold: the title, the labels and the buttons.
@@ -31,15 +28,14 @@ namespace CapriDesktop
         // What the page's controls are drawn on: her red on screen, and white or black for a moment while Matted works out how strong
         // each pixel is.
         internal static Color Paper = Red;
-        // The page's words, in the salmon of the reference's Arasaka panel, and the words on her red when a button is filled (8 Nov).
+        // The page's words, in the salmon of the reference's Arasaka panel, and the words on her red when a button is filled.
         internal static readonly Color Salmon = Color.FromArgb(245, 128, 120);
         internal static readonly Color Dark = Color.FromArgb(30, 12, 14);
         // How the page's top and sides sit inside the sheet, in the art's pixels.
         private const float PageInset = 7;
 
-        // Her artist's notes: 24 fps, every line typing at its own frame at one speed. A file is far longer than those lines were,
-        // so the page reveals across BodyFrames instead, and any click or key there ends the animation. Its frames are drawn as
-        // often as the screen shows them (Pacer), each one where the art's 24 a second have got to by then.
+        // Her artist's notes: 24 fps, every line typing at its own frame. A file is longer, so the page reveals across
+        // BodyFrames, any click or key ending it, with frames drawn as often as the screen shows them (Pacer).
         private const double Fps = 24;
         private const double TypeRate = 1.5;
         private const double BodyFrames = 14;
@@ -58,9 +54,8 @@ namespace CapriDesktop
 
         internal event Action Saved;
 
-        // A file she ships has a reset to stock flag in it. Saving is the only moment that flag can have
-        // moved, so saving is what checks it, rather than a sweep of every file on a timer. A file that
-        // resets is rewritten here and shows as stock the next time it is opened or Reload is pressed.
+        // A file she ships has a reset to stock flag, and saving is the only moment it can move, so saving checks it
+        // rather than a timer. A file that resets is rewritten here and shows as stock on its next open or Reload.
         internal static Action<string> Stocked;
         // Her skills, for the skill.md files she was taught here: each opens as a tab, and New makes one.
         internal static Mods Skills;
@@ -101,6 +96,7 @@ namespace CapriDesktop
             forcedArt = art;
             Text = personalities ? "Capri personality editor" : "Capri file editor";
             FormBorderStyle = FormBorderStyle.None;
+            Neon.NeverFullScreen(this);
             ShowInTaskbar = false;
             StartPosition = FormStartPosition.Manual;
             AutoScaleMode = AutoScaleMode.None;
@@ -108,7 +104,7 @@ namespace CapriDesktop
             Cursor = Cursors.SizeAll;
             docs = new[]
             {
-                new Doc("personality.md", delegate { if (!Brain.MakePersonality()) throw new IOException("No personality.md."); return Brain.OpenPersonality(); }),
+                // personality.md is in her personality editor, with her packs and moods, and only there.
                 new Doc("me.md", delegate { return Brain.OpenNote(false); }),
                 // Her Twitch rules are hers to edit too, so they open here rather than in whatever Windows has for.md.
                 new Doc(TwitchRules.FileName, delegate { return TwitchRules.Open(); }),
@@ -118,9 +114,8 @@ namespace CapriDesktop
                 new Doc(Sayings.FileName, delegate { return Sayings.Open(); }),
                 new Doc(Moments.FileName, delegate { return Moments.Open(); }),
                 new Doc(Angles.FileName, delegate { return Angles.Open(); }),
-                // Her stories, while they are a size anybody would open. A lore file can run to megabytes, and
-                // this editor lays a whole document out as pages: handed one that big it would hang rather
-                // than open. Absent rather than greyed out, since a tab that cannot be used is noise.
+                // Her stories, while a size anybody would open: this editor lays a whole document out as pages and
+                // would hang on megabytes. Absent rather than greyed out, since an unusable tab is noise.
                 new Doc(Lore.FileName, delegate { return Lore.Open(); }, delegate { return Lore.Editable; }),
                 new Doc(CapriDesktop.Touch.FileName, delegate { return CapriDesktop.Touch.Open(); }),
                 // Her check-ins, which had no tab at all, which is why the button for them went to Notepad.
@@ -220,9 +215,8 @@ namespace CapriDesktop
             }
         }
 
-        // Opens the panel on personality.md (0) or me.md (1), or brings it up and turns to that file if it's open already.
-        // The same thing by name, so a button can ask for the file it is about rather than count tabs. An
-        // unknown name opens the first page, which is better than nothing opening at all.
+        // Opens the panel on personality.md (0) or me.md (1), or turns to that file if open; or by name, so a button
+        // can ask for its file. An unknown name opens the first page.
         internal void Open(string named)
         {
             int at = 0;
@@ -465,9 +459,8 @@ namespace CapriDesktop
             foreach (Doc doc in docs)
             {
                 if (!doc.Dirty) continue;
-                // An empty draft is not a draft. One was found on disk at nothing bytes beside a file with
-                // real content in it, and coming back it reads as them having emptied the file: she says
-                // their unsaved changes are back, shows nothing, and a save takes the file with it.
+                // An empty draft is not a draft: restoring one beside a real file would show nothing, and a save would
+                // empty the file.
                 string keeping = doc.ForFile();
                 if (string.IsNullOrWhiteSpace(keeping)) { ForgetDraft(doc); continue; }
                 try { File.WriteAllText(doc.Note.Path + Unsaved, keeping); }
@@ -546,7 +539,7 @@ namespace CapriDesktop
             string problem = Write(doc);
             page.Mark(doc);
             if (problem != null) { page.Say(problem, true); return false; }
-            page.Say(doc.SkillPath != null ? SkillSays(doc) : doc == docs[0] && Brain.PersonalityNote.Length > 0 ? "Saved. " + Brain.PersonalityNote + "." : "Saved.", false);
+            page.Say(doc.SkillPath != null ? SkillSays(doc) : string.Equals(doc.Label, "personality.md", StringComparison.OrdinalIgnoreCase) && Brain.PersonalityNote.Length > 0 ? "Saved. " + Brain.PersonalityNote + "." : "Saved.", false);
             return true;
         }
 
@@ -640,7 +633,8 @@ namespace CapriDesktop
             if (Stocked != null) { try { Stocked(doc.Note.Path); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
             doc.Revert();
             ForgetDraft(doc);
-            if (doc == docs[0] && Saved != null) Saved();
+            // Her personality key reads personality.md, so it is told whenever that file saves, in either editor.
+            if (Saved != null && string.Equals(doc.Label, "personality.md", StringComparison.OrdinalIgnoreCase)) Saved();
             // A skill saved is put to use straight away.
             Action skillSaved = SkillSaved;
             if (doc.SkillPath != null && skillSaved != null) skillSaved();
@@ -798,10 +792,8 @@ namespace CapriDesktop
             frostWaited = 0;
         }
 
-        // The blur under the sheet, once a frame from the pacer is on screen (8 Nov). Reshaping it takes Windows about as long as
-        // drawing a frame, so while the sheet slides it's reshaped every third frame, after the frame rather than before it, and
-        // always to a shape inside the sheet: the one it has now while it grows, and the one it will have a few frames on while it
-        // shrinks. The sheet slides between the art's frames 14 and 35, and the blur takes its own shape as soon as it stops.
+        // The blur under the sheet: reshaping takes about a frame, so while the sheet slides it's reshaped every third
+        // frame, after it, to a shape inside the sheet.
         private void Follow()
         {
             if (!frostDue || !IsHandleCreated) return;
@@ -847,7 +839,7 @@ namespace CapriDesktop
                 using (Brush fill = new SolidBrush(PanelArt.SheetFill(sheetAlpha))) pen.FillPolygon(fill, sheetShape);
                 pen.CompositingMode = CompositingMode.SourceOver;
                 LayGrain(pen, sheetShape);
-                // No page box under the words (Lachy, 8 Nov): the sheet stays her artist's see-through right up to the text.
+                // No page box under the words (Lachy): the sheet stays her artist's see-through right up to the text.
                 using (Pen edge = new Pen(Color.FromArgb(220, Red), 2.4f * a)) { edge.LineJoin = LineJoin.Miter; pen.DrawPolygon(edge, SheetShape(sheet, depth, 1.2f)); }
             }
             using (Brush body = new SolidBrush(PanelArt.Spine)) pen.FillPolygon(body, spineShape);
@@ -877,7 +869,7 @@ namespace CapriDesktop
             }
         }
 
-        // The grain over a shape: a panel-sized layer of it, through the shape's outline (8 Nov). GDI+'s texture brush drew the
+        // The grain over a shape: a panel-sized layer of it, through the shape's outline. GDI+'s texture brush drew the
         // same but took 50 ms to fill the sheet; only the slanted edges' half-covered pixels go without their faint specks now.
         private void LayGrain(Graphics pen, PointF[] shape)
         {
@@ -977,9 +969,8 @@ namespace CapriDesktop
             return placed;
         }
 
-        // A soft black shadow round everything, her red text included so it holds up on any wallpaper. Drawn small and blurred, then
-        // stretched, so it costs the same at 200%. The stretch goes straight into the panel's pixels and only where the shadow is:
-        // GDI+ stretching it over the whole panel took most of each frame (8 Nov).
+        // A soft black shadow round everything, her red text too, so it holds on any wallpaper. Drawn small, blurred
+        // and stretched straight into the panel's pixels only where the shadow falls, so it costs the same at 200%.
         private void PaintShadow(Graphics pen, PointF[] spine, PointF[] sheet, double sheetAlpha, RectangleF rule, RectangleF block, string topVersion, PointF versionAt, string name, PointF nameAt, string project, PointF projectAt)
         {
             int small = Math.Max(2, (int)Math.Round(a * 2.5f));
@@ -1046,9 +1037,9 @@ namespace CapriDesktop
             return right < 0 ? Rectangle.Empty : Rectangle.FromLTRB(left, top, right + 1, bottom + 1);
         }
 
-        // The blurred shade `small` times bigger, as black at its strength, by straight lines between its pixels' centres: what GDI+'s
-        // bilinear stretch drew. A row at a time across, then down, and only over the panel's pixels the shade's `covered` ones reach.
-        // The panel was just cleared, so these are written, not blended.
+        // The blurred shade scaled up small times as black at its strength, bilinear between pixel centres, a row
+        // across then down, only over the panel pixels covered reaches. The panel was just cleared, so these are
+        // written, not blended.
         private unsafe void Stretch(Rectangle covered, int small, int width)
         {
             if (covered.IsEmpty || surface == null) return;
@@ -1286,9 +1277,9 @@ namespace CapriDesktop
             return brush;
         }
 
-        // One of her files: what's on disk, through her own note code, and what's in the box, with the box's line ends.
-        // Her personality files, newest-first in the order that matters: the one she is being now, the dynamic
-        // settings that drive the moods, every other personality, then the moods themselves.
+        // One of her files: what's on disk through her note code, and what's in the box with its line ends. Her
+        // personality files, newest first: the one she is now, the dynamic settings, every other personality, then the
+        // moods.
         private static Doc[] PersonalityDocs()
         {
             // Grouped and in order, rather than whoever she happens to be first: the settings, then her character,
@@ -1303,12 +1294,8 @@ namespace CapriDesktop
             found.Add(new Doc("personality.md", delegate
                 { if (!Brain.MakePersonality()) throw new IOException("No personality.md."); return Brain.OpenPersonality(); }));
 
-            // P_ and M_ in the tab only. The files keep their own names, since the folder they are in
-            // already says which they are and renaming them would break every saved pick.
-            // A personality or mood marked senpai only is left out while the switch is off, not greyed out,
-            // the same as her interests file.
-            // One side's files only: each side keeps its own whole copy of every pack and mood, so the switch picks
-            // which folder is listed, the same way it picks which one she reads.
+            // P_ and M_ in the tab only; files keep their names so saved picks still work. A senpai-only personality or
+            // mood is left out with the switch off, and only the side in use is listed.
             bool senpaiSide = Brain.SenpaiOn && Directory.Exists(Personalities.Senpais ?? "");
             foreach (string each in Sorted(senpaiSide ? Personalities.Senpais : Personalities.Plain)) if (senpaiSide || !Personalities.SenpaiOnly(each)) Add(found, taken, each, "P_");
             bool senpaiMoods = Brain.SenpaiOn && Directory.Exists(Dynamics.Senpais ?? "");
@@ -1324,7 +1311,7 @@ namespace CapriDesktop
                 // Every file, since her senpai ones are numbered and have no type. A backup is a copy of one
                 // of them rather than one of them, so it stays out of her editor.
                 List<string> found = new List<string>();
-                foreach (string file in Directory.GetFiles(folder)) if (!file.EndsWith(".bak", StringComparison.OrdinalIgnoreCase) && !file.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)) found.Add(file);
+                foreach (string file in Directory.GetFiles(folder)) if (Notes.IsPack(file)) found.Add(file);
                 found.Sort(StringComparer.OrdinalIgnoreCase);
                 return found.ToArray();
             }
@@ -1414,6 +1401,7 @@ namespace CapriDesktop
                 this.panel = panel;
                 Text = "Capri file editor";
                 FormBorderStyle = FormBorderStyle.None;
+                Neon.NeverFullScreen(this);
                 StartPosition = FormStartPosition.Manual;
                 AutoScaleMode = AutoScaleMode.None;
                 ShowInTaskbar = true;
@@ -1429,7 +1417,6 @@ namespace CapriDesktop
                 box.KeyDown += delegate { panel.Finish(); };
                 box.MouseDown += delegate { panel.Finish(); };
                 box.TextChanged += delegate { if (!loading) Typed(); Freshen(); };
-                // STOCK 0.9.0: tabs = new[] { new Ink { Tag = 0 }, new Ink { Tag = 1 } };
                 tabs = MakeTabs(panel.docs.Length);
                 close = new Ink { Mark = true, AccessibleName = "Close the file editor" };
                 close.Click += delegate { panel.Ask(); };
@@ -1472,14 +1459,8 @@ namespace CapriDesktop
             // Which file the side column starts at, and how many fit. Only used when the tabs run down the side.
             private int tabFirst, tabShown;
 
-            // Off. The side layout itself is sound, but this page is not a normal form: it is a layered window that
-            // paints itself twice through WM_PRINT, once on white and once on black, and subtracts the two to get its
-            // alpha. Something about running that with this many child buttons leaves them rendering as plain white
-            // boxes, and neither GDI exhaustion (140 objects, limit 10000) nor the skipped Fit tail explained it.
-            //
-            // A cramped editor beats a broken one, so this is off until the tabs are drawn into the page's own
-            // surface rather than being 28 child controls, which is the fix that actually suits this design
-            //.
+            // Off: this page paints itself twice through WM_PRINT for its alpha, and with this many child buttons they
+            // come out as white boxes. On again once the tabs are drawn into the page's own surface.
             private bool SideTabs { get { return true; } }
 
             // The wheel over the column moves the list, not the text.
@@ -1532,10 +1513,8 @@ namespace CapriDesktop
                 close.Bounds = new Rectangle(Width - pad - Scaled(28), Scaled(6), Scaled(28), Scaled(28));
                 int right = close.Left - Scaled(12);
                 for (int i = 0; i < tabs.Length; i++) tabs[i].Text = panel.docs[i].Label;
-                // <<< PATCH: tabs wrap onto another line instead of running into her title
-                // Three files fitted on one row. With her commands and her playlist there are five, so they are laid out
-                // right to left and dropped onto a new line when the next one would reach her title, and the text below
-                // starts further down by however many lines that took.
+                // Tabs laid out right to left and wrapped onto a new line before they reach her title; the text below
+                // moves down to match.
                 int textLeft = pad;
                 // Down the side instead of across the top once there are more files than a couple of rows can hold.
                 // The personality editor opens with close to twenty, and wrapped rows of buttons ate the page
@@ -1554,10 +1533,8 @@ namespace CapriDesktop
                         if (!seen) continue;
                         tabs[i].Bounds = new Rectangle(pad, sideTop + slot * (sideHigh + sideGap), sideWide, sideHigh);
                     }
-                    // The text column starts beside them. Everything after this is shared with the top strip: the
-                    // first version of this returned here instead, which skipped cover.Bounds, bar.Sync() and
-                    // Freshen(), so the veil was never sized and the tabs never got their text. That is what the
-                    // white boxes were.
+                    // The text column starts beside them. Everything after this is shared with the top strip, so the
+                    // veil is sized and the tabs get their text.
                     textLeft = pad + sideWide + gap;
                 }
                 else
@@ -1583,7 +1560,6 @@ namespace CapriDesktop
                 }
                 // Kept as an empty box so the veil and the title painter have something harmless to work with.
                 titleBox = new Rectangle(pad, Scaled(4), 0, Scaled(44) - Scaled(6));
-                // <<< END PATCH: wrapping tabs
                 int top = row, bottom = Height - foot, barWide = Scaled(8);
                 lineTop = row - Scaled(6);
                 lineFoot = bottom + Scaled(2);
@@ -1602,9 +1578,8 @@ namespace CapriDesktop
                 if (make.Visible) at = PlaceButton(make, at, buttonTop, buttonHigh, gap);
                 at = PlaceButton(keep, at, buttonTop, buttonHigh, gap);
                 status.Bounds = new Rectangle(at, buttonTop, Math.Max(Scaled(40), Width - pad - at), buttonHigh);
-                // Drawn in OnPaint rather than rendered as a control. As a child Label it came out of the page's
-                // white and black passes as a solid white block with a cross through it, which is what was sitting
-                // beside Save and Reload. Its Bounds are still set above, to say where to draw it.
+                // Drawn in OnPaint rather than as a child Label, which the page's white and black passes turned into a
+                // white box. Its Bounds still say where to draw it.
                 status.Visible = false;
                 cover.Bounds = new Rectangle(0, 0, Width, Height);
                 bar.Sync();
@@ -1949,10 +1924,8 @@ namespace CapriDesktop
                 titled = panel.TitleTyped();
             }
 
-            // The page with nothing behind it, so the sheet shows through everywhere but the words, tabs and buttons. It's painted once
-            // on white and once on black: how far each pixel moves between the two says how see-through it is, and the one on black is
-            // already its colour times that, which is how the window takes it. Nothing is ever quite clear (an alpha of 1, too faint to
-            // see), so a click between the words still lands on the page.
+            // The page with nothing behind it, painted once on white and once on black: the difference gives each
+            // pixel's alpha. Nothing is quite clear (alpha 1), so a click between the words still lands on the page.
             private void Matte(Native.Surface into)
             {
                 Stopwatch timed = Stopwatch.StartNew();
@@ -2018,7 +1991,6 @@ namespace CapriDesktop
             {
                 base.OnPaint(e);
                 // The name is on its own tab, lit up, so drawing it again here only cost room.
-                // STOCK 0.9.0: if (shown != null) TextRenderer.DrawText(e.Graphics, shown.Name, titleFont, titleBox, Salmon, TitleLine);
                 // Thin red rules under the title and over the buttons, like the lines between the reference panel's fields.
                 using (Brush rule = new SolidBrush(Color.FromArgb(200, Red)))
                 {
@@ -2307,11 +2279,9 @@ namespace CapriDesktop
             }
         }
 
-        // The animation's beat (8 Nov). A thread of its own wakes in step with the screen and asks the panel for a frame: at every
-        // refresh on a screen up to 99 Hz and at every few on a faster one, so 50 to 99 frames a second on any screen of 50 Hz or
-        // more, and never more often than the screen shows them. While the last frame is still being drawn it asks for nothing, so
-        // a slow PC skips frames instead of falling behind. WinForms' own timer only ticks on Windows' 15.6 ms steps and wanders by
-        // as much again.
+        // The animation's beat: its own thread wakes with the screen and asks for a frame, 50 to 99 a second on any
+        // screen of 50 Hz or more. A frame still drawing skips the next, so a slow PC drops frames instead of falling
+        // behind.
         private sealed class Pacer
         {
             internal const int Message = 0x8000 + 0x5C;
@@ -2538,9 +2508,8 @@ namespace CapriDesktop
         private sealed class Ink : Button
         {
             internal bool Filled, Mark;
-            // A tab, rather than one of the buttons along the bottom. Its text is a file name, it is left aligned
-            // because that is the end that tells them which file it is, and it scrolls while the mouse is on it
-            // because the strip is too narrow for a prefixed pack name and ellipsis loses the part that differs.
+            // A tab rather than a bottom button: its text is a file name, left aligned because that end tells files
+            // apart, and it scrolls on hover since an ellipsis would hide the part that differs.
             internal bool Rolling;
             private bool hot, down;
             private Timer roll;
@@ -2680,7 +2649,7 @@ namespace CapriDesktop
         internal const float SheetWaist = SheetRight - StepIn;
         internal const float RuleLeft = 137, RuleRight = 434, RuleTop = 110, RuleBottom = 114, BlockTop = 123, BlockBottom = 135, BlockEnd = 172;
         internal const double RestAlpha = 81.7 / 255;
-        // Where the sheet settles instead: dark glass like the Arasaka panel in Lachy's reference (8 Nov), still on her artist's
+        // Where the sheet settles instead: dark glass like the Arasaka panel in Lachy's reference, still on her artist's
         // curve. Its colour is what that panel's sheet measures over a dark room.
         internal const double GlassAlpha = 0.78;
         internal static readonly Color Glass = Color.FromArgb(52, 30, 36);
@@ -2699,10 +2668,8 @@ namespace CapriDesktop
         internal static readonly Color Spine = Color.FromArgb(243, 222, 70, 62);
         internal static readonly Color Rule = Color.FromArgb(222, FileEditor.Red);
 
-        // A value at any moment between the art's frames: a smooth curve through every frame's measurement (8 Nov), so a screen
-        // drawing far more often than 24 times a second sees the art's easing, not a straight line from one frame to the next with
-        // a jolt at each. It never overshoots a measurement (a monotone cubic, after Fritsch and Carlson), and it eases out of
-        // `lead`, where it was the frame before `first`, and into its last measurement, which it holds.
+        // A value at any moment between the art's frames, on a smooth curve that never overshoots (monotone cubic,
+        // after Fritsch and Carlson). It eases out of lead, the frame before first, and holds its last measurement.
         internal static float Along(float[] curve, int first, double frame, float lead)
         {
             double at = frame - first;

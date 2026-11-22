@@ -204,3 +204,18 @@ Running on this PC	Rulează pe acest PC
 NORMAL	NORMAL
 OFF	OPRIT
 Local server address	Adresa serverului local
+Remember panel position	Ține minte poziția panoului
+Custom colours	Culori personalizate
+Custom colours...	Culori personalizate...
+Choose	Alege
+Hers	Ale ei
+Quiet	Liniște
+Quiet min	Liniște min
+Quiet max	Liniște max
+Until I turn it off	Până o opresc eu
+Quiet on calls	Liniște în apeluri
+Quiet in videos	Liniște la videoclipuri
+Quiet until {n}:{n}	Liniște până la {n}:{n}
+Quiet until turned off	Liniște până la oprire
+Export settings	Exportă setările
+Import settings	Importă setările

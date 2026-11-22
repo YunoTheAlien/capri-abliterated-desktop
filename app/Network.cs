@@ -17,8 +17,7 @@ namespace CapriDesktop
         internal bool? Names;
     }
 
-    // Reads their connection the way they'd check it themselves, a few pings and a name lookup, without changing anything
-    // (Lachy, 3 Nov: "ensure they have the tools they need to perform everything themself").
+    // Reads their connection the way they'd check it themselves, a few pings and a name lookup, without changing anything (Lachy).
     internal static class Network
     {
         // Pings the address they gave, or two public ones, the second only when the first never answers, and looks a name up.

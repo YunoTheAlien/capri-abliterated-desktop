@@ -1,16 +1,6 @@
-# Capri Remote's PC-side checks. Builds RemoteTests.exe from the Remote files with the same csc.exe as her build, then runs:
-#   vectors  RemoteCrypto against every check in remote/test/vectors.json
-#   units    relay hosts, phone names, and DPAPI sealing of her room and phones
-#   qr       30 pairing URLs and every QR version and level, read back by check-qr.py (Python with opencv-python and Pillow)
-#   e2e      RemoteLink against the real relay under wrangler dev --local, with remote/test's fake phone (Node 22 or newer,
-#            after `npm --prefix remote/relay ci` once). With -Relay wss://<host>, the live steps against that running
-#            relay instead: fresh rooms, no keys, tokens or codes printed, and no wrangler needed.
-#   live     the screen view and call (RemoteScreen, RemoteCall) on a drawn desktop with fake ears, against the same relay:
-#            frames in parts, flow control, monitors and Auto, the watching badge's list, push-to-talk and her voice.
-#            It prints the bytes a second for each quality and scene.
-# Nothing here deploys or signs in anywhere.
-#
-#   powershell -NoProfile -ExecutionPolicy Bypass -File app\RemoteTests\run.ps1 [-OutputDirectory <dir>] [-Only vectors,units,qr,e2e,live] [-Relay wss://<host>]
+# Capri Remote's PC-side checks: builds RemoteTests.exe with her csc, then vectors, units, qr, e2e against wrangler dev
+# or -Relay, and live. Nothing deploys or signs in.
+# powershell -NoProfile -ExecutionPolicy Bypass -File app\RemoteTests\run.ps1 [-OutputDirectory <dir>] [-Only vectors,units,qr,e2e,live] [-Relay wss://<host>]
 param([string]$OutputDirectory, [string[]]$Only = @('vectors', 'units', 'qr', 'e2e', 'live'), [string]$Relay)
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path

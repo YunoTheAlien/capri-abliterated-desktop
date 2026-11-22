@@ -12,9 +12,9 @@ using System.Windows.Forms;
 
 namespace CapriDesktop
 {
-    // Capri Remote's screen view and call in Capri herself (app/RemoteScreen.cs, app/RemoteCall.cs): her monitors and their
-    // captures (FrameGrab), the monitor she's looking at for Auto, her ears and voice for a call, and a badge on the PC the
-    // whole time a phone watches or calls. RemoteConnect starts it with her link and RemoteDisconnect ends it.
+    // Capri Remote's screen view and call inside Capri: her monitors and captures (FrameGrab), Auto's monitor, her ears
+    // and voice for a call, and a PC badge while a phone watches or calls. RemoteConnect starts it, RemoteDisconnect
+    // ends it.
     internal sealed partial class Companion
     {
         private volatile RemoteScreen remoteScreen;
@@ -62,9 +62,8 @@ namespace CapriDesktop
             RemoteBadgeShow();
         }
 
-        // Her own ears on a phone's line: Parakeet whenever it's in and Windows speech isn't the pick, with Talk on at the PC
-        // or not, and Windows' recognizer otherwise. Hearing.Text alone only has Parakeet while Talk is on, so with Talk off
-        // every call line went to Windows' recognizer, which turned them into word soup (9 Nov).
+        // Her own ears on a phone's line: Parakeet whenever it's in and Windows speech isn't the pick, whether Talk is
+        // on or not; Windows' recognizer otherwise.
         private string RemoteEars(short[] samples)
         {
             LocalEars own = OwnCallEars();
@@ -135,11 +134,9 @@ namespace CapriDesktop
             internal volatile bool Stopped;
         }
 
-        // Her answer for a phone on a call, voiced a piece at a time on one pool thread: each piece plays as soon as it's
-        // made, straight after the one before, while the next one is made, so the phone hears her first words while the rest
-        // is still being voiced. Her bubble shows the whole answer with the first piece, paced by how long the whole will
-        // take. A newer answer, talking over her or Interrupt on the phone stops the pieces still to come, and a piece her
-        // voice can't make leaves the rest in words.
+        // Her answer for a phone on a call, voiced a piece at a time on one thread: each piece plays as soon as it's
+        // made, so the phone hears her first words early. A newer answer, being talked over or Interrupt stops the
+        // rest.
         private void VoicePieces(int ticket, int turn, int audio, string said, TalkState state, Func<string, byte[]> speak, Func<string, byte[]> free, List<string> pieces)
         {
             int letters = 0;
@@ -245,10 +242,8 @@ namespace CapriDesktop
         // From the link's read worker.
         private void RemoteInterrupted(string device, string re) { Post(delegate { RemoteInterrupt(device, re); }); }
 
-        // Interrupt on a phone (call.hush): her answer to that phone's message stops at once, as if they'd talked over her at
-        // the PC, with the pieces still to be voiced and what's still waiting to go to phones (her speaker's hush sends them
-        // call.hush). With nothing of it still going, that phone just hears so. Anything else she's saying carries on, and
-        // the phone keeps that quiet by itself.
+        // Interrupt on a phone (call.hush): her answer to that phone stops at once, as if talked over at the PC; with
+        // nothing going, the phone hears so. Anything else she's saying carries on.
         private void RemoteInterrupt(string device, string re)
         {
             RemoteCall call = remoteCall;
@@ -267,11 +262,9 @@ namespace CapriDesktop
             internal int Samples;
         }
 
-        // A phone's lines on its call through her real ears hook, chat path and voice, with stand-in ears, brain and voice that
-        // take about as long as hers (her voice 450 ms and 10 ms a letter, as her log shows ElevenLabs taking): her first words
-        // reach the phone sooner a sentence at a time than voiced whole, the next sentence follows with no hush between them,
-        // and the phone's Interrupt (call.hush) stops her answer there and on the PC with nothing more of it sent. An Interrupt
-        // for an answer she's moved on from, one with no re and one from a phone that isn't on a call change nothing.
+        // A phone's call lines through her real ears hook with stand-ins timed like hers: a sentence at a time reaches
+        // the phone sooner than whole, with no hush between, and call.hush stops it everywhere. A stale or foreign hush
+        // changes nothing.
         private void SmokeRemoteCall(List<string> checks)
         {
             const string Phone = "phoneC";
@@ -595,7 +588,7 @@ namespace CapriDesktop
             {
                 List<KeyValuePair<string, Rectangle>> screens = new List<KeyValuePair<string, Rectangle>>();
                 foreach (Screen screen in Screen.AllScreens) screens.Add(new KeyValuePair<string, Rectangle>(screen.DeviceName, screen.Bounds));
-                Screen main = Screen.PrimaryScreen;
+                Screen main = Displays.Home;
                 return RemoteScreen.Numbered(screens, main == null ? null : main.DeviceName);
             }
 
@@ -717,7 +710,7 @@ namespace CapriDesktop
             foreach (RemoteWatcher one in calling) { phones.Add(one.Device); if (name == null) name = one.Name; }
             RemoteMonitor monitor = null;
             foreach (RemoteWatcher one in watching) if (monitor == null && one.Monitor != null) monitor = one.Monitor;
-            Rectangle area = monitor != null ? Screen.FromRectangle(monitor.Bounds).WorkingArea : Screen.PrimaryScreen.WorkingArea;
+            Rectangle area = monitor != null ? Screen.FromRectangle(monitor.Bounds).WorkingArea : Displays.Home.WorkingArea;
             string lead = BadgeLead(watching.Count > 0, calling.Count > 0, hearing, phones.Count);
             string who = phones.Count > 1 ? phones.Count + " PHONES" : (name ?? "PHONE").ToUpperInvariant();
             if (remoteBadge == null || remoteBadge.IsDisposed) remoteBadge = new RemoteBadge();

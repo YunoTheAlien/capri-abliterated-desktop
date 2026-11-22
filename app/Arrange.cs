@@ -10,10 +10,8 @@ using System.Windows.Forms;
 
 namespace CapriDesktop
 {
-    // Her window tool's moves (Lachy, 2 Nov: "build everything else that can be included in 0.8.0, especially focused on the tool
-    // use"): maximize, restore, snap to half a monitor, send to another monitor, move and resize an app's window, on monitors of
-    // any size, way round or scale. What she says is where the window really ended up, read back afterwards, so an app that won't
-    // go smaller, a window that runs as admin or one that stopped responding is said as it is.
+    // Her window tool's moves (Lachy): maximize, restore, snap, send to another monitor, move and resize, on any
+    // monitor. What she says is where the window really ended up, read back afterwards.
     internal static class Arrange
     {
         // One of their monitors: what her tools call it, all of it and the part windows use (without the taskbar), and its scale
@@ -301,9 +299,8 @@ namespace CapriDesktop
             }
         }
 
-        // A window taken to another monitor. One that fills a monitor or half of one, like a snapped window, fills the same part of
-        // the new one. Otherwise it keeps its size, grown or shrunk by how much bigger the new monitor's scale is, and its spot on
-        // the screen, shrunk to fit a smaller or portrait monitor.
+        // A window taken to another monitor: one filling a monitor or half of one fills the same part there; otherwise
+        // it keeps its size, scaled by the monitors' scale, and its spot, shrunk to fit a smaller or portrait one.
         internal static Rectangle Carried(Rectangle edges, Display from, Display to)
         {
             Rectangle a = from.Work, b = to.Work;
@@ -355,9 +352,9 @@ namespace CapriDesktop
             return new Rectangle(left, top, wanted.Width, wanted.Height);
         }
 
-        // A size or place in her brain's words: pixels ("1280" or "1280px"), a percent of the monitor ("50%"), or a change from
-        // where it is ("+200", "-10%"). A place's change in percent is of the monitor, and a size's is of its size now. Null when
-        // it isn't one; the same as now when it's left out.
+        // A size or place in her brain's words: pixels ("1280", "1280px"), a percent of the monitor, or a change
+        // ("+200", "-10%"); a place's percent is of the monitor, a size's of its size. Null when not one; same as now
+        // when left out.
         internal static int? Measure(string said, int now, int whole, bool place)
         {
             string text = Regex.Replace((said ?? "").Trim().ToLowerInvariant(), @"\s+|px$|pixels?$", "");

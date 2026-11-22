@@ -80,6 +80,7 @@ namespace CapriDesktop
 
         private string ModsReplying(string said, string source)
         {
+            modsTold++;
             if (!ModsListen(host => host.replying != null)) return said;
             CapriMessage message = ModMessage(said, source);
             ModsFire(delegate(ModHost host) { if (host.replying != null) host.replying(message); });
@@ -87,8 +88,12 @@ namespace CapriDesktop
             return changed.Length == 0 ? said : changed;
         }
 
+        // How many times a line of hers was handed to the replying, speaking, replied and spoke hooks, mods or none, for her checks.
+        internal int modsTold;
+
         private void ModsReplied(string said, string source)
         {
+            modsTold++;
             if (!ModsListen(host => host.replied != null)) return;
             CapriMessage message = ModMessage(said, source);
             ModsFire(delegate(ModHost host) { if (host.replied != null) host.replied(message); });
@@ -97,6 +102,7 @@ namespace CapriDesktop
         // Her words before her voice says them: changed, or "" to keep that line in her bubble only.
         private string ModsSpeaking(string words)
         {
+            modsTold++;
             if (words.Length == 0 || !ModsListen(host => host.speaking != null)) return words;
             CapriMessage message = ModMessage(words, "speech");
             ModsFire(delegate(ModHost host) { if (host.speaking != null) host.speaking(message); });
@@ -107,6 +113,7 @@ namespace CapriDesktop
 
         private void ModsSpoke(string said)
         {
+            modsTold++;
             modAloud = true;
             if (ModsListen(host => host.started != null)) ModsFire(delegate(ModHost host) { if (host.started != null) host.started(said); });
         }
@@ -251,14 +258,40 @@ namespace CapriDesktop
             return made;
         }
 
-        // Every tool running mods added, as Hands wants them: name, what it does, and what its text is for.
+        // Every tool running mods added, as Hands wants them: name, what it does, and what its text is for. A tool its mod's
+        // cog stops at this SECURITY level isn't offered.
         private string[][] ModToolList()
         {
             List<string[]> tools = new List<string[]>();
             foreach (ModHost host in LiveHosts())
-                lock (host.tools) foreach (ModTool tool in host.tools.Values) tools.Add(new[] { tool.Name, tool.Description, tool.Takes });
+                lock (host.tools)
+                    foreach (ModTool tool in host.tools.Values)
+                        if (PluginSettings.Now(Mods.CogId(host.Id), PluginSettings.Tool, tool.Name) != PluginSettings.Denied) tools.Add(new[] { tool.Name, tool.Description, tool.Takes });
             tools.Sort((a, b) => string.CompareOrdinal(a[0], b[0]));
             return tools.ToArray();
+        }
+
+        // The tools a running mod added, for its cog.
+        internal string[] ModToolNames(string id)
+        {
+            List<string> names = new List<string>();
+            foreach (ModHost host in LiveHosts())
+                if (host.Id == id) lock (host.tools) foreach (ModTool tool in host.tools.Values) names.Add(tool.Name);
+            names.Sort(StringComparer.Ordinal);
+            return names.ToArray();
+        }
+
+        // A mod tool its cog allows at this SECURITY level: it runs without asking, whatever SECURITY's toggle says.
+        private bool ModToolRuns(ToolArguments args)
+        {
+            if (args == null || string.IsNullOrEmpty(args.Name)) return false;
+            foreach (ModHost host in LiveHosts())
+            {
+                bool has;
+                lock (host.tools) has = host.tools.ContainsKey(args.Name);
+                if (has) return PluginSettings.Now(Mods.CogId(host.Id), PluginSettings.Tool, args.Name) == PluginSettings.Allowed;
+            }
+            return false;
         }
 
         private string RunModTool(string name, string text)
@@ -267,6 +300,7 @@ namespace CapriDesktop
             {
                 ModTool tool;
                 lock (host.tools) if (!host.tools.TryGetValue(name ?? "", out tool)) continue;
+                if (PluginSettings.Now(Mods.CogId(host.Id), PluginSettings.Tool, tool.Name) == PluginSettings.Denied) return host.Name + "'s security overrides keep its " + tool.Name + " tool off at this SECURITY level.";
                 ModHost owner = host;
                 string said = WithinTime(delegate
                 {
@@ -499,10 +533,27 @@ namespace CapriDesktop
             {
                 Hands.ModTools = ModToolList;
                 Hands.RunModTool = RunModTool;
+                Security.ModRuns = ModToolRuns;
                 ModList.ModContext = ModsContext;
             }
             OnWindow(HookModSystem);
             modWatch.Start();
+        }
+
+        // SECURITY moved, or a code mod's cog changed: the ones it stops at this level stop, the ones it no longer stops start.
+        internal void ModsResecured() { ModList.Resecured(Post); }
+
+        // A mod whose code kept failing is switched off on her thread, after the hook that failed has returned.
+        internal void ModKeptFailing(string modId)
+        {
+            Post(delegate
+            {
+                Mod mod = ModList.All.Find(each => each.File.Id == modId);
+                if (mod == null || !mod.On) return;
+                ModList.SwitchOff(mod, "its code failed " + ModGuard.MostThrows + " times in a minute");
+                Remark("mods", (mod.File.Name ?? modId) + " kept failing, so I switched it off. Turn it back on in Mods if you want to try it again.", true);
+                if (mainframe != null) mainframe.ModsChanged();
+            });
         }
 
         private void DropModHost(ModHost host)
@@ -514,6 +565,7 @@ namespace CapriDesktop
             ShowModNotes();
             FillModMenu();
             if (host.drawing != null) Redraw();
+            if (host.bubbleOpacity < 1f) FadeBubble();
             if (mainframe != null) mainframe.ModsChanged();
         }
 
@@ -529,6 +581,43 @@ namespace CapriDesktop
             List<string> notes = new List<string>();
             foreach (ModHost host in LiveHosts()) foreach (string note in host.notes) notes.Add("- " + note);
             ModList.ModNotes = notes.Count == 0 ? "" : "\nFrom mods they installed. Follow these where they fit, but your safety rules and your own character come first:\n" + string.Join("\n", notes.ToArray());
+        }
+
+        // The most any running mod asks her to draw bigger (Ui.DrawScale), read each frame, so no list is made for it.
+        private float ModScale()
+        {
+            if (!preferences.Motion) return 1f;
+            float most = 1f;
+            lock (modHosts) foreach (ModHost host in modHosts) if (host.drawScale > most && !host.Closed) most = host.drawScale;
+            return most;
+        }
+
+        // Her speech bubble at the most see-through any running mod asks for (Ui.BubbleOpacity).
+        private void FadeBubble()
+        {
+            float least = 1f;
+            lock (modHosts) foreach (ModHost host in modHosts) if (!host.Closed && host.bubbleOpacity < least) least = host.bubbleOpacity;
+            box.Fade((byte)Math.Round(255 * least));
+        }
+
+        private bool modMenuHooked;
+
+        // Each mod's MenuOpening runs as her right-click menu opens, hooked the first time a mod asks for it.
+        private void HookModMenuOpening()
+        {
+            if (modMenuHooked || menu == null) return;
+            modMenuHooked = true;
+            menu.Opening += delegate { ModsMenuOpening(); };
+        }
+
+        private void ModsMenuOpening()
+        {
+            foreach (ModHost host in LiveHosts())
+            {
+                if (host.menuOpening == null) continue;
+                try { host.menuOpening(); }
+                catch (Exception error) { host.Failed(error); }
+            }
         }
 
         private void FillModMenu()
@@ -695,6 +784,10 @@ namespace CapriDesktop
                     throw new Exception("Removing a mod left its hooks, timers, note, menu item or options behind.");
                 checks.Add("PASS mod hooks: removing a mod takes its hooks, timers, personality notes, menu items and options with it");
                 CheckNewerHooks(checks, write, until);
+                CheckModMenus(checks, write, until);
+                CheckModScale(checks, write, until);
+                CheckModControls(checks, write, until);
+                CheckModColours(checks, write, until);
                 string tour =Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "..", "..", "mods", "hooks-tour" + Mods.CodeExtension));
                 if (!File.Exists(tour)) { checks.Add("LIMIT mod hooks: the Hooks Tour file isn't beside this build, so it wasn't imported"); return; }
                 if (!mainframe.ImportMod(tour)) throw new Exception("Hooks Tour was refused: " + mainframe.ModStatusText);
@@ -711,6 +804,172 @@ namespace CapriDesktop
                 mainframe.ShowMods(false);
                 foreach (Mod left in mods.All.ToArray()) mods.Remove(left);
             }
+        }
+
+        // API 4: a mod's own submenu, its ticks and lines, the 30 item cap, and MenuOpening changing its words.
+        private void CheckModMenus(List<string> checks, Func<string, string, string, string> write, Func<Func<bool>, bool> until)
+        {
+            Mods mods = ModList;
+            string body = "public class M : ICapriMod { ICapriHost c; ICapriMenuItem tick, off; int opened;\n"
+                + "void Mark(string name, string text) { File.WriteAllText(Path.Combine(c.Folder, name), text); }\n"
+                + "public void Start(ICapriHost h) { c = h; ICapriMenu m = h.Ui.AddMenu(\"Menu test\");\n"
+                + "m.Add(\"Run\", () => Mark(\"run\", \"x\")); m.AddLine();\n"
+                + "tick = m.AddCheck(\"Tick\", false, on => Mark(\"tick\", on + \" \" + tick.Checked));\n"
+                + "m.Add(\"Gone\", null).Remove(); off = m.Add(\"Off\", () => Mark(\"off\", \"x\")); off.Enabled = false;\n"
+                + "for (int i = 0; i < 40; i++) m.Add(\"Extra \" + i, null);\n"
+                + "h.Ui.MenuOpening += () => { opened++; tick.Text = \"Tick \" + opened; }; }\n"
+                + "public bool Heard(string w) { return false; } public void Stop() { } }";
+            if (!mainframe.ImportMod(write("menus", null, body))) throw new Exception("A mod making its own menu was refused: " + mainframe.ModStatusText);
+            string data = Path.Combine(mods.Folder, "menus-data");
+            Func<string, string> mark = delegate(string name) { string file = Path.Combine(data, name); return File.Exists(file) ? File.ReadAllText(file) : null; };
+            ToolStripMenuItem own = null;
+            until(() => modMenu != null && modMenu.DropDownItems.Count == 1 && (own = modMenu.DropDownItems[0] as ToolStripMenuItem) != null && own.DropDownItems.Count == 29);
+            if (own == null || own.Text != "Menu test" || own.DropDownItems.Count != 29 || own.DropDownItems[0].Text != "Run" || !(own.DropDownItems[1] is ToolStripSeparator)
+                || own.DropDownItems[2].Text != "Tick" || own.DropDownItems[3].Text != "Off" || own.DropDownItems[3].Enabled || own.DropDownItems[28].Text != "Extra 24")
+                throw new Exception("A mod's own menu isn't under Mods as it built it, or went past 30 items: " + (own == null ? "none" : own.Text + " " + own.DropDownItems.Count));
+            ToolStripDropDownMenu drop = own.DropDown as ToolStripDropDownMenu;
+            if (drop == null || !drop.ShowCheckMargin || drop.Renderer != menu.Renderer) throw new Exception("A mod's own menu doesn't wear her menu's look, or has no room for ticks.");
+            own.DropDownItems[0].PerformClick();
+            own.DropDownItems[2].PerformClick();
+            if (mark("run") != "x" || mark("tick") != "True True" || !((ToolStripMenuItem)own.DropDownItems[2]).Checked) throw new Exception("A mod's menu item or tick didn't run, or the tick didn't change: " + mark("tick"));
+            if (!modMenuHooked) throw new Exception("MenuOpening didn't hook her right-click menu.");
+            ModsMenuOpening();
+            if (!until(() => own.DropDownItems[2].Text == "Tick 1")) throw new Exception("MenuOpening couldn't change a mod's menu item: " + own.DropDownItems[2].Text);
+            checks.Add("PASS mod menus: a mod's own submenu sits under Mods in her look, with items, a tick, a line, a greyed item, at most 30 entries, and MenuOpening updates its words");
+            mods.Remove(mods.All.Find(mod => mod.File.Id == "menus"));
+            if (!until(() => !modMenu.Available) || Array.Exists(LiveHosts(), each => each.Id == "menus"))
+                throw new Exception("Removing a mod left its own menu behind: " + modMenu.DropDownItems.Count + " under Mods");
+            ModsMenuOpening();
+            checks.Add("PASS mod menus: removing the mod takes its submenu, and her menu opening after that runs nothing of it");
+        }
+
+        // API 4: Ui.Switch and Ui.Button are her own switch and key, in a mod's panel, and what they do reaches the mod.
+        private void CheckModControls(List<string> checks, Func<string, string, string, string> write, Func<Func<bool>, bool> until)
+        {
+            Mods mods = ModList;
+            string body = "public class M : ICapriMod { ICapriHost c;\n"
+                + "void Mark(string name, string text) { File.WriteAllText(Path.Combine(c.Folder, name), text); }\n"
+                + "public void Start(ICapriHost h) { c = h;\n"
+                + "h.Mainframe.AddPanel(\"Switch test\", \"right\", 3, () => { Control s = h.Ui.Switch(\"Glow test\", true, on => Mark(\"switch\", on.ToString())); Mark(\"switched\", s.GetType().Name + \" \" + s.Width + \" \" + ((CheckBox)s).Checked); return s; });\n"
+                + "h.Mainframe.AddPanel(\"Button test\", \"right\", 4, () => { Control b = h.Ui.Button(\"Press test\", () => { Mark(\"button\", \"x\"); throw new InvalidOperationException(\"button threw\"); }); Mark(\"buttoned\", b.GetType().Name); return b; }); }\n"
+                + "public bool Heard(string w) { return false; } public void Stop() { } }";
+            if (!mainframe.ImportMod(write("controls", null, body))) throw new Exception("A mod using her switch and key was refused: " + mainframe.ModStatusText);
+            string data = Path.Combine(mods.Folder, "controls-data");
+            Func<string, string> mark = delegate(string name) { string file = Path.Combine(data, name); return File.Exists(file) ? File.ReadAllText(file) : null; };
+            Func<string, Control> find = delegate(string text) { foreach (Control one in mainframe.Controls) if (one.Text == text) return one; return null; };
+            CheckBox flip = null;
+            Button press = null;
+            until(() => (flip = find("Glow test") as CheckBox) != null && (press = find("Press test") as Button) != null);
+            try
+            {
+                if (flip == null || press == null || mark("switched") != "Toggle 328 True" || mark("buttoned") != "Key")
+                    throw new Exception("Ui.Switch and Ui.Button weren't her own switch and key in the mod's panels: " + mark("switched") + " / " + mark("buttoned"));
+                flip.Checked = false;
+                press.PerformClick();
+                if (mark("switch") != "False" || mark("button") != "x" || !Array.Exists(LiveHosts(), each => each.Id == "controls"))
+                    throw new Exception("Her switch or key in a mod's panel didn't reach the mod, or a key that threw took the mod down: " + mark("switch") + " / " + mark("button"));
+            }
+            finally { mods.Remove(mods.All.Find(mod => mod.File.Id == "controls")); }
+            if (!until(() => find("Glow test") == null && find("Press test") == null)) throw new Exception("A mod's switch and key stayed after it was removed.");
+            checks.Add("PASS mod controls: Ui.Switch and Ui.Button are her own OFF/ON switch and key at the column's width in a mod's panel, a flip or press reaches the mod, one that throws is the mod's failure, not hers, and both go with the mod");
+        }
+
+        // API 5: Ui.Colour. Any mod names its colours and gets them back, kept in colours.md in its own data folder; setting one
+        // tells it through ColoursChanged; its approval and Mods row say it has custom colours; removed, it lists none.
+        private void CheckModColours(List<string> checks, Func<string, string, string, string> write, Func<Func<bool>, bool> until)
+        {
+            Mods mods = ModList;
+            string body = "public class M : ICapriMod { ICapriHost c;\n"
+                + "void Mark(string name, string text) { File.WriteAllText(Path.Combine(c.Folder, name), text); }\n"
+                + "void Ask() { Color a = c.Ui.Colour(\"Beam\", Color.FromArgb(10, 200, 120)); Mark(\"beam\", a.R + \",\" + a.G + \",\" + a.B); }\n"
+                + "public void Start(ICapriHost h) { c = h; Ask(); h.Ui.Colour(\"Edge: line, | = #\", Color.Red); h.Ui.ColoursChanged += () => { Ask(); Mark(\"told\", \"yes\"); }; }\n"
+                + "public bool Heard(string w) { return false; } public void Stop() { } }";
+            string file = write("tinted", null, body);
+            ModFile read = Mods.ReadCode(File.ReadAllText(file));
+            if (!read.Colours || Mods.Consent(read, "x").IndexOf("Has custom colours", StringComparison.Ordinal) < 0) throw new Exception("A mod naming colours wasn't said to have custom colours on its approval.");
+            if (!mainframe.ImportMod(file)) throw new Exception("A mod naming colours was refused: " + mainframe.ModStatusText);
+            string data = Path.Combine(mods.Folder, "tinted-data");
+            Func<string, string> mark = delegate(string name) { string at = Path.Combine(data, name); return File.Exists(at) ? File.ReadAllText(at) : null; };
+            try
+            {
+                Color usual = Neon.Tone(10, 200, 120);
+                if (!until(() => mark("beam") == usual.R + "," + usual.G + "," + usual.B)) throw new Exception("Ui.Colour didn't hand back the mod's own colour in her look: " + mark("beam"));
+                List<string> names = AddonColours.Names("tinted");
+                if (names.Count != 2 || names[0] != "Beam" || names[1] != "Edge line" || !File.Exists(Path.Combine(data, AddonColours.FileName)))
+                    throw new Exception("A mod's colours weren't kept by their cleaned names in its own colours.md: " + string.Join(" / ", names.ToArray()));
+                if (!AddonColours.Trees().Exists(each => each.Key == "tinted")) throw new Exception("An installed mod's colours aren't listed for Custom colours.");
+                string row = mainframe.ModRowAbout("tinted");
+                if (row == null || row.IndexOf("Has custom colours.", StringComparison.Ordinal) < 0) throw new Exception("The Mods row doesn't say the mod has custom colours: " + row);
+                Dictionary<string, Color?> set = new Dictionary<string, Color?>();
+                set["Beam"] = Color.FromArgb(1, 2, 3);
+                AddonColours.Set("tinted", set);
+                if (!until(() => mark("told") == "yes" && mark("beam") == "1,2,3")) throw new Exception("Setting a mod's colour didn't reach it through ColoursChanged: " + mark("beam"));
+                if (File.ReadAllText(Path.Combine(data, AddonColours.FileName)).IndexOf("#010203", StringComparison.Ordinal) < 0) throw new Exception("A mod's colour wasn't saved in its colours.md.");
+            }
+            finally { mods.Remove(mods.All.Find(mod => mod.File.Id == "tinted")); }
+            if (AddonColours.Trees().Exists(each => each.Key == "tinted")) throw new Exception("A removed mod's colours are still listed.");
+            checks.Add("PASS mod colours: Ui.Colour names a mod's colour and hands back its own in her look, kept by a cleaned name in colours.md in its own data folder, listed for Custom colours while it is installed and not once removed; a colour set reaches the mod through ColoursChanged; its approval and Mods row say it has custom colours");
+        }
+
+        // API 4: Ui.DrawScale draws her bigger within its limits, Motion off holds her still, and it goes with the mod.
+        private void CheckModScale(List<string> checks, Func<string, string, string, string> write, Func<Func<bool>, bool> until)
+        {
+            Mods mods = ModList;
+            string body = "public class M : ICapriMod { ICapriHost c;\n"
+                + "public void Start(ICapriHost h) { c = h; h.Ui.DrawScale = 2f; h.Ui.BubbleOpacity = 0.1f;\n"
+                + "h.Ui.AddMenuItem(\"Small\", () => c.Ui.DrawScale = 0.5f); h.Ui.AddMenuItem(\"Some\", () => c.Ui.DrawScale = 1.1f);\n"
+                + "h.Ui.AddMenuItem(\"Game\", () => File.WriteAllText(Path.Combine(c.Folder, \"game\"), c.System.GameInFront.ToString())); }\n"
+                + "public bool Heard(string w) { return false; } public void Stop() { } }";
+            if (!mainframe.ImportMod(write("scale", "system", body))) throw new Exception("A mod setting DrawScale was refused: " + mainframe.ModStatusText);
+            ModHost host = null;
+            until(() => (host = Array.Find(LiveHosts(), each => each.Id == "scale")) != null && modMenu != null && modMenu.DropDownItems.Count == 3);
+            byte least = (byte)Math.Round(255 * ModHost.LeastBubbleOpacity);
+            if (least > 80 || !until(() => box.Alpha == least)) throw new Exception("BubbleOpacity wasn't held to its least, 0.3: alpha " + box.Alpha);
+            bool gameWas = gameAhead;
+            string gameFile = Path.Combine(mods.Folder, "scale-data", "game");
+            try
+            {
+                gameAhead = true;
+                modMenu.DropDownItems[2].PerformClick();
+                string seen = File.Exists(gameFile) ? File.ReadAllText(gameFile) : null;
+                gameAhead = false;
+                modMenu.DropDownItems[2].PerformClick();
+                if (seen != "True" || File.ReadAllText(gameFile) != "False") throw new Exception("System.GameInFront didn't follow her own game check: " + seen);
+            }
+            finally { gameAhead = gameWas; }
+            if (host == null || host.drawScale != ModHost.MostDrawScale) throw new Exception("DrawScale wasn't held to its most: " + (host == null ? "no mod" : host.drawScale.ToString()));
+            bool motionWas = preferences.Motion;
+            try
+            {
+                preferences.Motion = true;
+                if (Math.Abs(Pulse() - ModHost.MostDrawScale) > 0.001f) throw new Exception("A mod's DrawScale didn't reach her drawn size: " + Pulse());
+                if (!hidden)
+                {
+                    Redraw();
+                    if (drawnPulse <= 1.0005f) throw new Exception("A frame drawn with a mod's DrawScale wasn't drawn bigger: " + drawnPulse);
+                }
+                preferences.Motion = false;
+                if (Pulse() != 1f) throw new Exception("DrawScale moved her with Motion off.");
+                preferences.Motion = true;
+                modMenu.DropDownItems[0].PerformClick();
+                if (host.drawScale != 1f || Pulse() != 1f) throw new Exception("DrawScale went under 1: " + host.drawScale);
+                modMenu.DropDownItems[1].PerformClick();
+                if (Math.Abs(Pulse() - 1.1f) > 0.001f) throw new Exception("DrawScale didn't change when the mod changed it: " + Pulse());
+                mods.Remove(mods.All.Find(mod => mod.File.Id == "scale"));
+                if (!until(() => !Array.Exists(LiveHosts(), each => each.Id == "scale")) || Pulse() != 1f || box.Alpha != 255) throw new Exception("DrawScale or BubbleOpacity stayed after its mod was removed: " + Pulse() + ", alpha " + box.Alpha);
+                if (!hidden)
+                {
+                    // Drawn bigger, she reached past her body's box; back to her size, none of that may be left above her.
+                    Redraw();
+                    Redraw();
+                    int stray = 0;
+                    for (int y = 0; y < Math.Min(frame.Height, drawnBounds.Top - 2); y++)
+                        for (int x = 0; x < frame.Width; x++) if (frame.GetPixel(x, y).A != 0) stray++;
+                    if (stray > 0) throw new Exception("After DrawScale ended, " + stray + " pixels of her bigger frame stayed above her.");
+                }
+            }
+            finally { preferences.Motion = motionWas; Redraw(); }
+            checks.Add("PASS mod draw scale: DrawScale draws her bigger from 1 to at most 1.15" + (hidden ? " (hidden, so not drawn)" : " in a drawn frame") + ", never under 1, not with Motion off, and goes with the mod; BubbleOpacity holds to 0.3 at least and goes with it too; System.GameInFront reads her own game check");
         }
 
         // API 3: tools her brain picks by itself, tool vetoes, fresh context, the mod's store, system events, hotkeys, sounds,
@@ -800,6 +1059,31 @@ namespace CapriDesktop
             }
             finally { Security.Drop(); Security.TheySaid(); Security.Load(securityWas); Action securityChanged = Security.Changed; if (securityChanged != null) securityChanged(); }
             checks.Add("PASS mod hooks: mod tools have their own SECURITY toggle, off on Lockdown and Guarded, a held one waits for their own yes, and a mod's Chat.Send never answers it");
+            // Its cog, the same as a plug-in's: a tick runs the tool without asking at that level, Lockdown included; a cross
+            // takes it out of her tool list there and refuses it if called anyway.
+            string cog = Mods.CogId("hooks3");
+            try
+            {
+                bool listed = Array.IndexOf(ModToolNames("hooks3"), "hook_echo") >= 0;
+                Security.Pick(Security.Lockdown);
+                PluginSettings.Set(cog, PluginSettings.Tool, "hook_echo", Security.Lockdown, PluginSettings.Allowed);
+                string ticked = DoTool("mod", new ToolArguments { Name = "hook_echo", Text = "ticked" }, asking, true);
+                Security.Pick(Security.Trusted);
+                PluginSettings.Set(cog, PluginSettings.Tool, "hook_echo", Security.Trusted, PluginSettings.Denied);
+                Hands.Forget();
+                bool offered = Hands.KitFor().ClaudeTools.Contains("\"hook_echo\"");
+                string crossed = DoTool("mod", new ToolArguments { Name = "hook_echo", Text = "crossed" }, asking, true);
+                if (!listed || ticked != "echo: ticked" || offered || crossed.IndexOf("security overrides keep its hook_echo tool off", StringComparison.Ordinal) < 0)
+                    throw new Exception("A mod tool's cog didn't override SECURITY: listed for its cog " + listed + ", ticked in Lockdown " + ticked + ", offered when crossed " + offered + ", crossed " + crossed);
+            }
+            finally
+            {
+                PluginSettings.Set(cog, PluginSettings.Tool, "hook_echo", Security.Lockdown, PluginSettings.Follows);
+                PluginSettings.Set(cog, PluginSettings.Tool, "hook_echo", Security.Trusted, PluginSettings.Follows);
+                Security.Drop(); Security.TheySaid(); Security.Load(securityWas); Action securityChanged = Security.Changed; if (securityChanged != null) securityChanged();
+                Hands.Forget();
+            }
+            checks.Add("PASS mod hooks: a mod tool's cog overrides SECURITY per level like a plug-in's: a tick runs it without asking even in Lockdown, a cross takes it out of her tools there and refuses it");
             ModHost host = Array.Find(LiveHosts(), each => each.Id == "hooks3");
             if (mark("badkey") != "refused" || mark("system") != "True True" || mark("sound") != "True False" || mark("screen") != "True" || (mark("move") ?? "").IndexOf("A mod can move her with", StringComparison.Ordinal) != 0)
                 throw new Exception("A hotkey that types, the system hooks, a sound, her screen or a move a mod can't do went wrong: " + mark("badkey") + " / " + mark("system") + " / " + mark("sound") + " / " + mark("move"));
@@ -939,6 +1223,7 @@ namespace CapriDesktop
             {
                 Exception inner = error is System.Reflection.TargetInvocationException && error.InnerException != null ? error.InnerException : error;
                 Brain.Log("mod " + id, -1, inner.ToString());
+                if (ModGuard.Threw(id)) capri.ModKeptFailing(id);
             }
 
             private void Need(string permission)
@@ -957,7 +1242,10 @@ namespace CapriDesktop
                 menuItems.Clear();
                 optionsMake = null;
                 capri.OnWindow(delegate { contexts.Clear(); });
+                capri.OnWindow(delegate { capri.mainframe.RemoveModPanels(id); });
                 capri.OnWindow(delegate { capri.DropModHost(this); });
+                if (treeChanged != null) { AddonColours.Changed -= treeChanged; Neon.Repainted -= repainted; }
+                coloursChanged = null;
             }
 
             public string Folder
@@ -1191,6 +1479,207 @@ namespace CapriDesktop
                 });
             }
 
+            internal const float MostDrawScale = 1.15f;
+            internal volatile float drawScale = 1f;
+
+            float ICapriUi.DrawScale
+            {
+                get { return drawScale; }
+                set { drawScale = float.IsNaN(value) ? 1f : Math.Max(1f, Math.Min(MostDrawScale, value)); }
+            }
+
+            Control ICapriUi.Switch(string text, bool on, Action<bool> changed)
+            {
+                string label = Clean(text, 60);
+                return capri.FromWindow(() => capri.mainframe.ModSwitch(label, on, changed, Failed));
+            }
+
+            Color ICapriUi.Colour(string name, Color usual) { return AddonColours.Declare(id, name, usual); }
+
+            // Told on the window's thread when one of this mod's colours is set, or her palette or look changes.
+            internal Action coloursChanged;
+            private Action<string> treeChanged;
+            private Action repainted;
+
+            event Action ICapriUi.ColoursChanged
+            {
+                add
+                {
+                    coloursChanged += value;
+                    if (treeChanged != null || over) return;
+                    treeChanged = delegate(string changed) { if (string.Equals(changed, id, StringComparison.OrdinalIgnoreCase)) TellColours(); };
+                    repainted = TellColours;
+                    AddonColours.Changed += treeChanged;
+                    Neon.Repainted += repainted;
+                }
+                remove { coloursChanged -= value; }
+            }
+
+            private void TellColours()
+            {
+                if (over || coloursChanged == null) return;
+                capri.OnWindow(delegate
+                {
+                    Action told = coloursChanged;
+                    if (over || told == null) return;
+                    try { told(); }
+                    catch (Exception error) { Failed(error); }
+                });
+            }
+
+            Control ICapriUi.Button(string text, Action clicked)
+            {
+                string label = Clean(text, 60);
+                return capri.FromWindow(() => capri.mainframe.ModButton(label, clicked, Failed));
+            }
+
+            internal const float LeastBubbleOpacity = 0.3f;
+            internal volatile float bubbleOpacity = 1f;
+
+            float ICapriUi.BubbleOpacity
+            {
+                get { return bubbleOpacity; }
+                set
+                {
+                    bubbleOpacity = float.IsNaN(value) ? 1f : Math.Max(LeastBubbleOpacity, Math.Min(1f, value));
+                    if (!over) capri.OnWindow(capri.FadeBubble);
+                }
+            }
+
+            internal Action menuOpening;
+            event Action ICapriUi.MenuOpening { add { menuOpening += value; capri.OnWindow(capri.HookModMenuOpening); } remove { menuOpening -= value; } }
+
+            ICapriMenu ICapriUi.AddMenu(string text)
+            {
+                string label = Clean(text, 60);
+                if (label.Length == 0) label = name;
+                ModMenu made = new ModMenu(this, label);
+                if (over) return made;
+                capri.OnWindow(delegate
+                {
+                    if (over) return;
+                    menuItems.Add(made.Item);
+                    capri.LikeMenu(made.Item);
+                    capri.FillModMenu();
+                });
+                return made;
+            }
+
+            // A mod's own submenu under Mods. Every change waits for her window's thread; a click that throws goes to Failed.
+            private sealed class ModMenu : ICapriMenu
+            {
+                private const int MostItems = 30;
+                private readonly ModHost host;
+                internal readonly ToolStripMenuItem Item;
+                private int count;
+
+                internal ModMenu(ModHost owner, string label)
+                {
+                    host = owner;
+                    Item = new ToolStripMenuItem(label);
+                }
+
+                private bool Room() { return !host.over && System.Threading.Interlocked.Increment(ref count) <= MostItems; }
+
+                public ICapriMenuItem Add(string text, Action clicked)
+                {
+                    ModMenuItem made = new ModMenuItem(host, Clean(text, 60));
+                    if (!Room()) return made;
+                    made.Item.Click += delegate
+                    {
+                        if (clicked == null) return;
+                        try { clicked(); }
+                        catch (Exception error) { host.Failed(error); }
+                    };
+                    host.capri.OnWindow(delegate { if (!host.over) Item.DropDownItems.Add(made.Item); });
+                    return made;
+                }
+
+                public ICapriMenuItem AddCheck(string text, bool on, Action<bool> changed)
+                {
+                    ModMenuItem made = new ModMenuItem(host, Clean(text, 60));
+                    made.on = on;
+                    made.Item.Checked = on;
+                    if (!Room()) return made;
+                    made.Item.Click += delegate
+                    {
+                        made.on = !made.on;
+                        made.Item.Checked = made.on;
+                        if (changed == null) return;
+                        try { changed(made.on); }
+                        catch (Exception error) { host.Failed(error); }
+                    };
+                    host.capri.OnWindow(delegate { if (!host.over) Item.DropDownItems.Add(made.Item); });
+                    return made;
+                }
+
+                public void AddLine()
+                {
+                    if (!Room()) return;
+                    host.capri.OnWindow(delegate { if (!host.over) Item.DropDownItems.Add(new ToolStripSeparator()); });
+                }
+
+                public void Clear()
+                {
+                    System.Threading.Interlocked.Exchange(ref count, 0);
+                    host.capri.OnWindow(delegate { Item.DropDownItems.Clear(); });
+                }
+
+                public void Remove()
+                {
+                    host.capri.OnWindow(delegate
+                    {
+                        host.menuItems.Remove(Item);
+                        host.capri.FillModMenu();
+                    });
+                }
+            }
+
+            private sealed class ModMenuItem : ICapriMenuItem
+            {
+                private readonly ModHost host;
+                internal readonly ToolStripMenuItem Item;
+                private string text;
+                internal volatile bool on;
+                private volatile bool enabled = true;
+
+                internal ModMenuItem(ModHost owner, string label)
+                {
+                    host = owner;
+                    text = label;
+                    Item = new ToolStripMenuItem(label);
+                }
+
+                public string Text
+                {
+                    get { return text; }
+                    set
+                    {
+                        string label = Clean(value, 60);
+                        if (label.Length == 0) return;
+                        text = label;
+                        host.capri.OnWindow(delegate { Item.Text = label; });
+                    }
+                }
+
+                public bool Checked
+                {
+                    get { return on; }
+                    set { on = value; host.capri.OnWindow(delegate { Item.Checked = value; }); }
+                }
+
+                public bool Enabled
+                {
+                    get { return enabled; }
+                    set { enabled = value; host.capri.OnWindow(delegate { Item.Enabled = value; }); }
+                }
+
+                public void Remove()
+                {
+                    host.capri.OnWindow(delegate { if (Item.Owner != null) Item.Owner.Items.Remove(Item); });
+                }
+            }
+
             void ICapriUi.SetOptions(string title, Func<Control> make)
             {
                 optionsTitle = Clean(string.IsNullOrWhiteSpace(title) ? name : title, 60);
@@ -1229,6 +1718,21 @@ namespace CapriDesktop
                     if (made == null) return;
                     capri.mainframe.Restore();
                     capri.mainframe.OpenModPage(id, heading, made);
+                });
+            }
+
+            void ICapriMainframe.AddPanel(string title, string column, int slot, Func<Control> make, bool simple)
+            {
+                if (make == null) throw new ArgumentNullException("make");
+                string heading = Clean(string.IsNullOrWhiteSpace(title) ? name : title, 40);
+                int side = string.Equals((column ?? "").Trim(), "left", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+                capri.OnWindow(delegate
+                {
+                    if (over) return;
+                    Control made;
+                    try { made = make(); }
+                    catch (Exception error) { Failed(error); return; }
+                    capri.mainframe.AddModPanel(id, heading, side, slot, made, simple);
                 });
             }
 
@@ -1568,6 +2072,7 @@ namespace CapriDesktop
             bool ICapriSystem.IsAway { get { Need("system"); return Native.IdleMilliseconds() >= awayAfter * 60000; } }
             int ICapriSystem.Battery { get { Need("system"); bool charging; return BatteryNow(out charging); } }
             bool ICapriSystem.Charging { get { Need("system"); bool charging; BatteryNow(out charging); return charging; } }
+            bool ICapriSystem.GameInFront { get { Need("system"); return capri.gameAhead; } }
 
             string ICapriMods.Id { get { return id; } }
 

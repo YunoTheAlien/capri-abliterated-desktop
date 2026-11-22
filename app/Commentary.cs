@@ -35,10 +35,8 @@ namespace CapriDesktop
         public void Mood(GameMood mood) { }
     }
 
-    // Her live comments on a game, like a friend on the couch: something happens, she looks at the frames from just before and
-    // after with her fastest eyes, and says one line, or nothing if nothing's worth saying. Triggers come from whatever noticed
-    // the moment: the game's sound, a flash or a red screen edge, a health bar, or Minecraft's own log. Nothing here runs on a timer
-    // except Chatty's look around when nothing's happened for a while.
+    // Her live comments on a game: a moment noticed (sound, a flash, a health bar, the game's log), the frames around
+    // it read by her fastest eyes, and one line or nothing. Only Chatty's look around runs on a timer.
     internal static class Commentary
     {
         internal const int Off = 0;
@@ -58,7 +56,7 @@ namespace CapriDesktop
         internal static Action<string, string, GameMood> Speak;
         internal static Func<byte[]> Shot = delegate { return null; };
         internal static Func<bool> Moments = delegate { return false; };
-        // GAMES > Game sounds: whether a big burst of the game's sound counts as a moment (#234).
+        // GAMES > Game sounds: whether a big burst of the game's sound counts as a moment.
         internal static Func<bool> Hears = delegate { return true; };
         internal static Func<string> Keep;
         // The time, so the smoke test can move it on.
@@ -100,9 +98,8 @@ namespace CapriDesktop
 
         internal static void Trigger(string kind, byte[] frameBefore, byte[] frameAfter) { Trigger(kind, null, frameBefore, frameAfter); }
 
-        // A moment her game watching noticed, or the game's own log told her about (F67): her live reactions get it first, with her
-        // brain's quick line, then her brain gets its look at the pictures. While they're on, the look's line has to land as fast
-        // as a reaction does, and it goes up in the feed even while she can't talk.
+        // A moment her game watching noticed or the game's log reported: her live reactions get it first with a quick
+        // line, then her brain looks at the pictures, as fast as a reaction while they're on, even when she can't talk.
         internal static bool Moment(string kind, string detail, byte[] frameBefore, byte[] frameAfter)
         {
             // With Game sounds off a burst is no moment. The banner look GameWatch gave it first still counts, so a kill read
@@ -501,7 +498,7 @@ namespace CapriDesktop
             if (!found.Success) return null;
             bool theirs = found.Groups["name"].Value == player;
             if (!theirs && !head.Groups["chat"].Success && line.IndexOf("[Server thread/", StringComparison.Ordinal) < 0) return null;
-            // Someone else's death at their hands is their kill (F67).
+            // Someone else's death at their hands is their kill.
             if (!theirs && player != null && Regex.IsMatch(text, @"\b(?:by|fighting|escape) " + Regex.Escape(player) + @"(?![A-Za-z0-9_])"))
                 return new GameEvent { Kind = "kill", Detail = "They took down " + found.Groups["name"].Value + ": " + text };
             return new GameEvent { Kind = theirs || player == null ? "death" : "chat", Detail = text };
@@ -581,7 +578,7 @@ namespace CapriDesktop
             string game = Commentary.Game();
             if (game == null || !Computer.ScreenNames(line, game)) return;
             // With her live reactions on, every game line of hers goes up in their feed over the game, as text even while she
-            // can't talk (F67).
+            // can't talk.
             if (Reactions.Running)
             {
                 if (ownSpeech.Repeats("game comment", line, game) || !Reactions.Post(line, true)) return;

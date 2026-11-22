@@ -9,10 +9,8 @@ using System.Threading;
 
 namespace CapriDesktop
 {
-    // Capri Remote in her chat (remote/PROTOCOL.md): a phone's chat.send goes in exactly like a line typed in her TYPE box,
-    // and her answer to it, the tools she uses for it and her typing go back to that phone. Her other lines, like a reminder
-    // or a comment on the screen, stay on the PC. The connection is app/RemoteLink.cs and the Mainframe's REMOTE sheet is
-    // app/MainframeRemote.cs. Remote stays off until it's turned on there, and never runs in her smoke test.
+    // Capri Remote in her chat: a phone's chat.send goes in like a line in her TYPE box, and her answer, tools and
+    // typing go back to it; her other lines stay on the PC. Off until turned on, and never in her smoke test.
 #if !CROSS
     internal sealed partial class Companion
     {
@@ -415,9 +413,8 @@ namespace CapriDesktop
             if (RemoteCurrent(asker)) sink.Reply(asker.Device, RemoteMessages.NewId(), asker.Id, RemoteOut(said), true);
         }
 
-        // Begin only answers her newest ask, so a phone's message from before this ticket won't get its answer now. Its
-        // waiting reply closes: quietly when the same phone's newer message took over, as on her TYPE box, and as busy when
-        // something else did, like a line typed on the PC.
+        // Begin answers only her newest ask, so an older phone message closes quietly when the same phone superseded
+        // it, as busy when something else did.
         private void RemoteDrop(int ticket, RemoteAsker newer)
         {
             RemoteSink sink = remoteSink;
@@ -622,9 +619,8 @@ namespace CapriDesktop
 
         private static long RemoteJobNow() { return (DateTime.UtcNow.Ticks - new DateTime(1970, 1, 1).Ticks) / TimeSpan.TicksPerMillisecond; }
 
-        // A job's title on the phone. Anything that could carry what they typed, like a message, a search or a password, says
-        // only what kind of job it is. Her task's own words show only when it just opens apps by name, like "Open Steam and
-        // launch Helldivers 2", masked and redacted like her replies.
+        // A job's title on the phone says only its kind when it could carry what they typed; her task's own words show
+        // only for opening apps by name, masked like her replies.
         private static string RemoteJobTask(string text) { return RemoteJobWords.RemoteJobTask(text); }
 
         private static string RemoteJobAction(string tool, ToolArguments args, int toggle, string risk) { return RemoteJobWords.RemoteJobAction(tool, args, toggle, risk); }
@@ -853,9 +849,8 @@ namespace CapriDesktop
             return run != null && run.Ended == 0 && (run.Job != null ? job == run.Job : run.Hold != null && (Security.HoldingId == run.Hold || run.Thread != 0 && run.State == "running"));
         }
 
-        // Stop goes the way Esc does and drops a held question. Allow and Deny only answer the question that phone saw, bound
-        // to its hold or its job, and only once; the first answer wins and any other gets bad-message. The answer runs on a
-        // pool thread, so a long job never holds up her window.
+        // Stop works like Esc and drops a held question. Allow and Deny only answer the question that phone saw, once,
+        // first answer winning; others get bad-message. The answer runs on a pool thread.
         private void RemoteJobCommand(string device, RemoteJson.Map message)
         {
             lock (remoteGate)
@@ -959,7 +954,7 @@ namespace CapriDesktop
             if (RemoteToolWords("media", new ToolArguments { Action = "resume" }) != "Media: resume") throw new Exception("Media's summary lost its action.");
             if (RemoteOut("my key is sk-abcdefghijklmnopqrstuvwxyz123456").Contains("abcdefghijklmnop")) throw new Exception("A key in her reply went to the phone.");
             // Phone keyboards' text reaches her brain whole: curly quotes and emoji stay, and half an emoji, cut off by a trim
-            // like her 57-character screen names, never goes out as a lone \ud83d, which NVIDIA's server turned away (8 Nov).
+            // like her 57-character screen names, never goes out as a lone \ud83d, which NVIDIA's server turned away.
             string phoneText = "Open Discord\u2019s \u201Ccall\u201D \uD83D\uDE00\uD83C\uDFAE and play \uD834\uDD1E " + new string('x', 400) + " \u2014 thanks!";
             string cut = (new string('a', 56) + "\uD83C\uDFAE more").Substring(0, 57);
             byte[] wire = Brain.Json(new ChatRequest { Model = "phone-test", Messages = new[] { new ChatMessage("user", phoneText), new ChatMessage("tool", cut), new ChatMessage("user", "\uDE00 and \uD83D") } });
@@ -1128,9 +1123,8 @@ namespace CapriDesktop
             }
         }
 
-        // A phone's message through her real chat path with a stand-in brain: her answer goes back with its re, tools she uses
-        // for it show running, then done or failed, a line typed on the PC stays on the PC, and an answer beside a job finds
-        // the phone the job heard.
+        // A phone's message through her real chat path with a stand-in brain: answer with its re, tools shown running
+        // then done or failed, PC-typed lines staying on the PC, and a job's answer reaching the phone it heard.
         private void SmokeRemoteBridge(List<string> checks)
         {
             RemoteTap tap = new RemoteTap();

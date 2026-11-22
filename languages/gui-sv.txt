@@ -204,3 +204,18 @@ Running on this PC	Körs på den här datorn
 NORMAL	NORMAL
 OFF	AV
 Local server address	Lokal serveradress
+Remember panel position	Kom ihåg panelens position
+Custom colours	Egna färger
+Custom colours...	Egna färger...
+Choose	Välj
+Hers	Hennes
+Quiet	Tyst
+Quiet min	Tyst min
+Quiet max	Tyst max
+Until I turn it off	Tills jag stänger av det
+Quiet on calls	Tyst under samtal
+Quiet in videos	Tyst i videor
+Quiet until {n}:{n}	Tyst till {n}:{n}
+Quiet until turned off	Tyst tills avstängt
+Export settings	Exportera inställningar
+Import settings	Importera inställningar

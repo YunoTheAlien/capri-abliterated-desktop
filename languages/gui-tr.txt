@@ -204,3 +204,18 @@ Running on this PC	Bu PC'de çalışıyor
 NORMAL	NORMAL
 OFF	KAPALI
 Local server address	Yerel sunucu adresi
+Remember panel position	Panel konumunu hatırla
+Custom colours	Özel renkler
+Custom colours...	Özel renkler...
+Choose	Seç
+Hers	Onunkiler
+Quiet	Sessiz
+Quiet min	Sessiz min
+Quiet max	Sessiz max
+Until I turn it off	Ben kapatana kadar
+Quiet on calls	Aramalarda sessiz
+Quiet in videos	Videolarda sessiz
+Quiet until {n}:{n}	{n}:{n}'e kadar sessiz
+Quiet until turned off	Kapatılana kadar sessiz
+Export settings	Ayarları dışa aktar
+Import settings	Ayarları içe aktar

@@ -375,3 +375,19 @@ NORMAL	सामान्य
 OFF	बंद
 Local server address	स्थानीय सर्वर पता
 None	कोई नहीं
+Remember panel position	पैनल की जगह याद रखें
+Custom colours	अपने रंग
+Custom colours...	अपने रंग...
+Choose	चुनें
+Hers	उसके अपने
+Quiet	शांत
+Quiet min	शांत min
+Quiet max	शांत max
+Until I turn it off	जब तक मैं बंद न करूँ
+Quiet on calls	कॉल के दौरान शांत
+Quiet in videos	वीडियो में शांत
+Quiet until {n}:{n}	{n}:{n} तक शांत
+Quiet until turned off	बंद करने तक शांत
+Export settings	सेटिंग्स निर्यात करें
+Import settings	सेटिंग्स आयात करें
+GENERAL SETTINGS	सामान्य सेटिंग्स

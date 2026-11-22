@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Capri
-Comment=Desktop companion
-Exec=@EXEC@
-Icon=capri
-Terminal=false
-Categories=Utility;
-StartupWMClass=Capri

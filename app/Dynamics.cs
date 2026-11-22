@@ -6,25 +6,16 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
-    // Dynamic: she picks her own mood and changes it on a timer.
-    //
-    // An attitude is not a personality. A personality is who she is; an attitude is what she is like today, and it
-    // works by shifting what she *wants* rather than replacing her. Sleepy does not make her a different character, it
-    // makes being called on grate and being left alone pleasant. The same attitude on a pack that likes being thrown pulls the other way,
-    // because the weights add to hers instead of overwriting them.
-    //
-    // dynamic.md sets the personality underneath, how long a mood lasts, and which moods are in play. The moods
-    // themselves are files in attitudes\, in the same format as a personality, so anything that works there works here.
+    // Dynamic: she picks her own mood on a timer. A mood shifts what she wants rather than who she is, its weights
+    // added to her personality's. dynamic.md sets the personality underneath, timing and the moods in play.
     internal static class Dynamics
     {
         internal const string FileName = "dynamic.md";
         internal const string FolderName = "attitudes";
         internal static string Kept;
 
-        // personalSettings\attitudes. Her moods are split the way her personalities are: censored\ holds the
-        // plain sections of a mood and senpai\ the senpai ones under the same file name, so a censored
-        // install does not contain that text at all. A mood that is senpai throughout has the senpai file
-        // only, which makes the folder the marker.
+        // personalSettings\attitudes, split like her personalities: censored\ holds a mood's plain sections and senpai\
+        // its senpai ones under the same name, so a censored install doesn't contain that text.
         internal static string Folder;
 
         internal static string Plain { get { return string.IsNullOrEmpty(Folder) ? null : Path.Combine(Folder, Personalities.PlainName); } }
@@ -38,7 +29,7 @@ namespace CapriDesktop
             foreach (string folder in new[] { Plain, SenpaisRead })
             {
                 if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) continue;
-                try { foreach (string file in Directory.GetFiles(folder)) if (!file.EndsWith(".bak", StringComparison.OrdinalIgnoreCase) && !file.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)) found.Add(file); }
+                try { foreach (string file in Directory.GetFiles(folder)) if (Notes.IsPack(file)) found.Add(file); }
                 catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
             return found;
@@ -54,6 +45,10 @@ namespace CapriDesktop
         // her moods, because it is the same kind of thing: something about her that moves on its own.
         private static int specialInterestLow = 2, specialInterestHigh = 8;
         private static int cringe;
+        private static bool overNineThousand;
+        // How often, out of 100, a line is her mood's own rather than her personality's when her brain has not written the
+        // two together; the mood's openers and tails go round her personality's lines as often.
+        private static int moodShare = 50;
         // Seconds of nothing said before she lets the conversation go. 0 is off, which is how it ships.
         private static double forgetAfter;
         // How long between her probing questions. Same shape as the mood window, and read by Probes.
@@ -76,12 +71,8 @@ namespace CapriDesktop
         private static readonly Random dice = new Random();
 
         internal static string Under { get { Fresh(); lock (gate) return under; } }
-        // How long, from what they wrote: 2, 2h, 90m, 30s, or 1h30m. Hours when nothing says otherwise, which is what
-        // every one of these meant before. Returns false for anything it cannot read, so a typo leaves the default
-        // alone instead of setting a timer to nothing.
-        // `bare` is what a number with no unit after it means, in hours. One is the right answer for every setting
-        // that is a stretch of hours; a setting that is a handful of seconds passes the fraction for a second, so
-        // "90" there is a minute and a half rather than most of a working week.
+        // A length from what they wrote: 2, 2h, 90m, 30s or 1h30m; false for anything unreadable, so a typo keeps the
+        // default. bare is what a plain number means, in hours.
         internal static bool Span(string said, out double hours, double bare = 1)
         {
             hours = 0;
@@ -106,6 +97,9 @@ namespace CapriDesktop
         // 0 to 100, over whoever she is. Nothing per personality yet, on purpose: turning this up is meant
         // to affect all of them at once.
         internal static int Cringe { get { Fresh(); lock (gate) return cringe; } }
+        // The cringe dial set past 9000: 100 is the top of the scale, and this is past it.
+        internal static bool OverNineThousand { get { Fresh(); lock (gate) return overNineThousand; } }
+        internal static int MoodShare { get { Fresh(); lock (gate) return moodShare; } }
         internal static double ForgetAfter { get { Fresh(); lock (gate) return forgetAfter; } }
 
         internal static double ProbeLow { get { Fresh(); lock (gate) return probeLow; } }
@@ -138,6 +132,18 @@ namespace CapriDesktop
                 }
             }
         }
+        // Her drifting forwardness moved up by steps (a gift, a few feeds), never past the ceiling in dynamic.md.
+        internal static void NudgeForward(int steps)
+        {
+            int now = SpecialInterestDrift;
+            lock (gate)
+            {
+                int low = Math.Max(0, Math.Min(10, specialInterestLow)), high = Math.Max(0, Math.Min(10, specialInterestHigh));
+                if (high < low) { int swap = low; low = high; high = swap; }
+                specialInterestNow = Math.Max(low, Math.Min(high, now + steps));
+            }
+        }
+
         internal static double Most { get { Fresh(); lock (gate) return mostHours; } }
         internal static DateTime Until { get { lock (gate) return until; } }
 
@@ -163,10 +169,8 @@ namespace CapriDesktop
             }
         }
 
-        // How slowly each personality's own timers run, from its line in this file: 1 is as its pack has them, 2
-        // twice as long. Being ignored and getting over a sulk alone both go by it. One global list rather than a
-        // line in every pack, so they can be read and set against each other in one place. A personality with no
-        // line takes its stock pace, and one with none of those takes 1.
+        // How slowly each personality's own timers run, from its line here: 1 as its pack has them, 2 twice as long.
+        // One list so they can be set against each other; no line takes its stock pace, or 1.
         internal const string PaceHeading = "## How long each personality takes";
         private static readonly Dictionary<string, double> paces = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
 
@@ -174,9 +178,8 @@ namespace CapriDesktop
         private static readonly string[] PaceNotes =
         {
             PaceHeading, "",
-            ">! How long each personality takes over its own timers: how long before being left alone counts as",
-            ">! being ignored, and how long a sulk takes to wear off alone. 1 is as her pack has them, 2 is twice",
-            ">! as long, 0.5 half. From 0.25 to 10."
+            ">! How long each personality takes to feel ignored, and to get over a sulk alone.",
+            ">! 1 is as her pack has them, 2 twice as long, 0.5 half. From 0.25 to 10."
         };
 
         // Stock paces for the personalities the public build names. The others' come from the side that has them.
@@ -186,6 +189,23 @@ namespace CapriDesktop
         };
 
         internal static void StockPace(string named, double pace) { lock (gate) stockPaces[named] = pace; }
+
+        // Every stock pace as name and number, for the codex to carry.
+        internal static string[,] StockPaces()
+        {
+            lock (gate)
+            {
+                string[,] rows = new string[stockPaces.Count, 2];
+                int at = 0;
+                foreach (KeyValuePair<string, double> one in stockPaces)
+                {
+                    rows[at, 0] = one.Key;
+                    rows[at, 1] = one.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    at++;
+                }
+                return rows;
+            }
+        }
 
         internal static double Pace(string named)
         {
@@ -275,9 +295,8 @@ namespace CapriDesktop
             new Dictionary<string, KeyValuePair<DateTime, bool>>(StringComparer.OrdinalIgnoreCase);
 
 
-        // One half of a mood: written once if it is not there, brought up to date if it is. Written the way
-        // her files are read back, since the text in the build has plain newlines in it and her top up uses
-        // this machine's, which is what had her packs rewritten on every start until it was found.
+        // One half of a mood, written once if missing and brought up to date if not, with this machine's line ends, as
+        // her files are read back, so a top up never sees it as changed.
         private static void Keep(string file, string text, string whole)
         {
             if (file == null || string.IsNullOrEmpty(text)) return;
@@ -285,41 +304,17 @@ namespace CapriDesktop
             {
                 if (!File.Exists(file))
                 {
-                    File.WriteAllText(file, text.Replace("\r\n", "\n").Replace('\r', '\n').Replace("\n", Environment.NewLine), new UTF8Encoding(false));
+                    string fresh = text.Replace("\r\n", "\n").Replace('\r', '\n').Replace("\n", Environment.NewLine);
+                    File.WriteAllText(file, fresh, new UTF8Encoding(false));
+                    Renew.Wrote(file, fresh);
                     return;
                 }
-                MarkSenpaiOnly(file, whole);
-                TopUpMood(file, text);
+                // On an update the mood is written new, theirs kept as a .bak when they had changed it. In between it is
+                // theirs as it is.
+                if (Renew.Replace(file, text)) return;
+                Renew.Adopt(file, text);
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-        }
-
-        // Moods written before the split, one file each in attitudes\, are cut in two and moved into
-        // censored\ and senpai\, with the file they came from kept beside them as a .bak.
-        private static void Moved()
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(Folder) || !Directory.Exists(Folder)) return;
-                foreach (string file in Directory.GetFiles(Folder, "*.md"))
-                {
-                    try
-                    {
-                        string named = Path.GetFileNameWithoutExtension(file);
-                        string plainText, senpaiText;
-                        Personalities.Split(File.ReadAllText(file), out plainText, out senpaiText);
-                        string plainPath = PlainPathOf(named), senpaiPath = SenpaiPathOf(named);
-                        if (plainPath == null || senpaiPath == null) continue;
-                        if (!string.IsNullOrEmpty(plainText) && !File.Exists(plainPath)) File.WriteAllText(plainPath, plainText, new UTF8Encoding(false));
-                        if (!Brain.SenpaiOn && !string.IsNullOrEmpty(senpaiText)) continue;
-                        if (!string.IsNullOrEmpty(senpaiText) && !File.Exists(senpaiPath)) File.WriteAllText(senpaiPath, senpaiText, new UTF8Encoding(false));
-                        File.Move(file, SpareFiles.Name(file));
-                        Brain.Log("moods", -1, named + " moved into " + Personalities.PlainName + " and " + Personalities.SenpaiName + ", the file it came from kept as a .bak.");
-                    }
-                    catch (Exception bad) { Notes.Failed("a move into her two mood folders in Dynamics.cs", bad); }
-                }
-            }
-            catch (Exception bad) { Notes.Failed("a move into her two mood folders in Dynamics.cs", bad); }
         }
 
         internal static bool SenpaiOnly(string named)
@@ -339,10 +334,8 @@ namespace CapriDesktop
             catch (Exception) { return false; }
         }
 
-        // Her plain file for a mood, or its senpai one when that is the only file it has, which is what a mood
-        // that is senpai throughout looks like on disk.
-        // The mood she reads: the senpai folder's whole copy while the switch is on and she is off air, the
-        // censored one otherwise. Never one on top of the other.
+        // The file she reads for a mood: the senpai folder's whole copy while the switch is on and she is off air, the
+        // censored one otherwise, never one on top of the other.
         internal static string PathOf(string named)
         {
             string path = Named(Plain, named);
@@ -350,43 +343,12 @@ namespace CapriDesktop
             {
                 if (Brain.SenpaiLive)
                 {
-                    string senpai = Slots.Path(Senpais, named);
-                    if (senpai != null && File.Exists(senpai)) return senpai;
+                    string senpai = Slots.Find(Senpais, named);
+                    if (senpai != null) return senpai;
                 }
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return path;
-        }
-
-        // Once, with the switch on: each mood's half in the senpai folder becomes a whole copy, the safe file as it
-        // is on disk with the half's sections added, and a mood with no half gets a copy of its safe file. The
-        // half is kept as a .bak.
-        private static void WholeCopies()
-        {
-            if (string.IsNullOrEmpty(Senpais) || string.IsNullOrEmpty(Plain) || !Directory.Exists(Plain)) return;
-            try
-            {
-                Directory.CreateDirectory(Senpais);
-                string noted = Path.Combine(Senpais, "whole.txt");
-                HashSet<string> done = new HashSet<string>(File.Exists(noted) ? File.ReadAllLines(noted) : new string[0], StringComparer.OrdinalIgnoreCase);
-                bool any = false;
-                foreach (string plainFile in Directory.GetFiles(Plain))
-                {
-                    if (plainFile.EndsWith(".bak", StringComparison.OrdinalIgnoreCase) || plainFile.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)) continue;
-                    string named = Slots.Titled(plainFile) ?? Path.GetFileNameWithoutExtension(plainFile);
-                    if (done.Contains(named)) continue;
-                    string target = SenpaiPathOf(named);
-                    if (target == null) continue;
-                    string half = File.Exists(target) ? File.ReadAllText(target) : null;
-                    string whole = Personalities.Whole(File.ReadAllText(plainFile), half);
-                    if (half != null) File.Copy(target, target + ".bak", true);
-                    File.WriteAllText(target, whole.Replace("\n", Environment.NewLine), new UTF8Encoding(false));
-                    done.Add(named);
-                    any = true;
-                }
-                if (any) File.WriteAllLines(noted, new List<string>(done).ToArray());
-            }
-            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         internal static string PlainPathOf(string named) { return Named(Plain, named); }
@@ -403,37 +365,51 @@ namespace CapriDesktop
         // Called on the tick. Picks a first mood, and a new one whenever the current one has run out.
         internal static void Turn() { Turn(false); }
 
-        // force is an explicit "pick one now" from the menu. Without it the timer only runs on Dynamic, so a fixed
-        // personality keeps whatever mood it was given until it is changed by hand.
+        // How much more or less likely a mood is in the draw, from whatever leans it (Tilt.cs); 1 with nothing attached.
+        internal static Func<string, double> Weigh;
+
+        // A mood's chance out of 100 after anything leaning the draw: 0 stays never, and 100 or more is always in the pool.
+        internal static double Odds(int howOften, string named)
+        {
+            if (howOften <= 0) return 0;
+            double weight = 1;
+            if (Weigh != null) { try { weight = Weigh(named); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
+            return howOften * weight;
+        }
+
+        // force is an explicit "pick one now" from the menu. Without it the timer runs on Dynamic and on any
+        // personality whose mood is Dynamic; a mood held by hand, or none on a fixed personality, stays until changed
+        // by hand.
         internal static void Turn(bool force)
         {
-            if (!force && Personalities.Chosen != Personalities.Dynamic) { lock (gate) until = DateTime.MinValue; return; }
+            Tilt.Tick();
+            if (!force && Held && Personalities.Chosen != Personalities.Dynamic) { lock (gate) until = DateTime.MinValue; return; }
             DateTime now = DateTime.UtcNow;
             lock (gate) { if (now < until) return; }
 
-            // Every mood rolls its own chance, so several can share the same 10% and the ones that come up go in a
-            // pool together. One of that pool wins at random, which is how a tie is broken when too many land at once.
-            // 0 never comes up; 100 is always in the pool, which pins her in that mood until something sours it.
+            // Every mood rolls its own chance, and the ones that come up form a pool, from which one wins at random. 0
+            // never comes up; 100 is always in the pool, pinning her in that mood until something sours it.
             List<string> have = Allowed;
             string was = Personalities.Attitude;
+            // A round with nobody in the draw rolls again: each mood is meant to hold for hours, so a round of no
+            // mood at all would leave her moodless that long. Only every chance at 0 means no mood.
             List<string> won = new List<string>();
-            foreach (string one in have)
+            for (int round = 0; round < 1000 && won.Count == 0; round++)
             {
-                int howOften = Chance(one);
-                if (howOften <= 0) continue;
-                if (howOften >= 100 || dice.Next(100) < howOften) won.Add(one);
+                bool any = false;
+                foreach (string one in have)
+                {
+                    double howOften = Odds(Chance(one), one);
+                    if (howOften <= 0) continue;
+                    any = true;
+                    if (howOften >= 100 || dice.NextDouble() * 100 < howOften) won.Add(one);
+                }
+                if (!any) break;
             }
 
-            string next = "";
-            if (won.Count > 0)
-            {
-                // Not the one she just had when there is a real choice, so she does not sit in the same mood twice
-                // running by accident. A lone winner is allowed to repeat.
-                List<string> fresh = new List<string>();
-                foreach (string one in won) if (!string.Equals(one, was, StringComparison.OrdinalIgnoreCase)) fresh.Add(one);
-                List<string> pick = fresh.Count > 0 ? fresh : won;
-                next = pick[dice.Next(pick.Count)];
-            }
+            // Any winner, the one she is in included: a roll with nothing pushing it is a chance, and landing on the same mood
+            // is allowed.
+            string next = won.Count > 0 ? won[dice.Next(won.Count)] : "";
 
             double least = Least, most = Most;
             if (most < least) { double swap = least; least = most; most = swap; }
@@ -449,18 +425,13 @@ namespace CapriDesktop
         }
 
         // ---------- A mood that outlasts a restart ----------
-        //
-        // The timer lived in memory, so closing her ended whatever mood she was in: every start rolled a fresh
-        // one, and a mood set by hand for four hours was gone the moment she was restarted. Which also made
-        // restarting her a way to reroll, and a build does that several times an hour.
-        //
-        // Three things are kept: when the mood runs out, which mood it is, and whether it was set by hand. The
-        // deadline is what decides, so if it has passed while she was closed she rolls on the next start,
-        // which is what was asked for.
-        //
-        // Not mood.txt. That file is one word for anything else on this PC that follows her mood, a voice
-        // server above all, and giving it a second line would break the one thing it promises.
+        // When the mood runs out, which mood it is and whether it was set by hand are kept, so a restart doesn't reroll
+        // it. Not in mood.txt, which stays one word for whatever follows her mood.
         internal static string MoodKept;
+
+        // A fourth line kept beside the mood for whatever else runs on her mood's clock (Tilt.cs), written and read back.
+        internal static Func<string> MoreKept;
+        internal static Action<string> MoreRecalled;
 
         internal static void Remember()
         {
@@ -473,7 +444,8 @@ namespace CapriDesktop
                 if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder)) Directory.CreateDirectory(folder);
                 File.WriteAllText(MoodKept, ends.Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture) + Environment.NewLine
                     + (Personalities.Attitude ?? "") + Environment.NewLine
-                    + (Held ? "held" : "rolled") + Environment.NewLine, new UTF8Encoding(false));
+                    + (Held ? "held" : "rolled") + Environment.NewLine
+                    + (MoreKept == null ? "" : MoreKept() ?? "") + Environment.NewLine, new UTF8Encoding(false));
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
@@ -486,6 +458,8 @@ namespace CapriDesktop
             {
                 if (string.IsNullOrEmpty(MoodKept) || !File.Exists(MoodKept)) return;
                 string[] rows = File.ReadAllLines(MoodKept);
+                // Its own deadline, whether or not the mood's has passed.
+                if (rows.Length > 3 && MoreRecalled != null) { try { MoreRecalled(rows[3]); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
                 long ticks;
                 if (rows.Length < 2 || !long.TryParse(rows[0].Trim(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out ticks)) return;
                 DateTime ends = new DateTime(Math.Max(0, Math.Min(DateTime.MaxValue.Ticks, ticks)), DateTimeKind.Utc);
@@ -505,6 +479,86 @@ namespace CapriDesktop
                     + ", with " + (ends - DateTime.UtcNow).TotalHours.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "h left on it.");
             }
             catch (Exception bad) { Notes.Failed("reading her mood back in Dynamics.cs", bad); }
+        }
+
+        // Mood: Dynamic rolls on the timer on a fixed personality too, and a mood held by hand there stays put. Driven: the
+        // deadline is set and passed by hand rather than waited for.
+        internal static void Rolls(List<string> checks)
+        {
+            string wasKept = MoodKept, wasMood = Personalities.Attitude, wasChosen = Personalities.Chosen;
+            bool wasHeld = Held;
+            DateTime wasUntil;
+            lock (gate) wasUntil = until;
+            try
+            {
+                MoodKept = null;
+                List<string> have = Allowed;
+                if (have.Count < 2) { checks.Add("PASS a fixed personality's dynamic mood: fewer than two moods here, nothing to roll"); return; }
+                Personalities.Chosen = "Fixedly";
+                Held = false;
+                Personalities.Attitude = "";
+                lock (gate) until = DateTime.MinValue;
+                Turn();
+                string first = Personalities.Attitude;
+                DateTime ends;
+                lock (gate) ends = until;
+                if (first.Length == 0 || ends <= DateTime.UtcNow) throw new Exception("Mood: Dynamic on a fixed personality didn't roll a mood on the timer.");
+                Turn();
+                if (Personalities.Attitude != first) throw new Exception("A rolled mood changed before its time was up.");
+                lock (gate) until = DateTime.UtcNow.AddMinutes(-1);
+                Turn();
+                lock (gate) ends = until;
+                if (Personalities.Attitude.Length == 0 || ends <= DateTime.UtcNow) throw new Exception("A fixed personality's dynamic mood didn't roll again when its time was up.");
+                // Every roll lands on a mood while any mood has a chance: a round with no winner rolls again.
+                for (int roll = 0; roll < 200; roll++)
+                {
+                    lock (gate) until = DateTime.MinValue;
+                    Turn();
+                    if (Personalities.Attitude.Length == 0) throw new Exception("A roll came out with no mood, on roll " + roll + ".");
+                }
+
+                // Two moods in every draw: the one she is in comes up again some of the time, and the other some of the time.
+                List<string> pair = Allowed.FindAll(one => Chance(one) > 0);
+                if (pair.Count >= 2)
+                {
+                    Func<string, double> weighWas = Weigh;
+                    string a = pair[0], b = pair[1];
+                    int same = 0;
+                    try
+                    {
+                        Weigh = delegate(string named) { return named == a || named == b ? 1000 : 0; };
+                        Personalities.Attitude = a;
+                        for (int roll = 0; roll < 200; roll++)
+                        {
+                            string before = Personalities.Attitude;
+                            lock (gate) until = DateTime.MinValue;
+                            Turn();
+                            if (Personalities.Attitude == before) same++;
+                        }
+                    }
+                    finally { Weigh = weighWas; }
+                    if (same == 0 || same == 200) throw new Exception("With two moods in every draw, she landed on the same one " + same + " times in 200: a roll should allow the same mood, not force it.");
+                }
+
+                // Held by hand, a mood or no mood, it stays.
+                Held = true;
+                Personalities.Attitude = "Playful";
+                lock (gate) until = DateTime.UtcNow.AddMinutes(-1);
+                Turn();
+                if (Personalities.Attitude != "Playful") throw new Exception("A held mood on a fixed personality was rolled away: " + Personalities.Attitude);
+                Personalities.Attitude = "";
+                Turn();
+                if (Personalities.Attitude != "") throw new Exception("No mood held on a fixed personality was rolled into " + Personalities.Attitude);
+                checks.Add("PASS Mood: Dynamic rolls on the timer on a fixed personality from a fresh start, holds for its span and rolls again when it runs out, and 200 rolls all land on a mood; a mood held by hand, or no mood, stays");
+            }
+            finally
+            {
+                MoodKept = wasKept;
+                Personalities.Attitude = wasMood;
+                Personalities.Chosen = wasChosen;
+                Held = wasHeld;
+                lock (gate) until = wasUntil;
+            }
         }
 
         // That her mood outlasts a restart, which is the whole point of writing it down. Driven rather than
@@ -566,6 +620,17 @@ namespace CapriDesktop
             }
         }
 
+        // Picked by hand: her mood stays as it is and its clock starts again from now, since it was chosen.
+        internal static void Restarted()
+        {
+            double least = Least, most = Most;
+            if (most < least) { double swap = least; least = most; most = swap; }
+            double hours = least + new Random().NextDouble() * Math.Max(0.0, most - least);
+            lock (gate) until = DateTime.UtcNow.AddHours(Math.Max(0.05, hours));
+            Brain.Log("mood", -1, "Her mood's clock started again on a pick, for " + hours.ToString("0.#") + "h.");
+            Remember();
+        }
+
         // Rolls a new mood now, whatever the timer says.
         internal static void Again() { Held = false; lock (gate) until = DateTime.MinValue; Turn(true); Remember(); }
 
@@ -588,7 +653,7 @@ namespace CapriDesktop
         // that chain and not to this one is caught by SmokeDynamicDials rather than by somebody noticing their
         // timing does nothing.
         private static readonly Regex Dials = new Regex(
-            @"^(base|personality|(rotate )?(min|max)( hours)?|probe (min|max|wait)|story (min|max)|forget after|forward (min|max)|cringe)$",
+            @"^(base|personality|(rotate )?(min|max)( hours)?|probe (min|max|wait)|story (min|max)|forget after|forward (min|max)|cringe|mood share)$",
             RegexOptions.IgnoreCase);
 
         private static bool Dial(string key) { return Dials.IsMatch(key ?? ""); }
@@ -605,7 +670,7 @@ namespace CapriDesktop
                 string baseName = "Devoted";
                 double least = 4, most = 8, askLow = 1, askHigh = 2, askWait = 90;
                 double tellLow = storyLow, tellHigh = storyHigh;
-                int low = 2, high = 8, awful = cringe;
+                int low = 2, high = 8, awful = cringe, share = 50;
                 double letGo = forgetAfter;
                 List<string> moods = new List<string>();
                 Dictionary<string, int> odds = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -622,9 +687,7 @@ namespace CapriDesktop
                     if (one.Length == 0 || one.StartsWith(">")) continue;
                     if (one.StartsWith("- ")) one = one.Substring(2).Trim();
                     int mark = one.IndexOf(':');
-                    // A name this file knows as a setting is one wherever it sits. This took a setting only
-                    // when it was not under the mood list, so six that a top up had appended there were read
-                    // as moods and the settings they set fell back to stock, with the file holding the numbers.
+                    // A name this file knows as a setting is a setting wherever it sits, even below the mood list.
                     if (mark > 0 && (!listing || Dial(one.Substring(0, mark).Trim())))
                     {
                         string key = one.Substring(0, mark).Trim(), val = one.Substring(mark + 1).Trim();
@@ -656,6 +719,8 @@ namespace CapriDesktop
                         else if (Regex.IsMatch(key, @"^forget after$", RegexOptions.IgnoreCase) && Span(val, out much, 1.0 / 3600)) letGo = much * 3600;
                         else if (Regex.IsMatch(key, @"^cringe$", RegexOptions.IgnoreCase)
                             && double.TryParse(val.TrimEnd('%', ' '), out much)) awful = (int)much;
+                        else if (Regex.IsMatch(key, @"^mood share$", RegexOptions.IgnoreCase)
+                            && double.TryParse(val.TrimEnd('%', ' '), out much)) share = (int)much;
                         continue;
                     }
                     if (listing && one.Length > 0)
@@ -685,6 +750,8 @@ namespace CapriDesktop
                     specialInterestLow = Math.Max(0, Math.Min(10, low));
                     specialInterestHigh = Math.Max(0, Math.Min(10, high));
                     cringe = Math.Max(0, Math.Min(100, awful));
+                    overNineThousand = awful > 9000;
+                    moodShare = Math.Max(0, Math.Min(100, share));
                     // Under ten seconds would drop a chat between two sentences, so it is off or it is real.
                     forgetAfter = letGo <= 0 ? 0 : Math.Max(10, letGo);
                     // An edited range takes effect now rather than at the end of the current stretch.
@@ -743,232 +810,67 @@ namespace CapriDesktop
             return Personalities.InSenpai(path) ? senpai : plain;
         }
 
-        // The senpai only marker, into a mood file written before that mood carried one.
-        //
-        // The marker sits among the lines of a "How she reacts" section, and a mood file is only ever written when
-        // it is missing, so a mood that existed before it was marked never received it. One of them is marked senpai
-        // in the table here and was not marked on disk, which left it in her mood menu on a censored install: the
-        // one mood that can close her on its own, offered to someone who never turned anything on.
-        //
-        // Read from the table rather than a list of names, so a mood marked senpai later needs nothing added here.
-        // A section added to a mood after someone already had the file, and the lines added to a section they
-        // already have. Mood files were only ever written when missing, and then only whole sections were added,
-        // so a line written into a mood reached new installs and nobody else. Same trap the packs had, same fix:
-        // missing lines go at the end of the section they belong to, by exact match, and prose and settings
-        // sections are left alone.
-        // A number this shipped and has since changed, in a file already on disk.
-        //
-        // A mood shifts how she feels about something; it was carrying as much weight as her character. Measured
-        // across every pack against every mood, the two added to a mean of nearly the ceiling, a quarter of the
-        // pairs went past it and read identically, and in none of them would she rather not be patted. These are
-        // shifts now, taken from each mood's own description: the ones about being left alone pull down, the ones
-        // about wanting you push up, and none of them moves as far as a character does.
-        //
-        // Only an exact match of what this shipped is swapped. A number somebody has set themselves does not
-        // match and is left exactly as they wrote it.
-        private static readonly string[,] Retuned =
-        {
-            { "Sleepy", "petted", "+1", "0" }, { "Moody", "petted", "+2", "-1" },
-            { "Clingy", "petted", "+3", "+2" }, { "Needy", "petted", "+3", "+2" },
-            { "Playful", "petted", "+2", "+1" }, { "Touchy", "petted", "-1", "-3" },
-            { "Affectionate", "petted", "+3", "+2" }, { "Mischievous", "petted", "+1", "0" },
-            { "Focused", "petted", "0", "-2" }, { "Melancholy", "petted", "+3", "+1" },
-            { "Furious", "petted", "+1", "-3" }, { "Jealous", "petted", "+2", "+1" }
-        };
+        // Her window recomputes her voice when the mood changes, since a mood can shift it too.
+        internal static Action MoodChanged;
 
-        private static void Retune()
-        {
-            if (string.IsNullOrEmpty(Folder)) return;
-            // The rows for moods this build does not have come from whatever attached, so a file somebody
-            // already has is still retuned. Nothing attached means no extra rows and nothing to retune.
-            string[,] tuning = Retuned;
-            if (SenpaiRetunedFor != null)
-            {
-                try
-                {
-                    string[,] theirs = SenpaiRetunedFor();
-                    if (theirs != null && theirs.GetLength(0) > 0)
-                    {
-                        string[,] both = new string[Retuned.GetLength(0) + theirs.GetLength(0), 4];
-                        for (int row = 0; row < Retuned.GetLength(0); row++)
-                            for (int col = 0; col < 4; col++) both[row, col] = Retuned[row, col];
-                        for (int row = 0; row < theirs.GetLength(0); row++)
-                            for (int col = 0; col < 4; col++) both[Retuned.GetLength(0) + row, col] = theirs[row, col];
-                        tuning = both;
-                    }
-                }
-                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-            }
-            for (int at = 0; at < tuning.GetLength(0); at++)
-            {
-                try
-                {
-                    foreach (string file in new[] { PlainPathOf(tuning[at, 0]), SenpaiPathOf(tuning[at, 0]) })
-                    {
-                        if (string.IsNullOrEmpty(file) || !File.Exists(file)) continue;
-                        string had = File.ReadAllText(file);
-                        // The carriage return matters. Her files are written CRLF, and an end of line anchor matches
-                        // before the newline without passing the carriage return in front of it, so a class of only
-                        // space and tab before it matched nothing at all: this whole retune had never once run on a
-                        // real install, and every mood on disk still carried the number it was written to replace.
-                        string old = "(?m)^[ \t]*" + Regex.Escape(tuning[at, 1]) + "[ \t]*:[ \t]*"
-                            + Regex.Escape(tuning[at, 2]) + "[ \t\r]*$";
-                        if (!Regex.IsMatch(had, old)) continue;
-                        string made = Regex.Replace(had, old, tuning[at, 1] + ": " + tuning[at, 3]);
-                        if (made == had) continue;
-                        File.WriteAllText(file, made, new UTF8Encoding(false));
-                    }
-                }
-                catch (Exception bad) { Notes.Failed("the retune in Dynamics.cs", bad); }
-            }
-        }
-
-        // A number a mood never had. Smug said how she feels about being praised, ignored and thrown and said
-        // nothing about being petted, so hers was the one mood where a hand on her head shifted nothing at all,
-        // while her own pet lines are "Yes, I know" and "Keep going, I am enjoying being right". Read off that:
-        // she enjoys it as her due, which is where Playful and Jealous sit.
-        //
-        // It needs its own pass because "What she likes" is prose as far as the top up is concerned, so a line
-        // added to it in the source reaches new installs and nobody else.
-        private static readonly string[,] Filled = { { "Smug", "petted", "+1" } };
-
-        private static void Fill()
-        {
-            if (string.IsNullOrEmpty(Folder)) return;
-            for (int at = 0; at < Filled.GetLength(0); at++)
-            {
-                try
-                {
-                    foreach (string file in new[] { PlainPathOf(Filled[at, 0]), SenpaiPathOf(Filled[at, 0]) })
-                    {
-                        if (string.IsNullOrEmpty(file) || !File.Exists(file)) continue;
-                        string had = File.ReadAllText(file);
-                        Match section = Regex.Match(had, "(?ms)^##[ \t]*" + Regex.Escape(Personalities.LikesHeading)
-                            + "[ \t\r]*$(.*?)(?=^##[ \t]|\\z)");
-                        if (!section.Success) continue;
-                        string likes = section.Groups[1].Value;
-                        // Theirs if they have written one, whatever it says.
-                        if (Regex.IsMatch(likes, "(?m)^[ \t]*" + Regex.Escape(Filled[at, 1]) + "[ \t]*:")) continue;
-                        // After the last number in the section, so it lands among them rather than above the
-                        // heading or below a blank line at the end.
-                        Match last = Match.Empty;
-                        foreach (Match one in Regex.Matches(likes, "(?m)^[ \t]*[A-Za-z][A-Za-z ]*[ \t]*:[ \t]*[+-]?[0-9]+[ \t\r]*$")) last = one;
-                        if (!last.Success) continue;
-                        int into = section.Groups[1].Index + last.Index + last.Length;
-                        File.WriteAllText(file, had.Substring(0, into) + Environment.NewLine
-                            + Filled[at, 1] + ": " + Filled[at, 2] + had.Substring(into), new UTF8Encoding(false));
-                        try { Brain.Log("moods", -1, Filled[at, 0] + " gained " + Filled[at, 1] + ": " + Filled[at, 2] + ", which it never had."); }
-                        catch (Exception bad) { Notes.Failed("filling in a number a file never had in Dynamics.cs", bad); }
-                    }
-                }
-                catch (Exception bad) { Notes.Failed("filling in a number a file never had in Dynamics.cs", bad); }
-            }
-        }
-
-        private static void TopUpMood(string file, string stock)
+        // Moods written before the split, one file each in attitudes\, are cut in two and moved into
+        // censored\ and senpai\, with the file they came from kept beside them as a .bak.
+        private static void Moved()
         {
             try
             {
-                string had = File.ReadAllText(file), adding = "";
-                List<string> within = new List<string>();
-                foreach (Match head in Regex.Matches(stock, @"(?m)^##[ 	]*(.+?)[ 	
-]*$"))
+                if (string.IsNullOrEmpty(Folder) || !Directory.Exists(Folder)) return;
+                foreach (string file in Directory.GetFiles(Folder, "*.md"))
                 {
-                    string named = head.Groups[1].Value.Trim();
-                    if (named.Length == 0) continue;
-                    if (Regex.IsMatch(had, @"(?m)^[ \t]*##+[ \t]*" + Regex.Escape(named) + @"[ \t\r]*$"))
+                    try
                     {
-                        bool prose = false;
-                        foreach (string skip in Personalities.NotLines)
-                            if (named.StartsWith(skip, StringComparison.OrdinalIgnoreCase)) { prose = true; break; }
-                        if (!prose) within.Add(named);
-                        continue;
+                        string named = Path.GetFileNameWithoutExtension(file);
+                        string plainText, senpaiText;
+                        Personalities.Split(File.ReadAllText(file), out plainText, out senpaiText);
+                        string plainPath = PlainPathOf(named), senpaiPath = SenpaiPathOf(named);
+                        if (plainPath == null || senpaiPath == null) continue;
+                        if (!string.IsNullOrEmpty(plainText) && !File.Exists(plainPath)) File.WriteAllText(plainPath, plainText, new UTF8Encoding(false));
+                        if (!Brain.SenpaiOn && !string.IsNullOrEmpty(senpaiText)) continue;
+                        if (!string.IsNullOrEmpty(senpaiText) && !File.Exists(senpaiPath)) File.WriteAllText(senpaiPath, senpaiText, new UTF8Encoding(false));
+                        File.Move(file, SpareFiles.Name(file));
+                        Brain.Log("moods", -1, named + " moved into " + Personalities.PlainName + " and " + Personalities.SenpaiName + ", the file it came from kept as a .bak.");
                     }
-                    int from = head.Index;
-                    Match next = Regex.Match(stock.Substring(from + head.Length), @"(?m)^##[ 	]");
-                    int to = next.Success ? from + head.Length + next.Index : stock.Length;
-                    adding += Environment.NewLine + stock.Substring(from, to - from).TrimEnd() + Environment.NewLine;
+                    catch (Exception bad) { Notes.Failed("a move into her two mood folders in Dynamics.cs", bad); }
                 }
-                string body = FilledMood(had, stock, within);
-                if (adding.Length == 0 && body == had) return;
-                if (adding.Length > 0 && !body.EndsWith("\n")) body += Environment.NewLine;
-                File.WriteAllText(file, body + adding, new UTF8Encoding(false));
             }
-            catch (Exception bad) { Notes.Failed("a mood's top up in Dynamics.cs", bad); }
+            catch (Exception bad) { Notes.Failed("a move into her two mood folders in Dynamics.cs", bad); }
         }
 
-        // The lines of one section as she ships them, less the ones their file already has.
-        private static string FilledMood(string had, string stock, List<string> headings)
+        // Once, with the switch on: each mood's half in the senpai folder becomes a whole copy, the safe file as it
+        // is on disk with the half's sections added, and a mood with no half gets a copy of its safe file. The
+        // half is kept as a .bak.
+        private static void WholeCopies()
         {
-            if (headings.Count == 0) return had;
-            List<string> made = new List<string>(had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'));
-            foreach (string heading in headings)
-            {
-                int from = -1, to = made.Count;
-                for (int row = 0; row < made.Count; row++)
-                {
-                    string one = made[row].Trim();
-                    if (!one.StartsWith("#", StringComparison.Ordinal)) continue;
-                    if (from < 0)
-                    {
-                        if (string.Equals(one.TrimStart('#').Trim(), heading, StringComparison.OrdinalIgnoreCase)) from = row + 1;
-                        continue;
-                    }
-                    to = row;
-                    break;
-                }
-                if (from < 0) continue;
-                int after = from;
-                List<string> theirs = new List<string>();
-                for (int row = from; row < to; row++)
-                {
-                    string one = made[row].Trim();
-                    if (one.Length > 0) after = row + 1;
-                    if (one.Length == 0 || one.StartsWith(">", StringComparison.Ordinal)) continue;
-                    theirs.Add(one);
-                }
-                List<string> missing = new List<string>();
-                bool inside = false;
-                foreach (string line in stock.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
-                {
-                    string one = line.Trim();
-                    if (one.StartsWith("#", StringComparison.Ordinal))
-                    {
-                        if (inside) break;
-                        inside = string.Equals(one.TrimStart('#').Trim(), heading, StringComparison.OrdinalIgnoreCase);
-                        continue;
-                    }
-                    if (!inside || one.Length == 0 || one.StartsWith(">", StringComparison.Ordinal)) continue;
-                    bool known = false;
-                    foreach (string mine in theirs) if (string.Equals(mine, one, StringComparison.OrdinalIgnoreCase)) { known = true; break; }
-                    if (!known) missing.Add(one);
-                }
-                if (missing.Count == 0) continue;
-                made.InsertRange(after, missing);
-            }
-            return string.Join(Environment.NewLine, made.ToArray());
-        }
-
-        private static void MarkSenpaiOnly(string file, string stock)
-        {
+            if (string.IsNullOrEmpty(Senpais) || string.IsNullOrEmpty(Plain) || !Directory.Exists(Plain)) return;
             try
             {
-                if (!Marked(stock)) return;
-                string had = File.ReadAllText(file);
-                if (Marked(had)) return;
-                if (had.Length > 0 && !had.EndsWith("\n")) had += Environment.NewLine;
-                File.WriteAllText(file, had + Environment.NewLine + Legacy.OnlyKey + ": yes" + Environment.NewLine, new UTF8Encoding(false));
+                Directory.CreateDirectory(Senpais);
+                string noted = Path.Combine(Senpais, "whole.txt");
+                HashSet<string> done = new HashSet<string>(File.Exists(noted) ? File.ReadAllLines(noted) : new string[0], StringComparer.OrdinalIgnoreCase);
+                bool any = false;
+                foreach (string plainFile in Directory.GetFiles(Plain))
+                {
+                    if (!Notes.IsPack(plainFile)) continue;
+                    string named = Slots.Titled(plainFile) ?? Path.GetFileNameWithoutExtension(plainFile);
+                    if (done.Contains(named)) continue;
+                    string target = SenpaiPathOf(named);
+                    if (target == null) continue;
+                    string half = File.Exists(target) ? File.ReadAllText(target) : null;
+                    string whole = Personalities.Whole(File.ReadAllText(plainFile), half);
+                    if (half != null) File.Copy(target, target + ".bak", true);
+                    File.WriteAllText(target, whole.Replace("\n", Environment.NewLine), new UTF8Encoding(false));
+                    done.Add(named);
+                    any = true;
+                }
+                if (any) File.WriteAllLines(noted, new List<string>(done).ToArray());
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
-
-        private static bool Marked(string text)
-        {
-            return Legacy.MarkedOnly(text);
-        }
-
-        // Her window recomputes her voice when the mood changes, since a mood can shift it too.
-        internal static Action MoodChanged;
 
         internal static void Install()
         {
@@ -1017,10 +919,7 @@ namespace CapriDesktop
                     if (senpaiOn) Keep(SenpaiPathOf(named), Personalities.Whole(plainText, senpaiText), text);
                 }
             }
-            // This used to be one silent catch over the lot, with the retune inside it, which is how the retune
-            // came to have never run on a real install: anything at all going wrong while putting the mood files
-            // there skipped it, and nothing anywhere said so. Her moods on this box still carried every number
-            // the retune was written to replace.
+            // Each step logs its own failure, so the retune can't be skipped in silence by something else going wrong.
             catch (Exception bad)
             {
                 try { Brain.Log("moods", -1, "Her moods could not be installed: " + bad.GetType().Name + ": " + bad.Message); }
@@ -1029,18 +928,12 @@ namespace CapriDesktop
             // After the files exist, since this changes what is in them rather than putting them there, and
             // outside the catch above, because a number that has since changed must still be fixed in a file
             // that is already on disk whatever else failed.
-            try { Retune(); Fill(); }
-            catch (Exception bad)
-            {
-                try { Brain.Log("moods", -1, "Her mood numbers could not be brought up to date: " + bad.GetType().Name + ": " + bad.Message); }
-                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-            }
+
         }
 
-        // A dynamic.md written by an older build does not know about moods added since, and Install only ever wrote
-        // the file when it was missing. Any mood with a file but no line gets one appended, so new moods can actually
-        // turn up. Their existing lines and numbers are never touched.
-        // The same pass from outside, for the sweep that runs when the switch is known to be off.
+        // Her mood list names what is installed: a mood with a file and no line gets one, and a senpai mood leaves it
+        // with the switch off. Their lines and numbers are never touched; the settings above are written new on each
+        // version.
         internal static void TopUpNow() { TopUp(); }
 
         private static void TopUp()
@@ -1051,82 +944,6 @@ namespace CapriDesktop
                 Notes.Refresh(Kept, Settings);
                 string had = CapriDesktop.Notes.ReadAll(Kept);
                 bool hasList = Regex.IsMatch(had, @"(?mi)^#+\s*(attitudes|moods)");
-                // The forward range arrived after this file did, and Install only ever writes a missing file, so an
-                // older dynamic.md would never have offered it. Added above the mood list, where the other ranges are.
-                if (!Regex.IsMatch(had, @"(?mi)^\s*probe (min|max)\s*:"))
-                {
-                    string asking = ">! How long between her questions about you. Takes 2h, 90m, 30s or 1h30m."
-                        + Environment.NewLine + ">! probe wait is how long her bubble stays up waiting for the answer, in seconds."
-                        + Environment.NewLine + "probe min: 1h" + Environment.NewLine + "probe max: 2h"
-                        + Environment.NewLine + "probe wait: 90" + Environment.NewLine
-                        ;
-                    had = (had.EndsWith(Environment.NewLine) ? had : had + Environment.NewLine) + Environment.NewLine + asking;
-                    Notes.Put(Kept, had);
-                    lock (gate) { read = DateTime.MinValue; wasLong = -1; }
-                }
-                // Her stories, for a dynamic.md written before they had a window of their own. Same shape as
-                // the probe range above: added at the end, where the other timings are.
-                if (!Regex.IsMatch(had, @"(?mi)^\s*story (min|max)\s*:"))
-                {
-                    // The settings only. Refresh keeps this file's notes and has already put them at the
-                    // top, so writing them here as well leaves two copies of each, which is what the note
-                    // on the block below says and what happened when this was written with them.
-                    string telling = "story min: 4h" + Environment.NewLine + "story max: 8h" + Environment.NewLine;
-                    had = (had.EndsWith(Environment.NewLine) ? had : had + Environment.NewLine) + Environment.NewLine + telling;
-                    Notes.Put(Kept, had);
-                    lock (gate) { read = DateTime.MinValue; wasLong = -1; }
-                }
-                // A file that already had the two above it is missing only the wait, which goes in under them. The
-                // note for it is not written here: Refresh keeps this file's notes and has already put it with
-                // the others, so writing it again would leave two copies until the next read.
-                else if (!Regex.IsMatch(had, @"(?mi)^\s*probe wait\s*:"))
-                {
-                    Match last = Regex.Match(had, @"(?mi)^[ \t]*probe (?:min|max)[ \t]*:[^\r\n]*(\r?\n)?", RegexOptions.RightToLeft);
-                    string line = "probe wait: 90" + Environment.NewLine;
-                    if (last.Success)
-                    {
-                        int at = last.Index + last.Length;
-                        had = had.Substring(0, at) + line + had.Substring(at);
-                    }
-                    else had = (had.EndsWith(Environment.NewLine) ? had : had + Environment.NewLine) + Environment.NewLine + line;
-                    Notes.Put(Kept, had);
-                    lock (gate) { read = DateTime.MinValue; wasLong = -1; }
-                }
-                // Its own check: a file that already had probe min would never have reached the block above.
-                if (!Regex.IsMatch(had, @"(?mi)^\s*forget after\s*:"))
-                {
-                    string letting = ">! How long with nothing said before she lets the conversation go and starts fresh. Takes 90s, 5m or 1h30m."
-                        + Environment.NewLine + ">! 0 keeps it until you clear her yourself, which is how she ships."
-                        + Environment.NewLine + "forget after: 0" + Environment.NewLine;
-                    // In above her moods, with the rest of the settings. On the end of the file the note has no
-                    // setting under it and the next read drops it, leaving the setting with nothing explaining it.
-                    Match letHere = Regex.Match(had, @"(?mi)^#{2,}[ \t]*(attitudes|moods)[^\r\n]*");
-                    if (letHere.Success) had = had.Substring(0, letHere.Index) + letting + Environment.NewLine + had.Substring(letHere.Index);
-                    else had = (had.EndsWith(Environment.NewLine) ? had : had + Environment.NewLine) + Environment.NewLine + letting;
-                    Notes.Put(Kept, had);
-                    lock (gate) { read = DateTime.MinValue; wasLong = -1; }
-                }
-                if (!Regex.IsMatch(had, @"(?mi)^\s*cringe\s*:"))
-                {
-                    string awful = ">! How much she leans into a bit. 0 is dry, 100 is unbearable, over all of them at once."
-                        + Environment.NewLine + "cringe: 0" + Environment.NewLine;
-                    had = (had.EndsWith(Environment.NewLine) ? had : had + Environment.NewLine) + Environment.NewLine + awful;
-                    Notes.Put(Kept, had);
-                    lock (gate) { read = DateTime.MinValue; wasLong = -1; }
-                }
-                if (!Regex.IsMatch(had, @"(?mi)^\s*forward (min|max)\s*:"))
-                {
-                    string range = ">! With How forward she is set to drift, it moves between these on the same timer."
-                        + Environment.NewLine + "forward min: 2" + Environment.NewLine + "forward max: 8" + Environment.NewLine;
-                    Match list = Regex.Match(had, @"(?mi)^#+\s*(attitudes|moods)[^
-]*
-?
-");
-                    if (list.Success) had = had.Substring(0, list.Index) + range + Environment.NewLine + had.Substring(list.Index);
-                    else had = (had.EndsWith(Environment.NewLine) ? had : had + Environment.NewLine) + Environment.NewLine + range;
-                    Notes.Put(Kept, had);
-                    lock (gate) { read = DateTime.MinValue; wasLong = -1; }
-                }
                 // Switched off, those names come out of the list. The chance goes with the line and returns
                 // at stock.
                 if (!Brain.SenpaiOn)
@@ -1181,36 +998,16 @@ namespace CapriDesktop
                     Brain.Log("moods", -1, "Moods outside the table: " + knew + " attached, " + listed
                         + " already listed, " + put + " added to her file. Switch " + (Brain.SenpaiOn ? "on" : "off")
                         + ", on air " + (Brain.OnAir ? "yes" : "no") + ".");
-                // A mood listed as a bare name, from before the numbers existed, gets one. Without this a file ends
-                // up half numbered and half not, which reads as broken even though a bare name still works
-                //.
-                string[] lines = had.Replace("\r\n", "\n").Split('\n');
-                bool listing = false, numbered = false;
-                for (int at = 0; at < lines.Length; at++)
-                {
-                    string one = lines[at].Trim();
-                    if (one.StartsWith("#")) { listing = Regex.IsMatch(one.TrimStart('#').Trim(), @"^(attitudes|moods)", RegexOptions.IgnoreCase); continue; }
-                    if (!listing || one.Length == 0 || one.StartsWith(">") || one.IndexOf(':') >= 0) continue;
-                    string named = one.StartsWith("- ") ? one.Substring(2).Trim() : one;
-                    if (named.Length == 0) continue;
-                    lines[at] = named + ": " + (SenpaiShip(named) ? 0 : Often);
-                    numbered = true;
-                }
-                if (numbered) { had = string.Join(Environment.NewLine, lines); Notes.Put(Kept, had); }
-
-                if (adding.Length == 0) { if (numbered) lock (gate) { read = DateTime.MinValue; wasLong = -1; } Lifted(); return; }
+                if (adding.Length == 0) return;
                 if (!had.EndsWith(Environment.NewLine)) had += Environment.NewLine;
                 if (!hasList) had += Environment.NewLine + "## Attitudes she can have" + Environment.NewLine + Environment.NewLine;
                 Notes.Put(Kept, had + adding);
                 lock (gate) { read = DateTime.MinValue; wasLong = -1; }
-                // Last, so a setting this run appended under the list is lifted out in the same pass.
-                Lifted();
-                Blocked();
             }
             catch (Exception bad) { Notes.Failed("a top up in Dynamics.cs", bad); }
         }
 
-        // That a setting under the mood list is still read as a setting, and that it gets lifted back out.
+        // That a setting under the mood list is still read as a setting.
         // Against the file this box actually had: six of them below the mood names, which the read skipped
         // because it only took a setting when it was not under that list.
         internal static void DialCheck(List<string> checks)
@@ -1250,28 +1047,6 @@ namespace CapriDesktop
                 if (Cringe != 40) wrong.Add("cringe read as " + Cringe + ", not 40");
                 if (wrong.Count > 0) throw new Exception("A setting under the mood list was not read: " + string.Join(" | ", wrong.ToArray()));
 
-                // And they come out from under it, above the heading, with their numbers as they were.
-                Lifted();
-                string[] after = CapriDesktop.Notes.ReadAll(Kept).Replace("\r\n", "\n").Split('\n');
-                int heading = Array.FindIndex(after, row => row.Trim().StartsWith("##", StringComparison.Ordinal));
-                if (heading < 0) throw new Exception("The lift lost the mood heading.");
-                for (int at = heading; at < after.Length; at++)
-                {
-                    string one = after[at].Trim();
-                    int mark = one.IndexOf(':');
-                    if (mark > 0 && Dial(one.Substring(0, mark).Trim())) throw new Exception("\"" + one + "\" is still under the mood list.");
-                }
-                string head = string.Join("\n", after, 0, heading);
-                foreach (string want in new[] { "probe min: 3h", "probe wait: 120", "cringe: 40", "story max: 9h", "rotate min hours: 4" })
-                    if (head.IndexOf(want, StringComparison.Ordinal) < 0) throw new Exception("\"" + want + "\" is not above the mood list after the lift.");
-                if (head.IndexOf("Sleepy", StringComparison.Ordinal) >= 0) throw new Exception("The lift carried a mood out with the settings.");
-
-                // Twice over leaves it alone, and the numbers still read the same.
-                string once = CapriDesktop.Notes.ReadAll(Kept);
-                Lifted();
-                if (CapriDesktop.Notes.ReadAll(Kept) != once) throw new Exception("The lift moved something in a file it had already lifted.");
-                lock (gate) { read = DateTime.MinValue; wasLong = -1; }
-                if (ProbeLow != 3 || Cringe != 40) throw new Exception("The numbers changed when the lines moved.");
                 // Forget after: off at 0, under ten seconds refused as too short to be meant, and read in her
             // own time words so 2m is 120 seconds.
             Notes.Put(Kept, "# Dynamic" + Environment.NewLine + Environment.NewLine + "forget after: 0" + Environment.NewLine);
@@ -1283,6 +1058,30 @@ namespace CapriDesktop
             Notes.Put(Kept, "# Dynamic" + Environment.NewLine + Environment.NewLine + "forget after: 3" + Environment.NewLine);
             lock (gate) { read = DateTime.MinValue; wasLong = -1; }
             if (ForgetAfter != 10) throw new Exception("Forget after took a number too short to be meant: " + ForgetAfter);
+            // Cringe at 100 is the top tier; past 9000 is one more.
+            Notes.Put(Kept, "# Dynamic" + Environment.NewLine + Environment.NewLine + "cringe: 100" + Environment.NewLine);
+            lock (gate) { read = DateTime.MinValue; wasLong = -1; }
+            string top = Brain.CringeLine() ?? "";
+            if (Cringe != 100 || OverNineThousand || top.IndexOf("nine thousand", StringComparison.OrdinalIgnoreCase) >= 0
+                || (Personalities.Cringe >= 0 && !top.StartsWith("You are unbearable on purpose", StringComparison.Ordinal)))
+                throw new Exception("Cringe at 100 wasn't the unbearable line: " + top);
+            Notes.Put(Kept, "# Dynamic" + Environment.NewLine + Environment.NewLine + "cringe: 9001" + Environment.NewLine);
+            lock (gate) { read = DateTime.MinValue; wasLong = -1; }
+            string past = Brain.CringeLine() ?? "";
+            if (Cringe != 100 || !OverNineThousand || past.IndexOf("nine thousand", StringComparison.OrdinalIgnoreCase) < 0) throw new Exception("Cringe at 9001 wasn't past the top: " + past);
+            int chancePast = Sayings.FunnyChance;
+            double restPast = Sayings.FunnyRest;
+            Notes.Put(Kept, "# Dynamic" + Environment.NewLine + Environment.NewLine + "cringe: 100" + Environment.NewLine);
+            lock (gate) { read = DateTime.MinValue; wasLong = -1; }
+            int topDial = Math.Max(0, Math.Min(100, 100 + Personalities.Cringe)), topWant = topDial <= 40 ? 3 : 3 + (topDial - 40) * 7 / 60;
+            int chanceTop = Sayings.FunnyChance;
+            double restTop = Sayings.FunnyRest;
+            Notes.Put(Kept, "# Dynamic" + Environment.NewLine + Environment.NewLine + "cringe: 0" + Environment.NewLine);
+            lock (gate) { read = DateTime.MinValue; wasLong = -1; }
+            int chanceNone = Sayings.FunnyChance;
+            if (chancePast != 20 || Math.Abs(restPast - 1 / 3.0) > 0.01 || chanceTop != topWant || topDial == 100 && Math.Abs(restTop - 0.5) > 0.01 || chanceNone < 3)
+                throw new Exception("The cringe dial didn't set how often a funny line comes: past 9000 " + chancePast + "% every " + restPast + " h, at 100 " + chanceTop + "% every " + restTop + " h, at 0 " + chanceNone + "%");
+            checks.Add("PASS cringe at 100 is the unbearable line and past 9000 one more past it, with the dial still 100 for everything else; a funny line comes 3 in 100 up to 40, 10 at 100 at most every half hour, 20 past 9000 at most every 20 minutes");
             // F-21: dynamic.md names only the moods she can roll on the side in use.
             bool was = Brain.SenpaiOn;
             try
@@ -1304,7 +1103,7 @@ namespace CapriDesktop
 
             checks.Add("PASS forget after ships off, reads her time words so 2m is 120 seconds, and will not take a stretch short enough to drop a chat between two sentences");
 
-            checks.Add("PASS a setting written under the mood list in dynamic.md is still read as a setting, which it was not: probe min, probe max, probe wait, cringe, story min and story max were read as moods and their settings fell back to stock. The lift puts them above the heading with their numbers as they were, moods untouched, and leaves a file it has already lifted alone");
+            checks.Add("PASS a setting written under the mood list in dynamic.md is still read as a setting, which it was not: probe min, probe max, probe wait, cringe, story min and story max were read as moods and their settings fell back to stock.");
             }
             finally
             {
@@ -1316,96 +1115,8 @@ namespace CapriDesktop
             }
         }
 
-        // Settings lifted back above the mood list, where a fresh file puts them. Every top up here but one
-        // appends at the end, which on a file with a mood list is under it, so six of them read as moods that
-        // have no file. Lines move exactly as they are, so an edited number stays theirs.
-        // The headings each block of settings sits under, and the first setting each one goes above. A
-        // dynamic.md written before they existed has thirty one settings in one section, so every note in
-        // it stacks at the top and none of them is beside what it describes. Reading it is the whole point
-        // of the file, so the headings go in rather than the notes being left where they landed.
-        private static readonly string[,] Blocks =
-        {
-            { "## Who she is underneath", "base" },
-            { "## How forward she is", "forward min" },
-            { "## Her questions about you", "probe min" },
-            { "## Her own stories", "story min" },
-            { "## How much she leans in", "cringe" },
-            { "## Letting the conversation go", "forget after" },
-        };
-
-        private static void Blocked()
-        {
-            if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-            try
-            {
-                string had = CapriDesktop.Notes.ReadAll(Kept);
-                List<string> rows = new List<string>(had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'));
-                bool put = false;
-                for (int one = 0; one < Blocks.GetLength(0); one++)
-                {
-                    string heading = Blocks[one, 0], above = Blocks[one, 1];
-                    if (rows.Exists(delegate(string row) { return row.Trim().Equals(heading, StringComparison.OrdinalIgnoreCase); })) continue;
-                    int at = rows.FindIndex(delegate(string row)
-                    {
-                        return Regex.IsMatch(row ?? "", "^[ \t]*" + Regex.Escape(above) + "[ \t]*:", RegexOptions.IgnoreCase);
-                    });
-                    if (at < 0) continue;
-                    rows.InsertRange(at, new[] { heading, "" });
-                    put = true;
-                }
-                if (!put) return;
-                Notes.Put(Kept, string.Join(Environment.NewLine, rows.ToArray()).TrimEnd() + Environment.NewLine);
-                lock (gate) { read = DateTime.MinValue; wasLong = -1; }
-            }
-            catch (Exception bad) { Notes.Failed("the blocking pass in Dynamics.cs", bad); }
-        }
-
-        private static void Lifted()
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-                string had = CapriDesktop.Notes.ReadAll(Kept);
-                string[] rows = had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-                List<string> kept = new List<string>(), lifted = new List<string>();
-                bool listing = false;
-                int head = -1;
-                foreach (string raw in rows)
-                {
-                    string one = (raw ?? "").Trim();
-                    if (one.StartsWith("#", StringComparison.Ordinal))
-                    {
-                        listing = Regex.IsMatch(one.TrimStart('#').Trim(), @"^(attitudes|moods)\b", RegexOptions.IgnoreCase);
-                        if (listing && head < 0) head = kept.Count;
-                        kept.Add(raw);
-                        continue;
-                    }
-                    int mark = one.IndexOf(':');
-                    if (listing && mark > 0 && Dial(one.Substring(0, mark).Trim())) { lifted.Add(raw); continue; }
-                    kept.Add(raw);
-                }
-                if (lifted.Count == 0 || head < 0) return;
-                // A blank line between them and the heading, as the file has everywhere else.
-                lifted.Add("");
-                kept.InsertRange(head, lifted);
-                string made = string.Join(Environment.NewLine, kept.ToArray());
-                while (made.EndsWith(Environment.NewLine)) made = made.Substring(0, made.Length - Environment.NewLine.Length);
-                made += Environment.NewLine;
-                if (made == had) return;
-                Notes.Put(Kept, made);
-                lock (gate) { read = DateTime.MinValue; wasLong = -1; }
-            }
-            catch (Exception bad) { Notes.Failed("lifting the settings out of the mood list in Dynamics.cs", bad); }
-        }
-
-        // The intense ones ship switched off as well as gated, so they never turn up until they are asked for.
-        // A mood that cannot be rolled while the switch is off has no business being named in a censored
-        // file. The folder rule hides the mood; naming it at weight 0 in dynamic.md hands back what the
-        // folder was hiding. Reported as F-21.
-        //
-        // Asked of what attached rather than read out of the mood's own file, because a censored install
-        // does not have those files to read. With nothing attached no mood is gated, which is true: a build
-        // with none of them has nothing to keep back.
+        // A mood that can't be rolled with the switch off isn't named in a censored file. Asked of what is attached,
+        // since a censored install has no file to read; with nothing attached no mood is gated.
         internal static bool SenpaiMood(string named)
         {
             if (string.IsNullOrEmpty(named)) return false;
@@ -1465,9 +1176,16 @@ namespace CapriDesktop
                 made.AppendLine();
                 made.AppendLine("## How much she leans in");
                 made.AppendLine();
-                made.AppendLine(">! How much she leans into a bit. 0 is dry, 100 is unbearable, over all of them at once.");
+                made.AppendLine(">! How much she leans into a bit, over all of them at once: 0-100, 0 is dry, but over 9000 will make it unbearable.");
                 made.AppendLine();
                 made.AppendLine("cringe: 0");
+                made.AppendLine();
+                made.AppendLine("## Her mood in her lines");
+                made.AppendLine();
+                made.AppendLine(">! How often, 0 to 100, she says her mood's own line instead of her personality's.");
+                made.AppendLine(">! The mood's openers and tails go round her lines as often. Used until her brain blends the two.");
+                made.AppendLine();
+                made.AppendLine("mood share: 50");
                 made.AppendLine();
                 // Written here, with its note, rather than left to the top-up. The top-up adds it at the end of
                 // the file, where the note has no setting under it and the next read drops it as a stray.
@@ -1484,9 +1202,9 @@ namespace CapriDesktop
                 made.AppendLine();
                 made.AppendLine("## Attitudes she can have");
                 made.AppendLine();
-                made.AppendLine(">! One a line, with its chance of turning up, 0 to 100.");
-                made.AppendLine(">! 0 never. 100 always. Each rolls separately and one winner is picked.");
-                made.AppendLine(">! No winner means no mood that round, just the base personality.");
+                made.AppendLine(">! One mood a line, with its chance from 0 to 100.");
+                made.AppendLine(">! Each rolls a d100 and is in the draw on its chance or under. One is drawn from those.");
+                made.AppendLine(">! None in the draw rolls again. Only every chance at 0 means no mood.");
                 made.AppendLine(">! Each needs a file of the same name in the attitudes folder.");
                 made.AppendLine();
                 for (int mood = 0; mood < Moods.GetLength(0); mood++)
@@ -1503,12 +1221,8 @@ namespace CapriDesktop
             }
         }
 
-        // Each mood is a personality file with the same headings, but its What she likes numbers are added to her
-        // personality's rather than replacing them. So "called on: -3" makes attention unwelcome whoever she is, and a
-        // pack that likes being thrown still ends up liking it because her own +3 is still underneath.
-        // Every mood the build ships, for the sweep that looks for the senpai half of one in a censored
-        // install. Her packs expose theirs the same way.
-        // The names this build carries, for the pack writer. Names only, no text.
+        // A mood's numbers are added to her personality's rather than replacing them. Every mood the build ships, for
+        // the censored-install sweep, and the names it carries, for the pack writer.
         internal static string[] ShippedNames()
         {
             string[] found = new string[Moods.GetLength(0)];
@@ -1588,12 +1302,20 @@ ignored: +3
 petted: 0
 thrown: -2
 praised: 0
+touched shoulders: +1
+touched middle: 0
+touched legs: 0
+touched feet: -1
+tickled: -2
 
 ## How she reacts
 
 flirt: -2
 sulks at upset: 4
 sulk minutes: 10
+kind returns: 0.00
+mean scale: -0.17
+drift push: -0.21
 
 ## Drifts to
 
@@ -1629,6 +1351,28 @@ Oh. Hello. I was nearly asleep.
 
 - It is late. Come to bed. I mean, go to bed.
 - You should be asleep. I certainly should.
+
+## Openers
+
+>! Said before her usual lines while she is this way.
+
+*yawns*
+Mmh.
+Huh? Oh.
+Sorry, drifting.
+Mm-hm.
+Wha-
+
+## Tails
+
+>! Said after them.
+
+five more minutes.
+if I stay awake for it.
+or I'll nap on it.
+probably.
+don't make me get up.
+*yawn*.
 "
             },
             {
@@ -1645,12 +1389,20 @@ ignored: -3
 thrown: +2
 petted: +1
 praised: +1
+touched shoulders: +1
+touched middle: +1
+touched legs: 0
+touched feet: 0
+tickled: +2
 
 ## How she reacts
 
 sulks at upset: 9
 sulk minutes: 2
 sulk alone: 90
+kind returns: -0.08
+mean scale: -0.21
+drift push: +0.13
 
 ## Drifts to
 
@@ -1682,6 +1434,28 @@ I have had SO many thoughts, sit down.
 - I am going to vibrate through the floor.
 - Talk to me talk to me talk to me.
 - Give me something to DO.
+
+## Openers
+
+>! Said before her usual lines while she is this way.
+
+Ooh!
+Okay okay okay.
+Wait wait.
+Ha!
+Yes!
+Right, quick!
+
+## Tails
+
+>! Said after them.
+
+and then something else!
+let's go again!
+faster next time!
+I can't sit still.
+what's next?
+again, again!
 "
             },
             {
@@ -1699,6 +1473,11 @@ thrown: -2
 insulted: -2
 petted: -1
 praised: +2
+touched shoulders: -1
+touched middle: -2
+touched legs: -1
+touched feet: -1
+tickled: -2
 
 ## How she reacts
 
@@ -1708,6 +1487,9 @@ sulks after: 2
 sulks at upset: 3
 sulk minutes: 9
 sulk alone: 420
+kind returns: +0.19
+mean scale: +0.28
+drift push: +0.18
 
 ## Drifts to
 
@@ -1743,6 +1525,28 @@ Leave me alone. Wait, don't.
 
 Oh. It is you.
 Mm.
+
+## Openers
+
+>! Said before her usual lines while she is this way.
+
+Ugh.
+Fine.
+What.
+Hmph.
+Look.
+Great.
+
+## Tails
+
+>! Said after them.
+
+not that it matters today.
+whatever.
+don't push it.
+I'm not in the mood.
+today of all days.
+just so you know.
 "
             },
             {
@@ -1759,6 +1563,11 @@ ignored: -4
 petted: +2
 praised: +2
 thrown: -1
+touched shoulders: +2
+touched middle: +1
+touched legs: +1
+touched feet: 0
+tickled: +1
 
 ## How she reacts
 
@@ -1767,6 +1576,9 @@ sulks at upset: 4
 sulk minutes: 2
 sulk alone: 60
 dodges: no
+kind returns: -0.37
+mean scale: -0.42
+drift push: -0.14
 
 ## Drifts to
 
@@ -1804,6 +1616,28 @@ Finally. Stay this time.
 - Are you still there?
 - Say something. Anything.
 - I do not like this bit.
+
+## Openers
+
+>! Said before her usual lines while she is this way.
+
+Don't go.
+Stay?
+Oh, you're here.
+Wait, wait.
+Hey, hey.
+Mm, close.
+
+## Tails
+
+>! Said after them.
+
+don't leave yet.
+stay a bit longer.
+you're not going anywhere, right?
+just a little longer.
+promise you'll come back.
+I missed you already.
 "
             },
             { "Needy", @"# Needy
@@ -1818,6 +1652,11 @@ ignored: -4
 petted: +2
 praised: +3
 thrown: -2
+touched shoulders: +2
+touched middle: +1
+touched legs: 0
+touched feet: 0
+tickled: +1
 
 ## How she reacts
 
@@ -1826,6 +1665,9 @@ sulks at upset: 3
 sulk minutes: 3
 sulk alone: 60
 dodges: no
+kind returns: -0.46
+mean scale: -0.33
+drift push: -0.12
 
 ## Drifts to
 
@@ -1856,6 +1698,28 @@ Did you forget about me?
 You came back. You came back.
 I thought you'd forgotten.
 Say you missed me.
+
+## Openers
+
+>! Said before her usual lines while she is this way.
+
+Hey, um.
+Be honest.
+Did I do okay?
+Tell me.
+Oh, good.
+Um.
+
+## Tails
+
+>! Said after them.
+
+you'd tell me if I was annoying, right?
+is that okay?
+you still like me, yeah?
+say something nice.
+I just need to hear it.
+right?
 " },
             { "Playful", @"# Playful
 
@@ -1865,8 +1729,7 @@ Say you missed me.
 
 ## When she wants attention
 
->! Said when she wants you, with the toggle off as much as on. Keep these plainly childlike rather
->! than anything else: this pool ships to everyone.
+>! Said when she wants you. Keep these plainly childlike.
 
 can I have uppies?
 uppies? please? I said please.
@@ -1882,6 +1745,11 @@ called on: +2
 thrown: +3
 petted: +1
 ignored: -2
+touched shoulders: +1
+touched middle: 0
+touched legs: 0
+touched feet: +1
+tickled: +2
 
 ## How she reacts
 
@@ -1889,6 +1757,9 @@ sulks after: 0
 sulks at upset: 10
 sulk minutes: 2
 dodges: no
+kind returns: -0.07
+mean scale: -0.18
+drift push: +0.06
 
 ## When you pet her
 
@@ -1908,6 +1779,28 @@ Best game.
 
 Oh good, you're back. Play with me.
 Took your time! Come on.
+
+## Openers
+
+>! Said before her usual lines while she is this way.
+
+Tag!
+Hehe.
+Ooh, a game.
+Okay, my turn.
+Ha, gotcha.
+Bet you can't keep up.
+
+## Tails
+
+>! Said after them.
+
+your move.
+catch me if you can.
+best of three?
+I win, obviously.
+let's play.
+no takebacks.
 " },
             {
                 "Touchy",
@@ -1923,6 +1816,11 @@ thrown: -3
 petted: -3
 ignored: +1
 praised: +1
+touched shoulders: -2
+touched middle: -3
+touched legs: -2
+touched feet: -2
+tickled: -3
 
 ## How she reacts
 
@@ -1931,6 +1829,9 @@ sulks at upset: 2
 sulk minutes: 8
 sulk alone: 300
 dodges: yes
+kind returns: +0.21
+mean scale: +0.39
+drift push: +0.22
 
 ## Drifts to
 
@@ -1953,6 +1854,28 @@ Hands off me today.
 
 Mm.
 You're back. Give me a minute.
+
+## Openers
+
+>! Said before her usual lines while she is this way.
+
+Hey.
+Careful.
+Hands.
+Back up.
+Easy.
+Not now.
+
+## Tails
+
+>! Said after them.
+
+and don't touch.
+no poking today.
+give me some room.
+personal space, please.
+look, don't touch.
+I mean it.
 "
             },
             { "Affectionate", @"# Affectionate
@@ -1967,6 +1890,11 @@ petted: +2
 praised: +2
 ignored: -2
 thrown: -1
+touched shoulders: +2
+touched middle: +1
+touched legs: +1
+touched feet: 0
+tickled: +1
 
 ## How she reacts
 
@@ -1975,6 +1903,9 @@ sulks at upset: 5
 sulk minutes: 2
 sulk alone: 90
 dodges: no
+kind returns: -0.18
+mean scale: -0.26
+drift push: -0.08
 
 ## When you pet her
 
@@ -1999,6 +1930,28 @@ I'll keep the warm spot for you.
 
 There you are. Come sit.
 Missed you. Properly.
+
+## Openers
+
+>! Said before her usual lines while she is this way.
+
+Aw.
+Mm.
+Hey, you.
+Oh, there you are.
+Come here.
+Hi.
+
+## Tails
+
+>! Said after them.
+
+you're sweet.
+I like having you around.
+stay close.
+that's nice.
+I'm glad it's you.
+all warm and fuzzy.
 " },
             { "Mischievous", @"# Mischievous
 
@@ -2012,6 +1965,11 @@ thrown: +2
 petted: 0
 ignored: -1
 insulted: +1
+touched shoulders: 0
+touched middle: 0
+touched legs: -1
+touched feet: +1
+tickled: +2
 
 ## How she reacts
 
@@ -2019,6 +1977,9 @@ sulks after: 0
 sulks at upset: 9
 sulk minutes: 2
 dodges: no
+kind returns: +0.03
+mean scale: -0.09
+drift push: +0.08
 
 ## When you pet her
 
@@ -2038,6 +1999,28 @@ You'll regret starting this.
 I've been plotting.
 Good, I was getting ideas.
 Sit down, I've been busy.
+
+## Openers
+
+>! Said before her usual lines while she is this way.
+
+Heh.
+Ooh, idea.
+Don't look at me.
+Psst.
+Nothing to see here.
+Oops.
+
+## Tails
+
+>! Said after them.
+
+I may have done a thing.
+you didn't see anything.
+want to cause some trouble?
+it wasn't me.
+this'll be fun.
+trust me.
 " },
             {
                 "Focused",
@@ -2053,6 +2036,11 @@ ignored: +2
 petted: -2
 thrown: -3
 praised: +1
+touched shoulders: 0
+touched middle: -1
+touched legs: -1
+touched feet: -1
+tickled: -2
 
 ## How she reacts
 
@@ -2061,6 +2049,9 @@ sulks after: 2
 sulks at upset: 4
 sulk minutes: 6
 dodges: yes
+kind returns: +0.04
+mean scale: -0.06
+drift push: -0.26
 
 ## Drifts to
 
@@ -2088,6 +2079,28 @@ One second, nearly done.
 
 - Actually, this is fine. I have plenty on.
 - Leave me to it.
+
+## Openers
+
+>! Said before her usual lines while she is this way.
+
+One sec.
+Hold on.
+Mm, busy.
+Right.
+Hang on.
+In the zone, hang on.
+
+## Tails
+
+>! Said after them.
+
+back to it.
+where was I?
+let me finish this.
+quickly, I'm working.
+don't break my focus.
+nearly there.
 "
             },
             { "Melancholy", @"# Melancholy
@@ -2103,6 +2116,11 @@ petted: +1
 praised: +2
 thrown: -3
 insulted: -3
+touched shoulders: +1
+touched middle: 0
+touched legs: 0
+touched feet: 0
+tickled: -1
 
 ## How she reacts
 
@@ -2112,6 +2130,9 @@ sulks at upset: 3
 sulk minutes: 6
 sulk alone: 240
 dodges: no
+kind returns: -0.16
+mean scale: +0.23
+drift push: +0.11
 
 ## Drifts to
 
@@ -2135,6 +2156,28 @@ That isn't funny right now.
 Oh. Hello. It's good to see you.
 I'm glad you're back.
 It was quiet without you.
+
+## Openers
+
+>! Said before her usual lines while she is this way.
+
+Oh.
+Hm.
+Yeah.
+I guess.
+Hey.
+Mm, okay.
+
+## Tails
+
+>! Said after them.
+
+it's been one of those days.
+stay a while?
+quietly, if that's okay.
+sorry, I'm a bit low.
+thanks for being here.
+it'll pass.
 " },
             
             
@@ -2156,6 +2199,11 @@ ignored: -3
 petted: -3
 praised: +1
 called on: -1
+touched shoulders: -2
+touched middle: -3
+touched legs: -2
+touched feet: -2
+tickled: -3
 
 ## How she reacts
 
@@ -2166,6 +2214,9 @@ sulk alone: 600
 dodges: yes
 pranks: yes
 prank minutes: 6
+kind returns: +0.38
+mean scale: +0.47
+drift push: +0.35
 
 ## Drifts to
 
@@ -2210,6 +2261,28 @@ I have had a lot of time to think about this.
 
 - I am going to start moving things.
 - Do not leave me alone with your desktop.
+
+## Openers
+
+>! Said before her usual lines while she is this way.
+
+Oh, really?
+Unbelievable.
+Excuse me?
+Seriously.
+Right, that's it.
+Wow.
+
+## Tails
+
+>! Said after them.
+
+and I'm still mad.
+don't test me.
+I'm keeping score.
+watch your desktop.
+you're on thin ice.
+not forgiven.
 "
             },
             {
@@ -2226,6 +2299,11 @@ ignored: -4
 praised: +2
 petted: +1
 thrown: -2
+touched shoulders: +1
+touched middle: +1
+touched legs: 0
+touched feet: 0
+tickled: 0
 
 ## She switches on
 
@@ -2241,6 +2319,9 @@ sulks at upset: 3
 sulk minutes: 6
 sulk alone: 180
 dodges: no
+kind returns: -0.27
+mean scale: -0.14
+drift push: +0.16
 
 ## Drifts to
 
@@ -2276,6 +2357,28 @@ Oh, you remembered me.
 - What are you doing over there?
 - You've gone quiet. Suspiciously quiet.
 - I'm right here, you know.
+
+## Openers
+
+>! Said before her usual lines while she is this way.
+
+Oh, so now I'm interesting?
+Hm, finally.
+Remember me?
+Look who's back.
+Hmph.
+Oh, it's me now?
+
+## Tails
+
+>! Said after them.
+
+not some other AI.
+I'm the one here, you know.
+who were you talking to?
+don't go wandering off.
+I saw that.
+just me, okay?
 "
             },
             {
@@ -2293,11 +2396,19 @@ petted: +1
 ignored: -2
 insulted: -1
 thrown: 0
+touched shoulders: +1
+touched middle: -1
+touched legs: -1
+touched feet: -1
+tickled: 0
 
 ## How she reacts
 
 sulks at upset: 8
 sulk minutes: 3
+kind returns: +0.17
+mean scale: -0.11
+drift push: -0.09
 
 ## When you pet her
 
@@ -2316,6 +2427,28 @@ You will apologise and I will enjoy it.
 
 I knew you would be back.
 Of course you came back.
+
+## Openers
+
+>! Said before her usual lines while she is this way.
+
+Naturally.
+Of course.
+As expected.
+Heh, see?
+Told you.
+Obviously.
+
+## Tails
+
+>! Said after them.
+
+you're welcome.
+I'm just that good.
+admit it, you need me.
+try to keep up.
+as always.
+no applause needed.
 "
             }
         };

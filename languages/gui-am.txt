@@ -204,3 +204,18 @@ Running on this PC	በዚህ ፒሲ ላይ እየሰራ
 NORMAL	መደበኛ
 OFF	ጠፍቷል
 Local server address	የሎካል ሰርቨር አድራሻ
+Remember panel position	የፓነሉን ቦታ አስታውስ
+Custom colours	ብጁ ቀለሞች
+Custom colours...	ብጁ ቀለሞች...
+Choose	ምረጥ
+Hers	የራሷ
+Quiet	ጸጥታ
+Quiet min	ጸጥታ min
+Quiet max	ጸጥታ max
+Until I turn it off	እኔ እስካጠፋው ድረስ
+Quiet on calls	በጥሪዎች ጊዜ ጸጥታ
+Quiet in videos	በቪዲዮዎች ጊዜ ጸጥታ
+Quiet until {n}:{n}	ጸጥታ እስከ {n}:{n}
+Quiet until turned off	እስኪጠፋ ድረስ ጸጥታ
+Export settings	ቅንብሮችን ላክ
+Import settings	ቅንብሮችን አስገባ

@@ -10,9 +10,9 @@ using System.Threading;
 
 namespace CapriDesktop
 {
-    // A saved list she can't read, or one with entries she can't read, is copied to <name>.unreadable.json before anything
-    // saves over it, like her settings, and she carries on with the entries she could read. They hear about it once, ahead of
-    // her next reply about that list. While the copy keeps failing, she doesn't save over the file.
+    // An unreadable saved list, or one with unreadable entries, is copied to <name>.unreadable.json before anything
+    // overwrites it, and she carries on with what she could read. They hear once; while the copy fails she doesn't save
+    // over it.
     internal sealed class SavedList<T>
     {
         private readonly string path, label, kept;
@@ -565,7 +565,7 @@ namespace CapriDesktop
         }
     }
 
-    // Her one stopwatch, with no laps (#181). It counts on a clock that doesn't jump when the PC's time changes, and it isn't
+    // Her one stopwatch, with no laps. It counts on a clock that doesn't jump when the PC's time changes, and it isn't
     // saved, so it ends when she closes. Mac and Linux share it.
     internal static class Stopwatches
     {

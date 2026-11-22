@@ -204,3 +204,18 @@ Running on this PC	Mlaku ing PC iki
 NORMAL	NORMAL
 OFF	MATI
 Local server address	Alamat server lokal
+Remember panel position	Elinga posisi panel
+Custom colours	Werna dhewe
+Custom colours...	Werna dhewe...
+Choose	Pilih
+Hers	Duweké
+Quiet	Meneng
+Quiet min	Meneng min
+Quiet max	Meneng max
+Until I turn it off	Nganti tak pateni
+Quiet on calls	Meneng nalika telpon
+Quiet in videos	Meneng ing video
+Quiet until {n}:{n}	Meneng nganti {n}:{n}
+Quiet until turned off	Meneng nganti dipateni
+Export settings	Ekspor setelan
+Import settings	Impor setelan

@@ -48,7 +48,7 @@ namespace CapriDesktop
         internal CloneBody By;
     }
 
-    // Her copies on the desktop, after Desktop Goose: they wander, leave a trail, steal the cursor and drag notes in (Lachy, 1 Nov).
+    // Her copies on the desktop, after Desktop Goose: they wander, leave a trail, steal the cursor and drag notes in (Lachy).
     // There's no limit on how many. A new one only waits while the PC is still drawing the last frame, so Esc always gets through.
     internal sealed class Swarm
     {
@@ -269,8 +269,8 @@ namespace CapriDesktop
             return null;
         }
 
-        // Lachy, 1 Nov: "I want her to actually take your applications". One of them runs to a window, grabs its title bar and
-        // drags it somewhere else on her screen. More of them out means more windows on the move, up to three at once.
+        // One of them runs to a window, grabs its title bar and
+        // drags it somewhere else on her screen. More of them out means more windows on the move, up to three at once (Lachy).
         private void Haul(double now, bool hauling)
         {
             for (int i = Hauls.Count - 1; i >= 0; i--)
@@ -370,7 +370,7 @@ namespace CapriDesktop
         private double last, hintUntil = -1;
         private long took;
         // Esc is read on a thread of its own every 30 ms in real time, so slow frames with hundreds out can't miss a tap or
-        // stretch the hold, and a tap shows how to clear them (Ashy, 1 Nov: "pressing escape didnt do much").
+        // stretch the hold, and a tap shows how to clear them (Ashy).
         private System.Threading.Thread escWatch;
         private volatile bool closing, tapped;
         private volatile int heldMs = -1;
@@ -557,7 +557,7 @@ namespace CapriDesktop
             if (ticked != null) ticked(now);
         }
 
-        // While one of them has their cursor, it goes where she drags it and her sign is up (#106), until she lets go of it or
+        // While one of them has their cursor, it goes where she drags it and her sign is up, until she lets go of it or
         // they're put away. The smoke test watches PutCursor instead of moving the real one.
         internal Action<Point> PutCursor = delegate(Point at) { Cursor.Position = at; };
         private bool nabbing;
@@ -604,9 +604,8 @@ namespace CapriDesktop
             haul.Height = frame.Height;
         }
 
-        // The window goes where its hauler is. The move is posted to the window's own program, so a frozen app can't hold her up,
-        // and a window she isn't allowed to move, like an admin one, is let go and never picked again. One that would end up on a
-        // screen that's gone, like a monitor unplugged mid-drag, is let go where it is.
+        // The window goes where its hauler is, by posted moves so a frozen app can't hold her up. A window she can't
+        // move, like an admin one, is let go and never picked again, as is one headed for a screen that's gone.
         private void Carry(CloneHaul haul)
         {
             Rectangle frame, outer;
@@ -660,9 +659,8 @@ namespace CapriDesktop
             return path.Contains(at);
         }
 
-        // Every window they moved goes back where it was, unless it's since been moved by hand, closed or made full size. A
-        // minimised one goes back there when it's restored, one on another desktop goes back all the same, and none is sent to a
-        // screen that's gone. Every move is posted, so a frozen app can't hold her up.
+        // Every window they moved goes back unless since moved by hand, closed or maximised; a minimised one goes back
+        // when restored, and none goes to a screen that's gone. Moves are posted, so a frozen app can't hold her up.
         internal void PutBack()
         {
             foreach (KeyValuePair<IntPtr, Rectangle> home in homes)
@@ -943,9 +941,8 @@ namespace CapriDesktop
             catch (InvalidOperationException) { return false; }
         }
 
-        // An insult sets her clones off 1 time in 3, then 2 in 3, and always by the third. Never over a job, a game or a stream,
-        // and the note near her tells anyone who's never met them how to stop it. One she sat out still counts toward the
-        // next for ten minutes. Ones thrown at her clones while they're out don't.
+        // An insult sets her clones off 1 time in 3, then 2 in 3, then always; never over a job, game or stream, and a
+        // note says how to stop it. One she sat out counts toward the next for ten minutes.
         internal bool Upset(int roll, string held = null)
         {
             if (!preferences.UpsetChaos) return false;
@@ -1120,6 +1117,8 @@ namespace CapriDesktop
                     double now = clock.Elapsed.TotalSeconds;
                     double seconds = wav != null ? Voice.Seconds(wav) : 1 + line.Length * 0.06;
                     if (who - 1 < cloneWindow.Swarm.Bodies.Count) cloneWindow.Say(cloneWindow.Swarm.Bodies[who - 1], line, now + seconds + 1);
+                    // Shown in a clone's bubble, voiced or not, so it goes in her line log as said.
+                    try { Sayings.Shown(line); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                     if (wav != null)
                     {
                         voiceUntil = now + seconds + 0.6;

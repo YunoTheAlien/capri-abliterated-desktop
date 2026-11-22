@@ -8,13 +8,8 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
-    // Her own playlist, from folders on this PC. Everything is in playlist.json beside her settings, written so it can be
-    // read and edited by hand: indented, one path a line, and always UTF-8 with no byte order mark, because track names
-    // carry accents, kana and box-drawing characters and a mark here would stop her own reader dead.
-    //
-    // The file is laid out the way a hosts file is. The folders come first, then songs added one at a time, then the removed
-    // ones at the bottom under their own heading. Removing a song only ever writes its path into that bottom list: nothing
-    // here deletes, moves or renames a file on the drive, which is the whole reason removal is a list and not an action.
+    // Her playlist from folders on this PC, in playlist.json: readable by hand, UTF-8 with no BOM. Folders first, then
+    // added songs, then removed ones; removing only lists a path and never touches the file.
     internal sealed class Playlist
     {
         internal const string FileName = "playlist.json";
@@ -286,14 +281,8 @@ namespace CapriDesktop
         }
     }
 
-    // One song at a time through WPF's MediaPlayer, which goes to Media Foundation and so plays whatever Windows itself
-    // plays: mp3, m4a, wma, wav, and flac on Windows 10 and later.
-    //
-    // MCI through winmm was the obvious choice and had to be abandoned: its MPEGVideo device will not load in a 64-bit
-    // process, so every mp3 came back "Unknown problem while loading the specified device driver" and the playlist read as
-    // finished the moment it started (measured on D:\mp3\YouTube, 13 Nov). MediaPlayer needs a Dispatcher of its own, so it
-    // gets a single STA thread with a message loop, created once and kept for the life of the app. Her own UI thread is not
-    // used for it: WinForms does not pump WPF's queue, so MediaEnded would never arrive and tracks would never advance.
+    // One song at a time through WPF's MediaPlayer, which plays what Windows plays (MCI's mp3 device won't load in
+    // 64-bit). It runs on its own STA thread with a message loop, since WinForms doesn't pump WPF's queue.
     internal static class FolderTunes
     {
         private static readonly object gate = new object();
@@ -372,9 +361,8 @@ namespace CapriDesktop
             return true;
         }
 
-        // Where the song has got to, and how long it is. A track has a length and a position whatever any flag says, so
-        // these are the one reading that cannot drift: her player shows real progress from them, and a position that has
-        // not moved between two reads says she is held even if something else lost track of it.
+        // Where the song has got to and how long it is: the one reading that can't drift, so her player shows real
+        // progress, and a position unmoved between reads means she is held.
         internal static double At
         {
             get

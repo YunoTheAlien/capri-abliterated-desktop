@@ -5,24 +5,14 @@ using System.Text;
 
 namespace CapriDesktop
 {
-    // One of her plain line files: a markdown file of "## section" headings with a line under each, read back as
-    // pools she picks from. moments.md was the first and watching.md the second, and a third copy of the same
-    // hundred lines of loading, topping up and re-reading is how two of them end up behaving differently.
-    //
-    // What every one of them does: ships with real content, is re-read when it changes without a restart, gains
-    // sections and lines a later build adds without touching a word of theirs, and falls back to the lines in
-    // the build when a section is emptied, so nothing anyone deletes can leave her with nothing to say.
-    //
-    // A section whose heading ends in "(senpai)" is read only with the switch on, the same rule her
-    // packs and lines.md follow, and it is written only then as well.
+    // One of her plain line files: "## section" headings read back as pools, re-read on change, topped up by later
+    // builds without touching their words, and falling back to the build's lines when emptied. "(senpai)" sections only
+    // with the switch on.
     internal sealed class LineFile
     {
         internal const string SenpaiMark = " (" + Legacy.Mark + ")";
 
         private readonly string shipped;
-        // Lines she shipped that were wrong, and what they say now: an exact match of what was written, so a
-        // line somebody reworded themselves does not match and is left alone.
-        private readonly string[,] reworded;
         private readonly object gate = new object();
         private readonly Dictionary<string, string[]> loaded = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
         private DateTime read = DateTime.MinValue;
@@ -34,22 +24,11 @@ namespace CapriDesktop
         // bury the list, and a piece of history is content rather than a place worth replacing.
         internal bool Zoned = true;
 
-        internal LineFile(string shipped) : this(shipped, null) { }
+        internal LineFile(string shipped) { this.shipped = shipped; }
 
-        internal LineFile(string shipped, string[,] reworded)
-        {
-            this.shipped = shipped;
-            this.reworded = reworded;
-        }
-
-        // The same, but read when it is wanted rather than when the class loads. A file whose text gains a
-        // half from somewhere else cannot be captured in a static field initialiser: that runs long before
-        // anything attaches, so the half was always missing and the file was written without it.
-        internal LineFile(Func<string> shipping, string[,] reworded)
-        {
-            this.shipping = shipping;
-            this.reworded = reworded;
-        }
+        // The same, read when wanted rather than when the class loads: a static initialiser runs before anything
+        // attaches, so a half added from elsewhere would always be missing.
+        internal LineFile(Func<string> shipping) { this.shipping = shipping; }
 
         private readonly Func<string> shipping;
 
@@ -93,12 +72,8 @@ namespace CapriDesktop
         internal string[] Lines(string section)
         {
             if (string.IsNullOrEmpty(section)) return null;
-            // A mod may have taken this pool. Her own lines are still here and still read when it lets go,
-            // so nothing of hers is lost by a mod claiming it. See Zones.
-            // A mod may have taken this pool. Her own lines are still here and still read when it lets go,
-            // so nothing of hers is lost by a mod claiming it. The senpai half of a pool is a zone of its own
-            // and wins the same way her own senpai lines do, which also means a mod cannot reach it at all
-            // while the switch is off. See Zones.
+            // A mod may have taken this pool; her lines stay and are read when it lets go. The senpai half is its own
+            // zone, out of a mod's reach while the switch is off. See Zones.
             if (Zoned && !string.IsNullOrEmpty(Kept))
             {
                 if (Brain.SenpaiLive)
@@ -223,9 +198,9 @@ namespace CapriDesktop
             return (text ?? "").Replace("\r\n", "\n").Replace('\r', '\n').Replace("\n", Environment.NewLine);
         }
 
-        // Written once, then topped up: a section the build ships that the file has not got goes on the end, and
-        // a line she ships that is missing from a section it does have is added to it, matched exactly. A line
-        // they reworded stays reworded, and one they deleted comes back only if the whole section went with it.
+        // Written once, then topped up: a section the build ships that the file lacks goes on the end, and a missing
+        // shipped line, matched exactly, is added to its section. Reworded lines stay; a deleted one returns only with
+        // its whole section.
         internal void Write(bool over)
         {
             if (string.IsNullOrEmpty(Kept)) return;
@@ -239,8 +214,10 @@ namespace CapriDesktop
                     lock (gate) { wasLong = -1; read = DateTime.MinValue; }
                     return;
                 }
+                // Written new from stock on each version (Renew); in between only its notes follow her language, and the
+                // switch on adds its sections to a file written without them.
                 string had = File.ReadAllText(Kept);
-                string made = Reword(ToppedUp(had));
+                string made = SenpaiAdded(had);
                 if (made != had)
                 {
                     Notes.Put(Kept, made);
@@ -251,78 +228,29 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
-        private string ToppedUp(string had)
+        // The senpai sections she ships, each added whole to a file that has not got it, while the switch is on and she is
+        // off air. Turning the switch off leaves what is already written where it is.
+        private string SenpaiAdded(string had)
         {
+            if (!Brain.SenpaiLive) return had;
             List<string> rows = new List<string>(had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'));
+            bool added = false;
             foreach (KeyValuePair<string, List<string>> section in Shipped())
             {
-                // A senpai section is not put into a censored install at all, and not taken out of one that has it:
-                // turning the switch off leaves what is already written where it is, as everywhere else.
-                if (!Brain.SenpaiLive && section.Key.IndexOf(SenpaiMark, StringComparison.OrdinalIgnoreCase) >= 0) continue;
-                int from = -1, to = rows.Count;
-                for (int row = 0; row < rows.Count; row++)
-                {
-                    string one = rows[row].Trim();
-                    if (!one.StartsWith("##", StringComparison.Ordinal)) continue;
-                    if (from < 0)
-                    {
-                        if (string.Equals(one.TrimStart('#').Trim(), section.Key, StringComparison.OrdinalIgnoreCase)) from = row + 1;
-                        continue;
-                    }
-                    to = row;
-                    break;
-                }
-                if (from < 0)
-                {
-                    while (rows.Count > 0 && rows[rows.Count - 1].Trim().Length == 0) rows.RemoveAt(rows.Count - 1);
-                    rows.Add("");
-                    rows.Add("## " + section.Key);
-                    rows.Add("");
-                    foreach (string line in section.Value) rows.Add(line);
-                    continue;
-                }
-                List<string> has = new List<string>();
-                for (int row = from; row < to; row++) if (rows[row].Trim().Length > 0) has.Add(rows[row].Trim());
-                int at = to;
-                while (at > from && rows[at - 1].Trim().Length == 0) at--;
-                foreach (string line in section.Value)
-                {
-                    // A line with ">" in front of it is that line switched off, which is how every file of
-                    // hers comments something out. It counts as present, or the top up would put the live
-                    // one back beside it on her next start and nothing could ever be turned off by hand.
-                    if (has.Contains(line) || has.Contains("> " + line) || has.Contains(">" + line)) continue;
-                    rows.Insert(at, line);
-                    at++;
-                }
+                if (section.Key.IndexOf(SenpaiMark, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                bool there = false;
+                foreach (string row in rows)
+                    if (row.Trim().StartsWith("##", StringComparison.Ordinal) && string.Equals(row.Trim().TrimStart('#').Trim(), section.Key, StringComparison.OrdinalIgnoreCase)) { there = true; break; }
+                if (there) continue;
+                while (rows.Count > 0 && rows[rows.Count - 1].Trim().Length == 0) rows.RemoveAt(rows.Count - 1);
+                rows.Add("");
+                rows.Add("## " + section.Key);
+                rows.Add("");
+                rows.AddRange(section.Value);
+                added = true;
             }
-            string made = string.Join(Environment.NewLine, rows.ToArray());
-            if (!made.EndsWith(Environment.NewLine, StringComparison.Ordinal)) made += Environment.NewLine;
-            return made;
-        }
-
-        // The swap, after the top up: top up will have put the new line in already, so the old one is dropped
-        // rather than rewritten when its replacement is there, or the file ends up with both.
-        private string Reword(string body)
-        {
-            if (reworded == null) return body;
-            string[] rows = body.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-            for (int at = 0; at < reworded.GetLength(0); at++)
-            {
-                bool has = false;
-                foreach (string raw in rows) if (string.Equals(raw.Trim(), reworded[at, 1], StringComparison.Ordinal)) has = true;
-                List<string> kept = new List<string>();
-                foreach (string raw in rows)
-                {
-                    if (!string.Equals(raw.Trim(), reworded[at, 0], StringComparison.Ordinal)) { kept.Add(raw); continue; }
-                    if (has) continue;
-                    kept.Add(reworded[at, 1]);
-                    has = true;
-                }
-                rows = kept.ToArray();
-            }
-            string made = string.Join(Environment.NewLine, rows);
-            if (!made.EndsWith(Environment.NewLine, StringComparison.Ordinal)) made += Environment.NewLine;
-            return made;
+            if (!added) return had;
+            return string.Join(Environment.NewLine, rows.ToArray()) + Environment.NewLine;
         }
 
         private List<KeyValuePair<string, List<string>>> Shipped()

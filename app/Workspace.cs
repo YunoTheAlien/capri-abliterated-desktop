@@ -130,9 +130,9 @@ namespace CapriDesktop
         internal static readonly string[] Models = { "Default", "Opus", "Sonnet", "Haiku" };
         internal readonly string Root, Pipe;
         internal string Executable;
-        // Her own folder for chats started without picking one: Capri\Workspace in their profile folder, the same on every PC.
-        // Not Documents, which is often inside OneDrive, where Claude Code's fast small writes (.git, node_modules) would be
-        // uploaded and fought over. Only made when a chat first needs it, and never emptied or deleted by her.
+        // Her own folder for chats started without picking one: Capri\Workspace in their profile, the same on every PC,
+        // never Documents, which is often in OneDrive, where Claude Code's small fast writes would sync. Made on first
+        // need, never emptied.
         private static readonly string defaultHome = HomeFolder(), defaultFallback = Spare();
         internal string Home = defaultHome, HomeFallback;
         internal int ApprovalWait = 600000;
@@ -814,8 +814,81 @@ namespace CapriDesktop
                 if (!Regex.IsMatch(command, @"\A[A-Za-z]:/[\p{L}\p{Nd}_./~-]+\.cmd\z", RegexOptions.IgnoreCase)) throw new IOException("Workspace needs a short path for its hook command.");
                 hook = HuskJson.Map("type", "command", "command", command, "timeout", 660);
             }
-            return HuskJson.Write(HuskJson.Map("hooks", HuskJson.Map("PreToolUse", new List<object> {
+            // Her security files are denied to Claude Code's own edits too, in every mode, Blackwall included; her hook below
+            // refuses the rest, a command naming them among it.
+            List<object> denied = new List<object>();
+            foreach (string file in GuardedGlobs) denied.Add("Edit(" + file + ")");
+            return HuskJson.Write(HuskJson.Map("permissions", HuskJson.Map("deny", denied), "hooks", HuskJson.Map("PreToolUse", new List<object> {
                 HuskJson.Map("matcher", "*", "hooks", new List<object> { hook }) })));
+        }
+
+        // Her security files, which only her own windows change: what was approved, the crash guard, the plug-ins switched on,
+        // the security overrides, the plug-in sign-ins and her settings.json.
+        internal static readonly string[] GuardedGlobs = { "**/mods/approved.txt", "**/mods/approved-what.txt", "**/mods/guard.txt", "**/mods/plugins-on.txt", "**/keys/overrides/**", "**/keys/plugins/**" };
+        private static readonly Regex GuardedNames = new Regex(@"(?:^|[\\/\s""'=>])(?:approved|approved-what|guard|plugins-on)\.txt\b|[\\/]keys[\\/]+(?:overrides|plugins)\b|personalSettings[\\/]+keys\b", RegexOptions.IgnoreCase);
+        internal const string GuardedSaid = "That is one of Capri's security files. Only her own windows change it: Mainframe > Mods and SECURITY. Leave it alone and tell them so.";
+
+        // Null when a tool call leaves her security files alone; otherwise why it is refused. Reading them is left as it is:
+        // writing, editing, deleting or running a command that names them is not.
+        internal static string Guarded(string tool, Dictionary<string, object> input)
+        {
+            if (input == null || ReadTool(tool)) return null;
+            List<string> named = new List<string>();
+            foreach (string field in new[] { "file_path", "notebook_path", "path", "command" })
+            {
+                string value = HuskJson.Text(input, field);
+                if (!string.IsNullOrEmpty(value)) named.Add(value);
+            }
+            foreach (string value in named)
+            {
+                if (GuardedNames.IsMatch(value)) return GuardedSaid;
+                if (Regex.IsMatch(value, @"settings\.json", RegexOptions.IgnoreCase) && HerSettings(value)) return GuardedSaid;
+            }
+            return null;
+        }
+
+        // Her own settings.json: one beside a personalSettings folder and a mods folder, named in a path or a command.
+        private static bool HerSettings(string text)
+        {
+            foreach (Match found in Regex.Matches(text, @"[A-Za-z]:[\\/][^""'<>|*?\r\n]*?settings\.json|(?:\.\.?[\\/])?[^\s""'<>|*?]*settings\.json", RegexOptions.IgnoreCase))
+            {
+                try
+                {
+                    string dir = Path.GetDirectoryName(Path.GetFullPath(found.Value.Trim()));
+                    if (dir != null && Directory.Exists(Path.Combine(dir, "personalSettings")) && Directory.Exists(Path.Combine(dir, "mods"))) return true;
+                }
+                catch (ArgumentException) { }
+                catch (NotSupportedException) { }
+                catch (PathTooLongException) { }
+            }
+            return false;
+        }
+
+        // For SmokeWorkspaceWords: what is refused and what isn't, and the settings Claude Code gets.
+        internal static string GuardedCheck(string data)
+        {
+            Directory.CreateDirectory(Path.Combine(data, "personalSettings"));
+            Directory.CreateDirectory(Path.Combine(data, "mods"));
+            string settings = Path.Combine(data, "settings.json");
+            Func<string, string, string, bool> refused = delegate(string tool, string field, string value) { return Guarded(tool, HuskJson.Map(field, value)) != null; };
+            List<string> wrong = new List<string>();
+            foreach (string[] one in new[] {
+                new[] { "Write", "file_path", @"C:\Users\x\AppData\Local\Capri\mods\approved.txt" },
+                new[] { "Edit", "file_path", @"C:\Users\x\AppData\Local\Capri\mods\plugins-on.txt" },
+                new[] { "Write", "file_path", @"C:\Users\x\AppData\Local\Capri\personalSettings\keys\overrides\censored.txt" },
+                new[] { "Bash", "command", "echo smoke-door abc >> mods/approved.txt" },
+                new[] { "Bash", "command", "del \"C:\\Capri\\mods\\guard.txt\"" },
+                new[] { "PowerShell", "command", "Remove-Item C:\\Capri\\personalSettings\\keys\\overrides\\seal.txt" },
+                new[] { "Write", "file_path", settings },
+                new[] { "Bash", "command", "notepad \"" + settings + "\"" } })
+                if (!refused(one[0], one[1], one[2])) wrong.Add("let through " + one[0] + " " + one[2]);
+            foreach (string[] one in new[] {
+                new[] { "Write", "file_path", @"C:\Projects\site\settings.json" },
+                new[] { "Edit", "file_path", @"C:\Projects\site\approved-list.md" },
+                new[] { "Bash", "command", "git status" },
+                new[] { "Read", "file_path", @"C:\Capri\mods\approved.txt" } })
+                if (refused(one[0], one[1], one[2])) wrong.Add("refused " + one[0] + " " + one[2]);
+            return wrong.Count == 0 ? null : string.Join("; ", wrong.ToArray());
         }
 
         private void ReadVersion(string exe, WorkspaceChat chat)
@@ -1279,9 +1352,9 @@ namespace CapriDesktop
             EndStreams(turn, turn.Result && !turn.Failed);
         }
 
-        // A turn that ended well has had every real block finished, so a stream still unfinished then was abandoned, as when
-        // Claude Code retries a request, and goes. After Stop or a failure what streamed is all there is, so it stays, unless
-        // a newer message has words: then it was a request Claude Code retried, and the retry took its place.
+        // A turn that ended well had every real block finished, so a stream still open was abandoned, as when Claude
+        // Code retries, and goes. After Stop or a failure what streamed stays, unless a newer message has words,
+        // meaning a retry replaced it.
         internal void EndStreams(WorkspaceTurn turn, bool succeeded)
         {
             lock (turn.Chat.Gate)
@@ -1499,9 +1572,8 @@ namespace CapriDesktop
             foreach (WorkspaceApproval ask in turn.Asks) if (ask.Choice == null) { ask.Choice = "deny"; ask.Reason = reason; ask.Answered.Set(); }
         }
 
-        // A line in workspace\clicks.log for each press of a card's key and what came of it, so a click that seems lost can
-        // be told apart from one that arrived and was refused. Only the key, the outcome and the time: no words, paths or
-        // commands. The file starts again past 64 KB.
+        // A line in workspace\clicks.log for each press of a card's key and what came of it, telling a lost click from
+        // a refused one. Only key, outcome and time, no words, paths or commands; the file restarts past 64 KB.
         internal void Clicked(string key, string outcome)
         {
             try
@@ -1555,9 +1627,9 @@ namespace CapriDesktop
 
         internal static bool EditTool(string tool) { return tool == "Write" || tool == "Edit" || tool == "MultiEdit" || tool == "NotebookEdit"; }
 
-        // What an edit's card keeps of its input to show the change: the file and the changed text, each text cut to
-        // ShownLines lines and ShownChars letters, and no more than ShownAll letters in all, so a 5,000-line Write doesn't
-        // fill the saved chat. "cut" says something was left out. Other tools keep nothing.
+        // What an edit's card keeps of its input: the file and changed text, each cut to ShownLines lines and
+        // ShownChars letters and ShownAll in all, so a huge Write doesn't fill the saved chat. "cut" says something was
+        // left out; other tools keep nothing.
         internal const int ShownLines = 200, ShownChars = 20000, ShownAll = 40000;
 
         internal static string Shown(string tool, Dictionary<string, object> input)
@@ -1694,6 +1766,13 @@ namespace CapriDesktop
             WorkspaceChat chat;
             lock (gate) chat = chats.Find(delegate(WorkspaceChat found) { return found.Id == id; });
             if (chat == null || input == null || tool.Length == 0) return WorkspaceHook.Decision(false, "That Workspace turn isn't running.");
+            // Her security files, in every mode, Blackwall and Plan included: never written from here.
+            string guarded = Guarded(tool, input);
+            if (guarded != null)
+            {
+                Brain.Log("workspace", -1, "Refused " + tool + " on one of her security files: " + Summary(tool, input));
+                return WorkspaceHook.Decision(false, guarded);
+            }
             WorkspaceTurn turn;
             WorkspaceApproval ask = null;
             lock (chat.Gate)

@@ -204,3 +204,18 @@ Running on this PC	या PC वर चालत आहे
 NORMAL	सामान्य
 OFF	बंद
 Local server address	स्थानिक सर्व्हर पत्ता
+Remember panel position	पॅनेलची जागा लक्षात ठेवा
+Custom colours	स्वतःचे रंग
+Custom colours...	स्वतःचे रंग...
+Choose	निवडा
+Hers	तिचे
+Quiet	शांत
+Quiet min	शांत min
+Quiet max	शांत max
+Until I turn it off	मी बंद करेपर्यंत
+Quiet on calls	कॉल दरम्यान शांत
+Quiet in videos	व्हिडिओमध्ये शांत
+Quiet until {n}:{n}	{n}:{n} पर्यंत शांत
+Quiet until turned off	बंद करेपर्यंत शांत
+Export settings	सेटिंग्ज निर्यात करा
+Import settings	सेटिंग्ज आयात करा

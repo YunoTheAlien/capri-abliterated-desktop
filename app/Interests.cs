@@ -38,12 +38,8 @@ namespace CapriDesktop
             }
         }
 
-        // Three files, not one. her interests file had her settings, her lines, the list of what she is into and a pack
-        // of lines for each of about thirty of them, which ran to six hundred lines before anything went wrong
-        // with it. Nobody scrolls that far, so the two lists live on their own and her interests file keeps the settings
-        // and her general lines.
-        //
-        // All three are hers only with the toggle on: no tab, no reading, nothing written, with it off.
+        // Three files, so neither list is buried in the settings. All three are hers only with the toggle on: no tab,
+        // reading or writing with it off.
         internal const string HersName = "her_interests";
         internal const string YoursName = "your_interests";
         // The two other old names, set by the same pack as the first and null without it.
@@ -122,11 +118,9 @@ namespace CapriDesktop
             return new WrittenNote(YoursKept, YoursHead.Replace("\n", Environment.NewLine), writing);
         }
 
-        // A her interests file from before the split has one combined "how she brings it up". The two new sections are
-        // appended so she can tell a reward from a threat, and their own entries are left exactly as they are.
-        // Any section the build ships that the file does not have yet is appended, so new interest packs and new
-        // template pools turn up in a file written by an older build. Their own lines are never touched.
-        // What belongs in her senpai interests file: the list of what she is into, and the pack of lines for each one.
+        // Sections the build ships that the file lacks are appended, including the reward and threat split, so an older
+        // file gets new packs and pools; their lines are never touched. The senpai file holds the list and each
+        // interest's lines.
         private static bool Hers(string heading)
         {
             string head = (heading ?? "").Trim();
@@ -200,88 +194,9 @@ namespace CapriDesktop
             MakeYours();
         }
 
-        // Adds the sections of one kind that the file does not have yet.
-        private static void TopUpInto(string file, bool hers)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(file) || !File.Exists(file)) return;
-                string body = File.ReadAllText(file);
-                StringBuilder adding = new StringBuilder();
-                foreach (string heading in Headings(Text))
-                {
-                    if (Hers(heading) != hers) continue;
-                    // The \r matters: these files are CRLF and "$" cannot match before a carriage return, so
-                    // every heading read as missing and the whole file was appended to itself on every start.
-                    if (Regex.IsMatch(body, @"(?mi)^[ \t]*##+[ \t]*" + Regex.Escape(heading) + @"[ \t\r]*$")) continue;
-                    adding.Append(Chunk(Text, "## " + heading));
-                }
-                if (adding.Length == 0) return;
-                if (!body.EndsWith("\n")) body += Environment.NewLine;
-                Tucked.Write(file, body + adding.ToString(), new UTF8Encoding(false));
-            }
-            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-        }
-
-        private static void TopUpHers()
-        {
-            if (string.IsNullOrEmpty(HersKept)) return;
-            if (!File.Exists(HersKept)) MakeHers();
-            TopUpInto(HersKept, true);
-        }
-
         private static void MakeHers()
         {
             try { Tucked.Write(HersKept, HersHead.Replace("\n", Environment.NewLine), new UTF8Encoding(false)); }
-            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-        }
-
-        // Anything of hers left in her interests file after the carve, taken out. Nothing is lost: it is already in
-        // her senpai interests file by the time this runs, and anything only in her interests file is moved rather than dropped.
-        private static void NoHersInRandom()
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(Kept) || string.IsNullOrEmpty(HersKept) || !File.Exists(Kept) || !File.Exists(HersKept)) return;
-                string had = CapriDesktop.Notes.ReadAll(Kept), theirs = File.ReadAllText(HersKept);
-                string[] rows = had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-                List<string> stays = new List<string>(), moves = new List<string>();
-                bool moving = false, found = false;
-                foreach (string raw in rows)
-                {
-                    string line = raw.Trim();
-                    if (line.StartsWith("##", StringComparison.Ordinal))
-                    {
-                        string head = line.TrimStart('#').Trim();
-                        moving = Hers(head);
-                        if (moving)
-                        {
-                            found = true;
-                            // Already over there: drop this copy rather than making a second one.
-                            moving = !Regex.IsMatch(theirs, @"(?mi)^[ \t]*##+[ \t]*" + Regex.Escape(head) + @"[ \t\r]*$")
-                                ? true : false;
-                            if (!moving) { moving = true; moves.Add(null); continue; }
-                        }
-                    }
-                    if (moving) moves.Add(raw); else stays.Add(raw);
-                }
-                if (!found) return;
-                List<string> real = new List<string>();
-                bool skip = false;
-                foreach (string row in moves)
-                {
-                    if (row == null) { skip = true; continue; }
-                    if (row.TrimStart().StartsWith("##", StringComparison.Ordinal)) skip = false;
-                    if (!skip) real.Add(row);
-                }
-                while (stays.Count > 0 && stays[stays.Count - 1].Trim().Length == 0) stays.RemoveAt(stays.Count - 1);
-                Tucked.Write(Kept, string.Join(Environment.NewLine, stays.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
-                if (real.Count > 0)
-                {
-                    if (!theirs.EndsWith("\n")) theirs += Environment.NewLine;
-                    Tucked.Write(HersKept, theirs + string.Join(Environment.NewLine, real.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
-                }
-            }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
@@ -290,18 +205,18 @@ namespace CapriDesktop
             if (!Brain.SenpaiOn) { Gone(); return; }
             if (string.IsNullOrEmpty(Kept)) return;
             Split();
-            NoHersInRandom();
             try
             {
-                if (!File.Exists(Kept)) { Write(false); Split(); }
+                // Written new from stock on each version (Renew); in between only a missing file is written, and the
+                // notes follow her language. With her own file already there, a missing interests file is written
+                // without her sections, which live in hers.
+                if (!File.Exists(Kept))
+                {
+                    if (!string.IsNullOrEmpty(HersKept) && File.Exists(HersKept)) Tucked.Write(Kept, RandomText, new UTF8Encoding(false));
+                    else { Write(false); Split(); }
+                }
                 Notes.Refresh(Kept, Text);
-                // Each section to the file it belongs in. Without this the carve moved her list and her interest
-                // packs out and this put them straight back, so both files had them.
-                TopUpInto(Kept, false);
-                TopUpHers();
-                Reword();
-                OnlyOnce();
-                Settle();
+                if (!string.IsNullOrEmpty(HersKept) && !File.Exists(HersKept)) MakeHers();
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
@@ -322,147 +237,6 @@ namespace CapriDesktop
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return "Gentle";
-        }
-
-        // Puts "how she likes it" back under "what she is into".
-        //
-        // TopUp appends a missing section to the end of the file, and this one belongs near the top with the two
-        // lists people actually edit. At the bottom of a file this long nobody would ever find it.
-        // One of each section, for a file that grew copies of itself.
-        //
-        // The heading check above anchored with "$", which cannot match before the carriage return a CRLF file
-        // puts there, so every heading read as missing and the whole file was appended again on every start.
-        // Measured here at 125 copies of each section and 63,000 lines. The check is fixed; this clears what it
-        // already wrote.
-        //
-        // A line she shipped that was wrong, swapped for the one she ships now. Top up only ever adds what is
-        // missing, so a line already in their file keeps whatever it said for ever, and a weave template is a
-        // sentence she says: a broken one is heard every time it comes round.
-        //
-        // An exact match of what shipped, in the file it shipped in. Anything reworded by hand does not match
-        // and is left alone. The old line is dropped rather than rewritten when the new one is already there,
-        // since top up will have put it in.
-        private static readonly string[,] Reworded =
-        {
-            // "we end up at being told exactly what to do": her list is written as gerunds, so this one template
-            // read as broken English every time it was picked.
-            { "More of this and we end up at %it%.", "More of this and it leads to %it%." },
-            // And the one that replaced it, which still read oddly with a long line: "we end up here: being called good
-            // when I have earned it".
-            { "More of this and we end up here: %it%.", "More of this and it leads to %it%." },
-            { "Ask nicely and it could be %it%.", "Ask nicely and we could get to %it%." },
-            { "Behave like that and there is %it% in it for you.", "Behave like that and I might be talked into %it%." }
-        };
-
-        // Whether a line is already in the section that starts at this row, looking no further than its end.
-        private static bool Holds(string[] rows, int from, string line)
-        {
-            for (int at = from; at < rows.Length; at++)
-            {
-                string one = rows[at].Trim();
-                if (at > from && one.StartsWith("#", StringComparison.Ordinal)) return false;
-                if (string.Equals(one, line, StringComparison.Ordinal)) return true;
-            }
-            return false;
-        }
-
-        private static void Reword()
-        {
-            if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-            try
-            {
-                string had = CapriDesktop.Notes.ReadAll(Kept);
-                string[] rows = had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-                List<string> kept = new List<string>();
-                bool moved = false;
-                for (int at = 0; at < Reworded.GetLength(0); at++)
-                {
-                    // Per section, not per file. The same template is in several sections on purpose, and a
-                    // check across the whole file read the copy in one section as the copy in another, so the
-                    // second one was dropped instead of reworded and that pool came out a line short. Nothing
-                    // puts it back either: these files top up whole missing sections only, by design.
-                    kept.Clear();
-                    bool has = Holds(rows, 0, Reworded[at, 1]);
-                    foreach (string raw in rows)
-                    {
-                        string one = raw.Trim();
-                        if (one.StartsWith("#", StringComparison.Ordinal))
-                        {
-                            kept.Add(raw);
-                            has = Holds(rows, kept.Count, Reworded[at, 1]);
-                            continue;
-                        }
-                        if (!string.Equals(one, Reworded[at, 0], StringComparison.Ordinal)) { kept.Add(raw); continue; }
-                        moved = true;
-                        if (has) continue;
-                        kept.Add(Reworded[at, 1]);
-                        has = true;
-                    }
-                    rows = kept.ToArray();
-                }
-                if (moved) Tucked.Write(Kept, string.Join(Environment.NewLine, rows), new UTF8Encoding(false));
-            }
-            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-        }
-
-        // The first copy is the one kept, because that is the one anyone has edited. Later copies go whole.
-        private static void OnlyOnce()
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-                string had = CapriDesktop.Notes.ReadAll(Kept);
-                string[] rows = had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-                Dictionary<string, bool> seen = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
-                List<string> kept = new List<string>();
-                bool skipping = false, dropped = false;
-                foreach (string raw in rows)
-                {
-                    string line = raw.Trim();
-                    if (line.StartsWith("##", StringComparison.Ordinal))
-                    {
-                        string head = line.TrimStart('#').Trim();
-                        if (seen.ContainsKey(head)) { skipping = true; dropped = true; continue; }
-                        seen[head] = true;
-                        skipping = false;
-                    }
-                    if (!skipping) kept.Add(raw);
-                }
-                if (!dropped) return;
-                while (kept.Count > 0 && kept[kept.Count - 1].Trim().Length == 0) kept.RemoveAt(kept.Count - 1);
-                Tucked.Write(Kept, string.Join(Environment.NewLine, kept.ToArray()) + Environment.NewLine, new UTF8Encoding(false));
-            }
-            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-        }
-
-        private static void Settle()
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-                List<string> rows = new List<string>(CapriDesktop.Notes.ReadAll(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'));
-                // Every copy comes out, then one goes back in the right place. Appending and moving on separate
-                // runs left two of it, and a settings section that exists twice is worse than one in the wrong spot.
-                List<string> block = null;
-                for (int from = Heading(rows, "## " + HandlingKey); from >= 0; from = Heading(rows, "## " + HandlingKey))
-                {
-                    int ends = Next(rows, from);
-                    if (block == null) block = rows.GetRange(from, ends - from);
-                    rows.RemoveRange(from, ends - from);
-                }
-                int into = Heading(rows, "## what she is into");
-                if (block == null || into < 0) return;
-                rows.InsertRange(Next(rows, into), block);
-                Tucked.Write(Kept, string.Join(Environment.NewLine, rows.ToArray()).TrimEnd() + Environment.NewLine, new UTF8Encoding(false));
-            }
-            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-        }
-
-        private static int Heading(List<string> rows, string named)
-        {
-            for (int at = 0; at < rows.Count; at++)
-                if (string.Equals(rows[at].Trim(), named, StringComparison.OrdinalIgnoreCase)) return at;
-            return -1;
         }
 
         // The line the next section starts on, trailing blanks left with the section being moved.
@@ -525,24 +299,17 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
-        // A whole sentence built from one of her templates and one thing off the list, or null when she has either
-        // nothing listed or no way to say it. This is what makes the list touch everything: it is attached to her
-        // ordinary reactions rather than kept in a pool of its own.
-        // Lines belonging to one named interest. A name on the list with a matching "## interest: name" section brings its
-        // own lines in, so turning one on opens a path rather than only filling a blank in a template.
-        // A trailing "*" in the list marks a name that ships its own pack. It is a note to whoever is reading the
-        // file, so it comes off before the name is looked up or spoken: without this, uncommenting a starred line
-        // put the star into her mouth.
+        // A sentence from one of her templates and one thing off the list, or null, attached to her ordinary reactions.
+        // A "## interest: name" section brings that interest's own lines; a trailing "*" marks a shipped pack and comes
+        // off before use.
         private static string Named(string line) { return Regex.Replace((line ?? "").Trim(), @"\s*\*+$", "").Trim(); }
 
-        // What the character she is being is into, when her own pack carries a list of it. The shared list is
-        // everyone's, so it has the gentlest pack promising what the hardest would and the other way round. Null
-        // when her pack says nothing, and then the shared one answers as it always did.
+        // What the character she is being is into, when her pack carries its own list; otherwise null and the shared
+        // list answers, which would have the gentlest pack promising what the hardest would.
         private static string Hers()
         {
-            // Behind the switch, and said twice: her pack's list of this is written into the senpai half of her file,
-            // which a censored install does not have, and this never asks for it there either. A section
-            // somebody writes by hand into the plain half stays unread, which is the rule everywhere else.
+            // Behind the switch twice: her pack's list lives in the senpai half, which a censored install lacks, and
+            // isn't asked for there either. A section hand-written into the plain half stays unread.
             if (!Brain.SenpaiLive) return null;
             try
             {
@@ -591,10 +358,7 @@ namespace CapriDesktop
                         string one = (raw ?? "").Trim();
                         if (one.StartsWith("#"))
                         {
-                            // A single # is the file's title, not a section. Her senpai interests file is titled "What she
-                            // is into" and has a "## what she is into" under it, so counting the title as a
-                            // section put everything between the two into her list, the reset marker with it.
-                            // She offered "Reset to stock: 0 is on the table."
+                            // A single # is the file's title, not a section, so the title isn't read into her list.
                             under = one.StartsWith("##", StringComparison.Ordinal) ? one.TrimStart('#').Trim() : null;
                             continue;
                         }
@@ -694,9 +458,8 @@ namespace CapriDesktop
                         string one = (raw ?? "").Trim();
                         if (one.StartsWith("#"))
                         {
-                            // A single # is the file's title, not a section of it. Her senpai interests file is titled "What she is
-                            // into" and has a "## what she is into" under it, so counting the title as a section put
-                            // everything between the two into her list. She offered "Reset to stock: 0 is on the table."
+                            // A single # is the file's title, not a section, so the senpai interests file's title isn't
+                            // read into her list.
                             under = one.StartsWith("##", StringComparison.Ordinal) ? one.TrimStart('#').Trim() : null;
                             continue;
                         }
@@ -720,12 +483,8 @@ namespace CapriDesktop
             catch (Exception) { return null; }
         }
 
-        // Offered but switched off, so her file is a menu rather than a blank. Ordinary, legal and widely written
-        // about; anything that needs a real person who cannot agree to it is not here and will not be. A star marks
-        // one with its own pack below, which is what turns a name into lines of its own.
-        // The rest of her list, which is not in this source and not in the public build. Something
-        // attaches it before her file is written; with nothing attached the extra lines are simply
-        // absent, which is what a censored install wants.
+        // Offered but switched off, so her file is a menu rather than a blank; nothing needing a person who can't agree
+        // is here. The rest of her list isn't in this source; with nothing attached the lines are simply absent.
         internal static string[] SenpaiMore = new string[0];
 
         // The body of her file, which is not in this source and not in the public build. Something
@@ -744,6 +503,25 @@ namespace CapriDesktop
         }
 
         internal static string YoursText { get { return YoursHead.Replace("\n", Environment.NewLine); } }
+
+        // Her interests file as it is written fresh: the whole text less her own sections, which go to her_interests.
+        internal static string RandomText
+        {
+            get
+            {
+                string whole = Text;
+                if (string.IsNullOrEmpty(whole)) return whole;
+                StringBuilder made = new StringBuilder();
+                bool moving = false;
+                foreach (string raw in whole.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+                {
+                    string line = raw.Trim();
+                    if (line.StartsWith("##", StringComparison.Ordinal)) moving = Hers(line.TrimStart('#'));
+                    if (!moving) made.Append(raw).Append(Environment.NewLine);
+                }
+                return made.ToString().TrimEnd() + Environment.NewLine;
+            }
+        }
 
         internal static string Text
         {

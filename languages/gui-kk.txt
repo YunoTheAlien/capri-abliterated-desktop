@@ -204,3 +204,18 @@ Running on this PC	Осы PC-де іске қосылған
 NORMAL	ҚАЛЫПТЫ
 OFF	ӨШІРУЛІ
 Local server address	Жергілікті сервер мекенжайы
+Remember panel position	Панель орнын есте сақтау
+Custom colours	Өз түстерің
+Custom colours...	Өз түстерің...
+Choose	Таңдау
+Hers	Өзінікі
+Quiet	Үнсіз
+Quiet min	Үнсіз min
+Quiet max	Үнсіз max
+Until I turn it off	Өзім өшіргенше
+Quiet on calls	Қоңырау кезінде үнсіз
+Quiet in videos	Бейнеде үнсіз
+Quiet until {n}:{n}	{n}:{n} дейін үнсіз
+Quiet until turned off	Өшірілгенше үнсіз
+Export settings	Баптауларды экспорттау
+Import settings	Баптауларды импорттау

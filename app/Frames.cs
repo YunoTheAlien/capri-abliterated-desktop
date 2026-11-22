@@ -337,7 +337,7 @@ namespace CapriDesktop
                 if (!opened) return false;
                 // Lost to a mode change or a window taking the screen, it waits for that to settle before it tries again, even by
                 // copying the screen: a new device on every frame meanwhile can hang the graphics driver under a game
-                // (john_sandevistan, 2 Nov: Valorant crashed as the Mainframe opened).
+                // (john_sandevistan).
                 long now = clock();
                 if (area.Width <= 0 || area.Height <= 0)
                 {
@@ -481,9 +481,8 @@ namespace CapriDesktop
             else unmap(context, staging, 0);
         }
 
-        // A frame wider than maxWidth shrinks straight out of the capture in one pass. It used to be copied at full size, then
-        // shrunk again by GDI+: two passes over a 1440p or 4K frame for every clip frame while a game runs (Lachy, 2 Nov: the PC
-        // lagged while clipping, and one clip came out at 4 fps).
+        // A frame wider than maxWidth shrinks straight out of the capture in one pass, so a 1440p or 4K game isn't
+        // copied twice per clip frame (Lachy).
         internal unsafe Bitmap Copy(int maxWidth)
         {
             if (maxWidth <= 0) throw new ArgumentOutOfRangeException("maxWidth");

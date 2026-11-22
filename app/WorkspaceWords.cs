@@ -36,10 +36,8 @@ namespace CapriDesktop
         internal int From, Length;   // Where it came from in the text, in chars, without the last line's ending.
     }
 
-    // Claude's Markdown, read into blocks of styled runs for the Workspace transcript, and the plain text for copying them.
-    // It is CommonMark with GitHub's tables, task boxes, ~~strike~~ and bare addresses, bent where Claude's replies need it:
-    // Windows paths keep their backslashes, globs and file names keep their stars and underscores, a numbered list counts
-    // on the way a browser shows it, and any mark with no partner stays as typed.
+    // Claude's Markdown read into styled runs, plus plain text for copying: CommonMark with GitHub's tables, task
+    // boxes, strike and bare links, keeping Windows paths, globs and file names as typed; an unpaired mark stays.
     internal static class WorkWords
     {
         internal const string Dot = "\u2022", Box = "\u2610", Ticked = "\u2611";
@@ -1349,10 +1347,8 @@ namespace CapriDesktop
             }
         }
 
-        // A reply cut at every length: nothing throws, and every block but the last stays as the whole reply has it. The
-        // block before the last may change too in two cases: the text stops mid-line, and that unfinished line stops being a
-        // heading, rule, item or fence and joins it ("#" becoming "#hashtag"); or it is a table, which takes the next line
-        // as a row once a pipe arrives in it.
+        // A reply cut at every length: nothing throws, and every block but the last matches the whole reply's, except a
+        // cut mid-line or inside a table, where the block before it may change too.
         private static void Streams(List<string> failed, string reply)
         {
             List<WordBlock> whole = new BlockReader(reply).Read();
@@ -1398,10 +1394,8 @@ namespace CapriDesktop
             Sound(failed, text, blocks);
         }
 
-        // Nothing typed goes missing: the letters, emoji and other word characters of the input come out in the same order
-        // across the blocks' code languages, run text and link addresses. Marks, digits and spaces are left out of the
-        // count, because those are what the reader is allowed to take away or renumber, and so are the words after a code
-        // fence's language, which CommonMark drops too.
+        // Nothing typed goes missing: the input's letters and emoji come out in order across code languages, text and
+        // link addresses. Marks, digits and spaces aren't counted, nor words after a fence's language.
         private static void Sound(List<string> failed, string text, List<WordBlock> blocks)
         {
             StringBuilder shown = new StringBuilder(), typed = new StringBuilder();
@@ -1492,6 +1486,15 @@ namespace CapriDesktop
             List<string> failed = WorkWords.Check();
             if (failed.Count > 0) throw new Exception(failed.Count + " Workspace Markdown checks failed. First: " + failed[0]);
             checks.Add("PASS workspace Markdown reads every case, paste, streamed cut, random string and 200,000-character input right (" + took.ElapsedMilliseconds + " ms)");
+            // Her security files from Claude Code: refused by her hook in every mode, and denied in the settings it gets.
+            string data = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "capri-guarded-" + Guid.NewGuid().ToString("N").Substring(0, 6));
+            try
+            {
+                string wrong = Workspace.GuardedCheck(data);
+                if (wrong != null) throw new Exception("Workspace's guard on her security files went wrong: " + wrong);
+            }
+            finally { try { System.IO.Directory.Delete(data, true); } catch (System.IO.IOException) { } }
+            checks.Add("PASS Workspace refuses Claude Code writing, editing, deleting or naming in a command her security files (approved.txt, guard.txt, plugins-on.txt, the overrides, sign-ins and her settings.json), in every mode, and leaves other projects' files and reading alone");
         }
     }
 }

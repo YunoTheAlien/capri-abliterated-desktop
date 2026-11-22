@@ -4,20 +4,8 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
-    // The last pass over a line she has built, and the same rules offered as a check over anybody's writing.
-    //
-    // Her lines are assembled from parts: an opener, a core, a tail, and now and then a woven promise. Every
-    // join is a place two correct fragments make one wrong sentence, and the faults are always the same
-    // handful: a capital in the middle, punctuation doubled at a seam, a space before a comma, "a" in front of
-    // a vowel, a word said twice across a join.
-    //
-    // Lint already checks the pools as they are written, which catches a bad fragment at the source. This is
-    // the other end: what she is about to say, mended after the parts are joined, because some faults only
-    // exist once the parts are together.
-    //
-    // Deliberately small and deliberately certain. Everything here is a fault in any sentence, so nothing has
-    // to understand what she means, and nothing can turn a line she meant into one she did not. Her voice,
-    // her slang and her shouting are left exactly as written.
+    // The last pass over a line she has built, mending what joins break: a capital mid-sentence, doubled punctuation, a
+    // space before a comma, "a" before a vowel, a word said twice. Only certain faults, so her voice is never changed.
     internal static class Grammar
     {
         internal sealed class Fault
@@ -34,14 +22,24 @@ namespace CapriDesktop
             return Mend(said, out found);
         }
 
-        internal static string Mend(string said, out List<Fault> found)
+        // A line picked whole has no seams, so a word said twice in it is meant: "Knock knock", "Nope nope nope".
+        internal static string Mend(string said, bool whole)
+        {
+            List<Fault> found;
+            return Mend(said, out found, whole);
+        }
+
+        internal static string Mend(string said, out List<Fault> found) { return Mend(said, out found, false); }
+
+        private static string Mend(string said, out List<Fault> found, bool whole)
         {
             found = new List<Fault>();
-            if (string.IsNullOrEmpty(said)) return said;
+            // A meme line is said exactly as written (Sayings.MemeMark).
+            if (string.IsNullOrEmpty(said) || said.TrimStart().StartsWith("~", StringComparison.Ordinal)) return said;
             string was = said;
 
-            // A space before punctuation that never takes one.
-            said = Note(found, "a space before punctuation", was, Regex.Replace(said, @"[ \t]+([,.;:!?])", "$1"));
+            // A space before punctuation that never takes one. An ellipsis opening a phrase keeps the space before it.
+            said = Note(found, "a space before punctuation", was, Regex.Replace(said, @"[ \t]+([,;:!?]|\.(?!\.))", "$1"));
             // Two spaces where one belongs. Not at the start of a line: her .md files use indents of their own.
             was = said;
             said = Note(found, "a double space", was, Regex.Replace(said, @"(?<=\S)[ \t]{2,}(?=\S)", " "));
@@ -56,7 +54,7 @@ namespace CapriDesktop
             said = Note(found, "a capital mid-sentence", was, Lowered(said));
             // The same word twice across a join: "and and", "you you".
             was = said;
-            said = Note(found, "a word said twice", was, Regex.Replace(said, @"(?<![\p{L}'])(\p{L}{1,12})([ \t]+)\1(?![\p{L}'])", "$1", RegexOptions.IgnoreCase));
+            if (!whole) said = Note(found, "a word said twice", was, Regex.Replace(said, @"(?<![\p{L}'])(\p{L}{1,12})([ \t]+)\1(?![\p{L}'])", "$1", RegexOptions.IgnoreCase));
             // "a" in front of a vowel, and "an" in front of a consonant.
             was = said;
             said = Note(found, "a or an", was, Articles(said));
@@ -66,8 +64,9 @@ namespace CapriDesktop
             said = Note(found, "no space after punctuation", was,
                 Regex.Replace(said, @"(?<![\d\p{L}]\.[\p{L}\d]{0,6})([,;])(?=\p{L})", "$1 "));
             was = said;
+            // The last dot of an ellipsis is not a full stop: "...Fine." is written that way.
             said = Note(found, "no space after a full stop", was,
-                Regex.Replace(said, @"(?<!\p{Lu})(?<!\d)\.(?=\p{Lu}\p{Ll})", ". "));
+                Regex.Replace(said, @"(?<!\p{Lu})(?<!\d)(?<!\.)\.(?=\p{Lu}\p{Ll})", ". "));
             // A lower case letter starting a sentence.
             was = said;
             said = Note(found, "a sentence not starting with a capital", was,
@@ -87,11 +86,8 @@ namespace CapriDesktop
             return found;
         }
 
-        // A look over somebody's writing, in her voice rather than as a list of rule names: what she found, and
-        // the mended text to copy. Nothing is changed where they wrote it; this hands back a copy.
-        //
-        // The same rules she holds herself to, which is the point of it being offered at all: it needs no brain,
-        // nothing is sent anywhere, and it works with her offline.
+        // A look over somebody's writing in her voice: what she found and a mended copy, the original left alone. The
+        // same rules she holds herself to; no brain and nothing sent.
         internal static string Checked(string text, out string mended)
         {
             mended = text;

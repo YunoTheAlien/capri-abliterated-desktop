@@ -39,6 +39,8 @@ namespace CapriDesktop
         // While the tips smoke runs, only the pointer moves it sends count: a real pointer resting over the Mainframe would open the
         // tip under it instead.
         private bool tipsDriven, tipSent;
+        // While a check drives the tips, what last put one away, so a tip that never shows says why.
+        private string hintDropped, hintRefused;
         private IntPtr hintMouseWindow;
 
         [StructLayout(LayoutKind.Sequential)]
@@ -148,6 +150,7 @@ namespace CapriDesktop
             Explain(notesKey, "MD editor");
             Explain(filesKey, "MD editor", "Mainframe.cs", null, "Her folder");
             Explain(memoriesKey, "Remember our chats", "Mainframe.cs", null, "Her memories");
+            Explain(gifsKey, "Her GIFs", "Mainframe.cs", null, "Her GIFs");
             Explain(popTimes, "Pop-ins", "Mainframe.cs", null, "Pop-in times");
             Explain(gameNotes, "game_notes", "Hands.cs", null, "Game controls");
             Explain(miniGames, "mini_game", "Hands.cs", null, "Mini-games");
@@ -187,6 +190,10 @@ namespace CapriDesktop
             // Lachy's line is the whole tip here. What the setting does is in SelfKnow, for when they ask her.
             hints[legacyStand].Exact = Mods.LegacyTip;
             hints[legacyStand].Title = "";
+            // One sentence is the whole tip for Remember panel position; what it does is in SelfKnow.
+            hints[rememberPanel].Exact = PanelTip;
+            hints[rememberPanel].Title = "";
+            Explain(customColours, "Custom colours");
             hintDelay.Tick += delegate { ShowHint(); };
             Deactivate += delegate { DismissHint(); };
             VisibleChanged += delegate { if (!Visible) DismissHint(); };
@@ -253,10 +260,20 @@ namespace CapriDesktop
         {
             hintDelay.Stop();
             SettingHint hint = waitingHint;
-            if (hint == null || !HintShows(hint) || Control.MouseButtons != MouseButtons.None || (mouseHint ? overHint != hint : !hint.Control.ContainsFocus)) { DismissHint(); return; }
+            if (hint == null || !HintShows(hint) || Control.MouseButtons != MouseButtons.None || (mouseHint ? overHint != hint : !hint.Control.ContainsFocus))
+            {
+                if (tipsDriven) hintRefused = hint == null ? "no tip waiting" : !HintShows(hint) ? "its control not showing" : Control.MouseButtons != MouseButtons.None ? "a button held" : "the pointer or focus moved off";
+                DismissHint();
+                return;
+            }
             if (hintCard == null) hintCard = new HintCard();
             Rectangle area = Screen.FromRectangle(hint.Bounds).WorkingArea;
-            if (!hintCard.Place(hint.Title, HintFacts(hint), Unit(), hint.Bounds, area)) { DismissHint(); return; }
+            if (!hintCard.Place(hint.Title, HintFacts(hint), Unit(), hint.Bounds, area))
+            {
+                if (tipsDriven) hintRefused = "no room beside " + hint.Bounds + " in " + area;
+                DismissHint();
+                return;
+            }
             hint.Text = hintCard.Body;
             DescribeHint(hint);
             hintCard.Show(this);
@@ -267,6 +284,13 @@ namespace CapriDesktop
 
         private void DismissHint()
         {
+            if (tipsDriven && (waitingHint != null || HintUp))
+            {
+                System.Diagnostics.StackTrace trail = new System.Diagnostics.StackTrace(1, false);
+                List<string> callers = new List<string>();
+                for (int i = 0; i < Math.Min(3, trail.FrameCount); i++) callers.Add(trail.GetFrame(i).GetMethod().Name);
+                hintDropped = string.Join(" < ", callers.ToArray());
+            }
             hintDelay.Stop();
             waitingHint = null;
             if (hintCard != null && !hintCard.IsDisposed) hintCard.Hide();
@@ -325,6 +349,7 @@ namespace CapriDesktop
             internal HintCard()
             {
                 FormBorderStyle = FormBorderStyle.None;
+                Neon.NeverFullScreen(this);
                 AutoScaleMode = AutoScaleMode.None;
                 StartPosition = FormStartPosition.Manual;
                 ShowInTaskbar = false;
@@ -456,7 +481,7 @@ namespace CapriDesktop
                 title = name;
                 Body = "";
                 int pad = (int)Math.Ceiling(12 * unit), gap = (int)Math.Ceiling(8 * unit);
-                // Measured with no width, a title wraps after every letter, which squashed the call panel's tips (Lachy, 7 Nov).
+                // Measured with no width, a title wraps after every letter, which squashed the call panel's tips (Lachy).
                 Size words = Measure(name, titleFont, Math.Min((int)Math.Round(360 * unit), area.Width) - pad * 2);
                 titleBox = new Rectangle(pad, pad, words.Width, words.Height);
                 bodyBox = Rectangle.Empty;

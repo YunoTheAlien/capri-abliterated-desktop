@@ -9,11 +9,8 @@ using System.Windows.Forms;
 
 namespace CapriDesktop
 {
-    // Her menus, buttons and labels in the language picked for her. Each language is a plain file of lines, the
-    // English text, a tab, then the translation: one built into her, and a languages\gui-<code>.txt in her folder
-    // over the top of it, so a word can be changed without a new build. Anything neither has goes to her brain,
-    // the same as a line of hers, and shows in English until it comes back. With no language picked nothing
-    // changes at all.
+    // Her menus, buttons and labels in the picked language: built-in lines plus languages\gui-<code>.txt over them,
+    // English, a tab, then the translation. Anything missing goes to her brain and shows in English until it's back.
     internal static class Gui
     {
         private static readonly object gate = new object();
@@ -34,9 +31,8 @@ namespace CapriDesktop
             catch (Exception) { return english; }
         }
 
-        // A label's plain form: what it says once the decoration is off. " >" after a submenu's name, "..." after
-        // a key that opens something, and the numbers, which become a {n} slot, so "MODS >" reads the row for
-        // "Mods" and "90 min" the row for "{n} min". One row then serves every way the label is shown.
+        // A label's plain form, decoration off: " >" after a submenu, "..." after a key, and numbers as a {n} slot, so
+        // "MODS >" reads the row for "Mods" and "90 min" the row for "{n} min". One row serves every way it shows.
         internal static string Core(string english)
         {
             string core = (english ?? "").Trim();
@@ -97,9 +93,8 @@ namespace CapriDesktop
             return language == "Brazilian Portuguese" ? "pt-BR" : Brain.LanguageCode(language);
         }
 
-        // Labels from the codex, one table a language, the English, a tab, then the translation: set when the codex
-        // is opened, or on the build that has them attached. Read only while the switch is live, and never written to
-        // her tables or her folder, so they are only ever where the codex is.
+        // Labels from the codex, one table a language, English, a tab, then the translation. Read only while the switch
+        // is live and never written to her tables or folder, so they exist only where the codex is.
         internal static Dictionary<string, string> CodexTables;
         private static readonly Dictionary<string, Dictionary<string, string>> codexRead = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
 
@@ -160,24 +155,37 @@ namespace CapriDesktop
         }
 
         // ---------- Menus ----------
-        // A menu is translated each time it opens, since some of her items change their own text as she goes ("Sit
-        // here" and "Stand up"). The English each item last showed is remembered, so a text the code set again is
-        // read as new English and a translation is never translated twice.
+        // Translated on each open, since some items change their own text. The English each item last showed is kept,
+        // so code-set text is read as new and nothing is translated twice.
 
         private sealed class Seen
         {
-            internal string English, Shown, TipEnglish, TipShown;
+            internal string English, Shown, TipEnglish, TipShown, Language;
             internal bool Hooked;
+            internal Action Apply;
         }
 
         private static readonly ConditionalWeakTable<ToolStripItem, Seen> seen = new ConditionalWeakTable<ToolStripItem, Seen>();
 
         // ---------- Windows ----------
-        // Every label, check box and ordinary button in a window, translated once and again each time the code sets
-        // its text. Text boxes are what they type, and her own drawn keys translate themselves as they draw, so
-        // both are left alone. Safe to call on a window as often as wanted: each control is hooked once.
+        // Every label, check box and button in a window, translated once and again when the code sets its text; text
+        // boxes and her drawn keys are left alone. Safe to call often; a kept window follows a language change.
 
         private static readonly ConditionalWeakTable<Control, Seen> seenControls = new ConditionalWeakTable<Control, Seen>();
+
+        private static string windowsIn;
+
+        // Every window she has made, hidden kept ones too, while a language is picked, and once more after it is
+        // cleared so the English comes back.
+        internal static void Windows()
+        {
+            string language = Brain.Language;
+            if (language == null && windowsIn == null) return;
+            windowsIn = language;
+            List<Form> open = new List<Form>();
+            foreach (Form one in Application.OpenForms) open.Add(one);
+            foreach (Form one in open) Window(one);
+        }
 
         internal static void Window(Control root)
         {
@@ -185,17 +193,26 @@ namespace CapriDesktop
             foreach (Control child in root.Controls) Window(child);
             if (root is TextBoxBase || root is ComboBox || root is Form || root.GetType().Name == "Key") return;
             Seen was;
-            if (seenControls.TryGetValue(root, out was)) return;
+            if (seenControls.TryGetValue(root, out was))
+            {
+                if (was.Apply != null && was.Language != Brain.Language) was.Apply();
+                return;
+            }
             was = seenControls.GetOrCreateValue(root);
             was.Hooked = true;
             Control control = root;
             Action apply = delegate
             {
-                if (control.IsDisposed || string.IsNullOrEmpty(control.Text) || control.Text == was.Shown) return;
-                was.English = control.Text;
+                if (control.IsDisposed || string.IsNullOrEmpty(control.Text)) return;
+                string language = Brain.Language;
+                if (control.Text == was.Shown && language == was.Language) return;
+                // Text that is not the last one shown was set by the code: it is the new English.
+                if (control.Text != was.Shown) was.English = control.Text;
+                was.Language = language;
                 was.Shown = T(was.English);
                 if (was.Shown != control.Text) control.Text = was.Shown;
             };
+            was.Apply = apply;
             control.TextChanged += delegate { apply(); };
             control.ControlAdded += delegate(object sender, ControlEventArgs added) { Window(added.Control); };
             apply();

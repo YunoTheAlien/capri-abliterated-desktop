@@ -17,10 +17,8 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
-    // Fingerprints of her sealed keys: a one-way SHA-256 of each key, filed against the sealed copy it was made with.
-    // Her log is scrubbed of keys by comparing fingerprints, so nothing has to be decrypted to keep a key out of it; a
-    // key is opened only when it is used. A key sealed before fingerprints existed is opened once to make its own, and
-    // never again for this. The file holds no key and nothing a key can be worked back from.
+    // Fingerprints of her sealed keys, one-way SHA-256, so her log is scrubbed of keys without decrypting any. An old
+    // key is opened once to make its own; the file holds nothing a key can be worked back from.
     internal static class KeyPrints
     {
         internal static string Kept;
@@ -147,7 +145,7 @@ namespace CapriDesktop
     internal sealed class Voice
     {
         internal static string Host = "https://api.elevenlabs.io";
-        // Her lines off a call use v4 unless they pick another (Lachy, 1 Nov), and fall back to the model every account can use.
+        // Her lines off a call use v4 unless they pick another (Lachy), and fall back to the model every account can use.
         internal const string DefaultModel = "eleven_v4_turbo";
         internal const string CallModel = "eleven_flash_v2_5";
         // Her voice chat agent's stability, similarity and speed as JSON, so she's the same person on a call and off it.
@@ -241,22 +239,34 @@ namespace CapriDesktop
             return Regex.IsMatch(Uncued(words), @"[\p{L}\p{Nd}]") ? words : "";
         }
 
-        // Her emotion cues (F54, NoxEterna): a Fish Audio voice says "[laughing] No way!" laughing. A cue is one of Fish Audio's
-        // own names, or a sound a brain tends to write, maybe after "very" or "slightly" and with a word or two more, like
-        // "[whispers sweetly]". Fish Audio's old s1 took its names in round brackets, so "(sad)" is one too. Anything else in
-        // brackets is just text.
+        // Her emotion cues (NoxEterna): a Fish Audio voice says "[laughing] No way!" laughing. A cue is a Fish Audio
+        // name or a sound a brain tends to write, in square or round brackets; anything else in brackets is text.
         internal const string Feelings = "joyful|hyper|wanting|needy|longing|affectionate|loving|giddy|eager|flustered|tender|breathless|wistful|mournful|elated|thrilled|furious|happy|sad|angry|excited|calm|nervous|confident|surprised|satisfied|delighted|scared|worried|upset|frustrated|depressed|empathetic|embarrassed|disgusted|moved|proud|relaxed|grateful|curious|sarcastic|disdainful|unhappy|anxious|hysterical|indifferent|uncertain|doubtful|confused|disappointed|regretful|guilty|ashamed|jealous|envious|hopeful|optimistic|pessimistic|nostalgic|lonely|bored|contemptuous|sympathetic|compassionate|determined|resigned|in a hurry tone|shouting|screaming|whispering|soft tone|laughing|chuckling|sobbing|crying loudly|sighing|groaning|panting";
         private const string Sounds = "emphasis|gasping|yawning|snoring|clear throat|clears throat|long-break|break|laughs?|giggl(?:e|es|ing)|chuckles?|sighs?|gasps?|whispers?|sobs?|cr(?:ying|ies)|sniffl(?:e|es|ing)|groans?|yawns?|scoff(?:s|ing)?|snorts?|hum(?:s|ming)?|pauses?|teasing(?:ly)?|playful(?:ly)?|smug(?:ly)?|flirt(?:y|atious|atiously)|sweetly|softly|warm(?:ly)?|cheerful(?:ly)?|mischievous(?:ly)?|annoyed|pout(?:s|ing)?|gentl(?:e|y)|shy(?:ly)?|sleepy|tired|dramatic(?:ally)?|mock(?:ing|ingly)?|sing(?:s|ing)|cheeky|deadpan|quietly|loudly|evil";
         // Plain tones allowed in round brackets as well as square ones. Short on purpose: round brackets turn up in
         // ordinary writing, so only words nobody puts in a sentence by accident go here.
         private const string Tones = "sleepy|tired|playful|teasing|smug|deadpan|flirty|cheeky|mischievous|softly|sweetly|warmly|gently|quietly|loudly|whispering|laughing|giggling|chuckling|sighing|gasping";
 
-        internal static readonly Regex Cue = new Regex(@"\[\s*(?<cue>(?:(?:very|slightly|extremely|really|super|so|quite|a bit|a little|kind of|kinda)\s+)?(?:" + Feelings + "|" + Sounds + @")(?:[\s-]+[a-z']+){0,3})\s*\](?!\()|\(\s*(?<cue>(?!moved\b)(?:(?:very|slightly|extremely|really|super|so|quite|a bit|a little|kind of|kinda)\s+)?(?:" + Feelings + "|" + Tones + @"))\s*\)", RegexOptions.IgnoreCase);
+        // The same feelings as adverbs, "(smugly)", "[playfully]", which brains write too, and any lone lowercase "-ly"
+        // word in round brackets, like a stage direction, but not words like "(only)" or "(daily)".
+        private static readonly string Adverbs = MakeAdverbs();
 
-        // The first cue in a line, as written. Her Fish Audio voice acts these out itself; every other voice of hers
-        // has to be moved by hand, so this hands the word over and VoiceFeel turns it into pitch and pace.
-        // Whether a word is one her cue vocabulary knows, so a mood can be offered as a cue without inventing
-        // one. Her moods are named like feelings on purpose, and the ones that are not simply do not become cues.
+        private static string MakeAdverbs()
+        {
+            List<string> made = new List<string>();
+            foreach (string word in (Feelings + "|" + Tones).Split('|'))
+            {
+                if (word.Length < 3 || word.IndexOfAny(new[] { '(', '[', '?', '\\', ' ' }) >= 0 || word.EndsWith("ly", StringComparison.Ordinal)) continue;
+                string adverb = word.EndsWith("y", StringComparison.Ordinal) ? word.Substring(0, word.Length - 1) + "ily" : word.EndsWith("le", StringComparison.Ordinal) ? word.Substring(0, word.Length - 1) + "y" : word + "ly";
+                if (!made.Contains(adverb)) made.Add(adverb);
+            }
+            return string.Join("|", made.ToArray());
+        }
+
+        internal static readonly Regex Cue = new Regex(@"\[\s*(?<cue>(?:(?:very|slightly|extremely|really|super|so|quite|a bit|a little|kind of|kinda)\s+)?(?:" + Feelings + "|" + Sounds + "|" + Tones + "|" + Adverbs + @")(?:[\s-]+[a-z']+){0,3})\s*\](?!\()|\(\s*(?<cue>(?!moved\b)(?:(?:very|slightly|extremely|really|super|so|quite|a bit|a little|kind of|kinda)\s+)?(?:" + Feelings + "|" + Tones + "|" + Adverbs + @"))\s*\)|\(\s*(?<cue>(?!(?:only|early|daily|weekly|monthly|yearly|hourly|nightly|family|reply|apply|supply|ugly|holy|july|italy|bully|belly|jelly|rally|ally|lily|assembly|anomaly|monopoly|homily|comply|imply|multiply)\s*\))[a-z]+ly)\s*\)", RegexOptions.IgnoreCase);
+
+        // The first cue in a line: Fish Audio acts it out, and VoiceFeel turns it into pitch and pace for her other
+        // voices. Whether a word is a known cue, so a mood can be offered as one without inventing it.
         internal static bool Feeling(string word)
         {
             if (string.IsNullOrEmpty(word)) return false;
@@ -391,7 +401,7 @@ namespace CapriDesktop
                 string detail;
                 using (response)
                 using (StreamReader reader = new StreamReader(response.GetResponseStream())) detail = reader.ReadToEnd();
-                // They only see her short line, so errors.txt keeps ElevenLabs' own answer for Copy error details.
+                // They only see her short line, so errors.txt keeps ElevenLabs' own answer for Save log.
                 string said = Regex.Replace(detail ?? "", @"\s+", " ").Trim();
                 Brain.Log(request.RequestUri.GetLeftPart(UriPartial.Path), -1, "HTTP " + status + " " + (said.Length > 200 ? said.Substring(0, 200) : said));
                 throw new VoiceException(Explain(status, detail), status);
@@ -456,7 +466,7 @@ namespace CapriDesktop
 
         internal static T Read<T>(byte[] json) { using (MemoryStream stream = new MemoryStream(json)) return (T)new DataContractJsonSerializer(typeof(T)).ReadObject(stream); }
 
-        internal const string Unreadable = "ElevenLabs sent a reply Capri couldn't read. Right-click her, Help, Copy error details, and send it in the Discord.";
+        internal const string Unreadable = "ElevenLabs sent a reply Capri couldn't read. Right-click her, Help, Save log, and send the file in the Discord.";
 
         internal static T Reply<T>(byte[] json, string path)
         {
@@ -530,9 +540,9 @@ namespace CapriDesktop
 #else
             int letters = VoiceServer.Letters(said);
 #endif
-            // ElevenLabs can hand back a clip that ends early, which sounds like her voice stopping mid-reply while the text goes on
-            // (#158). Against this voice's own pace, one far too quick for its words is asked for once more and the longer one kept,
-            // like Fish Audio's pieces. One only a bit quick isn't, since asking again costs them credits, but it's logged too.
+            // ElevenLabs can return a clip that ends early, cutting her off mid-reply. One far too quick for its words,
+            // against this voice's pace, is asked for once more and the longer kept; one only a bit quick is just
+            // logged, since retries cost credits.
             double pace = Pace(paceKey), seconds = Seconds(wav);
             if (Quick(letters, seconds, pace, 1.3, 20))
             {
@@ -731,7 +741,7 @@ namespace CapriDesktop
             if (Silence != null) Silence();
 #else
             // A line stopped with sound still to play goes in errors.txt with what stopped it, so a report of her voice stopping
-            // mid-reply says which part of her did it (ticket 35).
+            // mid-reply says which part of her did it.
             player.Close(true, null);
 #endif
         }
@@ -774,7 +784,43 @@ namespace CapriDesktop
         {
             Action<short[]> output = Out;
             int level = Level;
-            if (output != null && level > 0) output(Make(cue, level));
+            if (output == null || level <= 0) return;
+            short[] made = Make(cue, level);
+            Capped(made, level);
+            output(made);
+        }
+
+        // However loud the PC is turned up, her sounds and her pranks peak no higher than this far under the speakers'
+        // full volume, the same ceiling a mod's sound has. At an ordinary volume nothing changes.
+        internal const double LoudestBelowFull = -20;
+
+        // The speakers' volume in decibels, or full when Windows won't say, which is the safe guess. Tests swap it.
+        internal static Func<double?> SpeakersDecibels = delegate { return Speakers.Decibels(); };
+
+        private static double SpeakersNow()
+        {
+            double? found = null;
+            try { found = SpeakersDecibels(); } catch (Exception) { }
+            return found.HasValue ? Math.Min(0, found.Value) : 0;
+        }
+
+        // A player's volume (0 to 1) brought under the ceiling, for a sound file Windows plays.
+        internal static double SafeVolume(double volume)
+        {
+            return Math.Min(Math.Max(0, Math.Min(1, volume)), Math.Pow(10, (LoudestBelowFull - SpeakersNow()) / 20));
+        }
+
+        // Samples already made at her level, scaled down when their loudest one would pass the ceiling.
+        internal static void Capped(short[] samples, int level)
+        {
+            if (samples == null || samples.Length == 0) return;
+            int peak = 0;
+            foreach (short one in samples) peak = Math.Max(peak, Math.Abs((int)one));
+            if (peak == 0) return;
+            double atPeak = 20 * Math.Log10(peak / 32768.0) + SpeakersNow();
+            if (atPeak <= LoudestBelowFull) return;
+            double scale = Math.Pow(10, (LoudestBelowFull - atPeak) / 20);
+            for (int i = 0; i < samples.Length; i++) samples[i] = (short)Math.Round(samples[i] * scale);
         }
 
         internal static void Type(string text, double pace, int seed)
@@ -885,10 +931,8 @@ namespace CapriDesktop
             }
         }
 
-        // A struck steel pipe. Sweep is tonal, built from a fundamental with a fifth and an octave over it, and a
-        // metal bar is not: its partials sit at awkward ratios, which is what makes it read as metal rather than as
-        // a note. So this has its own: inharmonic partials, a scrape of noise for the strike itself, and a long
-        // ring that outlasts everything else she plays.
+        // A struck steel pipe: inharmonic partials so it reads as metal rather than a note, a scrape of noise for the
+        // strike, and a long ring.
         private static readonly double[] Partials = { 1, 2.76, 5.40, 8.93, 13.34 };
         private static readonly double[] Loudness = { 1, 0.62, 0.38, 0.22, 0.12 };
 
@@ -961,6 +1005,95 @@ namespace CapriDesktop
     // defaults nothing here touches a sample, her HD voice included: it starts dry, like the clip it copies.
     internal static class VoiceFx
     {
+        // A light clean-up for her smaller models' lines: each frequency's noise floor, from the line's quietest tenth,
+        // eased off every 512-sample frame (128 hop, spectral gating), never below a tenth of the frame.
+        // How many lines have been cleaned, for the check that HQ never is and nothing cleans twice.
+        internal static int CleanedLines;
+
+        internal static short[] Clean(short[] pcm, int rate)
+        {
+            System.Threading.Interlocked.Increment(ref CleanedLines);
+            const int n = 512, hop = 128, half = n / 2;
+            if (pcm == null || pcm.Length < n * 2) return pcm;
+            int frames = (pcm.Length - n) / hop + 1;
+            float[] window = new float[n];
+            for (int i = 0; i < n; i++) window[i] = (float)(0.5 - 0.5 * Math.Cos(2 * Math.PI * i / n));
+            float[] loudness = new float[frames];
+            for (int f = 0; f < frames; f++)
+            {
+                double sum = 0;
+                for (int i = 0; i < n; i++) { double one = pcm[f * hop + i] * window[i]; sum += one * one; }
+                loudness[f] = (float)sum;
+            }
+            int[] order = new int[frames];
+            for (int i = 0; i < frames; i++) order[i] = i;
+            Array.Sort((float[])loudness.Clone(), order);
+            int quiet = Math.Max(1, frames / 10);
+            double[] re = new double[n], im = new double[n], floor = new double[half + 1];
+            for (int q = 0; q < quiet; q++)
+            {
+                Frame(pcm, order[q] * hop, window, re, im);
+                for (int k = 0; k <= half; k++) floor[k] += (re[k] * re[k] + im[k] * im[k]) / quiet;
+            }
+            float[] sum2 = new float[pcm.Length], weight = new float[pcm.Length];
+            for (int f = 0; f < frames; f++)
+            {
+                Frame(pcm, f * hop, window, re, im);
+                for (int k = 0; k <= half; k++)
+                {
+                    double power = re[k] * re[k] + im[k] * im[k];
+                    double gain = power <= 0 ? 0 : Math.Sqrt(Math.Max(0.1, (power - 1.5 * floor[k]) / power));
+                    re[k] *= gain; im[k] *= gain;
+                    if (k > 0 && k < half) { re[n - k] = re[k]; im[n - k] = -im[k]; }
+                }
+                Fft(re, im, true);
+                for (int i = 0; i < n; i++)
+                {
+                    int at = f * hop + i;
+                    sum2[at] += (float)(re[i] * window[i]);
+                    weight[at] += window[i] * window[i];
+                }
+            }
+            short[] cleaned = new short[pcm.Length];
+            for (int i = 0; i < pcm.Length; i++)
+                cleaned[i] = weight[i] > 1e-3f ? (short)Math.Max(-32767, Math.Min(32767, Math.Round(sum2[i] / weight[i]))) : pcm[i];
+            return cleaned;
+        }
+
+        private static void Frame(short[] pcm, int start, float[] window, double[] re, double[] im)
+        {
+            for (int i = 0; i < re.Length; i++) { re[i] = pcm[start + i] * window[i]; im[i] = 0; }
+            Fft(re, im, false);
+        }
+
+        private static void Fft(double[] re, double[] im, bool inverse)
+        {
+            int n = re.Length;
+            for (int i = 1, j = 0; i < n; i++)
+            {
+                int bit = n >> 1;
+                for (; (j & bit) != 0; bit >>= 1) j ^= bit;
+                j ^= bit;
+                if (i < j) { double t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; }
+            }
+            for (int len = 2; len <= n; len <<= 1)
+            {
+                double angle = 2 * Math.PI / len * (inverse ? 1 : -1), wr = Math.Cos(angle), wi = Math.Sin(angle);
+                for (int i = 0; i < n; i += len)
+                {
+                    double cr = 1, ci = 0;
+                    for (int k = 0; k < len / 2; k++)
+                    {
+                        int a = i + k, b = i + k + len / 2;
+                        double tr = re[b] * cr - im[b] * ci, ti = re[b] * ci + im[b] * cr;
+                        re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+                        double next = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = next;
+                    }
+                }
+            }
+            if (inverse) for (int i = 0; i < n; i++) { re[i] /= n; im[i] /= n; }
+        }
+
         internal const int MostPitch = 6;
         internal const int Slowest = 70;
         internal const int Fastest = 150;
@@ -974,9 +1107,9 @@ namespace CapriDesktop
         internal static volatile int Glitch;
         internal static volatile int HdGlitch;
         internal static volatile int ServerGlitch;
-        // Her voice layers (Lachy, 29 Oct): Main is her voice as the sliders above make it, and Layer 1 and Layer 2 are copies of
-        // it, each pitched on its own without changing its length, delayed and mixed back in under her. They're off out of the
-        // box, and off leaves every sample alone. Every voice she has gets them, like her pitch, speed, robot and glitch.
+        // Her voice layers (Lachy): Main is her voice as the sliders make it; Layer 1 and 2 are copies pitched without
+        // changing length, delayed and mixed under her. Off out of the box, leaving every sample alone; every voice of
+        // hers gets them.
         internal static volatile Layering Layers = Layering.Off;
         // How loud each layer mixes in under her: 0.4, 8 dB down, so she's doubled with a shimmer rather than singing a chord.
         internal const double LayerLevel = 0.4;
@@ -1145,9 +1278,9 @@ namespace CapriDesktop
         // How much longer the time-stretch makes her for a pitch's ratio and her speed, so the resample brings her back to time.
         private static double Stretch(double lift, int speed) { return lift * 100 / Math.Max(1, speed); }
 
-        // Her voice layers' settings: on or off, and each layer's pitch, -12 to +12 semitones from Main in half steps, and its
-        // delay, 0 to 250 ms. A change makes a new one, so a line she's saying keeps the layers it started with. Layer 1 starts
-        // a little higher than her and Layer 2 lower, both just behind her.
+        // Her voice layers' settings: on or off, each layer's pitch (-12 to +12 semitones from Main) and delay (0 to
+        // 250 ms). A change makes a new one, so a line in progress keeps its layers. Layer 1 starts a little higher,
+        // Layer 2 lower, both just behind.
         internal sealed class Layering
         {
             internal const double MostPitch = 12;
@@ -1204,10 +1337,8 @@ namespace CapriDesktop
             internal string Shown { get { return (On ? "On" : "Off") + " | " + PitchName(Pitch1) + ", " + DelayName(Delay1) + " | " + PitchName(Pitch2) + ", " + DelayName(Delay2); } }
         }
 
-        // Her two layers under her: each a copy of her finished voice, pitched without changing its length (the time-stretch
-        // and resample her HD voice's pitch uses), delayed and mixed in LayerLevel under her, then kept under full scale by a
-        // limiter. Each copy lines up sample for sample with her, so any chunking mixes the same, and Flush lets the delayed
-        // copies ring out past her last word.
+        // Her two layers: copies of her voice pitched without changing length, delayed and mixed in at LayerLevel under
+        // a limiter. Each lines up sample for sample with her, and Flush lets the delayed copies ring out.
         private sealed class Layerer
         {
             private readonly Copy[] copies;
@@ -1316,9 +1447,9 @@ namespace CapriDesktop
             }
         }
 
-        // Keeps her layered voice under full scale. A sample's gain is the least any sample up to 2.5 ms ahead needs, eased in
-        // over those 2.5 ms and let back up over about 60 ms, so a peak is turned down smoothly before it arrives. Below full
-        // scale every sample goes through as it is. Each sample waits only for the 2.5 ms after it, so chunking changes nothing.
+        // Keeps her layered voice under full scale: each sample's gain is the least any sample 2.5 ms ahead needs,
+        // eased in over that and released over about 60 ms. Below full scale samples pass untouched, and chunking
+        // changes nothing.
         private sealed class Limiter
         {
             internal const double Ceiling = 31000;
@@ -1877,9 +2008,9 @@ namespace CapriDesktop
             }
         }
 
-        // Her robot voice, like a talk box: a synth that follows her pitch, pulled toward the nearest note, takes on the shape
-        // of her voice and plays under her. Smooth and musical: nothing is cut, repeated or crushed. Each step waits for what it
-        // reads, so a line streamed in chunks comes out the same as styled whole.
+        // Her robot voice, like a talk box: a synth following her pitch, pulled to the nearest note, shaped by her
+        // voice and played under her, with nothing cut, repeated or crushed. Streamed chunks come out the same as
+        // styled whole.
         private sealed class Vocoder
         {
             private readonly int rate;
@@ -2814,6 +2945,126 @@ namespace CapriDesktop
         }
     }
 
+    // Her free voice at three qualities, one model each beside her pack: HQ is the pack's own, Mixed ours (int8 for
+    // words and timing, full precision for the sound), LQ k2-fsa's int8 Kokoro. The smaller two get VoiceFx.Clean; each
+    // is fetched when picked.
+    internal static class VoiceQuality
+    {
+        internal const string HQ = "hq", Mixed = "mixed", LQ = "lq";
+        internal static readonly string[] All = { HQ, Mixed, LQ };
+        // The menu's names.
+        internal static readonly string[] Labels = { "Her own (HQ)", "Her own (Mixed)", "Her own (LQ)" };
+        internal const string MixedName = "capri-voice-mixed-1.onnx";
+        internal const long MixedSize = 278125275;
+        internal const string MixedSha = "aed884751a5af6a0575b1c5c33f17a3b145b972f2d27babf7ca12bdc21ed468d";
+        // The release it first went out on; empty is this build's own.
+        internal static string MixedTag = "";
+        internal static string LqUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-int8-multi-lang-v1_0.tar.bz2";
+        internal const long LqArchiveSize = 132353410, LqSize = 114202993;
+        internal const string LqArchiveSha = "72c347230107ef8a31098ec4d468a605244beef5f1ed00db97efa13518800653";
+        internal const string LqSha = "75635ea3b85a32d00094dcdd61a258aba87c160f7c264c304a7b3ae9d734195e";
+
+        internal static string Known(string quality) { return Array.IndexOf(All, quality) >= 0 ? quality : HQ; }
+
+        internal static string Label(string quality) { return Labels[Array.IndexOf(All, Known(quality))]; }
+
+        internal static bool Filtered(string quality) { return quality == Mixed || quality == LQ; }
+
+        internal static string FileOf(string quality) { return quality == Mixed ? "model.mixed.onnx" : quality == LQ ? "model.int8.onnx" : "model.onnx"; }
+
+        // What it costs to get, for the menu: nothing for HQ, which is her pack.
+        internal static long Download(string quality) { return quality == Mixed ? MixedSize : quality == LQ ? LqArchiveSize : 0; }
+
+        internal static bool Ready(string folder, string quality)
+        {
+            if (Known(quality) == HQ) return true;
+            FileInfo file = new FileInfo(Path.Combine(folder, FileOf(quality)));
+            return file.Exists && file.Length == (quality == Mixed ? MixedSize : LqSize);
+        }
+
+        // The model to open for it: its own when it's here, HQ's otherwise.
+        internal static string Model(string folder, string quality)
+        {
+            return Path.Combine(folder, FileOf(Ready(folder, quality) ? Known(quality) : HQ));
+        }
+
+        // Each quality opens its own model when it's here and HQ's when it isn't; only Mixed and LQ are cleaned; the clean-up
+        // takes the hiss down without taking her down with it; the choice is one of her settings, so settings.json carries it.
+        internal static void Check(List<string> checks, string root)
+        {
+            string folder = Path.Combine(root, "quality-" + Guid.NewGuid().ToString("N").Substring(0, 6));
+            Directory.CreateDirectory(folder);
+            File.WriteAllBytes(Path.Combine(folder, "model.onnx"), new byte[] { 1 });
+            bool fallsBack = Model(folder, LQ) == Path.Combine(folder, "model.onnx") && Model(folder, Mixed) == Path.Combine(folder, "model.onnx") && !Ready(folder, LQ);
+            using (FileStream lq = File.Create(Path.Combine(folder, FileOf(LQ)))) lq.SetLength(LqSize);
+            bool ownFile = Ready(folder, LQ) && Model(folder, LQ) == Path.Combine(folder, "model.int8.onnx") && Model(folder, HQ) == Path.Combine(folder, "model.onnx") && !Ready(folder, Mixed);
+            string hqModel = Path.Combine(folder, "model.onnx"), lqModel = Path.Combine(folder, "model.int8.onnx");
+            bool filtered = !Filtered(HQ) && Filtered(Mixed) && Filtered(LQ) && Known(null) == HQ && Known("nonsense") == HQ && Labels.Length == All.Length
+                && !LocalVoice.Cleans(folder, HQ, hqModel) && LocalVoice.Cleans(folder, LQ, lqModel) && !LocalVoice.Cleans(folder, LQ, hqModel) && !LocalVoice.Cleans(folder, Mixed, hqModel);
+            int rate = 24000;
+            short[] line = new short[rate];
+            Random noise = new Random(7);
+            for (int i = 0; i < line.Length; i++)
+                line[i] = (short)((i >= rate * 3 / 10 ? 8000 * Math.Sin(2 * Math.PI * 440 * i / rate) : 0) + noise.Next(-300, 301));
+            int before = VoiceFx.CleanedLines;
+            short[] cleaned = VoiceFx.Clean(line, rate);
+            // Her own effects on a line add no clean-up of their own: the one clean-up is this, once.
+            VoiceFx.Kokoro(line, rate, 0, 0, 0, 1);
+            bool once = VoiceFx.CleanedLines == before + 1;
+            Func<short[], int, int, double> rms = delegate(short[] s, int from, int to) { double sum = 0; for (int i = from; i < to; i++) sum += (double)s[i] * s[i]; return Math.Sqrt(sum / (to - from)); };
+            double hissBefore = rms(line, 2000, rate * 3 / 10 - 2000), hissAfter = rms(cleaned, 2000, rate * 3 / 10 - 2000);
+            double voiceBefore = rms(line, rate / 2, rate - 2000), voiceAfter = rms(cleaned, rate / 2, rate - 2000);
+            bool cleans = cleaned.Length == line.Length && hissAfter < hissBefore * 0.6 && Math.Abs(voiceAfter - voiceBefore) < voiceBefore * 0.15;
+            System.Reflection.FieldInfo kept = typeof(Preferences).GetField("FreeQuality");
+            bool saved = kept != null && kept.IsDefined(typeof(System.Runtime.Serialization.DataMemberAttribute), false);
+            try { Directory.Delete(folder, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            if (!fallsBack || !ownFile || !filtered || !cleans || !saved || !once)
+                throw new Exception("Her voice's qualities went wrong: HQ when missing " + fallsBack + ", own file " + ownFile + ", filter only on Mixed and LQ " + filtered + ", clean-up " + cleans + " (hiss " + hissBefore.ToString("0") + " to " + hissAfter.ToString("0") + ", voice " + voiceBefore.ToString("0") + " to " + voiceAfter.ToString("0") + "), kept in her settings " + saved + ", cleaned once and only by the clean-up " + once);
+            checks.Add("PASS her voice's three qualities: each opens its own model when it's here and HQ's when it isn't, only Mixed and LQ are cleaned and HQ never is, even standing in for them, nothing else cleans a line, the clean-up takes hiss from " + hissBefore.ToString("0") + " to " + hissAfter.ToString("0") + " and leaves her voice within 15%, and the choice is one of her settings");
+        }
+
+        internal static void Fetch(string folder, string quality, Action<string, long, long> progress, Func<bool> stopped)
+        {
+            if (Ready(folder, quality)) return;
+            string target = Path.Combine(folder, FileOf(quality));
+            if (quality == Mixed)
+            {
+                Engine.Fetch(ReleaseFile.Address(MixedName, MixedTag), target, MixedSize, MixedSha, "her Mixed voice", progress, stopped);
+                return;
+            }
+            // LQ comes inside k2-fsa's archive: only its model is kept, beside her own voices.
+            string archive = folder + ".lq.tar.bz2", staging = folder + ".lq", kept = staging + ".onnx";
+            Engine.Fetch(LqUrl, archive, LqArchiveSize, LqArchiveSha, "her LQ voice", progress, stopped);
+            try
+            {
+                TarReader.Clean(staging);
+                using (FileStream packed = new FileStream(archive, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20))
+                using (Stream plain = Bunzip.Open(packed))
+                {
+                    TarReader.Unpack(plain, staging, true, delegate(string path)
+                    {
+                        if (Path.GetFileName(path) == "model.int8.onnx") return new FileStream(kept, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20);
+                        return Stream.Null;
+                    });
+                    plain.CopyTo(Stream.Null);
+                }
+                if (!File.Exists(kept) || !string.Equals(Engine.Hash(kept), LqSha, StringComparison.OrdinalIgnoreCase)) throw new IOException(Engine.Unmatched("her LQ voice"));
+                if (File.Exists(target)) File.Delete(target);
+                File.Move(kept, target);
+            }
+            finally
+            {
+                TarReader.Clean(staging);
+                foreach (string leftover in new[] { kept, archive })
+                {
+                    try { if (File.Exists(leftover)) File.Delete(leftover); }
+                    catch (IOException) { }
+                    catch (UnauthorizedAccessException) { }
+                }
+            }
+        }
+    }
+
     internal sealed class FreeStyle
     {
         internal readonly string Name;
@@ -2852,6 +3103,20 @@ namespace CapriDesktop
         private string lang;
         internal volatile FreeStyle Style = Styles[0];
         internal volatile bool Cancel;
+        // Which of her three models; the one open, and whether its lines are cleaned.
+        internal volatile string Quality = VoiceQuality.HQ;
+        private string openModel;
+        private bool openFiltered;
+
+        internal bool Has(string quality) { return VoiceQuality.Ready(folder, quality); }
+
+        // Whether a line from this model is cleaned: only Mixed's and LQ's own models are, never HQ's, even standing in for them.
+        internal static bool Cleans(string folder, string quality, string model)
+        {
+            return VoiceQuality.Filtered(quality) && !string.Equals(model, Path.Combine(folder, VoiceQuality.FileOf(VoiceQuality.HQ)), StringComparison.OrdinalIgnoreCase);
+        }
+
+        internal void AddQuality(string quality, Action<string, long, long> progress) { VoiceQuality.Fetch(folder, quality, progress, delegate { return Cancel; }); }
 
         internal LocalVoice(string data) { folder = Folder(data); }
 
@@ -2864,6 +3129,10 @@ namespace CapriDesktop
         }
 
         internal bool Installed { get { return Complete(folder); } }
+
+        internal bool Warmed { get { return tts != IntPtr.Zero; } }
+
+        internal int Used;
 
         private static bool Complete(string where) { return VoicePack.Complete(where); }
 
@@ -2891,9 +3160,8 @@ namespace CapriDesktop
             File.Delete(zip);
         }
 
-        // A new pack goes into her folder file by file. Deleting the folder first failed on onnxruntime.dll once her voice, ears or
-        // wake word had loaded it, since Windows holds a loaded DLL until she closes, and left only the DLLs behind, so every try
-        // after failed the same way. A DLL that's in use stays: the pack is pinned, so it's the same file.
+        // A new pack goes in file by file rather than replacing the folder, since Windows holds a loaded
+        // onnxruntime.dll until she closes. A DLL in use stays: the pack is pinned, so it's the same file.
         internal static void Merge(string from, string into)
         {
             foreach (string file in Directory.GetFiles(from, "*", SearchOption.AllDirectories))
@@ -2916,6 +3184,7 @@ namespace CapriDesktop
         {
             FreeStyle style = Style;
             string code = Brain.LanguageCode(Brain.Language);
+            Used = Environment.TickCount;
             lock (gate) Open(style.British, Speaks(code) ? code : null);
         }
 
@@ -2928,6 +3197,7 @@ namespace CapriDesktop
         internal byte[] Speak(string text, string code)
         {
             if (code != null && !Speaks(code)) throw new VoiceException("Her free voice doesn't have that language yet.");
+            Used = Environment.TickCount;
             if (!VoiceLanguage.Reads(text, code ?? "en")) throw new VoiceException(VoiceLanguage.Missing(VoiceLanguage.Tongue(text, Brain.Language), Brain.Language));
             FreeStyle style = Style;
             int pitch = VoiceFx.Pitch, speed = VoiceFx.Speed, robot = VoiceFx.Robot, glitch = VoiceFx.Glitch, rate;
@@ -2948,6 +3218,7 @@ namespace CapriDesktop
                     pcm = new short[samples.Length];
                     for (int i = 0; i < samples.Length; i++) pcm[i] = (short)Math.Max(-32767, Math.Min(32767, Math.Round(samples[i] * 32767)));
                     rate = made.Rate;
+                    if (openFiltered) pcm = VoiceFx.Clean(pcm, rate);
                 }
                 finally
                 {
@@ -2961,7 +3232,8 @@ namespace CapriDesktop
         private void Open(bool gb, string code)
         {
             string wanted = code == null ? (gb ? "en" : "en-us") : VoiceTongues.Lang(code);
-            if (tts != IntPtr.Zero && lang == wanted) return;
+            string quality = Quality, model = VoiceQuality.Model(folder, quality);
+            if (tts != IntPtr.Zero && lang == wanted && openModel == model) return;
             if (IntPtr.Size != 8) throw new VoiceException("Her free voice needs 64-bit Windows.");
             if (!Installed) throw new VoiceException("Set up her free voice in Capri Mainframe.");
             Load(folder);
@@ -2973,7 +3245,7 @@ namespace CapriDesktop
                 Config config = new Config();
                 config.Model.Threads = Math.Max(1, Math.Min(6, Environment.ProcessorCount / 2));
                 config.Model.Provider = keep("cpu");
-                config.Model.Kokoro.Model = keep(Path.Combine(folder, "model.onnx"));
+                config.Model.Kokoro.Model = keep(model);
                 config.Model.Kokoro.Voices = keep(Path.Combine(folder, "voices.bin"));
                 config.Model.Kokoro.Tokens = keep(Path.Combine(folder, "tokens.txt"));
                 config.Model.Kokoro.Data = keep(Path.Combine(folder, "espeak-ng-data"));
@@ -2998,11 +3270,12 @@ namespace CapriDesktop
             finally { foreach (IntPtr pointer in held) Marshal.FreeHGlobal(pointer); }
             if (tts == IntPtr.Zero) throw new VoiceException("Her free voice wouldn't start.");
             lang = wanted;
+            openModel = model;
+            openFiltered = Cleans(folder, quality, model);
         }
 
-        // sherpa-onnx takes a folder with a letter like ś for no folder at all and then ends the whole process, with nothing in
-        // errors.txt (Herbuś, 1 Nov, and tested on a folder named Ośka). A Windows user name like that puts everything of hers in one,
-        // so sherpa-onnx gets there through a plain-named junction.
+        // sherpa-onnx treats a folder with a letter like ś as no folder and ends the process (Herbuś), so with a user
+        // name like that it reaches her files through a plain-named junction.
         private static readonly object plainGate = new object();
         private static string plainRoot, plainAlias;
         internal const string SpecialLetters = "Her voice files are in a folder with special letters in its name, and her voice can't read those.";
@@ -3015,7 +3288,7 @@ namespace CapriDesktop
         internal static string Plain(string value)
         {
             if (IsPlain(value)) return value;
-            string root = Path.GetDirectoryName(Brain.LogPath);
+            string root = Logs.DataOf(Brain.LogPath);
             lock (plainGate)
             {
                 if (plainRoot != root) { plainAlias = Junction(root); plainRoot = root; }
@@ -3161,6 +3434,36 @@ namespace CapriDesktop
         private static IntPtr tts;
         private static string opened;
         private static string openKind;
+        // When it last spoke, and what a rest let go of, so the next chat opens it again ahead of her first line.
+        internal static int Used;
+        private static string restedKey;
+
+        internal static bool Warmed { get { lock (gate) return tts != IntPtr.Zero; } }
+
+        // Let go of the model; its memory is the most a voice of hers holds.
+        internal static void Rest()
+        {
+            lock (gate)
+            {
+                if (tts == IntPtr.Zero) return;
+                restedKey = opened;
+                Close();
+            }
+        }
+
+        // The model a rest let go of, opened again. Nothing when none was.
+        internal static void Warm()
+        {
+            lock (gate)
+            {
+                string key = restedKey;
+                restedKey = null;
+                if (key == null || tts != IntPtr.Zero) return;
+                int bar = key.LastIndexOf('|');
+                try { Open(key.Substring(0, bar), key.Substring(bar + 1)); Used = Environment.TickCount; }
+                catch (VoiceException caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            }
+        }
         // The clip Pocket TTS last copied, kept read until it changes.
         private static string clipFrom;
         private static float[] clipSound;
@@ -3375,6 +3678,8 @@ namespace CapriDesktop
             lock (gate)
             {
                 string kind = Open(folder, lang);
+                Used = Environment.TickCount;
+                restedKey = null;
                 IntPtr words = LocalVoice.Utf8(text);
                 IntPtr audio = IntPtr.Zero;
                 try
@@ -3455,9 +3760,8 @@ namespace CapriDesktop
             }
         }
 
-        // sherpa-onnx starts espeak once for the whole app, from the first espeak-ng-data it's given, and that's usually her
-        // free voice's. So every model reads her free voice's copy, with the model's own language files added to it: a
-        // Spanish Piper voice brings es_dict, and deleting a model never takes her free voice's files with it.
+        // sherpa-onnx starts espeak once from the first espeak-ng-data it's given, usually her free voice's, so every
+        // model reads that copy with its own language files added; deleting a model never takes her free voice's files.
         private static string Speech(string folder)
         {
             string theirs = Path.Combine(folder, "espeak-ng-data"), ours = Path.Combine(Engine, "espeak-ng-data");
@@ -3627,7 +3931,7 @@ namespace CapriDesktop
 
         internal bool Awake { get { lock (gate) return awake && (server == null || !server.HasExited); } }
 
-        // The zip passed its checksum, so a missing server means antivirus took it (owner flag A14). Fits the VOICE note.
+        // The zip passed its checksum, so a missing server means antivirus took it. Fits the VOICE note.
         internal const string ServerGone = "Your antivirus likely took tts-server.exe. Allow it, then try again.";
 
         internal void Install(Action<string, long, long> progress)
@@ -3833,9 +4137,8 @@ namespace CapriDesktop
             foreach (string piece in Pieces(Voice.Sayable(text)))
             {
                 short[] made = Voice.Samples(Ask(number, "/v1/audio/speech", body(piece, 7)), out hertz);
-                // Like a voice server's, a piece far shorter than its words could take was cut off, which sounds like her voice
-                // stopping mid-reply while the text goes on (ticket 35: Ashy, on headphones with her HD voice). It's asked for once
-                // more with another seed, since the same seed makes the same sound, and the longer one is kept.
+                // A piece far shorter than its words could take was cut off (Ashy), so it's asked for once more with
+                // another seed, since the same seed makes the same sound, and the longer one is kept.
                 if (VoiceServer.Clipped(piece, made.Length, hertz))
                 {
                     short[] again = Voice.Samples(Ask(number, "/v1/audio/speech", body(piece, 8)), out hertz);
@@ -3940,7 +4243,7 @@ namespace CapriDesktop
                 {
                     byte[] wav = Speak(words);
                     lock (gate) { noted = null; memoryFailed = false; }
-                    // A slow line still played in HD, so it only goes in her log. Resting HD for one put her next lines in her free voice (2 Nov).
+                    // A slow line still played in HD, so it only goes in her log. Resting HD for one put her next lines in her free voice.
                     if (!CpuOnly && (Hardware == null || !Smaller(Hardware)) && took.Elapsed.TotalSeconds > Math.Max(SlowSeconds, Voice.Seconds(wav) * 1.2)) Brain.Log("HD voice", took.ElapsedMilliseconds, "slow, " + Voice.Seconds(wav).ToString("0.0") + " s of speech");
                     return wav;
                 }
@@ -3955,7 +4258,7 @@ namespace CapriDesktop
         }
 
         // Asleep while a wake is under way, her HD voice gets WakeWait to come up before her free voice takes the line, so the first
-        // line after a quiet spell isn't in another voice (2 Nov). A wake that ends without her up hands it on at once.
+        // line after a quiet spell isn't in another voice. A wake that ends without her up hands it on at once.
         internal Func<string, byte[]> Waiting(Func<string, byte[]> fallback, Action<string> trouble, Func<bool> waking)
         {
             Func<string, byte[]> hd = Or(fallback, trouble);
@@ -3967,7 +4270,7 @@ namespace CapriDesktop
             };
         }
 
-        // Their clip, reference.wav in her HD voice folder. Capri ships no voice clip (Lachy, 30 Oct), so with none picked
+        // Their clip, reference.wav in her HD voice folder. Capri ships no voice clip (Lachy), so with none picked
         // she can't speak in HD and her free voice takes the line.
         private byte[] Clip()
         {
@@ -4002,10 +4305,8 @@ namespace CapriDesktop
         public void Dispose() { Stop(); }
     }
 
-    // Their own voice model, through a server that speaks OpenAI's speech API (POST /v1/audio/speech), like Kokoro-FastAPI,
-    // openedai-speech, AllTalk, LocalAI, Qwen3-TTS behind vLLM-Omni or OpenAI itself, or one that speaks Fish Audio's (POST /v1/tts),
-    // as fish.audio's cloud and Fish Speech on their own PC both do. It gets only the words she says. Its sound goes through her
-    // pitch and speed like her other voices, with a robot and glitch of its own.
+    // Their own voice model, through a server speaking OpenAI's speech API (/v1/audio/speech) or Fish Audio's
+    // (/v1/tts). It gets only the words she says, and its sound takes her pitch, speed, robot and glitch.
     internal sealed class VoiceServer
     {
         internal const string Style = "Your server";
@@ -4018,7 +4319,7 @@ namespace CapriDesktop
         internal const string Files = "file";
         internal const string FishCloud = "https://api.fish.audio";
         internal const string FishFree = "s2.1-pro-free";
-        // Capri ships no Fish Audio voice (Lachy, 30 Oct: "We don't supply the voice, they get their own"). 0.7.6 test builds
+        // Capri ships no Fish Audio voice (Lachy): they bring their own. 0.7.6 test builds
         // saved this name in the Voice box, and it now means blank, so Fish Audio picks its own default.
         internal const string FishOldDefault = "Capri Default";
         internal const string OpenAiCloud = "https://api.openai.com/v1";
@@ -4036,14 +4337,12 @@ namespace CapriDesktop
         // The last problem she noted, so a server that stays down is said once, until it answers again.
         private volatile string noted;
 
-        // The name a voice server on this PC uses to say it reads her emotion cues. Fish Audio understands them
-        // natively; everything else was handed the line with the cues stripped, which is right for a service that
-        // would read "(joyful)" out loud and wrong for one written to act on it.
+        // The name a local voice server uses to say it reads her emotion cues: Fish Audio does natively; others get the
+        // line with cues stripped, so a service never reads "(joyful)" aloud.
         internal const string CuedModel = "capri-voice";
 
-        // Whether the server she is set to takes her cues as cues. Fish always; otherwise a server on this machine
-        // whose model says so. Loopback is part of the test on purpose: a cue is only worth sending to something
-        // that asked for it, and a local server is the only one that can have.
+        // Whether her set server takes cues as cues: Fish always, otherwise a server on this machine whose model says
+        // so. Loopback is part of the test on purpose, since only a local server can have asked for them.
         internal bool TakesCues
         {
             get
@@ -4100,10 +4399,8 @@ namespace CapriDesktop
             try
             {
                 Uri where = new Uri(url.IndexOf("://", StringComparison.Ordinal) >= 0 ? url : "http://" + url);
-                // DnsSafeHost rather than Host: an IPv6 address comes back from Host in brackets and canonical
-                // form, so comparing it against the text "::1" misses, and her cues were being stripped from a
-                // local server reached over IPv6 as though it were somebody else's machine. Found by the check
-                // below this, which is the first thing ever to ask.
+                // DnsSafeHost, not Host: Host brackets an IPv6 address, so "::1" didn't match and a local server's cues
+                // were stripped.
                 string host = where.DnsSafeHost;
                 System.Net.IPAddress address;
                 if (System.Net.IPAddress.TryParse(host.Trim('[', ']'), out address)) return System.Net.IPAddress.IsLoopback(address);

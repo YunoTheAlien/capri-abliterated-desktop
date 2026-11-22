@@ -247,6 +247,7 @@ namespace CapriDesktop
                 Icon = owner.Icon;
                 ShowInTaskbar = false;
                 FormBorderStyle = FormBorderStyle.None;
+                Neon.NeverFullScreen(this);
                 StartPosition = FormStartPosition.Manual;
                 AutoScaleMode = AutoScaleMode.None;
                 Font = Type(9.5f * zoom);
@@ -262,6 +263,19 @@ namespace CapriDesktop
                 shut.AccessibleName = "Close";
                 shut.Click += delegate { Close(); };
                 Controls.Add(shut);
+            }
+
+            // A minimise key beside close, drawn and placed as the Mainframe's: the window is put away as it is, and opening it
+            // again brings it back. Only a sheet that asks for it has one; before runs first, to end anything in hand.
+            protected Key Tucks(Action before)
+            {
+                Key tuck = new Key();
+                tuck.Bounds = Box(designWide - 84, 20, 26, 22);
+                tuck.Glyph = 1;
+                tuck.AccessibleName = "Minimize";
+                tuck.Click += delegate { if (before != null) before(); Hide(); };
+                Controls.Add(tuck);
+                return tuck;
             }
 
             protected void Run(Action work)
@@ -844,7 +858,7 @@ namespace CapriDesktop
             internal void PressStars(int card, int picked) { stars[card].Pick(picked); }
         }
 
-        // View on a mods window card (issue #221): the mod's name, author and kind over the first few useful lines of its
+        // View on a mods window card: the mod's name, author and kind over the first few useful lines of its
         // README, or its description when it has none or GitHub doesn't answer in time. Learn more opens its folder on GitHub.
         private sealed class ReadmeSheet : ModSheet
         {

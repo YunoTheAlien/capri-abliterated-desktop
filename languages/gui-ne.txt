@@ -204,3 +204,18 @@ Running on this PC	यो PC मा चल्दैछ
 NORMAL	सामान्य
 OFF	अफ
 Local server address	लोकल सर्भर ठेगाना
+Remember panel position	प्यानलको स्थान सम्झनुहोस्
+Custom colours	आफ्नै रङहरू
+Custom colours...	आफ्नै रङहरू...
+Choose	छान्नुहोस्
+Hers	उसको आफ्नै
+Quiet	शान्त
+Quiet min	शान्त min
+Quiet max	शान्त max
+Until I turn it off	मैले बन्द नगरेसम्म
+Quiet on calls	कलमा शान्त
+Quiet in videos	भिडियोमा शान्त
+Quiet until {n}:{n}	{n}:{n} सम्म शान्त
+Quiet until turned off	बन्द नगरेसम्म शान्त
+Export settings	सेटिङहरू निर्यात गर्नुहोस्
+Import settings	सेटिङहरू आयात गर्नुहोस्

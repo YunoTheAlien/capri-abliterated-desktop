@@ -1256,9 +1256,8 @@ export default {
         }
 
 #if CROSS
-        // Settings files Code/Husk Mode made into files of their own because they linked into a folder she can't change, like
-        // Nix's store. Change sets it: the new ones when it turns on, and all of them when it turns off, which doesn't link
-        // them back. They're kept in her data folder in between, so a restart doesn't lose them.
+        // Settings files Code/Husk Mode made standalone because they linked into a folder she can't change, like Nix's
+        // store. Change sets them: new ones on, all of them off, never linked back; kept in her data folder meanwhile.
         internal string[] Unlinked = new string[0];
 
         private string[] Relinks(bool off)

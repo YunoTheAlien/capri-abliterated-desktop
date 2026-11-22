@@ -26,6 +26,12 @@ namespace CapriDesktop
         internal static Color Dim { get { return CapriDesktop.Neon.SheetDim; } }
 
         internal static Color Pink { get { return CapriDesktop.Neon.SpokenAccent; } }
+        // Her music player's, set apart from her bubble's in layout.md.
+        internal static Color PlayerEdge { get { return CapriDesktop.Neon.PlayerEdge; } }
+        internal static Color PlayerAccent { get { return CapriDesktop.Neon.PlayerAccent; } }
+        internal static Color PlayerTitle { get { return CapriDesktop.Neon.PlayerTitle; } }
+        internal static Color PlayerRail { get { return CapriDesktop.Neon.PlayerRail; } }
+        internal static Color PlayerGround { get { return CapriDesktop.Neon.PlayerGround; } }
         private static readonly PrivateFontCollection fonts = new PrivateFontCollection();
         private static IntPtr fontMemory;
         private static readonly FontFamily embedded = Embedded("Capri.Font.Mono.ttf");
@@ -283,9 +289,8 @@ namespace CapriDesktop
 
         private static bool Myanmar(char c) { return (c >= 0x1000 && c <= 0x109F) || (c >= 0xA9E0 && c <= 0xA9FF) || (c >= 0xAA60 && c <= 0xAA7F); }
 
-        // Her mono font has no stand-in for Burmese, so GDI+ would draw nothing there. Burmese draws in Myanmar Text instead,
-        // on the same baseline as the rest of the line, which stays in her font.
-        // From the cache and never freed, since it is handed out line after line while a bubble is drawn.
+        // Her mono font has no Burmese, so it draws in Myanmar Text on the line's baseline while the rest stays in her
+        // font. From the cache and never freed, since it is handed out line after line.
         internal static Font Myanmar(Font font)
         {
             foreach (string family in new[] { "Myanmar Text", "Segoe UI" })
@@ -360,9 +365,9 @@ namespace CapriDesktop
 
         private static float Ascent(Font font) { return font.Size * font.FontFamily.GetCellAscent(font.Style) / font.FontFamily.GetEmHeight(font.Style); }
 
-        // Indian scripts, Lao and Khmer join letters and marks into one shape, and Tamil, Kannada, Malayalam, Ethiopic, Georgian
-        // and Armenian draw wider than her columns, so their words are measured in her bubble's font instead of counted, and
-        // Burmese in Myanmar Text, which draws it. Other words still count by letter.
+        // Scripts that join letters into shapes or draw wider than her columns (Indic, Lao, Khmer, Ethiopic, Georgian,
+        // Armenian and others) are measured in her bubble's font instead of counted, and Burmese in Myanmar Text. Other
+        // words count by letter.
         private static readonly Dictionary<string, double> measured = new Dictionary<string, double>();
         private static Bitmap rulerPage;
         private static Graphics ruler;
@@ -376,9 +381,8 @@ namespace CapriDesktop
             string[] words = text.Split(' ');
             foreach (string word in words)
             {
-                // Counted by letter only while her own face draws the word. Anything it does not have is now
-                // drawn in a face that does, at that face's width, so counting cells here would wrap the line
-                // against a width nothing is drawn at. Those words are measured the way they are drawn.
+                // Counted by letter only while her own face draws the word; one drawn in a fallback face is measured as
+                // drawn, or the line would wrap against the wrong width.
                 if (!Indic(word) && Drawable(word)) { foreach (char c in word) cells += Cells(c); continue; }
                 lock (measured)
                 {
@@ -417,14 +421,8 @@ namespace CapriDesktop
             return false;
         }
 
-        // The plain typographic format, made once for the whole program.
-        //
-        // StringFormat.GenericTypographic reads like a thing that already exists and builds a new one on
-        // every read instead. Forty seven places asked for it, most of them inside a paint, so she was
-        // making and dropping drawing objects by the thousand a minute for no reason. Ask for this one.
-        //
-        // Never change a flag on it. Anything that needs different flags clones it:
-        // new StringFormat(Look.Exact), and frees its own copy.
+        // The plain typographic format, made once for the whole program, since GenericTypographic builds a new one on
+        // every read. Never change a flag on it: clone it with new StringFormat(Look.Exact) and free the copy.
         internal static readonly StringFormat Exact = new StringFormat(StringFormat.GenericTypographic);
 
         // Right-to-left lines sit against the bubble's right edge and never wrap inside it.
@@ -492,9 +490,9 @@ namespace CapriDesktop
         [DllImport("icu.dll", CallingConvention = CallingConvention.Cdecl)] private static extern int ubrk_next(IntPtr iterator);
         [DllImport("icu.dll", CallingConvention = CallingConvention.Cdecl)] private static extern void ubrk_close(IntPtr iterator);
 
-        // Where a line may break inside a word with Thai, Lao, Khmer or Burmese in it. They write no spaces between words, so a
-        // word breaker finds them: Windows' own for Thai, and for the others, which it doesn't know, the ICU that comes with
-        // Windows 10 1903 and later. Without ICU their lines break between letters.
+        // Where a line may break inside a word in Thai, Lao, Khmer or Burmese, which write no spaces: Windows' word
+        // breaker for Thai, and the ICU in Windows 10 1903 and later for the others. Without ICU they break between
+        // letters.
         internal static bool[] Breaks(string word)
         {
             if (!Thai(word))
@@ -541,11 +539,8 @@ namespace CapriDesktop
             finally { Marshal.FreeHGlobal(text); }
         }
 
-        // Without a word breaker a line can still break between letters. A Thai or Lao line never breaks before a vowel or
-        // tone mark, or a vowel that follows its letter, and never after a vowel written before its letter. Every script keeps
-        // each letter with its marks, and with the next letter after a sign that joins them (a virama, or Khmer's coeng), and
-        // a Burmese line never breaks before ါ, ာ or း (newer .NET counts them as letters of their own, like Mac and Linux do)
-        // or a letter that ends the syllable before it.
+        // Without a word breaker, a line breaks between letters only where the script allows: never splitting a letter
+        // from its marks or a virama join, nor a Thai, Lao or Burmese vowel from the letter it belongs to.
         internal static bool[] Letters(string word)
         {
             bool[] breaks = new bool[word.Length];
@@ -588,9 +583,8 @@ namespace CapriDesktop
             return word;
         }
 
-        // Lines by columns, so Chinese, Japanese and Korean fit the bubble too. They have no spaces to break at, so a run of
-        // them fills the rest of a line and carries on below, the way they're written. Thai, Lao, Khmer and Burmese do the same
-        // between their words. Other words only break when they're longer than a whole line.
+        // Lines by columns, so Chinese, Japanese and Korean fill a line and carry on below as they're written, and
+        // Thai, Lao, Khmer and Burmese do the same between words. Other words break only when longer than a whole line.
         internal static List<string> Wrap(string text, int columns)
         {
             List<string> lines = new List<string>();
@@ -649,13 +643,9 @@ namespace CapriDesktop
         }
     }
 
-    // The clock her moves run on: her frames, her teleport's ribbons, her glitch bars and the rest of her overlays. A window timer
-    // only fires when nothing else is waiting on her window's thread, so a thread that's never quite idle starves every one of
-    // them at once. On 12 Nov, a computer job in a full-screen game did that for 22 s: her bubble and task panel kept updating,
-    // since those arrive as posted work, but her teleport sat on its first frame, glitch bars and all, until Esc ended the job.
-    // This counts time on a worker and hands each tick over as posted work, so her moves keep going whenever her window still
-    // answers. Only one tick waits at a time, and the next is counted from when this one went out, as a window timer counts,
-    // so her rates land on Windows' 1/64 s clock the way they always have: 33 ms still takes 47 ms.
+    // The clock her moves run on: a worker counts time and posts each tick, since a window timer starves when her
+    // thread is never idle. One tick waits at a time, counted from the last as a window timer counts, so her rates stay
+    // on Windows' 1/64 s clock.
     internal sealed class Beat : IDisposable
     {
         // Her window's thread, set as she starts. A beat started before then posts to the thread that started it.
@@ -816,10 +806,13 @@ namespace CapriDesktop
         internal bool ClickThrough;
         private Bitmap shown;
         internal bool Above = true;
-        internal Action<IntPtr, Bitmap, Point> Layer = Native.DrawLayered;
+        internal Action<IntPtr, Bitmap, Point> Layer;
+        // How see-through the whole window draws, 255 for not at all.
+        private byte alpha = 255;
 
         internal Overlay(string name)
         {
+            Layer = delegate(IntPtr window, Bitmap image, Point at) { Native.DrawLayered(window, image, at, alpha); };
             Text = name;
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false;
@@ -840,6 +833,20 @@ namespace CapriDesktop
         }
 
         internal Bitmap Image { get { return shown; } }
+
+        internal byte Alpha { get { return alpha; } }
+
+        // Draws it again at the new see-through, now if it is up.
+        internal void Fade(byte value)
+        {
+            if (value == alpha) return;
+            alpha = value;
+            if (Visible && shown != null && IsHandleCreated)
+            {
+                try { Layer(Handle, shown, Location); }
+                catch (Exception caught) { Brain.Caught(caught); }
+            }
+        }
 
         // Lets go of its picture while it's hidden, so a big one doesn't sit in memory between uses.
         internal void Forget()
@@ -886,10 +893,8 @@ namespace CapriDesktop
         }
     }
 
-    // The pencil, wave and mic that show under her when you hover her, cyberpunk like her mini player: black plates with cut
-    // corners and a pink-to-cyan neon edge, TYPE and TALK in her mono font, a wave of segments that lights up with your mic
-    // level in voice chat, a red MUTED while the mic is muted, and a few frames of her glitch when it shows. The same size and
-    // hit areas as the old rounded pill, with every straight edge on whole pixels, so it stays crisp at 100%, 150% and 200%.
+    // The pencil, wave and mic under her on hover: black cut-corner plates with a pink-to-cyan edge, TYPE and TALK in
+    // her mono, a mic-level wave, MUTED in red, and a short glitch as it shows. Every edge on whole pixels.
     internal sealed class TalkPill : Overlay
     {
         internal event Action Typing;
@@ -1166,10 +1171,8 @@ namespace CapriDesktop
             using (Brush brush = new SolidBrush(colour)) graphics.DrawString(label, font, brush, box.Left - ink.Left, box.Top - ink.Top, Look.Exact);
         }
 
-        // The wave as five bars of square segments. Out of voice chat it's the whole wave; in voice chat the segments light up to
-        // your mic level and the rest stay dark, all of them while the mic is muted.
-        // Lachy liked the old wave better (29 Oct): five rounded bars that stretch with your mic level in voice chat, and stay low
-        // and grey while the mic is muted.
+        // The wave as five bars of square segments: whole out of voice chat; in it, lit to your mic level, and dark
+        // while muted. The old rounded wave was preferred (Lachy).
         private static void DrawMeter(Graphics graphics, Rectangle meter, float s, bool chatting, bool muted, int level, Color colour)
         {
             float[] heights = { 5, 10, 14, 9, 4 };
@@ -1393,6 +1396,43 @@ namespace CapriDesktop
                 using (Brush plate = new SolidBrush(TalkPill.Fill)) graphics.FillEllipse(plate, 1, 1, side - 2, side - 2);
                 using (Pen edge = new Pen(Look.Red, Math.Max(1, s))) graphics.DrawEllipse(edge, 1, 1, side - 2, side - 2);
                 TalkPill.DrawMic(graphics, new PointF(side / 2f, side / 2f - 0.5f * s), s * 0.8f, TalkPill.Caption, true, TalkPill.Fill);
+            }
+            drawnAt = s;
+            Present(image, at);
+        }
+    }
+
+    // A small TEST tag under her on a copy whose file version was never stamped, so a test build on a shared screen is
+    // never taken for a release. Clicks go through it.
+    internal sealed class TestTag : Overlay
+    {
+        internal const string Word = "TEST";
+        private float drawnAt;
+
+        internal TestTag() : base("Test copy") { ClickThrough = true; }
+
+        internal static Size Measure(float s) { return new Size((int)Math.Round(44 * s), (int)Math.Round(16 * s)); }
+
+        // Placed by its top centre, as the mute mark is.
+        internal void Place(Point topCentre, float s)
+        {
+            Size size = Measure(s);
+            Point at = new Point(topCentre.X - size.Width / 2, topCentre.Y);
+            if (Visible && drawnAt == s && Location == at) return;
+            Bitmap image = new Bitmap(size.Width, size.Height, PixelFormat.Format32bppPArgb);
+            using (Graphics graphics = Graphics.FromImage(image))
+            using (Font font = Neon.Display(10 * s, GraphicsUnit.Pixel))
+            using (Brush plate = new SolidBrush(TalkPill.Fill))
+            using (Pen edge = new Pen(Look.Red, Math.Max(1, s)))
+            using (Brush ink = new SolidBrush(Look.Red))
+            using (StringFormat middle = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+            {
+                graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+                graphics.Clear(Color.Transparent);
+                graphics.FillRectangle(plate, 0, 0, size.Width - 1, size.Height - 1);
+                graphics.DrawRectangle(edge, 0, 0, size.Width - 1, size.Height - 1);
+                graphics.DrawString(Word, font, ink, new RectangleF(0, 0, size.Width, size.Height), middle);
             }
             drawnAt = s;
             Present(image, at);
@@ -2029,10 +2069,9 @@ namespace CapriDesktop
         // How far Under can reach past the sides of her cell, in pixels of her 384-tall art.
         internal const float UnderReach = 34;
 
-        // Her glitch on her artist's standing set, drawn under her before her frame goes on top: mint and violet ghosts of that
-        // same frame, some of its bands knocked sideways, and a few stray bars. Her own frame stays whole over it, so it shows
-        // around her edges the way the old glitch strip did. cell is her frame in strip, target where it's drawn, and strength
-        // how hard this step glitches, 0 to 1; the same seed draws the same picture.
+        // Her glitch on her artist's standing set, drawn under her frame: mint and violet ghosts, shifted bands and
+        // stray bars round her edges. cell is her frame, target where it's drawn, strength 0 to 1; one seed, one
+        // picture.
         internal static void Under(Graphics graphics, Bitmap strip, Rectangle cell, RectangleF target, double strength, int seed)
         {
             if (strength <= 0) return;
@@ -2142,7 +2181,7 @@ namespace CapriDesktop
         internal static readonly RectangleF FacePlate = new RectangleF(140, 145, 110, 110);
         internal static readonly RectangleF Zoom = new RectangleF(45, 45, 300, 300);
         internal static readonly StringFormat Spaced = Typographic();
-        // Her face tearing through the window first is off for now (too intrusive, Lachy 27 Oct 2026); the badge and brackets still show.
+        // Her face tearing through the window first is off for now as too intrusive (Lachy); the badge and brackets still show.
         internal static bool HackIn;
         internal static Bitmap Face;
         private static Bitmap painted, minted, bruised;
@@ -2538,11 +2577,8 @@ namespace CapriDesktop
         }
     }
 
-    // #106: whenever she has their mouse or keys, a thin pink and cyan glow round the screen she's working on, with "Capri's
-    // using your mouse. Esc stops her." on a badge like the takeover one, just above the bottom of the screen. Clicks go
-    // straight through it and it never takes focus. It shows even while she's hidden, and like the takeover badge it stays out
-    // of screenshots, so her own never show it to her. Windows 10 before its 2004 update can't keep a window out of them, so
-    // there it hides for the moment she takes one.
+    // Whenever she has their mouse or keys, a pink and cyan glow round her screen with "Capri's using your mouse. Esc
+    // stops her." Click-through, never focused, kept out of her screenshots, or hidden for them before Windows 10 2004.
     internal sealed class ControlGlow : Overlay
     {
         private readonly Beat ticks = new Beat();
@@ -2601,7 +2637,7 @@ namespace CapriDesktop
             if (unseen) return;
             Rectangle where;
             try { where = Working(); }
-            catch (Exception) { where = Screen.PrimaryScreen.Bounds; }
+            catch (Exception) { where = Displays.Home.Bounds; }
             if (where.Width < 64 || where.Height < 64 || (Visible && Image != null && where == area)) return;
             Bitmap frame = Image;
             if (frame == null || where != area)
@@ -2644,9 +2680,9 @@ namespace CapriDesktop
             return false;
         }
 
-        // A screen this size: a soft pink to cyan glow in from its edges, a crisp pink line round the edge with a thin cyan one
-        // just inside it, like the colours on her pointer, and the line on a takeover badge, centred above the bottom of the
-        // work area, which is given in the screen's own pixels.
+        // A screen this size: a soft pink to cyan glow in from its edges, a crisp pink line round it with a thin cyan
+        // one inside, like her pointer's colours, and a takeover badge centred above the work area's bottom, in screen
+        // pixels.
         internal static Bitmap Frame(Size size, Rectangle work, float scale)
         {
             Bitmap image = new Bitmap(size.Width, size.Height, PixelFormat.Format32bppPArgb);
@@ -2705,9 +2741,9 @@ namespace CapriDesktop
     // paint it out.
     internal sealed class HerPointer : Overlay
     {
-        // A cell of her click effect is 144 pixels square with her pointer's tip at its middle, and covers 72 pixels at 100%
-        // scale, which keeps it as big against her pointer as in the clip. That's one for one at 200% and exactly
-        // halved at 100%, so it's crisp at both. Windows' quickest timer shows the clip's 60 frames a second while it plays.
+        // A cell of her click effect is 144 pixels square with her pointer's tip at its middle, covering 72 pixels at
+        // 100%: one to one at 200% and exactly halved at 100%, so crisp at both. Windows' quickest timer plays its 60
+        // frames a second.
         internal const int ClickCell = 144, ClickWide = 72;
         internal const int UsualTick = 33;
         private const int ClickTick = 15;
@@ -2879,8 +2915,8 @@ namespace CapriDesktop
 
     internal sealed partial class Companion
     {
-        // How much of a frame of her click effect shows in a picture of her pointer, from 0 to 1: each strong pixel of the frame
-        // has to land on its own spot around the tip, in its own colour. Her pointer and bolts sit on top and hide a little.
+        // How much of a click-effect frame shows in a picture of her pointer, 0 to 1: each strong pixel must land on
+        // its own spot round the tip in its own colour; her pointer and bolts hide a little.
         private static double ClickShown(HerPointer pointer, Bitmap picture, int cell)
         {
             Bitmap strip = pointer.ClickArt.Strip;
@@ -3086,15 +3122,31 @@ namespace CapriDesktop
         [DllImport("user32.dll")] private static extern bool SetWindowDisplayAffinity(IntPtr window, uint affinity);
         [DllImport("user32.dll")] private static extern bool GetWindowDisplayAffinity(IntPtr window, out uint affinity);
 
-        // Their recordings and screenshots show the panel. Hers don't: it leaves capture only for the moment she takes one.
-        // True when it's on screen, so there's something to wait for.
+        // Their recordings and screenshots show the panel; hers don't, as it leaves capture for the moment she takes
+        // one. True when on screen. Where Windows refuses the affinity on a layered window, it hides for that moment
+        // instead.
         internal bool Unseen(bool unseen)
         {
             if (!IsHandleCreated) return false;
-            try { SetWindowDisplayAffinity(Handle, unseen ? 0x11u : 0u); }
-            catch (EntryPointNotFoundException) { return false; }
-            return unseen && Visible;
+            bool excluded = false;
+            try { excluded = SetWindowDisplayAffinity(Handle, unseen ? 0x11u : 0u); }
+            catch (EntryPointNotFoundException) { }
+            if (unseen)
+            {
+                if (!Visible) return false;
+                if (!excluded) { away = true; Hide(); }
+                return true;
+            }
+            if (away)
+            {
+                away = false;
+                drawn = null;
+                Step();
+            }
+            return false;
         }
+
+        private bool away;
 
         internal uint Affinity { get { uint value; return IsHandleCreated && GetWindowDisplayAffinity(Handle, out value) ? value : 0; } }
 
@@ -3223,6 +3275,7 @@ namespace CapriDesktop
         {
             ticks.Stop();
             owner = null;
+            away = false;
             steps.Clear();
             if (Visible) Hide();
         }
@@ -3230,6 +3283,7 @@ namespace CapriDesktop
         private void Step()
         {
             if (owner == null) { ticks.Stop(); return; }
+            if (away) return;
             double stay = outcome == "done" ? 4 : outcome == "waiting" || outcome == "asked" ? 8 : 6;
             double gone = outcome == null ? 0 : (Now - endedAt - stay) / 0.4;
             if (gone >= 1) { Stop(); return; }
@@ -3244,9 +3298,8 @@ namespace CapriDesktop
             if (Location != was && Moved != null) Moved();
         }
 
-        // A line too long for its rows keeps its first sentence and its last, which is usually the fix, like how to run her as
-        // administrator or "Pick one under BRAIN in Capri Mainframe", then only the first sentence's start before its colon
-        // with the last, and only then is cut short.
+        // A line too long for its rows keeps its first sentence and its last, usually the fix; then only the first
+        // sentence's start before its colon with the last; only then is it cut short.
         internal static List<string> Fitted(string lead, string text, int columns, int rows)
         {
             List<string> lines = Look.Wrap(lead + text, columns);
@@ -3375,6 +3428,9 @@ namespace CapriDesktop
         internal const string FromCloud = "cloud", FromServer = "server", FromPc = "pc";
         internal string Source;
         private string lastSource;
+        // Where the last render put the reply mark's cells and where the prompt's words start, for the check.
+        private RectangleF lastMarkCell;
+        private float lastTextFrom;
         internal string Reply;
         internal int Revealed;
         internal double Opened = -1;
@@ -3402,8 +3458,12 @@ namespace CapriDesktop
         internal RectangleF YesButton { get { return yesButton; } }
         internal RectangleF NoButton { get { return noButton; } }
 
+        // When the Yes and No went up, so it can give up after ChoiceMost seconds.
+        internal DateTime ChoiceSince;
+
         internal void Choose(Action<bool> answer)
         {
+            if (answer != null && picked == null) ChoiceSince = DateTime.UtcNow;
             picked = answer;
             yesButton = noButton = RectangleF.Empty;
             clean = false;
@@ -3493,8 +3553,8 @@ namespace CapriDesktop
                 image.Dispose();
                 image = broken;
             }
-            // A frame of her glitch is never what stays up when the next one can't be drawn (fushen, 10 Nov: her bubble sat torn
-            // over a game until she was restarted). A clean frame stays until its new words draw.
+            // A frame of her glitch is never what stays up when the next one can't be drawn (fushen).
+            // A clean frame stays until its new words draw.
             try { Present(image, at); }
             catch (Exception)
             {
@@ -3516,11 +3576,40 @@ namespace CapriDesktop
             lastArea = area;
         }
 
-        // A cloud, a server rack or a screen, in the prompt line's own dim colour so it follows the palette.
-        private static void SourceMark(Graphics graphics, string source, float x, float y, float cw, float line, float s)
+        // Where a capital's top and the baseline fall under a line drawn at 0 in this face, measured from the face itself
+        // at the size it is drawn, so a mark can sit on the letters rather than on the line's box.
+        private static readonly Dictionary<string, KeyValuePair<float, float>> capLines = new Dictionary<string, KeyValuePair<float, float>>();
+
+        internal static KeyValuePair<float, float> CapLine(Font font)
         {
-            // Centred on the letters rather than the line: her mono sits low in its cell, so the mark goes down with it.
-            float wide = cw * 1.6f, high = line * 0.58f, top = y + (line - high) / 2f + line * 0.1f;
+            string key = font.FontFamily.Name + "|" + font.Style + "|" + font.Size.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "|" + font.Unit;
+            KeyValuePair<float, float> found;
+            lock (capLines) if (capLines.TryGetValue(key, out found)) return found;
+            float top = font.GetHeight() * 0.2f, bottom = font.GetHeight() * 0.8f;
+            try
+            {
+                using (GraphicsPath letters = new GraphicsPath())
+                {
+                    float em = font.Unit == GraphicsUnit.Pixel ? font.Size : font.SizeInPoints * 96f / 72f;
+                    letters.AddString("HXE", font.FontFamily, (int)font.Style, em, PointF.Empty, Look.Exact);
+                    RectangleF ink = letters.GetBounds();
+                    if (ink.Height > 0) { top = ink.Top; bottom = ink.Bottom; }
+                }
+            }
+            catch (ArgumentException) { }
+            found = new KeyValuePair<float, float>(top, bottom);
+            lock (capLines) capLines[key] = found;
+            return found;
+        }
+
+        // A cloud, a server rack or a screen, in the prompt line's own dim colour so it follows the palette. Centred on the
+        // letters, between a capital's top and the baseline, and in the middle of its two cells.
+        private static void SourceMark(Graphics graphics, string source, float x, float y, float cw, float line, float s, Font font)
+        {
+            KeyValuePair<float, float> caps = CapLine(font);
+            float capTall = Math.Max(4 * s, caps.Value - caps.Key), middle = y + (caps.Key + caps.Value) / 2f;
+            float wide = cw * 1.6f, high = Math.Min(line * 0.7f, capTall * 1.15f), top = middle - high / 2f;
+            x += (2 * cw - wide) / 2f;
             System.Drawing.Drawing2D.SmoothingMode was = graphics.SmoothingMode;
             graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             using (Brush dim = new SolidBrush(Look.Dim))
@@ -3548,6 +3637,72 @@ namespace CapriDesktop
                 }
             }
             graphics.SmoothingMode = was;
+        }
+
+        // The reply mark sits on the letters. Her bubble drawn with each mark, from small text to 200%: the middle of the mark's
+        // ink comes within a pixel or so of the middle of the capitals after it. Pictures: reply-mark-<size>.png.
+        internal static void CheckMarks(List<string> checks, string output)
+        {
+            List<string> wrong = new List<string>(), seen = new List<string>();
+            Color dim = Look.Dim;
+            Func<Color, bool> inked = delegate(Color one) { return one.A > 0 && Math.Abs(one.R - dim.R) + Math.Abs(one.G - dim.G) + Math.Abs(one.B - dim.B) < 90; };
+            foreach (float s in new[] { 0.85f, 1f, 1.25f, 1.5f, 2f })
+            {
+                List<Bitmap> shots = new List<Bitmap>();
+                try
+                {
+                    foreach (string source in new[] { FromPc, FromCloud, FromServer })
+                        using (SpeechBox box = new SpeechBox())
+                        {
+                            box.Prompt = "> you: ";
+                            box.Heard = "NO NO CHILLING";
+                            box.Source = source;
+                            box.Reply = "Fine.";
+                            box.Revealed = box.Reply.Length;
+                            box.State = TalkState.Talking;
+                            Point at;
+                            Bitmap drawn = box.Render(s, new Point(800, 600), new Point(800, 900), new Rectangle(0, 0, 1800, 1400), false, out at);
+                            if (drawn == null) { wrong.Add(source + " at " + s + ": nothing drawn"); continue; }
+                            Bitmap kept = new Bitmap(drawn);
+                            shots.Add(kept);
+                            RectangleF cell = box.lastMarkCell;
+                            if (cell.IsEmpty) { wrong.Add(source + " at " + s + ": no mark drawn"); continue; }
+                            string prefix = SysLines.Prefix(box.Prompt);
+                            float cw = cell.Width / 2f, wordsFrom = box.lastTextFrom + Look.Cells(prefix) * cw;
+                            Func<float, float, float> middle = delegate(float from, float to)
+                            {
+                                int first = -1, last = -1;
+                                for (int y = (int)cell.Top; y < (int)Math.Ceiling(cell.Bottom) && y < kept.Height; y++)
+                                    for (int x = (int)from; x < (int)to && x < kept.Width; x++)
+                                        if (inked(kept.GetPixel(x, y))) { if (first < 0) first = y; last = y; break; }
+                                return first < 0 ? float.NaN : (first + last) / 2f;
+                            };
+                            float mark = middle(cell.Left, cell.Right), caps = middle(wordsFrom, wordsFrom + 6 * cw);
+                            if (float.IsNaN(mark) || float.IsNaN(caps)) { wrong.Add(source + " at " + s + ": no ink found"); continue; }
+                            float off = mark - caps;
+                            seen.Add(source + " " + s.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + ": " + off.ToString("+0.#;-0.#;0", System.Globalization.CultureInfo.InvariantCulture));
+                            if (Math.Abs(off) > Math.Max(1.5f, s)) wrong.Add(source + " at " + s + " sits " + off.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + " px off the letters' middle");
+                        }
+                    if (output != null && shots.Count > 0)
+                    {
+                        int wide = 0, tall = 0;
+                        foreach (Bitmap one in shots) { wide = Math.Max(wide, one.Width); tall += one.Height + 8; }
+                        using (Bitmap sheet = new Bitmap(wide, tall))
+                        {
+                            using (Graphics drawing = Graphics.FromImage(sheet))
+                            {
+                                drawing.Clear(Color.FromArgb(40, 44, 52));
+                                int y = 0;
+                                foreach (Bitmap one in shots) { drawing.DrawImageUnscaled(one, 0, y); y += one.Height + 8; }
+                            }
+                            sheet.Save(Path.Combine(output, "reply-mark-" + (int)Math.Round(s * 100) + ".png"), ImageFormat.Png);
+                        }
+                    }
+                }
+                finally { foreach (Bitmap one in shots) one.Dispose(); }
+            }
+            if (wrong.Count > 0) throw new Exception("A reply mark doesn't sit on its letters: " + string.Join("; ", wrong.ToArray()));
+            checks.Add("PASS the reply mark (this PC, cloud, server) sits on the prompt's letters, its middle against the capitals' middle, from small text to 200%: " + string.Join(", ", seen.ToArray()) + " px (reply-mark-*.png)");
         }
 
         internal Bitmap Render(float s, Point head, Point feet, Rectangle area, bool cursorOn, out Point at)
@@ -3595,11 +3750,8 @@ namespace CapriDesktop
                     graphics.SmoothingMode = SmoothingMode.AntiAlias;
                     graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
                     graphics.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-                    // Theirs out of sys.md, or hers. The alpha each is drawn at is hers either way: the glow and
-                    // the fill are deliberately not solid, and a colour they picked is wanted at the same weight
-                    // rather than suddenly opaque. One they set solid themselves still wins, through eight digits.
-                    // Set in layout.md with the rest of her colours. They were in sys.md as well and sys.md
-                    // won, which left the same four colours in two files with one of them doing nothing.
+                    // Theirs from layout.md, or hers; drawn at her alpha either way, since glow and fill aren't meant
+                    // solid. Eight digits set it solid on purpose.
                     Color edgeColour = CapriDesktop.Neon.SpokenEdge;
                     Color backColour = CapriDesktop.Neon.BubbleBack;
                     Color titleColour = CapriDesktop.Neon.SpokenTitle;
@@ -3624,7 +3776,9 @@ namespace CapriDesktop
                         if (Look.Cells(you) > columns - marked) you = Look.Cut(you, columns - marked - 3) + "...";
                         using (Brush dim = new SolidBrush(Look.Dim))
                         {
-                            if (marked > 0) SourceMark(graphics, Source, x, row2, cw, line, s);
+                            if (marked > 0) SourceMark(graphics, Source, x, row2, cw, line, s, heard);
+                            lastMarkCell = marked > 0 ? new RectangleF(x, row2, marked * cw, line) : RectangleF.Empty;
+                            lastTextFrom = x + marked * cw;
                             Look.Draw(graphics, you, heard, dim, x + marked * cw, row2);
                         }
                         row2 += line;
@@ -3735,6 +3889,7 @@ namespace CapriDesktop
         {
             Text = "Talk to Capri";
             FormBorderStyle = FormBorderStyle.None;
+            Neon.NeverFullScreen(this);
             ShowInTaskbar = false;
             StartPosition = FormStartPosition.Manual;
             TopMost = true;
@@ -3829,9 +3984,8 @@ namespace CapriDesktop
             input.SelectionStart = input.Text.Length;
         }
 
-        // Above her head, or under her feet when there is no room up there. Where it opens, and where it goes
-        // back to whenever there is no bubble to sit on: it used to be placed once and then follow the bubble
-        // for ever, and the bubble's last place is not where she is.
+        // Above her head, or under her feet without room up there: where it opens, and where it goes back whenever
+        // there is no bubble to sit on.
         internal void Place(Point head, Point feet, Rectangle area, float s)
         {
             int width = (int)SpeechBox.PanelWidth(s);
@@ -3874,9 +4028,9 @@ namespace CapriDesktop
     }
     internal sealed partial class Companion
     {
-        // Her old strips that are drawn in her old standing pose, which her artist's standing set stands in for, and how hard
-        // the glitch under her is on each of their cells. Her grin has no new art: her loop plays through it, with a flicker
-        // of glitch at its start.
+        // Her old strips drawn in her old standing pose, which her artist's standing set stands in for, and how hard
+        // the glitch under each cell is. Her grin has no new art: her loop plays through it with a flicker of glitch at
+        // its start.
         private static readonly Dictionary<string, double[]> StandIns = new Dictionary<string, double[]>
         {
             { "glitch", new[] { 0.5, 1.0, 0.8, 1.0, 0.6, 0.9, 0.5, 0.7, 0.3, 0.1 } },
@@ -3920,9 +4074,9 @@ namespace CapriDesktop
             return !ships;
         }
 
-        // Her glitch on her artist's standing set: drawn through her own RenderFrame, every step is her new frame whole on top
-        // of the underlay made from that same frame, cleared right by the lighter drawing on both facings and at two sizes;
-        // her loop picks up where it was afterwards; Legacy stand still plays the old strip. Pictures go in output.
+        // Her glitch on her artist's standing set through RenderFrame: every step her new frame whole over its own
+        // underlay, cleared by the lighter drawing on both facings and two sizes; her loop resumes after; Legacy stand
+        // plays the old strip.
         private void SmokeGlitchUnder(List<string> checks, string output)
         {
             bool framesWas = frames.Enabled, signalsWas = signals.Enabled, motionWas = preferences.Motion, facingWas = facingLeft, veilWas = veiled, hologramWas = preferences.Hologram;
@@ -4182,11 +4336,9 @@ namespace CapriDesktop
     }
     internal sealed partial class Companion
     {
-        // On her artist's standing set no frame of her old standing pose is ever drawn. Every strip her old standing size has
-        // to be listed (drawn as her standing loop, or another pose), so a strip added the old way fails here;
-        // then every clip is played through every cell by her own RenderFrame, both ways round, and the ways she comes back to
-        // standing run at real speed, and none of what her window drew may be one of those strips. Legacy stand still plays
-        // each of them pixel for pixel.
+        // On her artist's standing set no frame of her old standing pose is ever drawn: every old-size strip must be
+        // listed, every clip plays through RenderFrame both ways, and none may draw one. Legacy stand still plays them
+        // exactly.
         private void SmokeOldStand(List<string> checks, string output)
         {
             bool framesWas = frames.Enabled, signalsWas = signals.Enabled, motionWas = preferences.Motion, facingWas = facingLeft, veilWas = veiled;

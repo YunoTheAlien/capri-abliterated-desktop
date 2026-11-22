@@ -6,17 +6,8 @@ using System.Windows.Forms;
 
 namespace CapriDesktop
 {
-    // A scrollbar of hers, for anywhere of hers that scrolls.
-    //
-    // Windows' own bar is seventeen pixels of grey chrome with arrow buttons, and it looked exactly like what
-    // it is in the middle of her windows: the one part of her that did not follow the Mainframe colours
-    // setting, because it is drawn by Windows and not by her.
-    //
-    // This is six pixels of her palette with no buttons and nothing to click but the bar itself, and it takes
-    // its colours from Neon, so it changes with every other window when the look is changed.
-    //
-    // It drives an ordinary AutoScroll panel rather than replacing how scrolling works: the wheel, the
-    // keyboard and anything that moves the panel still do what they did, and this follows them.
+    // A scrollbar of hers: six pixels of her palette with no buttons, colours from Neon so it follows every look. It
+    // drives an ordinary AutoScroll panel, so wheel and keys still work and it follows them.
     internal sealed class SlimBar : Control
     {
         internal const int Thin = 6;
@@ -61,10 +52,8 @@ namespace CapriDesktop
             Sync();
         }
 
-        // A text box scrolls itself, in lines. Its own bar is turned off by the caller, so there is nothing
-        // to hide and nothing to fight: this asks how many lines there are, which one is at the top, and
-        // tells it to move by a number of lines. Typing, clicking, the wheel and the arrow keys all still
-        // scroll it, and the bar follows them.
+        // A text box scrolls itself in lines, with its own bar off: this reads the line count and top line and moves it
+        // by lines, and follows whatever else scrolls it.
         internal void Watch(TextBoxBase box)
         {
             if (typing != null)

@@ -200,9 +200,9 @@ namespace CapriDesktop
             }
         }
 
-        // What she says and shows of a tool result leaves out her brain's own instructions and tool names, like "Call ask and
-        // say..." or "list_windows names its program", while her brain still gets every word. A guard rail in a job shows them
-        // a plain line of its own in the task panel and in "Hit a snag: ...".
+        // What she says and shows of a tool result leaves out her brain's own instructions and tool names, while her
+        // brain gets every word. A guard rail in a job shows a plain line of its own, in the task panel and in "Hit a
+        // snag: ...".
         private static void SmokeBrainOnlyText(List<string> checks, string output)
         {
             string[,] spoken =
@@ -657,6 +657,35 @@ namespace CapriDesktop
                 mainframe.CloseThinkingExtra();
                 mainframe.Sync();
             }
+
+            // An xAI key is a MAX brain, Grok, kept out of her logs, read from xAI's own catalog, and the plans list the models
+            // their Codex and Claude Code really offer.
+            string xai = "xai-fixture-key-0123456789abcdefghij";
+            if (Cloud.KindOf(xai) != "xai" || Cloud.MediumKind("xai") || Cloud.KindOf("xai-test\r\nunsafe") != null
+                || new Cloud(xai, "grok-4.7").Name != "Grok" || Cloud.CompanyOf("xai") != "xAI" || Brain.Redacted(xai) != "[redacted]")
+                throw new Exception("The xAI key didn't route to MAX or stay out of the logs.");
+            if (Brain.Address("xai", "/models") != "https://api.x.ai/v1/language-models" || Brain.Address("xai", "/chat/completions") != "https://api.x.ai/v1/chat/completions")
+                throw new Exception("The xAI key went to the wrong address.");
+            List<string> grokModels = Brain.ReadCloudModels("xai", "{\"models\":[{\"id\":\"grok-4.7\",\"input_modalities\":[\"text\",\"image\"],\"output_modalities\":[\"text\"]},{\"id\":\"grok-audio\",\"input_modalities\":[\"text\"],\"output_modalities\":[\"audio\"]}]}");
+            Brain grok = new Brain();
+            if (grokModels.Count != 1 || Brain.DefaultCloudModel("xai", grokModels) != "grok-4.7"
+                || !grok.Sighted(new Cloud(xai, "grok-4.7")) || grok.Sighted(new Cloud(xai, "grok-unknown")))
+                throw new Exception("Her xAI model picker kept a media model or gave a model the wrong eyes: " + string.Join(",", grokModels.ToArray()));
+            if (ThinkingLevels.Why("xai", "grok-4.7", high, false) == null || !Brain.NotAKey.Contains("xAI"))
+                throw new Exception("Grok offered thinking levels it can't take, or her key check doesn't name xAI.");
+            List<string> codexModels = BetterModels.CodexJson("{\"models\":[{\"slug\":\"fixture-model\",\"visibility\":\"list\"},{\"slug\":\"hidden\",\"visibility\":\"hide\"}]}");
+            List<string> claudeModels = BetterModels.Claude("{\"type\":\"control_response\",\"response\":{\"subtype\":\"success\",\"request_id\":\"capri-models\",\"response\":{\"models\":[{\"value\":\"sonnet[1m]\"}]}}}");
+            BetterModels.Add(codexModels, "fixture-model");
+            BetterModels.Add(codexModels, "bad & model");
+            bool listedBefore = Brain.ModelFits("codex", "fixture-model");
+            BetterModels.Remember("codex", codexModels);
+            BetterModels.Remember("claudecode", claudeModels);
+            bool fits = Brain.ModelFits("codex", "fixture-model") && Brain.ModelFits("claudecode", "sonnet[1m]") && !Brain.ModelFits("codex", "bad & model") && !Brain.ModelFits("claudecode", "gpt-5");
+            BetterModels.Remember("codex", new List<string>());
+            BetterModels.Remember("claudecode", new List<string>());
+            if (codexModels.Count != 1 || codexModels[0] != "fixture-model" || claudeModels.Count != 1 || claudeModels[0] != "sonnet[1m]" || listedBefore || !fits)
+                throw new Exception("Her plan picker didn't keep only the listed, safe Codex and Claude Code model names.");
+            checks.Add("PASS MAX models: an xAI key is Grok on MAX with xAI's own catalog (text models only, eyes as listed), kept out of her logs and named in her key check, and a plan lists the models its Codex or Claude Code really offers");
         }
 
         // A cloud voice out of credit says so with its fix, the way her brain reads OpenAI's 429, instead of "busy (HTTP 429)",
@@ -791,7 +820,7 @@ namespace CapriDesktop
             checks.Add("PASS her help page quotes her lines as she says them now: keys, rate limits, Gemini's daily limit, the service's servers, her mic and Windows speech, cloud voice credit, the special-letters folder, call mode hearing and unreadable settings, with none of the old wording");
         }
 
-        // The owner's smaller wording flags: each line keeps its cause and its fix inside the note that shows it.
+        // Each line keeps its cause and its fix inside the note that shows it.
         private void SmokeSmallWording(List<string> checks)
         {
             // A14: her brain's and HD voice's server zips pass their checksum first, so a missing .exe means antivirus took it.

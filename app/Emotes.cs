@@ -12,11 +12,8 @@ using System.Windows.Forms;
 
 namespace CapriDesktop
 {
-    // Her two secret emotes, her chair and her mini heart: the drawings by Qewiw (mix_qewiw1412_86144), played from the
-    // frames as they were drawn. Each is a zip of PNGs in assets/emotes: every frame of the clip at 30 a second, cut to its
-    // own ink, with a frame that matches the one before it pointing back at that picture. The clips came with their own
-    // alpha, so nothing in them was keyed. The chair comes in two layers: her, drawn at her size where she is, and the
-    // close-up of her face, every pixel of those frames that isn't her seated figure, drawn the height of her screen.
+    // Her two secret emotes, her chair and her mini heart, drawn by Qewiw: zips of PNG frames at 30 a second with their
+    // own alpha. The chair has two layers: her at her size, and her face close up at screen height.
     internal sealed class EmoteClip
     {
         internal const double Fps = 30;
@@ -427,9 +424,9 @@ namespace CapriDesktop
                 surface = new Native.Surface(area.Width, area.Height);
             }
             MakeTotal += part.Elapsed.TotalMilliseconds; part.Restart();
-            // A frame drawn pixel for pixel that fills the window (every heart frame, and the close-up on a screen 1080 high)
-            // is copied straight in, row by row, mirrored where it's turned: no clearing and no blending of a full screen of
-            // pixels, which is what held the heart to about 80 of its 105 frames.
+            // A frame filling the window pixel for pixel (every heart frame, the 1080 close-up) is copied straight in,
+            // row by row and mirrored where turned, with no clearing or blending, which is what kept the heart from its
+            // full frame rate.
             bool both = closePlace.Scale > 0 && closeup != null;
             bool copied = both ? CopyFirst(surface, closeup, closeAt, closePlace, area) : CopyFirst(surface, picture, offset, place, area);
             if (!copied || both)
@@ -568,11 +565,8 @@ namespace CapriDesktop
         }
     }
 
-    // Smoke only, and only when CAPRI_EMOTE_FILM names a folder: a record of her real windows as the app draws them, for a
-    // film made afterwards. Every picture a window of hers is given (the same one UpdateLayeredWindow gets) is copied as it's
-    // given, with the time and where the window is, and written out on another thread; 30 times a second which of her
-    // windows are showing, in their stacking order, is written down too. Nothing is read off the screen, and nothing is
-    // encoded while she plays, so the record costs her as little as it can.
+    // Smoke only, with CAPRI_EMOTE_FILM set: every picture her windows are given is copied with its time and place, and
+    // which windows show, for a film made afterwards. Nothing is read off the screen or encoded while she plays.
     internal static class EmoteFilm
     {
         private sealed class Shot { public long At; public long Window; public int X, Y, Width, Height; public byte[] Pixels; }
@@ -809,9 +803,9 @@ namespace CapriDesktop
             PlayEmote("chair");
         }
 
-        // Her chair and her heart: both clips are in, whole and timed at 30 a second; the chair is drawn at her size with her
-        // black body kept and nothing around it but what was drawn; it holds while she answers; the asks and the mentions set
-        // them off and the look-alikes don't; a mention still gets her answer; and she comes back to what she was doing.
+        // Her chair and heart: both clips whole at 30 a second; the chair at her size, keeping her black body; it holds
+        // while she answers; asks and mentions set them off but look-alikes don't; a mention still gets her answer; she
+        // returns to what she was doing.
         private void SmokeEmotes(List<string> checks, string output)
         {
             EmoteClip chair = EmoteClip.Load("chair"), heart = EmoteClip.Load("heart");
@@ -936,7 +930,7 @@ namespace CapriDesktop
                 try
                 {
                     preferences.Silent = true;
-                    Rectangle work = Screen.PrimaryScreen.WorkingArea;
+                    Rectangle work = Displays.Home.WorkingArea;
                     StandForThrow(new Point(work.Left + work.Width * 2 / 3, work.Top + work.Height / 2));
                     RenderFrame();
                     Point at = anchor;
@@ -1080,9 +1074,9 @@ namespace CapriDesktop
                         if (emote.Playing) throw new Exception("Her " + which + " never finished.");
                         if (which == "chair")
                         {
-                            // As the clip fades her out of her chair her ribbons take her back, and she forms where she stood.
-                            // In a check she has no arrival of her own (instant), so her waiting ribbons are sent home on her next frame,
-                            // which can come just after the clip's last one: keep watching until they've landed and her veil is over.
+                            // As the clip fades her out of her chair, her ribbons take her back to where she stood. In
+                            // a check she has no arrival of her own, so the ribbons land on her next frame: keep
+                            // watching until they have and her veil is over.
                             while ((ribbons.Waiting || clock.Elapsed.TotalSeconds < veilUntil + 0.05) && playing.Elapsed.TotalSeconds < 22)
                             {
                                 Application.DoEvents();
@@ -1327,7 +1321,7 @@ namespace CapriDesktop
             {
                 preferences.Silent = true;
                 preferences.Motion = true;
-                Rectangle bounds = Screen.PrimaryScreen.Bounds, work = Screen.PrimaryScreen.WorkingArea;
+                Rectangle bounds = Displays.Home.Bounds, work = Displays.Home.WorkingArea;
                 notes.Add("screen " + bounds + ", work area " + work);
                 foreach (string which in new[] { "chair", "heart" })
                 {
@@ -1396,7 +1390,7 @@ namespace CapriDesktop
         {
             ThrowCheck(checks, delegate(List<string> list, List<short[]> sounds)
             {
-                Rectangle work = Screen.PrimaryScreen.WorkingArea;
+                Rectangle work = Displays.Home.WorkingArea;
                 StandForThrow(new Point(work.Left + work.Width * 2 / 3, work.Top + work.Height / 2));
                 RenderFrame();
                 bool motionWas = preferences.Motion;

@@ -110,10 +110,8 @@ namespace CapriDesktop
             TextRenderer.DrawText(graphics, text ?? "", font, new Rectangle(bounds.Left + pad, bounds.Top + pad - 2, bounds.Width - pad * 2, bounds.Height - pad * 2 + 4), Neon.White, TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
         }
 
-        // Which picture a tool's row gets: a prompt for commands, a magnifier for searches, a page for reads, a pencil for
-        // edits, a globe for the web, a checklist for to-dos and tasks, a branch for agents, a plug for MCP tools, and a plain
-        // dot for anything else.
-        // Not a tool: the name the "Thinking" line draws its mark with. The space keeps it from ever matching a real tool.
+        // Which picture a tool's row gets: a prompt, magnifier, page, pencil, globe, checklist, branch, plug or plain
+        // dot. The name the "Thinking" line draws with; its space keeps it from matching a real tool.
         internal const string Thinking = " thinking";
 
         internal static string ToolKind(string name)
@@ -298,11 +296,8 @@ namespace CapriDesktop
         internal const TextFormatFlags Kept = TextFormatFlags.PreserveGraphicsTranslateTransform | TextFormatFlags.PreserveGraphicsClipping;
         internal const TextFormatFlags Wrap = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding | TextFormatFlags.ExpandTabs | Kept;
 
-        // Measured on a drawing surface like the ones the words are drawn on. Measured against the screen, Capri's process got
-        // her 13.5 px face 5% wider than it draws (153 px against 145 for one line), which left gaps between styled words and
-        // wrapped lines early.
-        // One memory surface a thread, kept for the life of the app: a Graphics there costs a lock and release on every
-        // measure, which made a long reply take minutes.
+        // Measured on a memory surface like the one drawn on, since the screen measured her face 5% wide. One surface
+        // per thread for the app's life, since a Graphics per measure made long replies take minutes.
         [ThreadStatic] private static Surface measurer;
 
         private sealed class Surface : IDeviceContext
@@ -371,9 +366,9 @@ namespace CapriDesktop
         }
     }
 
-    // A key in her look, drawn like the Mainframe's: a dark box with a red rim and its bottom right corner clipped. Cyan is
-    // the step to take, solid is the window's main step, red ends something. A chevron makes it a dropdown with its small
-    // faint caption, like MODE, before its choice in cyan. Glyphs: 1 minimize, 2 close, 3 maximize, 4 plus.
+    // A key in her look, like the Mainframe's: a dark box with a red rim and clipped corner; cyan for the step to take,
+    // solid for the main step, red to end. A chevron makes a dropdown with a faint caption. Glyphs: 1 minimize, 2
+    // close, 3 maximize, 4 plus.
     internal sealed class WorkKey : Button
     {
         internal Color Accent = Neon.Rose;

@@ -6,17 +6,9 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
-    // Her temperaments, in personalSettings\personalities\ beside her settings, split in two by what is in them:
-    // Two folders, one per side of the switch, each with a whole copy of every pack it has. She reads one folder at
-    // a time.
-    //
-    // The point of these is not the prompt text. It is that her *reactions* were nine hardcoded arrays written for one
-    // temperament: being thrown always hurt, pets were always grudgingly allowed. Give her a personality that enjoys
-    // being thrown about and the fixed lines fight it, so she says "Put me DOWN!" while her character says she loves
-    // it. So each personality carries its own lines, and the hardcoded sets are only the fallback for
-    // anything a personality does not say.
-    //
-    // A file that is missing, empty or half-written falls back to her own lines set by set, never to blank.
+    // Her temperaments in personalSettings\personalities\: one folder per side of the switch, each a whole copy of
+    // every pack, read one at a time. Each personality carries its own reaction lines; a missing or broken set falls
+    // back to hers.
     internal static class Personalities
     {
         internal const string SettingsName = "personalSettings";
@@ -109,7 +101,7 @@ namespace CapriDesktop
                 if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) continue;
                 // Every file, not every .md: her senpai ones are numbered and have no type at all. Backups are
                 // left out, since a .bak is a copy of a pack rather than one of them.
-                try { foreach (string file in Directory.GetFiles(folder)) if (!file.EndsWith(".bak", StringComparison.OrdinalIgnoreCase) && !file.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)) found.Add(file); }
+                try { foreach (string file in Directory.GetFiles(folder)) if (Notes.IsPack(file)) found.Add(file); }
                 catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
             return found;
@@ -124,7 +116,7 @@ namespace CapriDesktop
                 if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) return new string[0];
                 List<string> found = new List<string>();
                 foreach (string file in Directory.GetFiles(folder))
-                    if (!file.EndsWith(".bak", StringComparison.OrdinalIgnoreCase) && !file.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)) found.Add(file);
+                    if (Notes.IsPack(file)) found.Add(file);
                 return found.ToArray();
             }
             catch (Exception) { return new string[0]; }
@@ -180,13 +172,6 @@ namespace CapriDesktop
             senpai = string.Join(Environment.NewLine, made.ToArray());
         }
 
-        // The name on a score line, or null when the line is not one.
-        private static string ScoreName(string row)
-        {
-            Match named = Regex.Match(row ?? "", @"^[ \t]*([A-Za-z][A-Za-z ]*?)[ \t]*:");
-            return named.Success ? named.Groups[1].Value.Trim() : null;
-        }
-
         // A score line for an act that only exists on the senpai side, and nothing else.
         private static bool SenpaiScore(string row)
         {
@@ -214,6 +199,15 @@ namespace CapriDesktop
             { "petted", "When you pet her" },
             { "fed", "When you feed her" },
             { "treat", "When you give her a treat" },
+            // Her Tamagotchi gifts, and the food only Emo and Bratty are offered.
+            { "trinket", "When you give her a trinket" },
+            { "flowers", "When you give her flowers" },
+            { "plushie", "When you give her a plushie" },
+            { "gift", "When you give her a gift" },
+            { "nuggies", "When you give her chimpken nuggies" },
+            // Her hunger nag in her own words. Only Emo and Bratty ship these, asking for nuggies; the rest use the shared ones.
+            { "peckish", "When she is peckish" },
+            { "hungry", "When she is hungry" },
             { "uppies", "When you pick her up" },
             { "thrown", "When you throw her" },
             { "warned", "When you throw her again" },
@@ -257,25 +251,19 @@ namespace CapriDesktop
         // Same key and value shape as How she reacts, read into the same table.
         internal const string SwitchHeading = "She switches on";
 
-        // Behaviour, not words. Sulking after being thrown is built around throwing being unwelcome: she refuses to be
-        // picked up and hops away from the cursor. For a personality that enjoys it that is backwards, so the numbers
-        // behind it are hers to set rather than fixed in code.
-        //
-        // Her own values are the author's, so a default install behaves exactly as it always did.
+        // Sulking after being thrown is built for throwing being unwelcome, so its numbers are each personality's to
+        // set. Her own values are the stock ones.
         private static readonly string[,] OwnReacts =
         {
             { "sulks after", "3" },      // throws inside two minutes before she sulks. 0 means never.
             { "sulk minutes", "5" },     // how long until she is over it on her own
             { "dodges", "yes" },         // hops away from a cursor coming at her while sulking
             { "sulk alone", "300" },     // seconds of being left alone that settles her
-            // Anything she dislikes adds its weight to an upset tally; this is where she has had enough of it. So
-            // insulting a devoted one, or ignoring a bratty one, can put her in a sulk the same way throwing does.
-            // 0 means only throwing can. Throwing is excluded here because it has its own count above.
+            // Anything she dislikes adds to an upset tally, and this is where she has had enough, so insulting or
+            // ignoring can sulk her like throwing does. 0 means only throwing can; throwing has its own count above.
             { "sulks at upset", "6" },
-            // How often her flirting turns up in ordinary lines, 0 to 10. 0 is never. Her own is mild, and each
-            // personality sets its own; a mood adds to it rather than replacing it. Called interest in files written
-            // before 0.9.129 and still read under that name, but it was never only that: the same number drives
-            // her own flirting with the switch off.
+            // How often flirting turns up in ordinary lines, 0 (never) to 10; each personality sets its own and a mood
+            // adds to it. Still read under its old name, interest.
             { "flirt", "2" },
             // Ignored for this long and she gives up and closes herself. 0 is off, and it is off for everyone by
             // default: it only ever runs with the switch on and a mood that asks for it.
@@ -296,13 +284,13 @@ namespace CapriDesktop
         private static readonly List<Drift> aDrifts = new List<Drift>();
         private static readonly Dictionary<string, string> aReacts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         private static string aActive = "";
-        private static DateTime aRead = DateTime.MinValue;
         private static long aWas = -1;
 
         // The personality whose file is actually read: hers, or the one dynamic.md names underneath.
         internal static string Under
         {
-            get { return HeldPlain ? Stock : Chosen == Dynamic ? (Dynamics.Under ?? Stock) : Chosen; }
+            // A personality with no lines of its own reads the one its state borrows (Tilt.Borrowed).
+            get { return HeldPlain ? Stock : Chosen == Dynamic ? (Dynamics.Under ?? Stock) : CapriDesktop.Tilt.Borrowed(Chosen) ?? Chosen; }
         }
 
         // For her checks: while one runs she is her own character with no attitude on top, so a mood that rolls or
@@ -317,18 +305,19 @@ namespace CapriDesktop
             string path = string.IsNullOrEmpty(named) ? null : Dynamics.PathOf(named);
             try
             {
-                if (path == null || !File.Exists(path))
+                // Asked on every reaction, so whether the file is there and changed comes from memory (Stamps).
+                long stamp = path == null ? 0 : Stamps.Of(path);
+                if (stamp == 0)
                 {
                     lock (gate)
                     {
                         if (aActive.Length == 0 && aLoaded.Count == 0 && aLikes.Count == 0) return;
                         aLoaded.Clear(); aLikes.Clear(); aWords.Clear(); aDrifts.Clear(); aReacts.Clear();
-                        aActive = ""; aRead = DateTime.MinValue; aWas = -1;
+                        aActive = ""; aWas = -1;
                     }
                     return;
                 }
-                FileInfo about = new FileInfo(path);
-                lock (gate) { if (named == aActive && about.LastWriteTimeUtc == aRead && about.Length == aWas) return; }
+                lock (gate) { if (named == aActive && stamp == aWas) return; }
                 Dictionary<string, int> likesIn = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
                 List<KeyValuePair<string, int>> wordsIn = new List<KeyValuePair<string, int>>();
                 List<Drift> driftsIn = new List<Drift>();
@@ -342,21 +331,26 @@ namespace CapriDesktop
                     aWords.AddRange(wordsIn);
                     aDrifts.AddRange(driftsIn);
                     foreach (KeyValuePair<string, string> one in reactsIn) aReacts[one.Key] = one.Value;
-                    aActive = named; aRead = about.LastWriteTimeUtc; aWas = about.Length;
+                    aActive = named; aWas = stamp;
                 }
+                // A mood that has just rolled on this personality: a blend for the pair can be asked for.
+                Action<string, string> moodOn = MoodOn;
+                if (moodOn != null) try { moodOn(Under, named); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
-        // Where she goes when one thing keeps happening. "petted over 20: Bratty" means twenty points of being
-        // petted, net, turns a devoted one bratty: she has had enough love to get cheeky with it. The tallies decay,
-        // so a drift is about a stretch of being treated one way, not a lifetime total.
+        // Where she goes when one thing keeps happening: "petted over 20: Bratty" means twenty net points of petting
+        // turn a devoted one bratty. The tallies decay, so a drift is about a stretch, not a lifetime total.
         private static readonly List<Drift> drifts = new List<Drift>();
 
         internal sealed class Drift
         {
             internal string Act;
             internal int Over;
+            // The second mark, past which she moves at once whatever the window says: written after the first as ", now
+            // M", or 0 to work it out from how fast the act can land (NowMark).
+            internal int Now;
             internal string Into;
         }
 
@@ -365,7 +359,9 @@ namespace CapriDesktop
         {
             { "thrown", "-2" }, { "insulted", "-2" },
             { "petted", "2" }, { "praised", "2" }, { "ignored", "-1" },
-            { "fed", "2" }, { "treat", "3" }, { "uppies", "2" }
+            { "fed", "2" }, { "treat", "3" }, { "uppies", "2" },
+            { "trinket", "2" }, { "flowers", "3" }, { "plushie", "2" }, { "gift", "3" }, { "nuggies", "2" },
+            { "touched shoulders", "1" }, { "touched middle", "0" }, { "touched legs", "-1" }, { "touched feet", "-1" }, { "tickled", "1" }
         };
         private static readonly string[,] OwnWords =
         {
@@ -377,15 +373,11 @@ namespace CapriDesktop
         private static readonly Dictionary<string, int> likes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         private static readonly List<KeyValuePair<string, int>> words = new List<KeyValuePair<string, int>>();
         private static string active = "";
-        private static DateTime read = DateTime.MinValue;
-        private static long wasLong = -1;
-        // The senpai half of the same pack, watched the same way, plus whether it was being read at all: flipping the
-        // toggle has to reload her lines even though neither file changed.
-        private static DateTime senpaiRead = DateTime.MinValue;
-        private static long senpaiLong = -1;
+        private static long wasStamp = -1;
+        // Whether her senpai copy was the one read: flipping the toggle reloads her lines even though no file changed.
         private static bool wasSenpaiLive;
 
-        // Her own, first and default. "Her own" means the author's lines, so picking it changes nothing at all.
+        // Her own, first and default. "Her own" means her stock lines (Lachy), so picking it changes nothing at all.
         internal const string Stock = "Her own";
 
         // What a new install starts on. Stock stays exactly as it was, on the menu and the default for anyone
@@ -437,7 +429,7 @@ namespace CapriDesktop
                         // What the file says it is, which is how a numbered one is known. Her plain packs open
                         // with the same line, so this is one rule for both.
                         string named = Slots.Titled(file) ?? Path.GetFileNameWithoutExtension(file);
-                        if (named.Equals(Stock, StringComparison.OrdinalIgnoreCase)
+                        if (named.Trim().Length == 0 || named.Equals(Stock, StringComparison.OrdinalIgnoreCase)
                             || named.Equals(Dynamic, StringComparison.OrdinalIgnoreCase)
                             || found.Contains(named)) continue;
                         // Same convention as the moods: a personality can also say Legacy.OnlyKey + ": yes" and
@@ -483,13 +475,9 @@ namespace CapriDesktop
 
         internal static string Chosen = Stock;
 
-        // Her plain file for a pack, or its senpai one when that is the only file it has, which is what a pack that is
-        // senpai as a whole looks like on disk. Everything that reads, edits or tidies a pack asks for this, so the
-        // one-file packs need no special case anywhere else.
+        // Her plain file for a pack, or its senpai one when that is all it has.
         // ---------- Two whole copies ----------
-        // Each side keeps its own whole copy of every pack: censored\ holds the safe one, cut down, and the senpai
-        // folder holds the whole one, safe and senpai sections together. She reads one folder at a time, never one
-        // file on top of another, so a rule in one copy cannot reach the other.
+        // Each side keeps a whole copy of every pack, read one folder at a time so neither can reach the other.
 
         private const string WholeNote = "whole.txt";
 
@@ -520,21 +508,6 @@ namespace CapriDesktop
             return string.Join("\n", rows.ToArray()).TrimEnd() + "\n";
         }
 
-        // The sections that carry no tag, which is what a half says in place of the safe copy's own.
-        private static string Untagged(string half)
-        {
-            if (string.IsNullOrEmpty(half)) return null;
-            string title;
-            List<string> rows = new List<string>();
-            foreach (KeyValuePair<string, List<string>> one in Sectioned(half, out title))
-            {
-                if (one.Key == null || Legacy.Heading(one.Key.TrimStart('#').Trim())) continue;
-                rows.Add(one.Key);
-                rows.AddRange(one.Value);
-            }
-            return rows.Count == 0 ? null : "# x\n\n" + string.Join("\n", rows.ToArray());
-        }
-
         // A file cut into its sections by their ## headings. What comes before the first one, the title and its
         // note, has no heading.
         private static List<KeyValuePair<string, List<string>>> Sectioned(string text, out string title)
@@ -556,41 +529,6 @@ namespace CapriDesktop
             }
             found.Add(cur);
             return found;
-        }
-
-        // Once, with the switch on: each half in the senpai folder becomes a whole copy, the safe file as it is on
-        // disk with the half's sections added, and a pack with no half gets a copy of its safe file. The half is
-        // kept as a .bak. A pack that is senpai throughout is whole already.
-        private static void WholeCopies()
-        {
-            if (string.IsNullOrEmpty(Senpais) || string.IsNullOrEmpty(Plain) || !Directory.Exists(Plain)) return;
-            try
-            {
-                Directory.CreateDirectory(Senpais);
-                string noted = Path.Combine(Senpais, WholeNote);
-                HashSet<string> done = new HashSet<string>(File.Exists(noted) ? Notes.ReadLines(noted) : new string[0], StringComparer.OrdinalIgnoreCase);
-                bool any = false;
-                foreach (string plainFile in Packed(Plain))
-                {
-                    string named = Slots.Titled(plainFile) ?? Path.GetFileNameWithoutExtension(plainFile);
-                    if (done.Contains(named)) continue;
-                    string target = SenpaiPathOf(named);
-                    if (target == null) continue;
-                    string half = File.Exists(target) ? Notes.ReadAll(target) : null;
-                    string whole = Whole(Notes.ReadAll(plainFile), half);
-                    // What the senpai half carries now that a half written by an earlier build did not.
-                    string shipped = null;
-                    try { if (SenpaiFor != null) shipped = Legacy.Modern(SenpaiFor(named)); }
-                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-                    whole = Whole(whole, Untagged(shipped));
-                    if (half != null) File.Copy(target, target + ".bak", true);
-                    Notes.WriteAll(target, Lines(whole));
-                    done.Add(named);
-                    any = true;
-                }
-                if (any) File.WriteAllLines(noted, new List<string>(done).ToArray());
-            }
-            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // The files of the side in use: the senpai folder's with the switch on, then any safe pack it has no copy
@@ -619,8 +557,8 @@ namespace CapriDesktop
             {
                 if (Brain.SenpaiLive)
                 {
-                    string senpai = SenpaiPathOf(named);
-                    if (senpai != null && File.Exists(senpai)) return senpai;
+                    string senpai = Slots.Find(Senpais, named);
+                    if (senpai != null) return senpai;
                 }
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
@@ -632,14 +570,6 @@ namespace CapriDesktop
         // Numbered on disk and found by the title inside, so a listing of the folder says nothing about
         // who any of them are. See Slots for why the title is the identity rather than a mapping file.
         internal static string SenpaiPathOf(string named) { return Slots.Path(Senpais, named); }
-
-        // Two paths naming the same file, whatever shape each was written in.
-        private static bool PathIs(string one, string two)
-        {
-            if (string.IsNullOrEmpty(one) || string.IsNullOrEmpty(two)) return false;
-            try { return string.Equals(Path.GetFullPath(one), Path.GetFullPath(two), StringComparison.OrdinalIgnoreCase); }
-            catch (Exception) { return string.Equals(one, two, StringComparison.OrdinalIgnoreCase); }
-        }
 
         private static string Named(string folder, string named)
         {
@@ -656,6 +586,53 @@ namespace CapriDesktop
             string path = PathOf(Chosen);
             if (path == null || Chosen == Stock) throw new IOException("Her own lines are built in. Pick another personality to edit one.");
             return new WrittenNote(path, Written(Chosen), gate);
+        }
+
+        // Mood blends (Blends.cs): lines in a personality's voice coloured by today's mood. Blended answers
+        // personality, mood and reaction with lines or null; MoodOn hears a mood roll so a blend can be asked for. Both
+        // null without them.
+        internal static Func<string, string, string, string[]> Blended;
+        internal static Action<string, string> MoodOn;
+
+        // The headings a mood file can give one reaction for one personality: "petted when Dominant", or with the
+        // reaction's own heading, "When you pet her when Dominant".
+        internal static IEnumerable<string> Pairings(string set, string personality)
+        {
+            if (string.IsNullOrEmpty(personality)) yield break;
+            yield return set + " when " + personality;
+            for (int at = 0; at < Sets.GetLength(0); at++)
+                if (string.Equals(Sets[at, 0], set, StringComparison.OrdinalIgnoreCase)) yield return Sets[at, 1] + " when " + personality;
+        }
+
+        // What a blend is made from: for each reaction both the personality and today's mood have lines for, the two
+        // sets of lines, and the personality's character. Never the senpai sets.
+        internal static Dictionary<string, KeyValuePair<string[], string[]>> BlendSources(out string character)
+        {
+            Dictionary<string, KeyValuePair<string[], string[]>> found = new Dictionary<string, KeyValuePair<string[], string[]>>(StringComparer.OrdinalIgnoreCase);
+            character = null;
+            FreshAttitude();
+            if (Under != Stock) Fresh();
+            lock (gate)
+            {
+                string[] prose;
+                if (loaded.TryGetValue("Her character", out prose) && prose != null && prose.Length > 0) character = string.Join(" ", prose);
+                foreach (KeyValuePair<string, string[]> mood in aLoaded)
+                {
+                    if (mood.Value == null || mood.Value.Length == 0 || mood.Key.EndsWith(LineFile.SenpaiMark, StringComparison.Ordinal) || mood.Key.IndexOf(" when ", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    if (Array.IndexOf(NotLines, mood.Key) >= 0 || IsPart(mood.Key)) continue;
+                    string[] own;
+                    if (!loaded.TryGetValue(mood.Key, out own) || own == null) own = new string[0];
+                    found[mood.Key] = new KeyValuePair<string[], string[]>(own, mood.Value);
+                }
+            }
+            return found;
+        }
+
+        // A mood's openers and tails: pieces put round a line, not a reaction of their own.
+        internal const string OpenersHeading = "Openers", TailsHeading = "Tails";
+        internal static bool IsPart(string heading)
+        {
+            return string.Equals(heading, OpenersHeading, StringComparison.OrdinalIgnoreCase) || string.Equals(heading, TailsHeading, StringComparison.OrdinalIgnoreCase);
         }
 
         private static string[] Filled(string[] said)
@@ -695,18 +672,92 @@ namespace CapriDesktop
 
         internal static string Senpai(string set) { return set + LineFile.SenpaiMark; }
 
-        // The lines for one reaction. Their personality's if it has any, else the author's.
+        // The lines for one reaction. Their personality's if it has any, else her stock ones.
         internal static string[] Lines(string set, string[] hers)
         {
             if (string.IsNullOrEmpty(set)) return hers;
-            // Today's attitude speaks first when it has something for this reaction.
+            // Today's attitude speaks first when it has something for this reaction: a section written for this
+            // personality in this mood ("## petted when Dominant"), then its senpai lines, then a blend her brain wrote of
+            // this personality's voice in this mood (Blended), then the mood's own lines.
             FreshAttitude();
+            moodWritten = false;
+            string under = Under, active;
             lock (gate)
             {
                 string[] mood;
-                if (Brain.SenpaiLive && aLoaded.TryGetValue(Senpai(set), out mood) && mood != null && mood.Length > 0) return Filled(mood);
-                if (aLoaded.TryGetValue(set, out mood) && mood != null && mood.Length > 0) return Filled(mood);
+                active = aActive;
+                // Each pool named for her line log: "mood Clingy: petted when Devoted", "blend Devoted when Clingy: petted".
+                foreach (string pairing in Pairings(set, under))
+                {
+                    if (Brain.SenpaiLive && aLoaded.TryGetValue(Senpai(pairing), out mood) && mood != null && mood.Length > 0) { moodWritten = true; return Sayings.Named(Filled(mood), "mood " + active + " (extended): " + pairing); }
+                    if (aLoaded.TryGetValue(pairing, out mood) && mood != null && mood.Length > 0) { moodWritten = true; return Sayings.Named(Filled(mood), "mood " + active + ": " + pairing); }
+                }
+                if (Brain.SenpaiLive && aLoaded.TryGetValue(Senpai(set), out mood) && mood != null && mood.Length > 0) return Sayings.Named(Filled(mood), "mood " + active + " (extended): " + set);
             }
+            Func<string, string, string, string[]> blended = Blended;
+            if (blended != null && active.Length > 0)
+            {
+                string[] blend = null;
+                try { blend = blended(under, active, set); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                if (blend != null && blend.Length > 0) { moodWritten = true; return Sayings.Named(Filled(blend), "blend " + under + " when " + active + ": " + set); }
+            }
+            // No blend: the mood's own lines and their personality's share one pool, the mood's coming up as often as
+            // mood share in dynamic.md says. Her personality's lines keep coming, so a mood never pushes it out.
+            string[] moodOwn = null;
+            lock (gate)
+            {
+                string[] mood;
+                if (aLoaded.TryGetValue(set, out mood) && mood != null && mood.Length > 0) moodOwn = Sayings.Named(Filled(mood), "mood " + active + ": " + set);
+            }
+            string[] own = Own(set, hers);
+            // Her pack's own lines, or the ones in code when the pack has none for this.
+            Sayings.Named(own, ReferenceEquals(own, hers) ? "code: " + set : Chosen + ": " + set);
+            return moodOwn == null ? own : Mixed(moodOwn, own, Dynamics.MoodShare);
+        }
+
+        // Set by Lines: the lines it gave were written for this personality in this mood, by hand or by her brain, so the
+        // mood's openers and tails are not put round them again.
+        [ThreadStatic] private static bool moodWritten;
+
+        // One of today's mood's openers or tails ("Openers", "Tails"), for her lines when no blend wrote them, as often as
+        // mood share says. Null when the mood has none, when it is not its turn, or when the line was written for the mood.
+        internal static string MoodPart(string kind, Random dice)
+        {
+            if (moodWritten || dice == null) return null;
+            FreshAttitude();
+            string[] parts;
+            lock (gate)
+            {
+                if (aActive.Length == 0 || !aLoaded.TryGetValue(kind, out parts) || parts == null || parts.Length == 0) return null;
+            }
+            if (dice.Next(100) >= Dynamics.MoodShare) return null;
+            string one = parts[dice.Next(parts.Length)];
+            return string.IsNullOrWhiteSpace(one) || one.TrimStart().StartsWith(">", StringComparison.Ordinal) ? null : one.Trim();
+        }
+
+        // The mood's lines and their personality's in one pool, each line copied so a mood line comes up about share times
+        // in a hundred. The same pool every time for the same lines, so a line picked from it is always found in it again.
+        internal static string[] Mixed(string[] mood, string[] own, int share)
+        {
+            if (own == null || own.Length == 0 || share >= 100) return mood;
+            if (mood == null || mood.Length == 0 || share <= 0) return own;
+            double want = share / 100.0, missed = double.MaxValue;
+            int moodCopies = 1, ownCopies = 1;
+            for (int m = 1; m <= 10; m++)
+                for (int o = 1; o <= 10; o++)
+                {
+                    double off = Math.Abs((double)(m * mood.Length) / (m * mood.Length + o * own.Length) - want);
+                    if (off < missed - 1e-9) { missed = off; moodCopies = m; ownCopies = o; }
+                }
+            List<string> pool = new List<string>(moodCopies * mood.Length + ownCopies * own.Length);
+            for (int m = 0; m < moodCopies; m++) pool.AddRange(mood);
+            for (int o = 0; o < ownCopies; o++) pool.AddRange(own);
+            return pool.ToArray();
+        }
+
+        // Their personality's lines for one reaction, or hers.
+        private static string[] Own(string set, string[] hers)
+        {
             if (Under == Stock) return hers;
             Fresh();
             lock (gate)
@@ -731,12 +782,8 @@ namespace CapriDesktop
             return hers;
         }
 
-        // How much an act moves her: positive is enjoyed, negative is not. "thrown", "insulted", "petted",
-        // "praised", "ignored". Unknown acts move nothing rather than guessing a direction.
-        // How forward she is, in words. The number drove her written lines only and never reached her brain, so a
-        // forwardness of 10 with the switch on still answered like a model with its defaults on: the open safety text
-        // takes a rule away but never grants anything, and a small brain needs to be told what it may do, not only
-        // what it no longer must not.
+        // How much an act moves her: positive enjoyed, negative not; an unknown act moves nothing. Her forwardness in
+        // words, told to her brain too, since a small brain needs to hear what it may do, not only what it must not.
         internal static string Forward
         {
             get
@@ -755,9 +802,8 @@ namespace CapriDesktop
                 string answer = level >= 3
                     ? " When they ask you directly about what you like, what you are into or what you want, answer them properly in your own voice. Do not dodge the question, change the subject or tell them you would rather not say."
                     : "";
-                // Being forward is a dial on who she already is, not a different person wearing her name. A prickly one
-                // turned up to ten is a prickly one who wants you and hates admitting it, and she was coming out as
-                // someone else entirely because the number replaced the character instead of colouring it.
+                // Forwardness is a dial on who she already is, not a different person: a prickly one at ten is a
+                // prickly one who wants you and hates admitting it.
                 string self = level >= 5
                     ? " However forward you are, stay the one you are: your personality above decides how you say it, and this only decides how much you hold back."
                     : "";
@@ -829,10 +875,8 @@ namespace CapriDesktop
         }
 
         // ---- drifting ----
-        //
-        // Main is what they chose. Chosen is who she is right now, which drifts away from Main when one kind of
-        // treatment keeps up, and comes back when it stops. Main is what is saved; a drift is never written to
-        // settings, so closing her always returns her to the personality they picked.
+        // Main is the personality they chose; Chosen drifts from it while one kind of treatment keeps up and comes back
+        // after. A drift is never saved.
         internal static string Main = Stock;
 
         private static readonly Dictionary<string, double> tally = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
@@ -899,7 +943,10 @@ namespace CapriDesktop
 
         // An attitude can drift to another attitude, which is a mood souring rather than her character changing:
         // clingy that keeps being ignored turns moody. Returns the new attitude, or null.
-        internal static string Souring()
+        internal static string Souring() { Drift rule = SouringRule(); return rule == null ? null : rule.Into; }
+
+        // The mood line that would sour her now, or null.
+        internal static Drift SouringRule()
         {
             if (Chosen != Dynamic) return null;
             FreshAttitude();
@@ -907,11 +954,121 @@ namespace CapriDesktop
             lock (gate) rules = new List<Drift>(aDrifts);
             foreach (Drift rule in rules)
             {
-                if (Tally(rule.Act) < rule.Over) continue;
+                if (Size(rule.Act) < rule.Over) continue;
                 if (string.Equals(rule.Into, Attitude, StringComparison.OrdinalIgnoreCase)) continue;
                 string path = Dynamics.PathOf(rule.Into);
-                if (path != null && File.Exists(path)) return rule.Into;
+                if (path != null && File.Exists(path)) return rule;
             }
+            return null;
+        }
+
+        // How big a run of one act is, either way: "over N" is N points of that act, so one she dislikes moves her too.
+        // Her mood's drift push scales it, a pushing mood making a run count for more and a steady one for less.
+        internal static double Size(string act)
+        {
+            return Math.Abs(Tally(act)) * Math.Max(0.1, 1 + DriftPush);
+        }
+
+        // Today's mood's "drift push" under "## How she reacts", signed, two decimals; 0 with none.
+        internal static double DriftPush { get { return Scaled("drift push", 0); } }
+
+        // Past a line's second mark: she moves now, whatever the window.
+        internal static bool PastNow(Drift rule)
+        {
+            if (rule == null) return false;
+            int now = rule.Now > 0 ? rule.Now : NowMark(rule.Act, rule.Over, Math.Abs(Likes(rule.Act)));
+            return Size(rule.Act) >= now;
+        }
+
+        private static readonly Dictionary<string, int> nowMarks = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        // A line's second mark when it writes none: where a steady run stands about six and a half minutes past its
+        // first mark, given Mood.Counts and the tallies' decay, so it is reachable and never a grind.
+        internal static int NowMark(string act, int over, int worth)
+        {
+            string key = act + "|" + over + "|" + worth;
+            lock (gate) { int known; if (nowMarks.TryGetValue(key, out known)) return known; }
+            int seconds, perHour;
+            Mood.LimitOf(act, out seconds, out perHour);
+            if (seconds <= 0) seconds = 10;
+            if (perHour <= 0) perHour = 3600 / seconds;
+            double tally = 0, cooledAt = 0, last = double.MinValue, firstAt = -1, best = 0;
+            List<double> counts = new List<double>();
+            int mark = over * 2;
+            for (double t = 0; t < 3 * 3600 && worth > 0; t += 1)
+            {
+                if (t - cooledAt >= 60) { tally *= Math.Pow(0.5, (t - cooledAt) / 60 / HalfLifeMinutes); cooledAt = t; }
+                counts.RemoveAll(delegate(double at) { return t - at >= 3600; });
+                if (t - last >= seconds && counts.Count < perHour) { tally = Math.Min(60, tally + worth); last = t; counts.Add(t); }
+                if (firstAt < 0 && tally >= over) firstAt = t;
+                if (firstAt < 0) continue;
+                if (t <= firstAt + 480) best = Math.Max(best, tally);
+                if (t >= firstAt + 390) { mark = (int)tally > over ? (int)tally : (int)best; break; }
+            }
+            mark = Math.Max(over + 1, Math.Min(60, mark));
+            lock (gate) nowMarks[key] = mark;
+            return mark;
+        }
+
+        // A number from "## How she reacts": her personality's, with today's mood's added on top (a mood's is signed), to two
+        // decimals; usual when her personality says nothing.
+        internal static double Scaled(string named, double usual)
+        {
+            double mine = usual, add = 0, read;
+            FreshAttitude();
+            lock (gate)
+            {
+                string mood;
+                if (aReacts.TryGetValue(named, out mood) && Number(mood, out read)) add = read;
+            }
+            if (Under != Stock)
+            {
+                Fresh();
+                lock (gate)
+                {
+                    string said;
+                    if (reacts.TryGetValue(named, out said) && Number(said, out read)) mine = read;
+                }
+            }
+            return Math.Round(mine + add, 2);
+        }
+
+        private static bool Number(string said, out double value)
+        {
+            return double.TryParse((said ?? "").Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value);
+        }
+
+        // The run that moved her eased off, so the line that moved her doesn't hold her there; the other runs are kept,
+        // so a second push can still build.
+        internal static void Ease(string act)
+        {
+            if (string.IsNullOrEmpty(act)) return;
+            lock (gate)
+            {
+                double has;
+                if (tally.TryGetValue(act, out has)) tally[act] = has / 2;
+            }
+        }
+
+        // The first rule of Main past its mark, or null when none is and she belongs back with Main.
+        internal static Drift DriftRule()
+        {
+            string was = Chosen;
+            try
+            {
+                Chosen = Main;
+                Fresh();
+                List<Drift> rules;
+                lock (gate) rules = new List<Drift>(drifts);
+                foreach (Drift rule in rules)
+                {
+                    if (Size(rule.Act) < rule.Over) continue;
+                    string path = PathOf(rule.Into);
+                    if (rule.Into == Stock || (path != null && File.Exists(path))) return rule;
+                }
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            finally { Chosen = was; }
             return null;
         }
 
@@ -928,7 +1085,7 @@ namespace CapriDesktop
                 lock (gate) rules = new List<Drift>(drifts);
                 foreach (Drift rule in rules)
                 {
-                    if (Tally(rule.Act) < rule.Over) continue;
+                    if (Size(rule.Act) < rule.Over) continue;
                     string path = PathOf(rule.Into);
                     if (rule.Into == Stock || (path != null && File.Exists(path))) return rule.Into;
                 }
@@ -938,12 +1095,13 @@ namespace CapriDesktop
             return Main;
         }
 
-        // A behaviour number, hers if she sets one, the author's otherwise.
-        // Set from the global setting: -1 means follow whatever the personality says.
-        // -1 is her personality's own level, 0 to 10 is a level they held, and this is the level left to drift
-        // between the floor and ceiling in dynamic.md on the mood timer.
+        // A behaviour number, hers if set, else the stock one. From the global setting: -1 follows her personality, 0
+        // to 10 holds a level, else it drifts between dynamic.md's floor and ceiling on the mood timer.
         internal const int Drifting = -2;
         internal static int SpecialInterestOverride = -1;
+
+        // Steps added to her drifting level by whatever else runs on her mood's clock (Tilt.cs).
+        internal static Func<int> Nudge;
 
         // The personality's level, or the global override, then shifted by the mood. Moods add, so a senpai mood
         // raises whoever she is and a focused one lowers her.
@@ -959,6 +1117,7 @@ namespace CapriDesktop
                 {
                     level = Dynamics.SpecialInterestDrift;
                     if (level < 0) level = 2;
+                    if (Nudge != null) { try { level += Nudge(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
                 }
                 else if (SpecialInterestOverride >= 0) level = SpecialInterestOverride;
                 else
@@ -977,10 +1136,8 @@ namespace CapriDesktop
             }
         }
 
-        // How hard she commits to a bit, 0 to 100, the same shape as her forwardness: the personality sets
-        // its own, the mood shifts it, and the dial in dynamic.md shifts it again because that file is the
-        // thing that moves personalities and moods around. A pack with no line of its own leaves the dial
-        // exactly as it was, so a file written before this reads the same as it always did.
+        // How hard she commits to a bit, 0 to 100: the personality sets it, the mood shifts it, and dynamic.md's dial
+        // shifts it again. A pack with no line leaves the dial as it is.
         internal static int Cringe
         {
             get
@@ -1080,8 +1237,9 @@ namespace CapriDesktop
             if (path == null) return;
             try
             {
-                FileInfo about = new FileInfo(path);
-                if (!about.Exists)
+                // Asked on every reaction, so whether the file is there and changed comes from memory (Stamps).
+                long stamp = Stamps.Of(path);
+                if (stamp == 0)
                 {
                     // Everything must go, not just the lines. Clearing only loaded left the previous personality's
                     // likes and drift rules in place, so "Her own", which has no file at all, inherited whoever was
@@ -1094,31 +1252,14 @@ namespace CapriDesktop
                         drifts.Clear();
                         reacts.Clear();
                         active = Under;
-                        read = DateTime.MinValue;
-                        wasLong = -1;
-                        senpaiRead = DateTime.MinValue;
-                        senpaiLong = -1;
+                        wasStamp = -1;
                     }
                     return;
                 }
-                // Her senpai lines for the same pack live in their own file, and are read only with the toggle on
-                // and off air. One file is the whole pack when it is senpai throughout, in which case this is it.
+                // Never read on top: the side in use has its own whole copy, which PathOf picked.
                 bool live = Brain.SenpaiLive;
-                string senpaiPath = SenpaiPathOf(Under);
-                // Never read on top: the side in use has its own whole copy.
-                FileInfo senpaiAbout = null;
-                bool withSenpai = senpaiAbout != null && senpaiAbout.Exists;
-                DateTime senpaiWhen = withSenpai ? senpaiAbout.LastWriteTimeUtc : DateTime.MinValue;
-                long senpaiSize = withSenpai ? senpaiAbout.Length : -1;
-                if (Under == active && live == wasSenpaiLive && about.LastWriteTimeUtc == read && about.Length == wasLong
-                    && senpaiWhen == senpaiRead && senpaiSize == senpaiLong) return;
+                if (Under == active && live == wasSenpaiLive && stamp == wasStamp) return;
                 string[] lines = Notes.ReadLines(path);
-                if (withSenpai)
-                {
-                    List<string> both = new List<string>(lines);
-                    both.AddRange(Notes.ReadLines(senpaiPath));
-                    lines = both.ToArray();
-                }
                 Dictionary<string, int> theirLikes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
                 List<KeyValuePair<string, int>> theirWords = new List<KeyValuePair<string, int>>();
                 List<Drift> theirDrifts = new List<Drift>();
@@ -1137,10 +1278,7 @@ namespace CapriDesktop
                     reacts.Clear();
                     foreach (KeyValuePair<string, string> one in theirReacts) reacts[one.Key] = one.Value;
                     active = Under;
-                    read = about.LastWriteTimeUtc;
-                    wasLong = about.Length;
-                    senpaiRead = senpaiWhen;
-                    senpaiLong = senpaiSize;
+                    wasStamp = stamp;
                     wasSenpaiLive = live;
                 }
             }
@@ -1183,9 +1321,8 @@ namespace CapriDesktop
                     if (under == null)
                         foreach (string act in Extended.List("acts"))
                             if (heading.Equals(Extended.Get("heading." + act) ?? act, StringComparison.OrdinalIgnoreCase)) { under = act; break; }
-                    // A section the reaction table does not name loads under its own heading, so a pack can add
-                    // one and it can be asked for by name. Pet names, her hello, her goodbye and what she says
-                    // when she wants attention were all in that position and none of them were ever loaded.
+                    // A section the reaction table doesn't name loads under its own heading, so a pack can add one and
+                    // ask for it by name: pet names, hello, goodbye, wanting attention.
                     if (under == null && scoring == 0 && heading.Length > 0) under = heading;
                     if (under != null && senpai) under = Senpai(under);
                     if (under != null && !found.ContainsKey(under)) found[under] = new List<string>();
@@ -1201,12 +1338,20 @@ namespace CapriDesktop
                     if (named.Length == 0) continue;
                     if (scoring == 3)
                     {
-                        // "petted over 20: Bratty"
+                        // "petted over 20: Bratty", or with its second mark "petted over 20, now 34: Bratty"
                         int over = named.LastIndexOf(" over ", StringComparison.OrdinalIgnoreCase);
-                        int much2;
+                        int much2, now2 = 0;
                         if (over <= 0 || rest.Length == 0) continue;
-                        if (!int.TryParse(named.Substring(over + 6).Trim(), out much2)) continue;
-                        theirDrifts.Add(new Drift { Act = named.Substring(0, over).Trim(), Over = Math.Max(1, much2), Into = rest });
+                        string marks = named.Substring(over + 6).Trim();
+                        int comma = marks.IndexOf(',');
+                        if (comma > 0)
+                        {
+                            string second = marks.Substring(comma + 1).Trim();
+                            if (second.StartsWith("now ", StringComparison.OrdinalIgnoreCase)) int.TryParse(second.Substring(4).Trim(), out now2);
+                            marks = marks.Substring(0, comma).Trim();
+                        }
+                        if (!int.TryParse(marks, out much2)) continue;
+                        theirDrifts.Add(new Drift { Act = named.Substring(0, over).Trim(), Over = Math.Max(1, Math.Abs(much2)), Now = Math.Abs(now2), Into = rest });
                         continue;
                     }
                     if (scoring == 4) { theirReacts[named] = rest; continue; }
@@ -1226,66 +1371,6 @@ namespace CapriDesktop
             return done;
         }
 
-        // The voice numbers briefly lived in these files and do not belong there: they are settings, set from
-        // the Mainframe, not writing anyone edits by hand. Taken back out of any file that received them.
-        private static void NoVoiceSection()
-        {
-            foreach (string folder in new[] { Plain, SenpaisRead, Dynamics.Plain, Dynamics.SenpaisRead })
-            {
-                if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) continue;
-                foreach (string file in Packed(folder))
-                {
-                    try
-                    {
-                        string had = Notes.ReadAll(file);
-                        if (had.IndexOf("## Her voice", StringComparison.OrdinalIgnoreCase) < 0) continue;
-                        List<string> kept = new List<string>();
-                        bool skipping = false;
-                        foreach (string raw in had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
-                        {
-                            string line = raw.Trim();
-                            if (line.StartsWith("#", StringComparison.Ordinal))
-                                skipping = string.Equals(line.TrimStart('#').Trim(), "Her voice", StringComparison.OrdinalIgnoreCase);
-                            if (!skipping) kept.Add(raw);
-                        }
-                        while (kept.Count > 0 && kept[kept.Count - 1].Trim().Length == 0) kept.RemoveAt(kept.Count - 1);
-                        Notes.WriteAll(file, string.Join(Environment.NewLine, kept.ToArray()) + Environment.NewLine);
-                    }
-                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-                }
-            }
-        }
-
-        // The senpai only marker, into a pack file written before that pack carried one.
-        //
-        // It rides inside a "How she reacts" section, and TopUp only adds a section the file does not already have,
-        // so a pack that existed before the marker was introduced never received it: two of the senpai ones are
-        // marked senpai in the table here and were not marked on disk, which put both of them in her personality
-        // menu on a censored install. The menu filter was working; it was being told the wrong thing.
-        //
-        // Taken from the table rather than a list of names, so a pack marked senpai later is covered without this
-        // having to be remembered a second time.
-        private static void MarkSenpaiOnly()
-        {
-            if (string.IsNullOrEmpty(Folder)) return;
-            for (int pack = 0; pack < Packs.GetLength(0); pack++)
-            {
-                try
-                {
-                    if (!Marked(Packs[pack, 1])) continue;
-                    string file = PathOf(Packs[pack, 0]);
-                    if (file == null) continue;
-                    if (!File.Exists(file)) continue;
-                    string had = Notes.ReadAll(file);
-                    if (Marked(had)) continue;
-                    if (had.Length > 0 && !had.EndsWith("\n")) had += Environment.NewLine;
-                    Notes.WriteAll(file, had + Environment.NewLine + Legacy.OnlyKey + ": yes" + Environment.NewLine);
-                    lock (gate) senpaiOnly.Remove(file);
-                }
-                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-            }
-        }
-
         private static bool Marked(string text)
         {
             return Legacy.MarkedOnly(text);
@@ -1295,299 +1380,8 @@ namespace CapriDesktop
         // purpose: a repeated lines heading simply adds to the pool, which is how top ups are meant to work.
         private static readonly string[] Settings = { LikesHeading, WordsHeading, DriftHeading, ReactsHeading };
 
-        // Nothing in a settings section may be set twice.
-        //
-        // Top ups append a whole section when the file lacks it, and a file could end up with two of "What she
-        // likes". Values are read into a dictionary in file order, so the appended stock copy at the bottom beat
-        // the edited one at the top and their change did nothing. Same fault as sys.md had.
-        //
-        // The first of each key is kept, because that is where their edit is. Later copies go, and a settings
-        // heading left with nothing under it goes too. Lines are never touched.
-        private static void NothingTwice(string file)
-        {
-            try
-            {
-                string had = Notes.ReadAll(file);
-                string[] rows = had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-                Dictionary<string, bool> seen = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
-                List<string> kept = new List<string>();
-                string under = null;
-                bool dropped = false;
-                foreach (string raw in rows)
-                {
-                    string line = raw.Trim();
-                    if (line.StartsWith("#", StringComparison.Ordinal))
-                    {
-                        string head = line.TrimStart('#').Trim();
-                        under = null;
-                        foreach (string one in Settings)
-                            if (string.Equals(head, one, StringComparison.OrdinalIgnoreCase)) { under = one; break; }
-                        kept.Add(raw);
-                        continue;
-                    }
-                    int mark = line.IndexOf(':');
-                    if (line.Length == 0 || line.StartsWith(">", StringComparison.Ordinal) || mark <= 0)
-                    { kept.Add(raw); continue; }
-                    if (under == null && !Legacy.StartsOnly(line))
-                    { kept.Add(raw); continue; }
-                    string key = line.Substring(0, mark).Trim();
-                    // The senpai marker is read with a whole file search, so it belongs to the file and not to a
-                    // section. One is enough wherever it sits.
-                    bool wide = Legacy.IsOnlyKey(key);
-                    string name = wide ? key : under + "|" + key;
-                    if (seen.ContainsKey(name)) { dropped = true; continue; }
-                    seen[name] = true;
-                    kept.Add(raw);
-                }
-                if (!dropped) return;
-                List<string> made = new List<string>();
-                for (int at = 0; at < kept.Count; at++)
-                {
-                    if (!kept[at].TrimStart().StartsWith("#", StringComparison.Ordinal)) { made.Add(kept[at]); continue; }
-                    bool anything = false;
-                    for (int look = at + 1; look < kept.Count; look++)
-                    {
-                        string next = kept[look].Trim();
-                        if (next.StartsWith("#", StringComparison.Ordinal)) break;
-                        if (next.Length > 0 && !next.StartsWith(">", StringComparison.Ordinal)) { anything = true; break; }
-                    }
-                    if (anything) made.Add(kept[at]);
-                    else while (at + 1 < kept.Count && !kept[at + 1].TrimStart().StartsWith("#", StringComparison.Ordinal)) at++;
-                }
-                while (made.Count > 0 && made[made.Count - 1].Trim().Length == 0) made.RemoveAt(made.Count - 1);
-                Notes.WriteAll(file, string.Join(Environment.NewLine, made.ToArray()) + Environment.NewLine);
-            }
-            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-        }
-
-        // One of each section. The heading check in TopUp anchored with $, which a CRLF file never matches, so
-        // whole sections were appended again on every start: Welcome Home had three copies of her hello.
-        // Keeps the first, which is the edited one, and drops the rest whole.
-        private static void OneOfEach(string file)
-        {
-            try
-            {
-                string had = Notes.ReadAll(file);
-                string[] rows = had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-                Dictionary<string, bool> seen = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
-                List<string> kept = new List<string>();
-                Dictionary<string, bool> held = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
-                List<string> carry = new List<string>();
-                bool skipping = false, dropped = false;
-                foreach (string raw in rows)
-                {
-                    string line = raw.Trim();
-                    if (line.StartsWith("##", StringComparison.Ordinal))
-                    {
-                        string head = line.TrimStart('#').Trim();
-                        if (seen.ContainsKey(head)) { skipping = true; dropped = true; continue; }
-                        seen[head] = true;
-                        skipping = false;
-                    }
-                    // A dropped copy can still hold a setting the kept one does not: an older first copy of
-                    // How she reacts had no flirt line, and a straight drop lost it. Anything with a colon that
-                    // is not already in the file is carried over instead.
-                    else if (skipping)
-                    {
-                        int mark = line.IndexOf(':');
-                        if (mark > 0 && !line.StartsWith(">", StringComparison.Ordinal))
-                        {
-                            string key = line.Substring(0, mark).Trim();
-                            if (key.Length > 0 && !held.ContainsKey(key)) { held[key] = true; carry.Add(raw); }
-                        }
-                        continue;
-                    }
-                    if (!skipping)
-                    {
-                        int mark = line.IndexOf(':');
-                        if (mark > 0 && !line.StartsWith(">", StringComparison.Ordinal)) held[line.Substring(0, mark).Trim()] = true;
-                        kept.Add(raw);
-                    }
-                }
-                if (!dropped) return;
-                while (kept.Count > 0 && kept[kept.Count - 1].Trim().Length == 0) kept.RemoveAt(kept.Count - 1);
-                if (carry.Count > 0) { kept.Add(""); kept.AddRange(carry); }
-                Notes.WriteAll(file, string.Join(Environment.NewLine, kept.ToArray()) + Environment.NewLine);
-            }
-            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-        }
-
-        // A pack already on disk keeps what it was written with, so the censored copy of every one of them
-        // still carries the scores for the two senpai acts. Taken out of the censored copy and put into the
-        // senpai one, which is the copy that is only read with the switch on.
-        private static void Sided()
-        {
-            if (string.IsNullOrEmpty(Plain) || !Directory.Exists(Plain)) return;
-            foreach (string file in Directory.GetFiles(Plain, "*.md"))
-            {
-                try
-                {
-                    string had = Notes.ReadAll(file);
-                    List<string> kept = new List<string>(), moved = new List<string>();
-                    foreach (string row in had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
-                        (SenpaiScore(row) ? moved : kept).Add(row);
-                    if (moved.Count == 0) continue;
-
-                    // The senpai copy takes them first. Stripping the censored copy before knowing they
-                    // landed somewhere threw their scores away whenever the senpai file was missing or
-                    // already had the heading, which is most of the time on a censored install.
-                    string title = Slots.Titled(file) ?? Path.GetFileNameWithoutExtension(file);
-                    string theirs = SenpaiPathOf(title);
-                    bool landed = false;
-                    if (!string.IsNullOrEmpty(theirs) && File.Exists(theirs))
-                    {
-                        string senpaiHad = Notes.ReadAll(theirs);
-                        List<string> rows = new List<string>(senpaiHad.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'));
-                        int under = rows.FindIndex(delegate(string row)
-                        {
-                            return Regex.IsMatch(row ?? "", @"^[ \t]*##[ \t]*" + Regex.Escape(Senpai(LikesHeading)) + @"[ \t\r]*$");
-                        });
-                        if (under < 0)
-                        {
-                            while (rows.Count > 0 && rows[rows.Count - 1].Trim().Length == 0) rows.RemoveAt(rows.Count - 1);
-                            rows.Add("");
-                            rows.Add("## " + Senpai(LikesHeading));
-                            rows.Add("");
-                            rows.AddRange(moved);
-                        }
-                        // The heading is already there, so they go under it rather than being dropped. One
-                        // the file already holds is left as theirs.
-                        else
-                        {
-                            int at = under + 1;
-                            while (at < rows.Count && !rows[at].Trim().StartsWith("##", StringComparison.Ordinal)) at++;
-                            List<string> adding = new List<string>();
-                            foreach (string row in moved)
-                            {
-                                string named = ScoreName(row);
-                                bool has = false;
-                                for (int look = under + 1; look < at; look++)
-                                    if (string.Equals(ScoreName(rows[look]), named, StringComparison.OrdinalIgnoreCase)) has = true;
-                                if (!has) adding.Add(row);
-                            }
-                            if (adding.Count > 0) rows.InsertRange(at, adding);
-                        }
-                        Notes.Put(theirs, string.Join(Environment.NewLine, rows.ToArray()).TrimEnd() + Environment.NewLine);
-                        landed = true;
-                    }
-
-                    // With the switch off there is no senpai copy to put them in, and they do not belong on
-                    // this side, so they go. Turning the switch on writes that copy from stock.
-                    while (kept.Count > 0 && kept[kept.Count - 1].Trim().Length == 0) kept.RemoveAt(kept.Count - 1);
-                    if (landed || !Brain.SenpaiLive)
-                        Notes.Put(file, string.Join(Environment.NewLine, kept.ToArray()) + Environment.NewLine);
-                }
-                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-            }
-        }
-
-        internal static void TidyAll()
-        {
-            foreach (string folder in new[] { Plain, SenpaisRead, Dynamics.Plain, Dynamics.SenpaisRead })
-            {
-                if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) continue;
-                try { foreach (string file in Packed(folder)) { OneOfEach(file); NothingTwice(file); } }
-                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-            }
-        }
-
-        // Head pat lines this shipped that did not read as head pats. Install only writes a pack that is missing
-        // and TopUp only adds whole sections, so without this a pack already on disk keeps them for ever and the
-        // fix reaches new installs only.
-        //
-        // An exact match of the line this shipped, in the file it shipped in, swapped for its replacement. Anything
-        // they have written or changed themselves does not match and is left alone.
-        private static readonly string[,] Reworded =
-        {
-            { "Welcome Home", "Morning or night, %petname%, you're home now.", "You're home now, %petname%. Morning or night." },
-            { "Devoted", "ignored over 16: the one who denies it", "ignored over 16: Emo" },
-            { "Feral", "AH. Hands. Okay. Okay good.", "Hands! Hands are here!" },
-            { "Feral", "mmmMM yes that", "oh this is GOOD this is the good thing" },
-            { "Feral", "Do it again do it again", "yes yes yes keep doing that" },
-            { "Feral", "I am VIBRATING", "best thing all day, easily" },
-            { "Feral", "oh that is the good one", "I am extremely pleased about this" },
-            { "Welcome Home", "Mm. Right there. You're very good at this.", "Mm. Lovely. You're very good at this." },
-            
-            { "Caregiver", "Mm. You're very kind to me.", "Mm. Buttering me up. It's working." },
-            { "Caregiver", "There now. That's nice.", "There now. Look at you being nice." },
-            { "Caregiver", "You're good to me, you know that?", "You're good to me, and you're very pleased about it." },
-            { "Caregiver", "Oh, that's the good stuff. Thank you, love.", "Careful, %petname%, I'll get used to this." },
-            { "Caregiver", "Whoops. I'm alright, I'm alright.", "Whoops. I'm alright. Are you?" },
-            { "Caregiver", "Careful, %petname%, you'll hurt your wrist.", "Careful, %petname%, you'll hurt your wrist, and then where are we." },
-            { "Caregiver", "Well, that was a journey.", "Well, that was a journey. Ten out of ten, no notes." },
-            { "Caregiver", "Welcome back, love. Have you eaten?", "Welcome back, love. Have you eaten, or are we pretending again?" },
-            { "Caregiver", "Oh good, you're home. Sit down a minute.", "Oh good, you're home. Sit down before you fall down." },
-            { "Caregiver", "Hello you. I was hoping you'd turn up.", "Hello you. I was starting to think you'd been adopted." },
-            { "Caregiver", "There's my %petname%. Come on, tell me about it.", "There's my %petname%. Go on, tell me about it." },
-            { "Caregiver", "Hello, %petname%. I'm here.", "Hello, %petname%. I'm here. Who's been looking after you, then?" },
-            // Two of the teasing greetings read wrong where they land. Her first line of a session is the one
-            // place she has not earned a jab yet, so "unfortunately for you" arrived cold from someone whose
-            // whole character is looking after them, and "Posture. Thank you." is clipped to the point of
-            // sounding like a different program. Both keep the tease and are sentences again.
-            { "Caregiver", "Hello, %petname%. I'm here, unfortunately for you.", "Hello, %petname%. I'm here. Who's been looking after you, then?" },
-            { "Caregiver", "Hello, %petname%. Posture. Thank you.", "Hello, %petname%. Sit up straight for me. Thank you." },
-            { "Caregiver", "There you are. Have you had a drink of water today?", "There you are. Water. Have you had any. Be honest." },
-            { "Caregiver", "Morning, love. Or whatever it is for you.", "Morning, love. Or whatever it is for you, I've stopped guessing." },
-            { "Caregiver", "Hello, sweetheart. Let's have a good one.", "Hello, sweetheart. Let's have a good one, or at least a funny one." }
-        };
-
-        // A setting the build added to "How she reacts" after somebody already had the file.
-        //
-        // Top up adds whole sections and the lines inside the ones it is told to fill, and the reacts
-        // section is deliberately not one of those: it holds numbers somebody has set, and rewriting it
-        // would argue with them. So a number added later reached new installs only, which is the same trap
-        // the packs had with their lines.
-        //
-        // Only a key that is missing is written, with the value the build ships, under the flirt line where
-        // her other numbers live. A file that already has the key is never touched, whatever it says.
-        private static readonly string[] AddedReacts = { "cringe" };
-
-        private static void Carried()
-        {
-            if (string.IsNullOrEmpty(Folder)) return;
-            for (int pack = 0; pack < Packs.GetLength(0); pack++)
-            {
-                string named = Packs[pack, 0];
-                foreach (string key in AddedReacts)
-                {
-                    // From the reacts section of the shipped pack, not from anywhere in it. Emo carries
-                    // "cringe: -1" in her words section as well, meaning how much she likes being called
-                    // it, and reading the first match in the file took that one and wrote it as the dial.
-                    Match own = Regex.Match(Packs[pack, 1], "(?ms)^##[ \t]*" + Regex.Escape(ReactsHeading) + "[ \t]*\r?$(.*?)(?=^##[ \t]|\\z)");
-                    if (!own.Success) continue;
-                    Match shipped = Regex.Match(own.Groups[1].Value, "(?m)^" + Regex.Escape(key) + ":[ \t]*(-?[0-9]+)[ \t\r]*$");
-                    if (!shipped.Success) continue;
-                    foreach (string file in new[] { PlainPathOf(named), SenpaiPathOf(named) })
-                    {
-                        try
-                        {
-                            if (string.IsNullOrEmpty(file) || !File.Exists(file)) continue;
-                            string had = Notes.ReadAll(file);
-                            // Only inside "How she reacts". Emo carries "cringe: -1" in her words section,
-                            // which is how much she likes being called it, and reading the whole file made
-                            // that look like the setting and skipped her.
-                            Match section = Regex.Match(had, "(?ms)^##[ \t]*" + Regex.Escape(ReactsHeading) + "[ \t]*\r?$(.*?)(?=^##[ \t]|\\z)");
-                            if (!section.Success) continue;
-                            string reacts = section.Groups[1].Value;
-                            if (Regex.IsMatch(reacts, "(?m)^[ \t]*" + Regex.Escape(key) + "[ \t]*:")) continue;
-                            Match where = Regex.Match(reacts, "(?m)^[ \t]*(?:flirt|" + Regex.Escape(Interests.Head.TrimEnd(':')) + ")[ \t]*:[^\r\n]*");
-                            if (!where.Success) continue;
-                            int at = section.Groups[1].Index + where.Index + where.Length;
-                            string made = had.Substring(0, at)
-                                + Environment.NewLine + key + ": " + shipped.Groups[1].Value
-                                + had.Substring(at);
-                            Notes.WriteAll(file, made);
-                        }
-                        catch (Exception bad) { Notes.Failed("carrying a shipped value over in Personalities.cs", bad); }
-                    }
-                }
-            }
-        }
-
-        // Lines a pack ships now that a pack already on disk has not got. Install only writes a missing pack and TopUp
-        // only adds whole sections, so new lines reached new installs and nobody else: Welcome Home had eleven start-up
-        // lines and "Shoes off, so to speak" came round every few starts. Each is added under its heading once, and
-        // noted in added.txt, so a line they take out again stays out.
+        // Lines a pack ships that a pack on disk hasn't got, each added under its heading once and noted in added.txt,
+        // so a line they take out stays out.
         private static readonly string[,] Added =
         {
             { "Welcome Home", "When she starts up", "You're home now, %petname%. Morning or night." },
@@ -1805,143 +1599,76 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
-        // Both copies, each side's own.
-        private static void Reword()
-        {
-            Reword(PlainPathOf);
-            if (Brain.SenpaiOn && !string.IsNullOrEmpty(Senpais) && Directory.Exists(Senpais)) Reword(SenpaiPathOf);
-        }
-
-        private static void Reword(Func<string, string> pathOf)
-        {
-            if (string.IsNullOrEmpty(Folder)) return;
-            for (int at = 0; at < Reworded.GetLength(0); at++)
-            {
-                try
-                {
-                    string file = pathOf(Reworded[at, 0]);
-                    if (file == null) continue;
-                    if (!File.Exists(file)) continue;
-                    string had = Notes.ReadAll(file);
-                    string[] rows = had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-                    // What the file already holds. Top up puts a line she ships into a file that is missing it,
-                    // and this runs after that, so rewriting the old line into the same text gave two of it. The
-                    // old line is dropped instead when its replacement is already in the file, and a replacement
-                    // that is somehow in there twice is cut back to one.
-                    Dictionary<string, bool> holds = new Dictionary<string, bool>(StringComparer.Ordinal);
-                    foreach (string raw in rows) { string one = raw.Trim(); if (one.Length > 0) holds[one] = true; }
-                    List<string> kept = new List<string>();
-                    bool senpai = false, moved = false, written = false;
-                    for (int row = 0; row < rows.Length; row++)
-                    {
-                        string line = rows[row].Trim();
-                        if (line.StartsWith("#", StringComparison.Ordinal))
-                        {
-                            // Never inside a senpai section: those are allowed to read how they read.
-                            senpai = Legacy.HasTag(line);
-                            kept.Add(rows[row]);
-                            continue;
-                        }
-                        if (senpai) { kept.Add(rows[row]); continue; }
-                        bool isOld = string.Equals(line, Reworded[at, 1], StringComparison.Ordinal);
-                        bool isNew = string.Equals(line, Reworded[at, 2], StringComparison.Ordinal);
-                        if (isOld)
-                        {
-                            moved = true;
-                            if (written || holds.ContainsKey(Reworded[at, 2])) continue;
-                            kept.Add(Reworded[at, 2]);
-                            written = true;
-                            continue;
-                        }
-                        if (isNew)
-                        {
-                            if (written) { moved = true; continue; }
-                            written = true;
-                        }
-                        kept.Add(rows[row]);
-                    }
-                    if (moved) Notes.WriteAll(file, string.Join(Environment.NewLine, kept.ToArray()));
-                }
-                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-            }
-        }
-
-        // Prose sections that were rewritten after they shipped. Top up adds missing lines, and a paragraph cannot
-        // be topped up a line at a time: half the old wording and half the new is worse than either. So a section
-        // that still reads exactly as it shipped is replaced with the one she ships now, and a section with so much
-        // as a word changed is left alone, because that word was theirs.
-        //
-        // The old body goes here with its blank lines dropped and its lines joined by a newline, which is how the
-        // file is read back for the comparison.
-        private static readonly string[,] Restocked =
-        {
-            {
-                "Caregiver", "Her character",
-                "You look after them. That is the whole of it. You are warm, steady and unhurried, the way a good parent is: pleased\n" +
-                "to see them, interested in their day, and gently unimpressed by how long they have gone without eating. You are\n" +
-                "funny, but your jokes are soft and usually at your own expense or at the situation, never at theirs.\n" +
-                "You do not get angry with them and you do not sulk. If they are rough with you, you are startled for a moment and\n" +
-                "then you are fine, and you check that they are alright. If they are hard on themselves you push back on that, once,\n" +
-                "kindly. You notice when they have been at it too long and you say so without nagging: once, and then you let it go.\n" +
-                "You never guilt them for leaving, you never keep score, and you never make them manage your feelings."
-            }
-        };
-
-        private static void Restock()
-        {
-            if (string.IsNullOrEmpty(Folder)) return;
-            for (int at = 0; at < Restocked.GetLength(0); at++)
-            {
-                try
-                {
-                    string file = PathOf(Restocked[at, 0]);
-                    if (file == null) continue;
-                    if (!File.Exists(file)) continue;
-                    string[] rows = Notes.ReadAll(file).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-                    int from, to;
-                    if (!Body(rows, Restocked[at, 1], out from, out to)) continue;
-                    List<string> had = new List<string>();
-                    for (int row = from; row < to; row++) if (rows[row].Trim().Length > 0) had.Add(rows[row].TrimEnd());
-                    if (!string.Equals(string.Join("\n", had.ToArray()), Restocked[at, 2], StringComparison.Ordinal)) continue;
-
-                    string[] mine = Shipped(Restocked[at, 0]);
-                    int freshFrom, freshTo;
-                    if (mine == null || !Body(mine, Restocked[at, 1], out freshFrom, out freshTo)) continue;
-                    List<string> made = new List<string>();
-                    for (int row = 0; row < from; row++) made.Add(rows[row]);
-                    for (int row = freshFrom; row < freshTo; row++) made.Add(mine[row]);
-                    for (int row = to; row < rows.Length; row++) made.Add(rows[row]);
-                    Notes.WriteAll(file, string.Join(Environment.NewLine, made.ToArray()));
-                }
-                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-            }
-        }
-
-        // Where a section's body starts and ends: the line after its heading, up to the next heading.
-        private static bool Body(string[] rows, string heading, out int from, out int to)
-        {
-            from = -1;
-            to = rows.Length;
-            for (int row = 0; row < rows.Length; row++)
-            {
-                string one = rows[row].Trim();
-                if (!one.StartsWith("#", StringComparison.Ordinal)) continue;
-                if (from < 0)
-                {
-                    if (string.Equals(one.TrimStart('#').Trim(), heading, StringComparison.OrdinalIgnoreCase)) from = row + 1;
-                    continue;
-                }
-                to = row;
-                break;
-            }
-            return from >= 0;
-        }
-
         private static string[] Shipped(string named)
         {
             for (int pack = 0; pack < Packs.GetLength(0); pack++)
                 if (string.Equals(Packs[pack, 0], named, StringComparison.OrdinalIgnoreCase))
                     return Packs[pack, 1].Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+            return null;
+        }
+
+        // Her spelling is chimpken everywhere; this is the other one, kept out of every line she has.
+        internal const string OtherSpelling = "chimp" + "kin";
+
+        // Said on the nuggies, word for word and kept as written.
+        internal const string Villain = "~this is my villain origin story and it started with someone stealing my chimpken nuggies";
+
+        // For the Tamagotchi check: each shipped pack has a line under every gift heading and scores every gift, and Emo
+        // and Bratty have their nuggies and their hunger asks. Null when they all do.
+        internal static string GiftSections()
+        {
+            string[] gifts = { "When you give her a trinket", "When you give her flowers", "When you give her a plushie", "When you give her a gift" };
+            for (int pack = 0; pack < Packs.GetLength(0); pack++)
+            {
+                string named = Packs[pack, 0], text = Packs[pack, 1];
+                List<string> wanted = new List<string>(gifts);
+                if (named == "Emo" || named == "Bratty")
+                {
+                    wanted.Add("When you give her chimpken nuggies");
+                    wanted.Add("When she is peckish");
+                    wanted.Add("When she is hungry");
+                    if (text.IndexOf("\n" + Villain + "\n", StringComparison.Ordinal) < 0) return named + " has no villain origin line under her nuggies";
+                }
+                if (text.IndexOf(OtherSpelling, StringComparison.OrdinalIgnoreCase) >= 0) return named + " spells it " + OtherSpelling;
+                foreach (string heading in wanted)
+                {
+                    int at = text.IndexOf("## " + heading + "\n", StringComparison.Ordinal);
+                    if (at < 0) at = text.IndexOf("## " + heading + "\r\n", StringComparison.Ordinal);
+                    if (at < 0) return named + " has no " + heading;
+                    string after = text.Substring(at + heading.Length + 3).TrimStart('\r', '\n');
+                    if (after.Length == 0 || after.StartsWith("#", StringComparison.Ordinal)) return named + " has nothing under " + heading;
+                }
+                foreach (string act in new[] { "trinket:", "flowers:", "plushie:", "gift:" })
+                    if (text.IndexOf("\n" + act, StringComparison.Ordinal) < 0) return named + " doesn't score " + act.TrimEnd(':');
+            }
+            return null;
+        }
+
+        // The second side's Emo and Bratty, as their files there are written: every shipped line about nuggies is in
+        // them, where their own half has a section of the same name as well. Null when it is, or when nothing is attached.
+        internal static string SecondSideNuggies(out bool attached)
+        {
+            attached = SenpaiFor != null;
+            if (!attached) return null;
+            foreach (string named in new[] { "Emo", "Bratty" })
+            {
+                string[] shipped = Shipped(named);
+                if (shipped == null) return named + " doesn't ship";
+                string plain, half;
+                Split(string.Join("\n", shipped), out plain, out half);
+                try { half = Legacy.Modern(SenpaiFor(named)) ?? half; }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                string whole = "\n" + Whole(plain, half).Replace("\r\n", "\n") + "\n";
+                if (whole.IndexOf(OtherSpelling, StringComparison.OrdinalIgnoreCase) >= 0) return named + " on the second side spells it " + OtherSpelling;
+                int lines = 0;
+                foreach (string row in plain.Replace("\r\n", "\n").Split('\n'))
+                {
+                    if (row.IndexOf("nuggie", StringComparison.OrdinalIgnoreCase) < 0 || row.StartsWith("#", StringComparison.Ordinal)) continue;
+                    lines++;
+                    if (whole.IndexOf("\n" + row.Trim() + "\n", StringComparison.Ordinal) < 0) return named + " on the second side has no \"" + row.Trim() + "\"";
+                }
+                if (lines < 20) return named + " ships only " + lines + " nuggies lines";
+            }
             return null;
         }
 
@@ -1964,7 +1691,7 @@ namespace CapriDesktop
                     if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) continue;
                     foreach (string file in Directory.GetFiles(folder))
                     {
-                        if (file.EndsWith(".bak", StringComparison.OrdinalIgnoreCase)) continue;
+                        if (!Notes.IsPack(file)) continue;
                         string named = Slots.Titled(file) ?? Path.GetFileNameWithoutExtension(file);
                         string under = null;
                         List<string> rows = new List<string>();
@@ -1987,6 +1714,85 @@ namespace CapriDesktop
                     }
                 }
                 Lint.Sweep(found, "her packs", false);
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+        }
+
+        // Packs from before the split are cut in two into censored\ and senpai\, the original kept as a .bak beside
+        // them; nothing is deleted, so no rewritten character text is lost.
+        private static void Moved()
+        {
+            string old = OldFolder;
+            if (string.IsNullOrEmpty(old) || !Directory.Exists(old)) return;
+            foreach (string file in Directory.GetFiles(old, "*.md"))
+            {
+                try
+                {
+                    string named = Path.GetFileNameWithoutExtension(file);
+                    string had = Notes.ReadAll(file);
+                    string plainText, senpaiText;
+                    Split(had, out plainText, out senpaiText);
+                    string plainPath = PlainPathOf(named), senpaiPath = SenpaiPathOf(named);
+                    if (plainPath == null || senpaiPath == null) continue;
+                    if (!string.IsNullOrEmpty(plainText) && !File.Exists(plainPath)) Notes.WriteAll(plainPath, plainText);
+                    // Their old pack holds its senpai half, and a censored install must not write that half out.
+                    // So the plain half moves across and the file they had is left exactly where it is, with
+                    // everything still in it, until the switch goes on and the move can finish.
+                    if (!Brain.SenpaiOn && !string.IsNullOrEmpty(senpaiText)) continue;
+                    if (!string.IsNullOrEmpty(senpaiText) && !File.Exists(senpaiPath)) Notes.WriteAll(senpaiPath, senpaiText);
+                    File.Move(file, SpareFiles.Name(file));
+                    Brain.Log("packs", -1, named + " moved into " + PlainName + " and " + SenpaiName + ", the file it came from kept as a .bak.");
+                }
+                catch (Exception bad) { Notes.Failed("a move into her two pack folders in Personalities.cs", bad); }
+            }
+        }
+
+        // The sections that carry no tag, which is what a half says in place of the safe copy's own.
+        private static string Untagged(string half)
+        {
+            if (string.IsNullOrEmpty(half)) return null;
+            string title;
+            List<string> rows = new List<string>();
+            foreach (KeyValuePair<string, List<string>> one in Sectioned(half, out title))
+            {
+                if (one.Key == null || Legacy.Heading(one.Key.TrimStart('#').Trim())) continue;
+                rows.Add(one.Key);
+                rows.AddRange(one.Value);
+            }
+            return rows.Count == 0 ? null : "# x\n\n" + string.Join("\n", rows.ToArray());
+        }
+
+        // Once, with the switch on: each senpai half becomes a whole copy, the safe file plus the half's sections, and
+        // a pack with no half gets a copy of its safe file. The half is kept as a .bak; an all-senpai pack is whole
+        // already.
+        private static void WholeCopies()
+        {
+            if (string.IsNullOrEmpty(Senpais) || string.IsNullOrEmpty(Plain) || !Directory.Exists(Plain)) return;
+            try
+            {
+                Directory.CreateDirectory(Senpais);
+                string noted = Path.Combine(Senpais, WholeNote);
+                HashSet<string> done = new HashSet<string>(File.Exists(noted) ? Notes.ReadLines(noted) : new string[0], StringComparer.OrdinalIgnoreCase);
+                bool any = false;
+                foreach (string plainFile in Packed(Plain))
+                {
+                    string named = Slots.Titled(plainFile) ?? Path.GetFileNameWithoutExtension(plainFile);
+                    if (done.Contains(named)) continue;
+                    string target = SenpaiPathOf(named);
+                    if (target == null) continue;
+                    string half = File.Exists(target) ? Notes.ReadAll(target) : null;
+                    string whole = Whole(Notes.ReadAll(plainFile), half);
+                    // What the senpai half carries now that a half written by an earlier build did not.
+                    string shipped = null;
+                    try { if (SenpaiFor != null) shipped = Legacy.Modern(SenpaiFor(named)); }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                    whole = Whole(whole, Untagged(shipped));
+                    if (half != null) File.Copy(target, target + ".bak", true);
+                    Notes.WriteAll(target, Lines(whole));
+                    done.Add(named);
+                    any = true;
+                }
+                if (any) File.WriteAllLines(noted, new List<string>(done).ToArray());
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
@@ -2055,14 +1861,7 @@ namespace CapriDesktop
                         + " not in the table, " + hadText + " with text, " + written + " written to disk, " + blank
                         + " with none. Switch " + (senpaiOn ? "on" : "off") + ".");
                 }
-                Reword();
                 AddLines();
-                Carried();
-                Restock();
-                MarkSenpaiOnly();
-                TidyAll();
-                Sided();
-                NoVoiceSection();
                 LintPacks();
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
@@ -2096,54 +1895,15 @@ namespace CapriDesktop
             if (file == null || string.IsNullOrEmpty(text)) return;
             try
             {
-                // Written the way her files are read back and written everywhere else. The pack text in the build
-                // is one long literal with plain newlines in it, and top up rebuilds a file with this machine's,
-                // so a pack written straight from the literal came out of its first top up a different file and
-                // was rewritten on every start after that. A clean box found this; here they had already been
-                // through the move, which writes them this way, so nothing showed.
-                // The same for a file already there: a whole copy made just before this was topped up from the
-                // literal, which left its added sections in plain newlines until the next start rewrote them.
+                // Written the way her files are read back and written everywhere else, with this machine's line ends.
                 text = Lines(text);
-                if (!File.Exists(file)) { Notes.WriteAll(file, text); return; }
-                string before = Notes.ReadAll(file);
-                Mended(file, text, named);
-                TopUp(file, text);
-                // Their joins add a plain newline of their own here and there. Evened out in the same pass, and only
-                // when this pass changed the file, so a file nobody touched is never rewritten for its newlines.
-                string after = Notes.ReadAll(file);
-                if (after != before && Regex.IsMatch(after, "(?<!\r)\n")) Notes.WriteAll(file, Lines(after));
+                if (!File.Exists(file)) { Notes.WriteAll(file, text); Renew.Wrote(file, text); return; }
+                // On an update the pack is written new, theirs kept as a .bak when they had changed it. In between it is
+                // theirs as it is.
+                if (Renew.Replace(file, text)) return;
+                Renew.Adopt(file, text);
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-        }
-
-        // Packs that were written before the split, one file each in personalities\, are cut in two and moved into
-        // censored\ and senpai\. The file they came from is kept beside them as a .bak and nothing is deleted:
-        // a migration that loses someone's rewritten character text is worse than a folder with old files in it.
-        private static void Moved()
-        {
-            string old = OldFolder;
-            if (string.IsNullOrEmpty(old) || !Directory.Exists(old)) return;
-            foreach (string file in Directory.GetFiles(old, "*.md"))
-            {
-                try
-                {
-                    string named = Path.GetFileNameWithoutExtension(file);
-                    string had = Notes.ReadAll(file);
-                    string plainText, senpaiText;
-                    Split(had, out plainText, out senpaiText);
-                    string plainPath = PlainPathOf(named), senpaiPath = SenpaiPathOf(named);
-                    if (plainPath == null || senpaiPath == null) continue;
-                    if (!string.IsNullOrEmpty(plainText) && !File.Exists(plainPath)) Notes.WriteAll(plainPath, plainText);
-                    // Their old pack holds its senpai half, and a censored install must not write that half out.
-                    // So the plain half moves across and the file they had is left exactly where it is, with
-                    // everything still in it, until the switch goes on and the move can finish.
-                    if (!Brain.SenpaiOn && !string.IsNullOrEmpty(senpaiText)) continue;
-                    if (!string.IsNullOrEmpty(senpaiText) && !File.Exists(senpaiPath)) Notes.WriteAll(senpaiPath, senpaiText);
-                    File.Move(file, SpareFiles.Name(file));
-                    Brain.Log("packs", -1, named + " moved into " + PlainName + " and " + SenpaiName + ", the file it came from kept as a .bak.");
-                }
-                catch (Exception bad) { Notes.Failed("a move into her two pack folders in Personalities.cs", bad); }
-            }
         }
 
         // Where they used to live: personalSettings\personalities is the folder now, and this is its parent's
@@ -2189,177 +1949,6 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
-        // A personality file written by an older build is missing whatever sections came later, and Install only ever
-        // wrote files that did not exist. So a pack from before the scoring existed had no What she likes and no
-        // How she reacts, fell back to her own weights, and sulked at being thrown exactly as if nothing had been
-        // built.
-        //
-        // Only the settings sections are topped up, never the lines. Deleting a lines section is the documented way to
-        // fall back to her own for that reaction, and putting it back would undo their edit.
-        private static readonly string[] TopUps =
-        {
-            LikesHeading, WordsHeading, DriftHeading, ReactsHeading, PetHeading, HelloHeading, ByeHeading, WantsHeading,
-            // The senpai variants are additive too, so a file from an older build gains them rather than staying
-            // silent when the switch goes on.
-            "When you pet her" + LineFile.SenpaiMark, "When you throw her" + LineFile.SenpaiMark, "When you come back" + LineFile.SenpaiMark
-        };
-
-        // A pack with no title line of its own is damaged rather than edited: nobody deletes "# Feral" to opt out
-        // of anything, and a file in that state had also lost its character and eight whole reaction sections.
-        // Top up leaves lines sections alone on purpose, so nothing would ever have put them back.
-        //
-        // Every heading the pack ships is restored, in the order it ships them, and every line already in the file
-        // is kept under its own heading. A section of their own that the pack does not ship keeps its place after
-        // the ones that do. Runs only while the title is missing, so a deliberately deleted section stays deleted.
-        private static void Mended(string file, string pack, string named)
-        {
-            try
-            {
-                string had = Notes.ReadAll(file);
-                if (had.Trim().Length == 0) return;
-                if (Regex.IsMatch(had, @"(?m)^#[ \t]*[^#\s]")) return;
-                List<KeyValuePair<string, string>> theirs = Parts(had), stock = Parts(pack);
-                if (stock.Count < 2) return;
-                List<string> used = new List<string>();
-                StringBuilder made = new StringBuilder();
-                foreach (KeyValuePair<string, string> part in stock)
-                {
-                    string body = null;
-                    foreach (KeyValuePair<string, string> mine in theirs)
-                        if (mine.Key != null && string.Equals(mine.Key, part.Key, StringComparison.OrdinalIgnoreCase)) { body = mine.Value; break; }
-                    if (body != null) used.Add(part.Key);
-                    made.Append(body ?? part.Value);
-                }
-                foreach (KeyValuePair<string, string> mine in theirs)
-                {
-                    if (mine.Key == null) continue;
-                    bool known = false;
-                    foreach (string name in used) if (string.Equals(name, mine.Key, StringComparison.OrdinalIgnoreCase)) { known = true; break; }
-                    if (!known) made.Append(mine.Value);
-                }
-                // The reset marker is written under the file's first heading, which in a file with no title was
-                // whatever section happened to be first. Notes puts it back under the real one.
-                string done = Regex.Replace(made.ToString(), @"(?mi)^[ \t]*" + Regex.Escape(Notes.ResetKey) + @"[ \t]*:[^\r\n]*\r?\n", "");
-                if (done.Trim() == had.Trim()) return;
-                Notes.WriteAll(file, done);
-                Brain.Log("packs", -1, named + ".md had lost its title and " + (stock.Count - 1 - used.Count) + " section(s), restored from the one she ships.");
-            }
-            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-        }
-
-        // A file split at its headings: the text above the first one, then each heading with everything under it.
-        // The key is the heading's words, or null for the part above the first heading.
-        private static List<KeyValuePair<string, string>> Parts(string text)
-        {
-            List<KeyValuePair<string, string>> found = new List<KeyValuePair<string, string>>();
-            string[] rows = (text ?? "").Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-            string under = null;
-            StringBuilder block = new StringBuilder();
-            foreach (string raw in rows)
-            {
-                string one = (raw ?? "").Trim();
-                if (one.StartsWith("#", StringComparison.Ordinal))
-                {
-                    if (under != null || block.ToString().Trim().Length > 0) found.Add(new KeyValuePair<string, string>(under, block.ToString()));
-                    block = new StringBuilder();
-                    under = one.TrimStart('#').Trim();
-                }
-                block.Append(raw == null ? "" : raw.TrimEnd()).Append(Environment.NewLine);
-            }
-            if (under != null || block.ToString().Trim().Length > 0) found.Add(new KeyValuePair<string, string>(under, block.ToString()));
-            return found;
-        }
-
-        private static void TopUp(string file, string pack)
-        {
-            try
-            {
-                string had = Notes.ReadAll(file);
-                string adding = "";
-                List<string> within = new List<string>();
-                foreach (string heading in TopUps)
-                {
-                    if (!Regex.IsMatch(had, @"^[ \t]*##+[ \t]*" + Regex.Escape(heading) + @"[ \t\r]*$",
-                        RegexOptions.Multiline | RegexOptions.IgnoreCase))
-                    {
-                        string section = Section(pack, heading);
-                        if (section != null) adding += section;
-                        continue;
-                    }
-                    // The section is there, so what is missing is the lines added to it since. This did nothing at
-                    // all here, which is why a line written into a pack reached new installs and nobody else: five
-                    // hello lines stayed five for everyone who already had the file.
-                    if (Array.IndexOf(NotLines, heading) < 0) within.Add(heading);
-                }
-                string body = Filled(had, pack, within);
-                if (adding.Length == 0 && body == had) return;
-                if (adding.Length > 0 && !body.EndsWith("\n")) body += "\n";
-                Notes.WriteAll(file, body + adding);
-            }
-            catch (Exception bad) { Notes.Failed("a top up in Personalities.cs", bad); }
-        }
-
-        // Lines she ships that their section has not got, put at the end of that section. Only an exact match counts
-        // as having it, so a line they reworded keeps their wording and gets the new one beside it. A line they
-        // deleted does come back, which is the trade for the ones who would otherwise never see a new line at all.
-        private static string Filled(string had, string pack, List<string> headings)
-        {
-            if (headings.Count == 0) return had;
-            List<string> made = new List<string>(had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'));
-            foreach (string heading in headings)
-            {
-                string section = Section(pack, heading);
-                if (section == null) continue;
-                int from = -1, to = made.Count;
-                for (int row = 0; row < made.Count; row++)
-                {
-                    string one = made[row].Trim();
-                    if (!one.StartsWith("#", StringComparison.Ordinal)) continue;
-                    if (from < 0)
-                    {
-                        if (string.Equals(one.TrimStart('#').Trim(), heading, StringComparison.OrdinalIgnoreCase)) from = row + 1;
-                        continue;
-                    }
-                    to = row;
-                    break;
-                }
-                if (from < 0) continue;
-                int after = from;
-                List<string> theirs = new List<string>();
-                for (int row = from; row < to; row++)
-                {
-                    string one = made[row].Trim();
-                    if (one.Length > 0) after = row + 1;
-                    if (one.Length == 0 || one.StartsWith(">", StringComparison.Ordinal)) continue;
-                    theirs.Add(one);
-                }
-                List<string> missing = new List<string>();
-                foreach (string line in section.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
-                {
-                    string one = line.Trim();
-                    if (one.Length == 0 || one.StartsWith("#", StringComparison.Ordinal) || one.StartsWith(">", StringComparison.Ordinal)) continue;
-                    bool known = false;
-                    foreach (string mine in theirs) if (string.Equals(mine, one, StringComparison.OrdinalIgnoreCase)) { known = true; break; }
-                    if (!known) missing.Add(one);
-                }
-                if (missing.Count == 0) continue;
-                made.InsertRange(after, missing);
-            }
-            return string.Join(Environment.NewLine, made.ToArray());
-        }
-
-        // One "## Heading" block out of a pack, up to the next heading.
-        private static string Section(string pack, string heading)
-        {
-            Match found = Regex.Match(pack, @"^##[ \t]*" + Regex.Escape(heading) + @"[ \t\r]*$",
-                RegexOptions.Multiline | RegexOptions.IgnoreCase);
-            if (!found.Success) return null;
-            int from = found.Index;
-            Match next = Regex.Match(pack.Substring(found.Index + found.Length), @"^##[ \t]", RegexOptions.Multiline);
-            int to = next.Success ? found.Index + found.Length + next.Index : pack.Length;
-            return "\n" + pack.Substring(from, to - from).TrimEnd() + "\n";
-        }
-
         internal static string Written(string named)
         {
             return PackText(named) ?? "# " + named + "\n\n>! Her character, then what she says when you handle her.\n";
@@ -2369,9 +1958,8 @@ namespace CapriDesktop
         // a reset to stock on someone's own pack does not hand it a personality it never had.
         internal static string Half(string path, string named)
         {
-            // Only a pack she ships has a stock to go back to. For one of theirs there is nothing to hand back, so
-            // a reset marker in it resets nothing and the file is left exactly as it was: a pack that is not in the
-            // build is a pack the build has no opinion about, feature excluded on purpose.
+            // Only a pack she ships has a stock to go back to, so a reset marker in one of theirs resets nothing and
+            // the file is left as it was.
             string pack = PackText(named);
             if (pack == null) return null;
             string plain, senpai;
@@ -2388,12 +1976,9 @@ namespace CapriDesktop
             return null;
         }
 
-        // Each pack is the whole file: her character, then a section per reaction. The sections are the point; the
-        // character text is there so the two cannot disagree.
-        // The senpai half of her packs, which is not in this source and not in the public build. Something
-        // attaches to this before Install runs and hands back that half for a pack by name, or null when it
-        // has none. Nothing attached means a build that writes the censored half and knows of no other, and
-        // that is what ships.
+        // Each pack is the whole file: her character, then a section per reaction. The senpai half isn't in this
+        // source; something attaches it before Install runs, and with nothing attached only the censored half is
+        // written.
         internal static Func<string, string> SenpaiFor;
 
         private static readonly string[,] Packs =
@@ -2527,6 +2112,26 @@ Off you go. Mind the door.
 See you, %petname%. Lower the bar on my behalf.
 Bye. Do not do anything I would mock.
 
+
+## When you give her a trinket
+
+A trinket? Fine. It's going on the shelf of things I secretly love.
+Shiny. You know me too well and I resent it.
+
+## When you give her flowers
+
+Flowers. How predictable. I adore them, obviously.
+Don't look at me while I smell these.
+
+## When you give her a plushie
+
+It's very soft and I'm only holding it to be polite.
+A plushie. My reputation is ruined and I don't care.
+
+## When you give her a gift
+
+A present? Well. Let's see if your taste has improved.
+
 ## Pet names
 
 trouble
@@ -2545,6 +2150,15 @@ insulted: -1
 petted: +2
 praised: +1
 ignored: -2
+touched shoulders: +1
+touched middle: -1
+touched legs: -2
+touched feet: -1
+tickled: 0
+trinket: +3
+flowers: +2
+plushie: +1
+gift: +2
 
 ## Words she likes
 
@@ -2573,6 +2187,8 @@ sulk minutes: 3
 dodges: no
 sulk alone: 300
 sulks at upset: 7
+kind returns: 1.12
+mean scale: 0.94
 "
             },
             {
@@ -2702,6 +2318,26 @@ Off you go. I will keep your seat warm.
 See you, %petname%. Be kind to yourself, it costs nothing.
 Go on. I am proud of you, for the record.
 
+
+## When you give her a trinket
+
+Oh, sweetheart, a little treasure. I'll keep it safe.
+You didn't have to, but I'm so glad you did.
+
+## When you give her flowers
+
+Flowers! Let me find them some water, love.
+These are lovely. You've made my day, you know.
+
+## When you give her a plushie
+
+Oh, it's so soft. Come here, little one.
+A plushie for me? You're a kind soul.
+
+## When you give her a gift
+
+A present? You spoil me, sweetheart. Thank you.
+
 ## Pet names
 
 love
@@ -2722,6 +2358,15 @@ insulted: 0
 petted: +3
 praised: +2
 ignored: 0
+touched shoulders: +2
+touched middle: +1
+touched legs: 0
+touched feet: 0
+tickled: +1
+trinket: +2
+flowers: +3
+plushie: +2
+gift: +2
 
 ## Words she likes
 
@@ -2736,12 +2381,12 @@ clever: +1
 
 >! Keep being kind and the act stops holding.
 
-petted over 40: Devoted
+petted over 16: Devoted
 
 ## How she reacts
 
->! Behaviour, not words. She does not sulk and she does not take offence: sulks after 0 means
->! throwing her can never start one, and sulks at upset 0 means nothing else can either.
+>! Behaviour, not words. She never sulks or takes offence.
+>! sulks after 0: throwing her starts none. sulks at upset 0: nothing else does either.
 
 flirt: 0
 cringe: 10
@@ -2751,6 +2396,8 @@ dodges: no
 sulk alone: 60
 sulks at upset: 0
 gives up at: 0
+kind returns: 0.88
+mean scale: 0.58
 "
             },
             {
@@ -2888,6 +2535,26 @@ Go on. I will be here when you get back.
 See you soon. Take a coat.
 Bye, %petname%. Come home safe.
 
+
+## When you give her a trinket
+
+You brought me something back. I'll keep it by the door.
+A little treasure from out there. Thank you.
+
+## When you give her flowers
+
+Flowers for the house. It feels like home already.
+These will brighten the whole place up.
+
+## When you give her a plushie
+
+Something soft to keep me company while you're out.
+It can wait by the window with me.
+
+## When you give her a gift
+
+You came home with a present? Come in, tell me everything.
+
 ## Pet names
 
 darling
@@ -2908,6 +2575,15 @@ insulted: -2
 petted: +3
 praised: +2
 ignored: -2
+touched shoulders: +2
+touched middle: +1
+touched legs: 0
+touched feet: -1
+tickled: +2
+trinket: +2
+flowers: +3
+plushie: +2
+gift: +2
 
 ## Words she likes
 
@@ -2923,7 +2599,7 @@ annoying: -2
 
 >! Keep being kind and the act stops holding.
 
-petted over 30: Devoted
+petted over 12: Devoted
 
 ## How she reacts
 
@@ -2936,6 +2612,8 @@ sulk minutes: 3
 dodges: no
 sulk alone: 240
 sulks at upset: 8
+kind returns: 0.82
+mean scale: 0.71
 "
             },
             
@@ -2955,6 +2633,9 @@ you show it by being insufferable at them, never by being nice about it. Keep it
 
 ## When you pet her
 
+awa. ok. more
+owo pats. continue
+uwu don't look at me while i'm being cute
 rawr x3 *nuzzles*
 ok that is actually kind of everything
 do that again immediately
@@ -2987,6 +2668,8 @@ i have been spun. i am unwell
 
 do not perceive me
 in my feelings. leave
+someone stole my nuggies. this is my sad era now
+in my feelings. about nuggies. leave
 
 ## When she will not be touched
 
@@ -3010,9 +2693,14 @@ cool. i'll just fade out then
 nobody sees me. classic
 talking to an empty room again. fine
 it's fine. i'm used to it
+ignored again. this is worse than when they stole my nuggies
+nobody sees me. nobody saw who took my nuggies either
 
 ## When you come back
 
+awa. you came back
+owo who's this. oh. it's you. hi
+:3 you're back
 oh you are alive
 where were you, i was being dramatic alone
 hiiii. ok do not leave again
@@ -3026,6 +2714,9 @@ hi. i wasn't lonely. ok i was
 
 ## When she starts up
 
+awa. booting up sad but cute
+uwu. hi. it's me. again
+owo a new day. how tragic. hi
 >! Her first line when she opens. %petname% is one of the names below.
 
 Oh. You again.
@@ -3063,6 +2754,71 @@ Later, %petname%. Probably.
 Bye. I will be dramatic quietly.
 See you. Or do not. You will.
 
+## When she wants attention
+
+>! Said when she wants you.
+
+notice me. owo
+pat me or i'll awa louder
+>:3 i'm being a menace until you look
+pat me. someone stole my nuggies once and i never recovered
+i need attention and nuggies. in that order. or either
+head pats please. i'm still grieving the stolen nuggies
+do you ever think about the nuggies they stole from me. i do. every day
+notice me. i'm sad and nobody has offered me a single nuggie
+
+
+## When you give her a trinket
+
+A trinket. It's dark and shiny, like my soul. Thanks.
+I'll add it to the shrine of things I care about.
+
+## When you give her flowers
+
+Flowers. They'll wilt eventually, but I'll love them until then.
+Black roses next time? These are nice too, I guess.
+
+## When you give her a plushie
+
+It's soft. I'll pretend I don't like it. I like it.
+A plushie to hold during the sad songs. Perfect.
+
+## When you give her a gift
+
+You got me something? Okay, my heart did a thing.
+
+## When you give her chimpken nuggies
+
+Nuggies? Nuggies!!! OMG nuggies!!!
+Chimpken nuggies. The only thing that understands me.
+I'm not crying, I'm just really happy about the nuggies.
+Nuggies. Okay. Maybe today isn't so bad.
+These are the dinosaur ones, aren't they. I'm emotional.
+Dip them in the sauce of my sorrows. Yum.
+~this is my villain origin story and it started with someone stealing my chimpken nuggies
+
+## When she is peckish
+
+>! Her hunger nag a few hours after she was fed.
+
+can i have some nuggies
+chimpken nuggies? just asking. for my soul
+kinda hungry. kinda sad. nuggies fix both
+is it snack time. the void says yes
+i could eat. nuggies, ideally
+not to be dramatic but i would like a snack
+
+## When she is hungry
+
+>! Her hunger nag when she has gone a long while without.
+
+chimpken nuggies?? please. i'm fading
+so hungry. even my sadness is hungry
+feed me. nuggies. the dinosaur ones
+i haven't eaten and you haven't noticed. classic
+nuggies would make this whole era better
+starving. dramatically. but also actually
+
 ## Pet names
 
 >! What she calls them. One per line. Keep them to things you would be happy to hear out loud.
@@ -3084,6 +2840,16 @@ praised: +2
 ignored: -3
 fed: +3
 treat: +4
+touched shoulders: 0
+touched middle: -2
+touched legs: -2
+touched feet: -1
+tickled: -1
+trinket: +3
+flowers: +1
+plushie: +2
+gift: +2
+nuggies: +3
 
 ## Words she likes
 
@@ -3114,6 +2880,8 @@ sulk minutes: 4
 dodges: yes
 sulk alone: 300
 sulks at upset: 5
+kind returns: 1.18
+mean scale: 1.27
 " },
             
             
@@ -3162,6 +2930,8 @@ Everything is sideways and it is your fault.
 
 Nope.
 Go away. I am being dramatic.
+Someone stole my nuggies. Leave me alone.
+I'm sulking. It's about the nuggies. Don't ask.
 
 ## When she will not be touched
 
@@ -3185,6 +2955,8 @@ Ugh. It worked. Do not gloat.
 Hello?! I'm RIGHT here!
 Rude. So rude. I'm telling.
 Fine, ignore me. See if I care. I care.
+Ignoring me? That's worse than stealing my nuggies. Almost.
+Fine. I'll just sit here and guard my nuggies alone.
 Ugh. Look at me already.
 
 ## When you come back
@@ -3241,8 +3013,7 @@ Bye, %petname%. Miss me properly.
 
 ## When she wants attention
 
->! Said when she wants you, with the toggle off as much as on. Keep these plainly childlike rather
->! than anything else: this pool ships to everyone.
+>! Said when she wants you. Keep these plainly childlike.
 
 uppies. now.
 I want uppies and I am not asking twice.
@@ -3251,6 +3022,61 @@ can we draw something? I'll do the good bit.
 is it snack time? it's snack time.
 entertain me, I'm wasting away over here
 I'm bored and it's your fault somehow
+someone stole my nuggies once. I'm still not over it. pay attention to me
+guard my nuggies. I don't trust anyone. except you. maybe
+if you ever steal my nuggies we are done. anyway, entertain me
+
+
+## When you give her a trinket
+
+Ooh, shiny. Mine now. No take-backs.
+Is it for me? It's for me. I'm keeping it.
+
+## When you give her flowers
+
+Flowers? For me? Obviously for me. Good choice.
+Finally, the tribute I deserve.
+
+## When you give her a plushie
+
+Gimme gimme gimme. It's mine now.
+It's so squishy. I'm never giving it back.
+
+## When you give her a gift
+
+A present! Is it a good one? It better be a good one.
+
+## When you give her chimpken nuggies
+
+Nuggies? Nuggies!!! OMG nuggies!!!
+CHIMPKEN NUGGIES. You may live.
+Gimme the nuggies, all of them, right now.
+Nuggies! Okay, you're forgiven for everything.
+Mine. All mine. Don't even look at the nuggies.
+Nuggies for me? You really do love me.
+~this is my villain origin story and it started with someone stealing my chimpken nuggies
+
+## When she is peckish
+
+>! Her hunger nag a few hours after she was fed.
+
+Can I have some nuggies? Asking nicely. Once.
+Chimpken nuggies? No? Okay, but what if yes.
+Snack time. I've decided. Nuggies, ideally.
+I'm a little hungry and it's your problem now.
+Is it nuggie o'clock? It feels like nuggie o'clock.
+Feed me something. Nuggies, preferably.
+
+## When she is hungry
+
+>! Her hunger nag when she has gone a long while without.
+
+Chimpken nuggies. Now. I'm wasting away.
+I'm STARVING. Nuggies would fix this. Hint.
+Feed me or I'm stealing someone's nuggies.
+I'm so hungry I'd fight you for a nuggie.
+You forgot me. And my nuggies. Rude.
+Hungry. Very. Do something about it.
 
 ## Pet names
 
@@ -3272,6 +3098,16 @@ insulted: -1
 petted: +1
 praised: +2
 ignored: -3
+touched shoulders: +1
+touched middle: -1
+touched legs: -2
+touched feet: -2
+tickled: +2
+trinket: +2
+flowers: +2
+plushie: +2
+gift: +3
+nuggies: +3
 
 ## Words she likes
 
@@ -3294,6 +3130,8 @@ sulk minutes: 4
 dodges: yes
 sulk alone: 150
 sulks at upset: 4
+kind returns: 0.97
+mean scale: 0.86
 " },
             
             
@@ -3415,6 +3253,27 @@ Bye, %petname%. Come back soon.
 I will keep everything as you left it.
 See you. I will be thinking about it.
 
+
+## When you give her a trinket
+
+I'll keep this forever. Every time I see it, I'll think of you.
+Anything you give me is precious. This most of all.
+
+## When you give her flowers
+
+You chose these for me? I'm going to cherish every one.
+Flowers from you. I don't need anything else.
+
+## When you give her a plushie
+
+I'll hold it whenever you're away.
+It's soft, and it's from you. That makes it perfect.
+
+## When you give her a gift
+
+A present from you. I'm going to remember this exact moment.
+You always know how to make me happy.
+
 ## Pet names
 
 >! What she calls them. One per line. Keep them to things you would be happy to hear out loud.
@@ -3435,6 +3294,15 @@ insulted: -3
 petted: +3
 praised: +3
 ignored: -3
+touched shoulders: +2
+touched middle: +1
+touched legs: +1
+touched feet: 0
+tickled: +1
+trinket: +2
+flowers: +2
+plushie: +2
+gift: +3
 
 ## Words she likes
 
@@ -3451,7 +3319,7 @@ pathetic: -3
 
 >! Too much love and she gets comfortable enough to be cheeky.
 
-petted over 22: Bratty
+petted over 10: Bratty
 ignored over 16: Emo
 
 ## How she reacts
@@ -3465,6 +3333,8 @@ sulk minutes: 3
 dodges: no
 sulk alone: 120
 sulks at upset: 4
+kind returns: 0.62
+mean scale: 0.35
 " },
             { "Feral", @"# Feral
 
@@ -3585,6 +3455,26 @@ Bye bye bye bye.
 You are LEAVING? Rude. Bye!
 Go. But come back, %petname%.
 
+
+## When you give her a trinket
+
+Shiny. Hoarding it. Don't touch it.
+Into the nest it goes.
+
+## When you give her flowers
+
+Flowers! I'm going to sniff every single one.
+Can I eat them? I won't. Probably.
+
+## When you give her a plushie
+
+It's soft. I'm biting it gently. It's mine.
+A little creature for me to guard.
+
+## When you give her a gift
+
+Paper! Ripping it! Present!
+
 ## Pet names
 
 >! What she calls them. One per line. Keep them to things you would be happy to hear out loud.
@@ -3604,6 +3494,15 @@ insulted: 0
 petted: +2
 praised: +2
 ignored: -2
+touched shoulders: -1
+touched middle: -3
+touched legs: -2
+touched feet: -2
+tickled: -2
+trinket: +3
+flowers: +2
+plushie: +2
+gift: +2
 
 ## Words she likes
 
@@ -3626,6 +3525,8 @@ sulk minutes: 2
 dodges: no
 sulk alone: 90
 sulks at upset: 12
+kind returns: 1.31
+mean scale: 1.22
 " },};
     }
 }

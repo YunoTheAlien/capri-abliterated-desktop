@@ -1,8 +1,5 @@
-# Reads back the QR codes `RemoteTests qr` made and checks each says exactly what went in. Usage: python check-qr.py <folder>
-#
-# OpenCV's own decoder reads them first, as a second implementation. Pairing URLs, the only codes Capri shows, must all
-# read in OpenCV. For the sweep of every version and level, a code OpenCV can't read (it misses a few version 21 Low ones)
-# is checked here instead: its format bits, every block's Reed-Solomon syndromes and its data, from ISO/IEC 18004's tables.
+# Reads back the QR codes `RemoteTests qr` made and checks each says what went in, through OpenCV first; pairing URLs
+# must all read there. A code OpenCV misses is checked here against ISO/IEC 18004. Usage: python check-qr.py <folder>
 import sys
 from pathlib import Path
 

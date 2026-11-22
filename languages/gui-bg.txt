@@ -204,3 +204,18 @@ Running on this PC	Работи на този компютър
 NORMAL	НОРМАЛНО
 OFF	ИЗКЛ
 Local server address	Адрес на локалния сървър
+Remember panel position	Запомняне на позицията на панела
+Custom colours	Собствени цветове
+Custom colours...	Собствени цветове...
+Choose	Избор
+Hers	Нейният
+Quiet	Тихо
+Quiet min	Тихо min
+Quiet max	Тихо max
+Until I turn it off	Докато не го изключа
+Quiet on calls	Тихо по време на разговори
+Quiet in videos	Тихо при видеа
+Quiet until {n}:{n}	Тихо до {n}:{n}
+Quiet until turned off	Тихо до изключване
+Export settings	Експорт на настройките
+Import settings	Импорт на настройките

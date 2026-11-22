@@ -5,23 +5,9 @@ using System.Text;
 
 namespace CapriDesktop
 {
-    // Named places in what she says that a mod can take over, without a compiler and without touching her
-    // source.
-    //
-    // The alternative was splitting her files into small ones so a mod could replace a file, which trades one
-    // large thing nobody can safely edit for hundreds of small ones nobody can find. This is the other way
-    // round: her files stay as they are and the places worth replacing are named, the way a numbered slot on
-    // her Mainframe is named.
-    //
-    // A zone is one pool of lines, named for the file it lives in and the heading above it, so every pool she
-    // already has is claimable and a pool added later is claimable with nothing added here. Small on purpose:
-    // a zone that was all of her would be the problem rather than the fix.
-    //
-    // Every zone keeps its default. A mod turned off, removed, refused or broken leaves her exactly as she
-    // shipped, because the default is never replaced, only looked at second.
-    //
-    // This is what she says. What she does is not claimable, and that is deliberate: a mod inside her
-    // decisions is a different thing with its own approval and permissions, and it is not this.
+    // Named places in what she says that a mod can take over without touching her source: a zone is one pool, named by
+    // file and heading, so every pool is claimable. Each keeps its default, so a removed mod leaves her as shipped.
+    // What she does isn't claimable.
     internal static class Zones
     {
         internal const string ListFile = "mod-zones.txt";
@@ -90,9 +76,8 @@ namespace CapriDesktop
         private static void Ask()
         {
             KeyValuePair<string, Func<string[]>>[] asking;
-            // Emptied first. The list only ever grew, so a zone offered while the switch was on stayed in
-            // it after the switch went off and the file went on naming a section she no longer has. A zone
-            // a mod is holding keeps its claim: this is the offer list, not the claims.
+            // Emptied first, so a zone offered while the switch was on isn't still named once it is off. A zone a mod
+            // holds keeps its claim: this is the offer list, not the claims.
             lock (gate)
             {
                 asking = pools.ToArray();
@@ -116,9 +101,9 @@ namespace CapriDesktop
             }
         }
 
-        // A mod taking zones as it is turned on. A zone two mods want goes to the one turned on last, logged.
-        // Turning one off gives her lines back through Mods.Apply rebuilding the table, not through the Drop
-        // below: that is here so claiming replaces what this mod held even from a caller that does not.
+        // A mod taking zones as it is turned on; a zone two mods want goes to the one turned on last, logged. Turning
+        // off is undone by Mods.Apply rebuilding the table; Drop here makes a claim replace what this mod held, even
+        // from a caller that doesn't.
         internal static void Claim(string mod, Dictionary<string, string[]> zones)
         {
             if (string.IsNullOrEmpty(mod)) return;
@@ -203,11 +188,9 @@ namespace CapriDesktop
 #if !CROSS
     internal sealed partial class Companion
     {
-        // The zone system had no check of its own: a settings mod claiming a pool, her own lines coming back
-        // when it lets go, a zone two mods want, and the list she writes for modders.
-        // Personalities and moods a mod brings: written when it is on, taken away when it is not, a file somebody
-        // edited left alone, one that was there first never written over, and a senpai one not written with the
-        // switch off.
+        // The zone system's check: a mod claiming a pool, her lines coming back when it lets go, a contested zone, the
+        // modders' list. Mod packs written only while on and taken away after; edited or older files and the switch
+        // respected.
         internal void CheckModPacks(List<string> checks, string output)
         {
             Mods mods = ModList;
@@ -315,11 +298,9 @@ namespace CapriDesktop
                     throw new Exception("A zone taken from another mod left no line in her log.");
                 checks.Add("PASS mod zones: a zone two mods want goes to the one turned on last and the handover is logged");
 
-                // Claim on its own, without Apply's DropAll in front of it. Every path in the app goes through
-                // Apply, which rebuilds the whole table, so the Drop inside Claim never finds anything and the
-                // Sapphire box was right to call its body unreachable. It is kept because it is what makes
-                // Claim correct read on its own, and a thing kept for that reason has to be held by a check or
-                // it is only an opinion in a comment. This is the caller Apply is not: one mod re-claiming.
+                // Claim on its own, without Apply's DropAll first: every app path goes through Apply, so the Drop
+                // inside Claim never finds anything there. This is the caller Apply is not, one mod claiming again, so
+                // that Drop stays held by a check.
                 Zones.DropAll();
                 Dictionary<string, string[]> firstZones = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
                 firstZones[zone] = first;
@@ -357,12 +338,8 @@ namespace CapriDesktop
             }
         }
 
-        // A settings line she can say out loud. Her files keep settings in the preamble as "name: value" and
-        // her lines under "## heading", and nothing checked that a reader honours the difference: Capri said
-        // "reset to stock: 0 is on the table" because one reader treats "#" and "##" alike.
-        //
-        // Every pool of every line file is read back through her own reader, so this holds for a pool added
-        // later and for a file somebody has edited, rather than for the two headings that were reported.
+        // Every pool of every line file read back through her own reader, so a "name: value" settings line is never
+        // said aloud, for pools added later and edited files too.
         internal void CheckPoolLines(List<string> checks, string output)
         {
             Func<string, bool> setting = delegate(string line)
@@ -397,9 +374,9 @@ namespace CapriDesktop
             checks.Add("PASS pool lines: every pool of her " + read + " line files on disk was read back through her own reader, and none of the "
                 + pooled + " holds a settings line, so nothing she says can be a \"" + CapriDesktop.Notes.ResetKey + "\" flag or any other name and value");
 
-            // The rule the readers rely on: settings sit above the first "## heading" and a reader opens a
-            // section only on "##". A reader that takes a bare "#" as a heading puts the preamble in its scope,
-            // and since headings match ignoring case, a title repeating a section name makes them readable.
+            // The rule readers rely on: settings sit above the first "## heading", and a section opens only on "##",
+            // since a bare "#" would put the preamble in scope and a title matching a section name would make it
+            // readable.
             string made = "# Rainy days\n\n>! A note.\n\n" + CapriDesktop.Notes.ResetKey + ": 0\n\n## rainy days\n\npuzzles\n";
             Dictionary<string, string[]> got = LineFile.PoolsForTest(made);
             string[] right;
@@ -458,6 +435,14 @@ namespace CapriDesktop
             CapriSetup.Program.SpareForTest(program);
             if (!File.Exists(theirs) || File.ReadAllText(theirs) != "theirs") throw new Exception("A spare they had put back themselves was removed as the oldest.");
             checks.Add("PASS update spares: which ones go is decided by when each was written, so one put back or copied in by hand outlives the ones she made");
+
+            // "Updater.exe --close" with no folder closed her, rewrote her programs and started her again.
+            string named = Path.Combine(output, "Capri");
+            if (CapriSetup.Program.Closing(new[] { "--close" }) != CapriSetup.Program.InstallPath
+                || CapriSetup.Program.Closing(new[] { "--close", named }) != named
+                || CapriSetup.Program.Closing(new[] { "--apply-update" }) != null || CapriSetup.Program.Closing(new string[0]) != null)
+                throw new Exception("\"--close\" was not read as closing her, or another command was.");
+            checks.Add("PASS updater --close: with or without a folder it only closes her and is decided before any update, so an updater never takes it for one");
         }
     }
 #endif

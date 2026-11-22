@@ -204,3 +204,18 @@ Running on this PC	רץ במחשב הזה
 NORMAL	רגיל
 OFF	כבוי
 Local server address	כתובת שרת מקומי
+Remember panel position	לזכור את מיקום החלונית
+Custom colours	צבעים מותאמים
+Custom colours...	צבעים מותאמים...
+Choose	בחירה
+Hers	שלה
+Quiet	שקט
+Quiet min	שקט min
+Quiet max	שקט max
+Until I turn it off	עד שאכבה את זה
+Quiet on calls	שקט בשיחות
+Quiet in videos	שקט בסרטונים
+Quiet until {n}:{n}	שקט עד {n}:{n}
+Quiet until turned off	שקט עד כיבוי
+Export settings	ייצוא הגדרות
+Import settings	ייבוא הגדרות

@@ -21,9 +21,9 @@ namespace CapriDesktop
         internal HashSet<string> Online = new HashSet<string>(StringComparer.Ordinal);
     }
 
-    // Capri Remote in the Mainframe: a Remote key on CAPRI's band, cyan while Remote is on and solid cyan while a phone is
-    // connected, and the REMOTE sheet it opens: Remote on or off, a QR to pair a phone and the code to check when one asks,
-    // the paired phones with Revoke, and the relay's host.
+    // Capri Remote in the Mainframe: a Remote key on CAPRI's band, cyan while on and solid while a phone is connected,
+    // and the REMOTE sheet: on or off, a QR to pair, the code to check, paired phones with Revoke, and the relay's
+    // host.
 #if !CROSS
     internal sealed partial class Mainframe
     {
@@ -62,10 +62,12 @@ namespace CapriDesktop
 
         private void OpenRemote()
         {
+            System.Diagnostics.Stopwatch took = System.Diagnostics.Stopwatch.StartNew();
             MakeRemote();
             remoteSheet.Fill(capri.RemoteView());
             if (!remoteSheet.Visible) remoteSheet.Show(this);
             remoteSheet.Activate();
+            Timed(took, "Remote");
         }
 
         // Made once and kept, like her other windows; a zoom that no longer fits the screen makes it again.
@@ -93,11 +95,11 @@ namespace CapriDesktop
             }
         }
 
-        // The smoke test's look at CAPRI's band: nothing else on the main page touches the Remote key, and each control on its
-        // row is drawn where it sits, over the band, into a picture. The page needn't be laid out for it. s is the Mainframe's
-        // scale when its size isn't 100%.
-        internal string RemoteBand(string path, float s = 1f)
+        // The smoke test's look at CAPRI's band: nothing else touches the Remote key, and each control in its row is
+        // drawn where it sits into a picture. s is the Mainframe's scale, its own when left out.
+        internal string RemoteBand(string path, float s = 0f)
         {
+            if (s <= 0) s = Unit();
             Rectangle strip = new Rectangle(0, remoteKey.Top - (int)(30 * s), (int)Math.Ceiling(Wide * s), (int)(66 * s));
             List<Control> row = new List<Control>();
             foreach (Control control in Controls)
@@ -132,14 +134,14 @@ namespace CapriDesktop
             return null;
         }
 
-        // The smoke test's look at Remote's phone at the Mainframe's current size: the key keeps Support's size and row and its
-        // own place, the phone is drawn left of "Remote" with room to spare, and CAPRI's band, the band with Remote hovered, and
-        // Support beside Remote's looks (at rest, hovered, pressed, on, on and hovered, a phone connected, disabled) are saved.
-        // Support's heart is held at rest so pictures from two builds can be compared.
+        // The smoke test's look at Remote's phone at the Mainframe's size: the key keeps Support's size and row, the
+        // phone sits left of "Remote", and each look of both keys is saved, with Support's heart held still to compare
+        // builds.
         internal string RemoteMark(string folder, int size, List<string> seen)
         {
             float s = Unit();
-            if (remoteKey.Size != support.Size || remoteKey.Top != support.Top) return "the key is at " + remoteKey.Bounds + " beside Support at " + support.Bounds;
+            // A pixel either way is the rounding of two keys scaled at different places (at Auto 150%, 132 and 131).
+            if (Math.Abs(remoteKey.Width - support.Width) > 1 || Math.Abs(remoteKey.Height - support.Height) > 1 || remoteKey.Top != support.Top) return "the key is at " + remoteKey.Bounds + " beside Support at " + support.Bounds;
             if (Math.Abs(remoteKey.Left - 100 * s) > 1.5f) return "the key moved to x " + remoteKey.Left;
             int wide = TextRenderer.MeasureText(remoteKey.Text, remoteKey.Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width;
             if (Key.PhoneRoom * s + wide > remoteKey.Width - 8 * s) return "the phone and its label need " + (Key.PhoneRoom * s + wide) + " px of the key's " + remoteKey.Width;

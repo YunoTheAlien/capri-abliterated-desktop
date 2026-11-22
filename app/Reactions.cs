@@ -269,11 +269,8 @@ namespace CapriDesktop
         }
     }
 
-    // Her live reactions in games (F67, from yuuki's Roblox clip; Lachy, 2 Nov: "definitely live reactions in games"). The moment
-    // her game watching notices something, her brain is asked for a short line about it, in the mood the run of the game has put
-    // her in, and the line goes up in a feed over the game if it lands in time. Her old fixed lines are only examples of her
-    // style now (Lachy, 3 Nov: "Premade ones? fr? Remove that", then "they can be examples"). Her brain's look at the pictures
-    // can follow, also only in time.
+    // Her live reactions in games (Lachy): when her game watching notices something, her brain writes a short line in
+    // the mood the game has put her in, shown over the game if in time. Her old fixed lines are only style examples.
     internal static class Reactions
     {
         // A line stays about this long, at most this many stack, and she says at most one out loud in this long.
@@ -391,9 +388,9 @@ namespace CapriDesktop
             }
         }
 
-        // A moment's quick line, from her brain: true when it's asked. A small moment (a sound, a flash, a hit, the screen changing
-        // or going dark) waits its turn behind the line before; a big one (a kill, a death, a win or a loss) never does. The line
-        // goes up only if it lands within 2.5 s and isn't an example or one of her last lines; otherwise nothing does.
+        // A moment's quick line from her brain; true when asked. Small moments wait behind the line before; big ones
+        // (kill, death, win, loss) never do. It shows only if it lands within 2.5 s and isn't an example or a recent
+        // line.
         internal static bool React(string kind, string detail = null)
         {
             string key = KindOf(kind);
@@ -540,9 +537,9 @@ namespace CapriDesktop
             }
         }
 
-        // Her mood follows the run of the game: kills after a string of deaths are a relief, a third kill in a row is a streak,
-        // a death that ends a streak stings, and the third death in a row gets teased. The pool is her examples for that mood, and
-        // the count is how long the run was.
+        // Her mood follows the run of the game: kills after deaths are relief, a third kill a streak, a streak-ending
+        // death stings, a third death in a row is teased. The pool is that mood's examples; the count is the run's
+        // length.
         private static string[] PoolLocked(string key, int now, out int count)
         {
             if (streak != 0 && unchecked(now - streakAt) > StreakLife) streak = 0;
@@ -646,9 +643,8 @@ namespace CapriDesktop
         }
     }
 
-    // The big words a game puts across the middle of the screen when you win, lose, die or get a kill (F67: "wins and losses
-    // where it can tell"). Only read at a moment, from the middle of the frame with her own feed painted out, and only words that
-    // make a whole short line in big letters count, so a sign or a menu doesn't.
+    // The big words a game shows across the middle when you win, lose, die or kill: read only at a moment, from the
+    // frame's middle with her feed painted out; only a whole short line in big letters counts.
     internal static class Banners
     {
         private static readonly Regex Dead = new Regex(@"^(?:you died|you are dead|you'?re dead|you have died|you were killed|you got eliminated|wasted|eliminated|killed by .+|eliminated by .+|knocked down|knocked out|downed)$", RegexOptions.IgnoreCase);
@@ -733,9 +729,9 @@ namespace CapriDesktop
         internal static void Reset() { lock (gate) lastKind = null; }
     }
 
-    // The feed itself (F67): up to four lines stacked on the right of the game's screen, a third of the way down, so the top-right
-    // corner stays free for the clip-saved popup. Newest at the bottom, each on a plate in her Mainframe's look; it glitches in and
-    // fades after about 4 s. Layered, top-most, click-through and never active, so the game keeps every click, key and its focus.
+    // The feed: up to four lines stacked on the right a third of the way down, leaving the top right for the clip
+    // popup, newest at the bottom on Mainframe plates, glitching in and fading after 4 s. Click-through and never
+    // active.
     internal sealed class ReactionFeed : Overlay
     {
         [DllImport("user32.dll")] private static extern bool SetWindowDisplayAffinity(IntPtr window, uint affinity);
@@ -871,11 +867,9 @@ namespace CapriDesktop
             return new Size(Widest(s) + margin * 2 + 2, Reactions.Most * (tallest + Gap(s)) + margin * 2 + 2);
         }
 
-        // One line's plate, in her Mainframe's look (Lachy, 2 Nov: overlays look like the Mainframe, not her talk pill): its dark
-        // ground with the wine glow at the top, corners clipped big at the top left and bottom right with the red rim and hot red
-        // strokes, and a bar beside the line like her headings' tick. A quick line reads white beside a red bar, and her brain's
-        // look at the pictures rose beside a cyan one. Every part of the look is drawn here, so it changes in one place. Latin text is in
-        // Bahnschrift like the Mainframe's; anything else keeps her mono font, which wraps and draws every script she speaks.
+        // One line's plate in her Mainframe's look (Lachy): dark ground, wine glow, clipped corners with the red rim,
+        // and a bar like her headings' tick, white for a quick line and cyan for her brain's look. Bahnschrift for
+        // Latin, her mono otherwise.
         internal static Bitmap Plate(string text, bool brain, float s)
         {
             Color ink = brain ? CityLook.Rose : CityLook.White, bar = brain ? CityLook.Cyan : CityLook.Hot;
@@ -1160,8 +1154,7 @@ namespace CapriDesktop
             return left >= FadeTime ? 1f : (float)Math.Max(0, left / FadeTime);
         }
 
-        // A frame that can't be drawn takes the feed off screen until one can, so a torn or old frame is never what stays up
-        // (fushen, 10 Nov: a plate sat torn over a game until she was restarted).
+        // A frame that can't be drawn takes the feed off screen until one can, so a torn or old frame is never what stays up (fushen).
         private void Draw()
         {
             if (lines.Count == 0 || IsDisposed) return;
@@ -1260,7 +1253,7 @@ namespace CapriDesktop
             mainframe.Sync();
         }
 
-        // GAMES > Game sounds (#234), on by default. Off, her reactions and comments let bursts of the game's sound go, and
+        // GAMES > Game sounds, on by default. Off, her reactions and comments let bursts of the game's sound go, and
         // everything else still counts.
         internal bool GameSoundsOn { get { return !preferences.NoGameSounds; } }
 
@@ -1311,9 +1304,8 @@ namespace CapriDesktop
             ReactionVoice(line);
         }
 
-        // Out loud only now and then: at most one every 8 s, never over her own voice or theirs. Mute her, her quiet key, a hide,
-        // her voice off or ElevenLabs voice chat keep reactions as text, and a voice that comes back late stays unsaid. So does a
-        // call, where saying one would close her ears on a line she's hearing (#171).
+        // Out loud only now and then: one every 8 s at most, never over her voice or theirs. Mute, quiet, hidden, voice
+        // off, ElevenLabs chat or a call keep reactions as text, and a late voice stays unsaid.
         private void ReactionVoice(string line)
         {
             if (!ReactionVoiceFree() || !Reactions.Voice(Reactions.Clock())) return;
@@ -1340,6 +1332,8 @@ namespace CapriDesktop
                     CheckEars(now, true);
                     Played(wav);
                     PlayVoice(wav);
+                    // A reaction said aloud goes in her line log as said.
+                    try { Sayings.Shown(line); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 });
             });
         }

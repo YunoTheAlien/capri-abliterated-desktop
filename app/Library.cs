@@ -83,9 +83,8 @@ namespace CapriDesktop
         }
     }
 
-    // A spare of one of her files with the moment it was made in its name, as seconds since 1970 in UTC:
-    // sys.md.1763472612.bak. The name is the record. A folder copied to a backup drive gets a new creation time on
-    // every file, and a spare opened and saved gets a new write time, and neither can reorder these.
+    // A spare of one of her files named with the moment it was made, seconds since 1970 in UTC: sys.md.1763472612.bak.
+    // The name is the record, since copies and saves change file times.
     internal static class SpareFiles
     {
         private static readonly DateTime Zero = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -192,8 +191,11 @@ namespace CapriDesktop
         internal static readonly string[] Both =
         {
             "lines.md", "dynamic.md", "sys.md", "touch.md", "watching.md", "moments.md", "mod-zones.txt",
-            "me.md", "memories.md", "personality.md", "personality.backup.md", "mood.txt", "mood.when"
+            "me.md", "memories.md", "mood.txt", "mood.when"
         };
+        // Once kept per side, now one file in personalSettings itself, read whichever side is on: their personality has
+        // nothing of either side in it and does not change between them (Joined brings an existing install together).
+        internal static readonly string[] Shared = { "personality.md", "personality.backup.md" };
         internal static readonly string[] OneSide = { "her_interests", "random_interests", "your_interests" };
         internal static readonly string[] Played = { "chess.md" };
         // A censored copy was made from a file that had both halves, and the rest of it still wants scrubbing.
@@ -221,9 +223,45 @@ namespace CapriDesktop
             return false;
         }
 
-        // Where a file lives for this side, from the loose path it had. A loose one moves in on the first start.
-        // Turning on, a side with no copy yet starts from the censored one; nothing is ever copied the other way
-        // except once, when a loose file from before the split is laid out on a machine that is on.
+        // Where a file lives for this side: a loose one moves in on first start, and a new side starts from the
+        // censored copy, never the other way. Made one file again: the side in use wins, and a differing copy is kept
+        // as a spare.
+        internal static string Joined(string settings, string name, bool full)
+        {
+            if (string.IsNullOrEmpty(settings) || string.IsNullOrEmpty(name)) return null;
+            string shared = Path.Combine(settings, name);
+            string mine = Path.Combine(settings, full ? Personalities.SenpaiName : Personalities.PlainName, name);
+            string other = Path.Combine(settings, full ? Personalities.PlainName : Personalities.SenpaiName, name);
+            try
+            {
+                if (File.Exists(mine))
+                {
+                    if (File.Exists(shared))
+                    {
+                        if (SameWords(shared, mine)) File.Delete(shared);
+                        else File.Move(shared, SpareFiles.Name(shared));
+                    }
+                    File.Move(mine, shared);
+                }
+                if (File.Exists(other))
+                {
+                    if (!File.Exists(shared)) File.Move(other, shared);
+                    else if (SameWords(shared, other)) File.Delete(other);
+                    else File.Move(other, SpareFiles.Name(shared));
+                }
+            }
+            catch (IOException caughtOne) { Brain.Caught(caughtOne); }
+            catch (UnauthorizedAccessException caughtOne) { Brain.Caught(caughtOne); }
+            return shared;
+        }
+
+        // The same words, whatever line endings or trailing space each was saved with.
+        private static bool SameWords(string one, string two)
+        {
+            Func<string, string> plain = delegate(string path) { return Regex.Replace(File.ReadAllText(path).Replace("\r\n", "\n"), @"[ \t]+\n", "\n").Trim(); };
+            return plain(one) == plain(two);
+        }
+
         internal static string Place(string loose, bool full)
         {
             if (string.IsNullOrEmpty(loose)) return loose;

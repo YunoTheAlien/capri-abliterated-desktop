@@ -147,9 +147,9 @@ namespace CapriDesktop
             return samples;
         }
 
-        // Two monitors side by side, each drawn as a desktop: a code editor and a browser on a wallpaper, the monitor's number
-        // in big letters and a taskbar with a clock. The scene says what moves: nothing (still), a line being typed (typing),
-        // the editor scrolling (scroll), or a video playing in the browser (video).
+        // Two monitors side by side drawn as desktops: an editor and browser on a wallpaper, the monitor's number and a
+        // taskbar clock. The scene says what moves: nothing (still), typing, the editor scrolling (scroll), or a video
+        // (video).
         internal sealed class FakeDesktop : RemoteScreenSource, IDisposable
         {
             internal readonly object Gate = new object();

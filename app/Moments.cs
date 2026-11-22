@@ -5,17 +5,8 @@ using System.Text;
 
 namespace CapriDesktop
 {
-    // The lines she says on her own, when nothing else is speaking for her: popping in, wanting attention,
-    // waking to her name, noticing the PC struggling.
-    //
-    // These were arrays in her source. Eight pools of five to ten lines, picked with a plain roll, with none of
-    // the machinery every other line of hers goes through: no personality, no mood, no composition, and no
-    // memory of having just said one. Ten lines picked at random repeat inside an evening, and they did, which
-    // is the most common thing anyone says about her.
-    //
-    // They are a file of hers now, so they can be rewritten and added to without a build, and every pick goes
-    // through the same recency her other lines use, which survives a restart. A personality or a mood with its
-    // own lines for the same moment still speaks first: this is the bottom of that chain, not the top.
+    // The lines she says on her own: popping in, wanting attention, waking to her name, noticing the PC struggling.
+    // From a file, through the same recency as her other lines; a personality or mood with its own lines speaks first.
     internal static class Moments
     {
         internal const string FileName = "moments.md";

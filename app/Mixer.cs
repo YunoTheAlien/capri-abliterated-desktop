@@ -18,12 +18,11 @@ namespace CapriDesktop
     }
 
     // Each app's own volume in Windows' volume mixer, on every speaker it plays through, apart from the PC's volume, so "turn the
-    // game down" or "mute Spotify" is one call (Lachy, 3 Nov: "ensure they have the tools they need to perform everything themself").
+    // game down" or "mute Spotify" is one call (Lachy).
     internal static class Mixer
     {
-        // Windows quiets every other app while one is on a call, and can count her mic or her voice as a call (Neco Arc, 3 Nov:
-        // "everything else on computer gets muted"). Each of her sounds opts out before it starts, and a failure never stops it.
-        // The smoke test swaps in its own sessions and opt-out.
+        // Windows quiets other apps during a call and can count her mic or voice as one (Neco Arc), so each of her
+        // sounds opts out before it starts, never stopped by a failure. The smoke test swaps in its own sessions.
         internal static readonly Guid SessionId = new Guid("F4B1A599-7266-4319-A8CA-E70ACB11E8CD");
         internal static Func<string, int, object> Session = OpenSession;
         internal static Func<object, bool, int> Ducking = delegate(object session, bool optOut) { return ((ISound)session).SetDuckingPreference(optOut); };

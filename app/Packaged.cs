@@ -7,7 +7,7 @@ using Windows.ApplicationModel;
 
 namespace CapriDesktop
 {
-    // The Microsoft Store copy (#114): the same Capri in an MSIX package, which Windows installs read-only and updates itself.
+    // The Microsoft Store copy: the same Capri in an MSIX package, which Windows installs read-only and updates itself.
     // Whatever has to differ from a normal install asks here, and outside a package none of it changes anything.
     internal static class Packaged
     {
@@ -55,10 +55,8 @@ namespace CapriDesktop
             }
         }
 
-        // Her data folder, under LocalApplicationData. Windows keeps the new folders a package makes in AppData in a private place
-        // that only the package sees at the usual path, so File Explorer, Notepad and her brain's engine couldn't open what she
-        // made there. A Store copy uses that private place by its real name, which everyone can open and which goes when she's
-        // uninstalled. A folder the website's Capri made is real already, so she moves in and keeps everything in it.
+        // Her data folder under LocalApplicationData. A Store copy uses the package's private AppData by its real path,
+        // so other programs can open it; a folder the website's Capri made is moved into and kept.
         internal static string Home(string local)
         {
             string usual = Path.Combine(local, "Capri");

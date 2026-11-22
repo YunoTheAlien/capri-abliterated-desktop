@@ -204,3 +204,18 @@ Running on this PC	მუშაობს ამ კომპიუტერზ�
 NORMAL	ჩვეულებრივი
 OFF	გამორთული
 Local server address	ადგილობრივი სერვერის მისამართი
+Remember panel position	პანელის მდებარეობის დამახსოვრება
+Custom colours	მორგებული ფერები
+Custom colours...	მორგებული ფერები...
+Choose	არჩევა
+Hers	მისი
+Quiet	ჩუმი
+Quiet min	ჩუმი min
+Quiet max	ჩუმი max
+Until I turn it off	სანამ არ გამოვრთავ
+Quiet on calls	ჩუმი ზარების დროს
+Quiet in videos	ჩუმი ვიდეოებში
+Quiet until {n}:{n}	ჩუმი {n}:{n}-მდე
+Quiet until turned off	ჩუმი გამორთვამდე
+Export settings	პარამეტრების ექსპორტი
+Import settings	პარამეტრების იმპორტი

@@ -204,3 +204,18 @@ Running on this PC	Na-agba ọsọ n'ọnụ kọmputa a
 NORMAL	NKỊTỊ
 OFF	MAPỤ
 Local server address	Adreesị sava obodo
+Remember panel position	Cheta ọnọdụ panel
+Custom colours	Agba nke gị
+Custom colours...	Agba nke gị...
+Choose	Họrọ
+Hers	Nke ya
+Quiet	Dara jụụ
+Quiet min	Dara jụụ min
+Quiet max	Dara jụụ max
+Until I turn it off	Ruo mgbe m gbanyụrụ ya
+Quiet on calls	Dara jụụ n'oge oku
+Quiet in videos	Dara jụụ na vidiyo
+Quiet until {n}:{n}	Dara jụụ ruo {n}:{n}
+Quiet until turned off	Dara jụụ ruo mgbe e gbanyụrụ ya
+Export settings	Bupụ ntọala
+Import settings	Bubata ntọala

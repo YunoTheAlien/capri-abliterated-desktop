@@ -167,10 +167,8 @@ namespace CapriDesktop
 
     internal partial class Companion
     {
-        // Her first launch card as they'd use it, on stand-ins: no model is downloaded, no key is real, the clipboard and the
-        // browser are never touched. Each path (this PC, free key, plan or key), Skip on every screen, Skip all from every
-        // screen, quitting halfway and coming back, an update never seeing it, her lines held back while it's open, and pictures
-        // of every screen at 100%, 125% and 150%.
+        // Her first launch card as they'd use it, on stand-ins with nothing downloaded or touched: every path, Skip and
+        // Skip all, quitting halfway, an update never seeing it, and pictures at 100%, 125% and 150%.
         private void SmokeFirstRun(List<string> checks, string output)
         {
             Directory.CreateDirectory(output);
@@ -315,10 +313,9 @@ namespace CapriDesktop
 
                 part("SmokeFirstRunLanguage", delegate
                 {
-                    // Her language row on the first screen, on stand-ins: the Windows guess shows and is saved before any click, the
-                    // Mainframe's own menu opens from it by mouse, Tab and Space or Enter, and closes on Esc. It opens on the card's
-                    // screen and inside its work area, a 1366 x 768 one too. A pick is saved at once and her brain and ears follow it,
-                    // English clears her brain's language, a Mainframe pick shows on the card, and Skip all and NO AI keep the pick.
+                    // Her language row on the first screen, on stand-ins: the Windows guess is saved at once, the menu
+                    // opens by mouse or keys inside the work area, and a pick reaches her brain, her ears and the
+                    // Mainframe.
                     Action<Control, Keys> languageKey = delegate(Control target, Keys code)
                     {
                         Message down = Message.Create(target.Handle, 0x0100, new IntPtr((int)code), IntPtr.Zero);
@@ -785,9 +782,9 @@ namespace CapriDesktop
                     passed("PASS MY PLAN OR KEY asks for a Claude or ChatGPT plan through her own plan hookup (a stand-in) and a paid key goes under MAX INTELLIGENCE with no Move to MAX step; Skip on BRAIN ONLINE moves on and Skip all with a brain ends the card with no Mainframe and no EXTRAS");
                 });
 
-                // A click or key still on its way to the card when it changes under it: her brain coming online, the screen built
-                // again, Skip all, a second card opened over it. The old screen's tile and Next get their click as if it landed
-                // that moment, and nothing happens; a click on the live screen after a Mainframe pick still works.
+                // A click or key still on its way when the card changes under it (her brain coming online, a rebuild,
+                // Skip all, a second card): the old screen's tile and Next do nothing, while a click on the live screen
+                // still works.
                 part("SmokeFirstRunStale", delegate
                 {
                     System.Reflection.MethodInfo onClick = typeof(Control).GetMethod("OnClick", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -840,9 +837,9 @@ namespace CapriDesktop
 
                 part("SmokeFirstRunNoAi", delegate
                 {
-                    // NO AI, the fourth pick: Next finishes on JUST ME with no voice, mic or EXTRAS and no Mainframe, and the choice is
-                    // kept. From then on nothing is asked of any brain from any path (a stand-in hears about anything turned away), what
-                    // needs no brain still works, and what needs one gets her line once, then not again for a while.
+                    // NO AI: Next finishes on JUST ME with no voice, mic, EXTRAS or Mainframe, and it's kept. No brain
+                    // is asked anything from any path; what needs none still works, and what needs one gets her line
+                    // once, then not for a while.
                     reset();
                     int setupsAt = setups;
                     List<string> refused = new List<string>();
@@ -1084,9 +1081,9 @@ namespace CapriDesktop
 
                 part("SmokeFirstRunDesktop", delegate
                 {
-                    // Her first launch as it looks: a plain desktop with a taskbar, her standing where she lands, her bubble with the
-                    // screen's line and the card beside her. Nothing may overlap or leave the screen, on 1920 x 1080 and 1366 x 768,
-                    // with her in the middle or at either edge.
+                    // Her first launch as it looks: a plain desktop and taskbar, her where she lands, her bubble and
+                    // the card. Nothing overlapping or off screen at 1920 x 1080 and 1366 x 768, with her in the middle
+                    // or at either edge.
                     Point headAt = Head(), feetAt = Feet(), herAt = anchor;
                     Size herSize = Size;
                     List<string> scenes = new List<string>(), clashes = new List<string>(), nudged = new List<string>();
@@ -1149,7 +1146,9 @@ namespace CapriDesktop
                             return problem;
                         }
                     };
+                    string[] names = { "", "desktop-1-pick-1080-middle", "desktop-2-free-key-1080-right", null, "desktop-4-voice-768-middle", null, null, null };
                     foreach (int screen in new[] { FirstRun.Pick, FirstRun.Key, FirstRun.Plan, FirstRun.Online, FirstRun.Voice, FirstRun.Extras, FirstRun.Wait })
+                    foreach (Size size in new[] { new Size(1920, 1080), new Size(1366, 768) })
                     {
                         reset();
                         if (screen == FirstRun.Online) { brain.Remote = new Cloud("AIza-firstrun-test", "gemini-90-flash"); brain.Model = "gemini-90-flash"; preferences.Tier = 1; }
@@ -1161,26 +1160,25 @@ namespace CapriDesktop
                         SettingUpVoice = true;
                         voiceGot = 96L << 20;
                         voiceTotal = LocalVoice.PackSize;
-                        card = OpenFirstRun(screen == FirstRun.Online ? FirstRun.Pick : screen, screen == FirstRun.Key ? FirstRun.Free : screen == FirstRun.Plan ? FirstRun.Own : FirstRun.Local, false, 1f);
+                        // At the size the card takes on that screen at 100%, as a real start sizes it from the room above the taskbar.
+                        card = OpenFirstRun(screen == FirstRun.Online ? FirstRun.Pick : screen, screen == FirstRun.Key ? FirstRun.Free : screen == FirstRun.Plan ? FirstRun.Own : FirstRun.Local, false, Mainframe.FirstRunCard.FitScale(1f, size.Height - 48));
                         if (screen == FirstRun.Online) card.BrainOnline();
                         if (coming) { card.Brain = FirstRun.Coming; SettingUp = true; card.Go(screen); }
                         pump();
                         if (card.Line == null) card.Line = online;
-                        string[] names = { "", "desktop-1-pick-1080-middle", "desktop-2-free-key-1080-right", null, "desktop-4-voice-768-middle", null, null, null };
-                        foreach (Size size in new[] { new Size(1920, 1080), new Size(1366, 768) })
-                            foreach (int side in new[] { 0, -1, 1 })
-                            {
-                                string name = names[screen] != null && names[screen].IndexOf(size.Height.ToString(), StringComparison.Ordinal) >= 0 && names[screen].EndsWith(side == 0 ? "middle" : side < 0 ? "left" : "right", StringComparison.Ordinal) ? names[screen] : null;
-                                string clash = scene(card, size, side, name);
-                                if (clash != null) clashes.Add(card.Count + " " + screen + " " + clash);
-                            }
+                        foreach (int side in new[] { 0, -1, 1 })
+                        {
+                            string name = names[screen] != null && names[screen].IndexOf(size.Height.ToString(), StringComparison.Ordinal) >= 0 && names[screen].EndsWith(side == 0 ? "middle" : side < 0 ? "left" : "right", StringComparison.Ordinal) ? names[screen] : null;
+                            string clash = scene(card, size, side, name);
+                            if (clash != null) clashes.Add(card.Count + " " + screen + " " + clash);
+                        }
                         SettingUpVoice = voiceBefore;
                         voiceGot = voiceTotal = 0;
                         card.SkipAll();
                         putBack();
                     }
                     if (scenes.Count != 3 || clashes.Count > 0) throw new Exception("Her first launch on a desktop: " + scenes.Count + " pictures; " + string.Join("; ", clashes.ToArray()));
-                    passed("PASS on a 1920 x 1080 and a 1366 x 768 desktop, with her in the middle or at either edge, every screen of the card sits beside her on the screen without covering her or her bubble (she steps aside first where it fits neither side: " + string.Join(", ", nudged.ToArray()) + "): " + string.Join(", ", scenes.ToArray()));
+                    passed("PASS on a 1920 x 1080 and a 1366 x 768 desktop, with her in the middle or at either edge, every screen of the card, at the size that screen gives it, sits beside her on the screen without covering her or her bubble (she steps aside first where it fits neither side: " + string.Join(", ", nudged.ToArray()) + "): " + string.Join(", ", scenes.ToArray()));
                 });
 
                 part("SmokeFirstRunScales", delegate

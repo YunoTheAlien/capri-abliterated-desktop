@@ -3,11 +3,8 @@ using System.Collections.Generic;
 
 namespace CapriDesktop
 {
-    // Capri Remote and her brains (remote/PROTOCOL.md section 8.1): a paired phone sees which brain she uses, picks another
-    // and sends a brain's API key. This file is the protocol's share, with no window or brain in it, so app/RemoteTests runs
-    // it too: what a phone may ask, what the PC answers, and RemoteLink's part in carrying them. Keys only ever come in: no
-    // message made here can carry one out. Her side, which saves a key exactly as her Mainframe's key box does, is
-    // app/RemoteBrains.cs.
+    // Capri Remote and her brains, the protocol's share (remote/PROTOCOL.md 8.1), with no window or brain so
+    // app/RemoteTests runs it too. Keys only come in; no message here can carry one out. Her side is RemoteBrains.cs.
     internal static class RemoteBrainKeys
     {
         // In hello-ok's features while Remote is on.
@@ -48,9 +45,8 @@ namespace CapriDesktop
             internal int Tier = -1;
         }
 
-        // A phone's brain ask, or null when it's malformed: the PC answers error bad-message, with re when its id was good.
-        // A key is trimmed, as her Mainframe's key box trims it, and has 1 to MostKey characters and no control characters,
-        // which could never be a key and would break the header it goes out in.
+        // A phone's brain ask, or null when malformed, answered bad-message with re when its id was good. A key is
+        // trimmed as the key box does and must be 1 to MostKey characters with no control characters.
         internal static Ask Read(string device, RemoteJson.Map message, out string re)
         {
             re = null;

@@ -204,3 +204,18 @@ Running on this PC	Ó ń ṣiṣẹ́ lórí PC yìí
 NORMAL	DEÉDÉÉ
 OFF	PA
 Local server address	Àdírẹ́sì olùpèsè agbègbè
+Remember panel position	Rántí ipò pánẹ́ẹ̀lì
+Custom colours	Àwọn àwọ̀ àdáni
+Custom colours...	Àwọn àwọ̀ àdáni...
+Choose	Yàn
+Hers	Tirẹ̀
+Quiet	Ìdákẹ́jẹ́ẹ́
+Quiet min	Ìdákẹ́jẹ́ẹ́ min
+Quiet max	Ìdákẹ́jẹ́ẹ́ max
+Until I turn it off	Títí èmi yóò fi pa á
+Quiet on calls	Ìdákẹ́jẹ́ẹ́ nígbà ìpè
+Quiet in videos	Ìdákẹ́jẹ́ẹ́ nínú fídíò
+Quiet until {n}:{n}	Ìdákẹ́jẹ́ẹ́ títí di {n}:{n}
+Quiet until turned off	Ìdákẹ́jẹ́ẹ́ títí a ó fi pa á
+Export settings	Gbé ètò jáde
+Import settings	Gbé ètò wọlé

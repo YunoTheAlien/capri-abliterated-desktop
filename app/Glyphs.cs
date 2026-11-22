@@ -5,20 +5,8 @@ using System.Runtime.InteropServices;
 
 namespace CapriDesktop
 {
-    // Whether a font actually has the letter, and what to draw it in when it does not.
-    //
-    // A font with no glyph for a character does not fail and does not fall back: GDI+ draws the font's own
-    // stand-in, which in most faces is a hollow box, and in a good many is a box with a cross through it. So
-    // a Russian device name, a Japanese window title, a Greek filename or an emoji in a message comes out as
-    // a row of boxes, on somebody else's machine, in a font that was chosen long before anybody knew what it
-    // would be asked to draw.
-    //
-    // Her own faces are the narrow ones: a display font and an embedded mono, neither of which carries much
-    // beyond Latin. That is fine as long as nothing hands them a letter they do not have.
-    //
-    // The font itself is asked, through GDI, rather than guessed at from the character's block: a family that
-    // does carry Cyrillic keeps drawing it, and one that does not is caught whatever the character is. The
-    // answer is kept per family and style, since a glyph does not appear or vanish with the size.
+    // Whether a font has the letter, and what to draw it in when not: a missing glyph draws as a box. The font itself
+    // is asked through GDI, and the answer is kept per family and style.
     internal static class Glyphs
     {
         [DllImport("gdi32.dll", CharSet = CharSet.Unicode)]

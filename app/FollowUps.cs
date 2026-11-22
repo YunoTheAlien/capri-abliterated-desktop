@@ -36,6 +36,8 @@ namespace CapriDesktop
         private void CheckFollowUp(double now)
         {
             if (followTicket == asking && !followLogged && !FollowDelivery(followTicket)) { asking++; CloseTalk(); }
+            // In a back and forth her own extra after a reply is dropped, not saved for later.
+            if (conversing) { followUp.Drop(); return; }
             bool finished = talkState == TalkState.Off && !LineBusy && (!chatting || !earsShut);
             string line = followUp.Take(now, asking, FollowInput(), micTalked, FollowUpAllowed(), finished);
             if (line == null) return;

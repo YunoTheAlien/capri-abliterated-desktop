@@ -204,3 +204,18 @@ Running on this PC	Yn rhedeg ar y PC hwn
 NORMAL	ARFEROL
 OFF	I FFWRDD
 Local server address	Cyfeiriad gweinydd lleol
+Remember panel position	Cofio safle'r panel
+Custom colours	Lliwiau personol
+Custom colours...	Lliwiau personol...
+Choose	Dewis
+Hers	Ei rhai hi
+Quiet	Tawel
+Quiet min	Tawel min
+Quiet max	Tawel max
+Until I turn it off	Nes i mi ei ddiffodd
+Quiet on calls	Tawel ar alwadau
+Quiet in videos	Tawel mewn fideos
+Quiet until {n}:{n}	Tawel tan {n}:{n}
+Quiet until turned off	Tawel nes ei ddiffodd
+Export settings	Allforio gosodiadau
+Import settings	Mewnforio gosodiadau

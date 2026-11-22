@@ -34,6 +34,8 @@ namespace CapriDesktop
         internal string[] Permissions = new string[0];
         // A code mod's // requires: line: the mod API it needs, and other mods that must be installed and on.
         internal int NeedsApi;
+        // A code mod that names colours of its own through Ui.Colour, said on its approval and its Mods row so people know.
+        internal bool Colours;
         internal string[] Requires = new string[0];
         internal string[] Games;
         // The programs a skill is for, so it is offered when one of them is in front.
@@ -41,6 +43,8 @@ namespace CapriDesktop
         internal string Know;
         // What a code mod reaches for, read off its source when the file is read. Shown where it is approved.
         internal string[] Reaches = new string[0];
+        // On Capri's checked list, as this exact file (CodeMods.cs).
+        internal bool Checked;
         // Every outside address in its code, whole. Reaches names only each site; these go under it.
         internal string[] Places = new string[0];
         // Why its source cannot be read, or null; that source laid back out when it can be; and whether that
@@ -48,6 +52,8 @@ namespace CapriDesktop
         internal string Unreadable;
         internal string Tidy;
         internal bool AskTwice;
+        // The files it carries packed into its code, from its "// assets:" line, so their packing isn't read as hidden text.
+        internal string[] Assets = new string[0];
         // Pools of hers this mod says instead, by zone name. Read apart from the rest, since a JSON object
         // with names of its own does not fit a contract with fixed fields.
         internal Dictionary<string, string[]> Zones;
@@ -80,6 +86,11 @@ namespace CapriDesktop
         // Own: a skill she was taught here, kept in her own skills folder rather than installed as a mod.
         internal bool Code, Changed, Skin, Skill, Own;
         internal string Hash;
+        // A skill a plug-in carries: the plug-in's id and name, the skill's folder, and the other files in it read_skill opens.
+        internal string Owner, From, Folder;
+        internal string[] Extra = new string[0];
+        // A plug-in on its own row in Mods > INSTALLED: the row's name, its cog and Remove are the plug-in's.
+        internal PluginInfo Plugin;
     }
 
     internal sealed class ModException : Exception
@@ -115,6 +126,7 @@ namespace CapriDesktop
             ownFolder = Path.Combine(data, OwnFolderName);
             // The directory's last good list lives with her data, where a temp-folder clean cannot take it.
             ModDirectory.KeptFolder = Path.Combine(data, "mod-directory");
+            if (WithStarters) AddStarters();
             All = new List<Mod>();
             Problems = new List<string>();
             Hands.AlsoHeard = delegate(string words)
@@ -215,6 +227,7 @@ namespace CapriDesktop
                     }
                 }
             }
+            plugged = PluginSkills();
             Apply();
         }
 
@@ -252,9 +265,8 @@ namespace CapriDesktop
             return All.Find(mod => mod.File.Id == read.Id);
         }
 
-        // A newer copy of a mod that's already in, from the mods directory. It goes in through the normal import, so a code mod
-        // still asks, and then every mod is left on or off the way it was: importing turns a mod on and other skins and colour
-        // sets off, which an update shouldn't.
+        // A newer copy from the mods directory, through the normal import so a code mod still asks; every mod is then
+        // left on or off as it was, since an import would switch skins and colour sets.
         internal Mod Update(string file, Func<ModFile, string, bool> ask)
         {
             HashSet<string> before = Off();
@@ -276,6 +288,7 @@ namespace CapriDesktop
             if (on)
             {
                 off.Remove(mod.File.Id);
+                ModGuard.Forget(mod.File.Id);
                 if (mod.File.Colors != null)
                 {
                     OnlyColours(mod.File.Id, off);
@@ -287,6 +300,18 @@ namespace CapriDesktop
             mod.On = on;
             Apply();
             return true;
+        }
+
+        // A mod's own saved data, the "<id>-data" folder a code mod keeps between runs. Removing the mod asks about it;
+        // turning one off never does, so turning it back on finds everything as it was.
+        internal string DataOf(Mod mod) { return System.IO.Path.Combine(folder, mod.File.Id + "-data"); }
+
+        internal bool HasData(Mod mod) { return Directory.Exists(DataOf(mod)); }
+
+        internal void DropData(Mod mod)
+        {
+            string data = DataOf(mod);
+            if (Directory.Exists(data)) Directory.Delete(data, true);
         }
 
         internal void Remove(Mod mod)
@@ -315,9 +340,8 @@ namespace CapriDesktop
                 throw new ModException("zones has to be a list of zone names, each with its lines.");
             foreach (XmlNode one in zones.ChildNodes)
             {
-                // A JSON name that is not a legal XML name does not become the element's name: the element
-                // is called item and carries the real name in an attribute of the same word. Every zone
-                // name has a space and a colon in it, so every one of them arrives that way.
+                // A JSON name that isn't a legal XML name becomes an element called item carrying the real name in an
+                // attribute, as every zone name does with its space and colon.
                 string named = (one.Attributes != null && one.Attributes["item"] != null
                     ? one.Attributes["item"].Value
                     : XmlConvert.DecodeName(one.LocalName) ?? "").Trim();
@@ -423,9 +447,7 @@ namespace CapriDesktop
             if (!wantLog) DeleteLog();
             ApplySkin();
             LayPacks();
-            skills = All.FindAll(mod => mod.Skill && mod.On).ToArray();
-            knownSkills = All.FindAll(mod => mod.Skill).ToArray();
-            skillNote = Standing(skills);
+            SetSkills();
             note = names.Length == 0 ? "" : "\nThey can also call you " + Listed(names) + ". Those are nicknames for you, so answer to them like your own name.";
         }
 
@@ -434,10 +456,9 @@ namespace CapriDesktop
         private const string LaidFile = "laid-packs.txt";
         private const int LongestPack = 200000, LongestPackName = 40;
 
-        // The packs the mods that are on bring, written into her folders; the ones a mod no longer brings, because it
-        // was turned off or removed, taken away again. What was written is noted in laid-packs.txt with the text
-        // it had, so a file somebody has edited since is left alone, and one that was there first is never written
-        // over. A senpai one is written only with the switch on, and switching off does not take it away.
+        // Packs the active mods bring, written into her folders and taken away again when a mod stops bringing them.
+        // laid-packs.txt notes what was written, so edited or older files are left alone; senpai ones only with the
+        // switch on.
         internal void LayPacks()
         {
             try
@@ -573,6 +594,8 @@ namespace CapriDesktop
         {
             Directory.CreateDirectory(folder);
             File.WriteAllLines(Path.Combine(folder, OffFile), off);
+            // In her settings.json's mods block, so it is written with her other settings (on close, before an update).
+            SettingsFile.Changed();
         }
     }
 }

@@ -17,9 +17,9 @@ namespace CapriDesktop
 
     internal enum HudBox { None, Listening, Thinking, Reply, Job }
 
-    // Gaming Mode's HUD: a click-through window at the top left of the game's monitor that never takes focus or the cursor,
-    // with her eyes in a framed panel, a portrait while she talks, her reply box and a status strip. Everything here runs on
-    // her UI thread, and a call from any other thread is posted there, so game code can call these from anywhere.
+    // Gaming Mode's HUD: a click-through, never-focused window at the top left of the game's monitor with her eyes, a
+    // portrait while she talks, her reply box and a status strip. It runs on her UI thread; calls from elsewhere are
+    // posted there.
     internal static class GameHud
     {
         private static Control owner;
@@ -892,7 +892,7 @@ namespace CapriDesktop
 
         private string Landing(GameSeen game) { return "Gaming Mode on, " + Name() + (Warn(game) ? ". " + Borderless : (Hud() ? ". Docking top-left until you close the game." : ". I'll stay out here with you until you close the game.")); }
 
-        // On by default (Lachy, 31 Oct): a game in front takes her in with nothing said, unless she can't show over it.
+        // On by default (Lachy): a game in front takes her in with nothing said, unless she can't show over it.
         internal void Notice(double now)
         {
             if (State != Stage.Off) return;
@@ -969,7 +969,7 @@ namespace CapriDesktop
         }
 
         // Gaming Mode is them asking her to watch, so she reacts at least when something happens, HUD or no HUD. Comments set
-        // to Off by them still stops her (#234).
+        // to Off by them still stops her.
         private int GamePace { get { return preferences.NoComments && CommentPace == Commentary.Off ? Commentary.Off : Math.Max(CommentPace, GamingOn ? Commentary.Events : Commentary.Off); } }
 
         // Her game comments as Settings and her settings tool show them: the pace they'd run at in a game, where Gaming Mode
@@ -989,7 +989,7 @@ namespace CapriDesktop
             gaming.Undock = LeaveDock;
             gaming.Changed = delegate { CheckFullScreen(FullScreen()); mainframe.Sync(); };
             gaming.Say = GamingSay;
-            // Lachy, 31 Oct: for now Gaming Mode keeps her normal self, body, panel and all, and the HUD stays out of it.
+            // For now Gaming Mode keeps her normal self, body, panel and all, and the HUD stays out of it (Lachy).
             gaming.Hud = delegate { return testing; };
             gaming.Stays = delegate { return !testing && !preferences.NoGaming; };
             gaming.Name = delegate { return string.IsNullOrWhiteSpace(Brain.Nickname) ? "choom" : Brain.Nickname; };

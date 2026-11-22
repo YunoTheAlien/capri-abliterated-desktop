@@ -204,3 +204,18 @@ Running on this PC	ກຳລັງເຮັດວຽກຢູ່ PC ນີ້
 NORMAL	ປົກກະຕິ
 OFF	ປິດ
 Local server address	ທີ່ຢູ່ server ໃນເຄື່ອງ
+Remember panel position	ຈື່ຕຳແໜ່ງແຜງ
+Custom colours	ສີກຳນົດເອງ
+Custom colours...	ສີກຳນົດເອງ...
+Choose	ເລືອກ
+Hers	ຂອງນາງ
+Quiet	ງຽບ
+Quiet min	ງຽບ min
+Quiet max	ງຽບ max
+Until I turn it off	ຈົນກວ່າຂ້ອຍຈະປິດ
+Quiet on calls	ງຽບລະຫວ່າງໂທ
+Quiet in videos	ງຽບໃນວິດີໂອ
+Quiet until {n}:{n}	ງຽບຈົນຮອດ {n}:{n}
+Quiet until turned off	ງຽບຈົນກວ່າຈະປິດ
+Export settings	ສົ່ງອອກການຕັ້ງຄ່າ
+Import settings	ນຳເຂົ້າການຕັ້ງຄ່າ

@@ -1,11 +1,5 @@
-# Door 2's sound, mixed the way door 1's is (_SOUNDS/mix-door.py) at the same levels, timed to door 2. The static and
-# the heartbeat start with it and the siren comes in at SIREN_IN. The heartbeat runs through the door opening and her
-# arrival to the end of the intro, looped, and stops unfaded. The siren runs looped under it and finishes its fade
-# SIREN_GAP seconds before the heartbeat stops. The static plays once, never looped, at half door 1's level, fading
-# over its own last FADE or the siren's end, whichever is first. Loop joins are crossfaded so they do not click.
-# The warning beeps are not in the mix: the mod plays one as a warning sign shows up, at door 1's alert level
-# scaled the way this mix is (printed below; BeepLevel in the mod). Writes door2.wav and warning-1.wav to
-# warning-3.wav into the Door2Intro folder.
+# Door 2's sound, mixed like door 1's: static and heartbeat from the start, siren at SIREN_IN, heartbeat looped to the
+# end, siren ending SIREN_GAP before it, static once at half level. Beeps are played by the mod (BeepLevel).
 # Run: python mix-door2.py <folder holding the layers> <Door2Intro folder>
 import os
 import sys

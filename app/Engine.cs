@@ -161,9 +161,8 @@ namespace CapriDesktop
         {
             root = Path.Combine(data, "brain");
             if (!File.Exists(CpuMark)) return;
-            // A marker this version wrote, with its reason, keeps her brain on the CPU. One from an older version, or from before
-            // markers had reasons, gets one more try on the graphics card: up to 0.8.9 a single garbled reply kept a PC on the CPU
-            // for good, and minutes per reply (Mirit0, #226). A marker she can't read keeps the CPU, as it always did.
+            // A marker this version wrote, with its reason, keeps her brain on the CPU. An older or reasonless one gets
+            // one more try on the graphics card (Mirit0); an unreadable one keeps the CPU.
             CpuOnly = true;
             try
             {
@@ -222,7 +221,7 @@ namespace CapriDesktop
 
         internal bool Crashed { get { lock (gate) return server != null && server.HasExited; } }
 
-        // The zip passed its checksum, so a missing server means antivirus took it (owner flag A14). Fits the BRAIN note.
+        // The zip passed its checksum, so a missing server means antivirus took it. Fits the BRAIN note.
         internal const string ServerGone = "Your antivirus likely took llama-server.exe. Allow it, then try again.";
 
         internal void Install(Pick pick, Action<string, long, long> progress)
@@ -346,12 +345,8 @@ namespace CapriDesktop
 
         internal static int Threads(int processors) { return Math.Max(1, Math.Min(4, processors / 2)); }
 
-        // How much of the graphics card she leaves for everything else, in MiB. llama-server fits as many of the
-        // model's layers on the card as leave this much free and runs the rest on the processor, so a bigger
-        // margin makes her slower and never stops her. Scaled to the card: a fifth of it, at least 1 GiB and at
-        // most 4, so a game or a stream beside her keeps room on a small card and a big one is not held back
-        // for nothing. Her eyes load onto the card after the fit is worked out, so their file is added on top.
-        // Zero when the card is not known, which leaves llama-server's own margin.
+        // Graphics memory she leaves for everything else, in MiB: a fifth of the card, 1 to 4 GiB, so a game beside her
+        // keeps room; her eyes are added on top. Zero when the card isn't known.
         internal static int FreeOnCard(long vram, long eyes)
         {
             if (vram <= 0) return 0;
@@ -491,7 +486,7 @@ namespace CapriDesktop
                 }
                 if (running == null || running.HasExited)
                 {
-                    // Its own log is off, so the exit code is the only clue Copy error details can carry. A graphics driver that crashes it while loading gets one try on the CPU, as a crash mid-chat does.
+                    // Its own log is off, so the exit code is the only clue Save log can carry. A graphics driver that crashes it while loading gets one try on the CPU, as a crash mid-chat does.
                     bool retry = running != null && onGpu;
                     string reason = "llama-server stopped while loading " + pick.Name + (onGpu ? "" : " on the CPU") + (running == null ? "" : " with exit code 0x" + ((uint)ExitCode(running)).ToString("X8")) + (retry ? careful ? ", keeping its previous memory size" : ", restarting it on the CPU" : "");
                     Brain.Log("brain", -1, reason);

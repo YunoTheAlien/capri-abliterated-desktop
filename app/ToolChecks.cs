@@ -17,10 +17,8 @@ namespace CapriDesktop
             internal Size Least = new Size(120, 80);
         }
 
-        // Her window tool on Lachy's three monitors, one of them portrait and one at 150%, with pretend windows that each do what a
-        // real one does: Discord won't go narrower than 940 pixels, Task Manager runs as admin, one app has stopped responding.
-        // What she says is where each window really ended up (Lachy, 2 Nov: "move, resize, maximize, minimize, restore, snap
-        // left/right, send to another monitor, and bring to front ... report truthfully what happened").
+        // Her window tool on three monitors, one portrait and one at 150%, with pretend windows that behave like real
+        // ones (a minimum width, admin, not responding). She reports where each window really ended up (Lachy).
         private static void SmokeWindowTool(List<string> checks)
         {
             Func<List<Arrange.Display>> displaysWas = Arrange.Displays;
@@ -343,7 +341,7 @@ namespace CapriDesktop
         {
             Form pane = null;
             ManualResetEvent shown = new ManualResetEvent(false);
-            Rectangle work = Screen.PrimaryScreen.WorkingArea;
+            Rectangle work = Displays.Home.WorkingArea;
             Thread owner = new Thread(delegate()
             {
                 pane = new Form { Text = "Capri window check", StartPosition = FormStartPosition.Manual, Bounds = new Rectangle(work.Left + 60, work.Top + 60, 640, 480), ShowInTaskbar = false };
@@ -359,7 +357,10 @@ namespace CapriDesktop
                 IntPtr handle = (IntPtr)pane.Invoke(new Func<IntPtr>(delegate { return pane.Handle; }));
                 OpenWindow window = new OpenWindow(handle, "Capri window check", "Capri");
                 List<Arrange.Display> screens = Arrange.Displays();
-                int main = screens.FindIndex(screen => screen.Primary);
+                // The screen her checks run on (Displays.Home), which is where the check window opens.
+                Rectangle home = Displays.Home.Bounds;
+                int main = screens.FindIndex(screen => screen.Bounds == home);
+                if (main < 0) main = screens.FindIndex(screen => screen.Primary);
                 Func<string, ToolArguments> asks = delegate(string action) { return new ToolArguments { Name = "the check window", Action = action }; };
                 string snapped = Arrange.Do(window, "the check window", asks("snap_left"));
                 Rectangle left = Arrange.Read(handle).Edges, half = Arrange.Half(screens[main].Work, "left");
@@ -371,7 +372,7 @@ namespace CapriDesktop
                 string resized = Arrange.Do(window, "the check window", new ToolArguments { Name = "the check window", Action = "resize", Width = "500", Height = "400" });
                 Rectangle sized = Arrange.Read(handle).Edges;
                 if (!snapped.StartsWith("Snapped the check window to the left half of ", StringComparison.Ordinal) || Math.Abs(left.Left - half.Left) > 8 || Math.Abs(left.Width - half.Width) > 16 || Math.Abs(left.Height - half.Height) > 16
-                    || maximized != "Maximized the check window" + (screens.Count > 1 ? " on the main screen." : ".") || !zoomed || restored != "Restored the check window from maximized to its normal size." || !normal
+                    || maximized != "Maximized the check window" + (screens.Count > 1 ? " on " + (screens[main].Primary ? "the main screen" : screens[main].Name) + "." : ".") || !zoomed || restored != "Restored the check window from maximized to its normal size." || !normal
                     || !centred.StartsWith("Moved the check window to the middle of ", StringComparison.Ordinal) || resized != "Resized the check window to 500 x 400." || Math.Abs(sized.Width - 500) > 4 || Math.Abs(sized.Height - 400) > 4)
                     throw new Exception("Her window tool didn't move a real window: " + snapped + " " + left + " / " + maximized + " " + zoomed + " / " + restored + " / " + centred + " / " + resized + " " + sized);
                 string sent = screens.Count > 1 ? Arrange.Do(window, "the check window", asks("move_to_screen")) : null;
@@ -387,9 +388,9 @@ namespace CapriDesktop
             }
         }
 
-        // Everyday asks said truthfully, on a pretend player and desk: pause never starts the music and play never stops it, a skip
-        // says the song it landed on, what's playing covers any player, an app in the tray isn't "not open", and a timer is a
-        // reminder on every brain (Lachy, 3 Nov: "check state before acting, report truthfully").
+        // Everyday asks said truthfully on a pretend player and desk: pause never starts music and play never stops it,
+        // a skip names its song, any player is covered, a tray app is open, a timer is a reminder on every brain
+        // (Lachy).
         private void SmokeEverydayAsks(List<string> checks)
         {
             Func<List<Tune>> sessionsWas = Hands.Sessions;
@@ -427,10 +428,10 @@ namespace CapriDesktop
                 string[,] asks =
                 {
                     { "now_playing", "Spotify is playing Consume by Chase Atlantic." }, { "pause", "Paused Spotify." },
-                    { "pause", "Nothing's playing: Spotify is already paused on Consume by Chase Atlantic." }, { "now_playing", "Spotify is paused on Consume by Chase Atlantic." },
-                    { "resume", "Spotify is playing Consume by Chase Atlantic again." }, { "resume", "Spotify is already playing Consume by Chase Atlantic." },
-                    { "play_pause", "Paused Spotify." }, { "play_pause", "Spotify is playing Consume by Chase Atlantic again." },
-                    { "next", "Skipped to the next track: Swim by Chase Atlantic." }, { "previous", "Went back a track: Consume by Chase Atlantic." }
+                    { "pause", "Nothing's playing: Spotify is already paused." }, { "now_playing", "Spotify is paused on Consume by Chase Atlantic." },
+                    { "resume", "Playing now." }, { "resume", "Spotify is already playing." },
+                    { "play_pause", "Paused Spotify." }, { "play_pause", "Playing now." },
+                    { "next", "Skipped to the next track." }, { "previous", "Went back a track." }
                 };
                 List<string> wrong = new List<string>();
                 for (int i = 0; i < asks.GetLength(0); i++)
@@ -513,7 +514,8 @@ namespace CapriDesktop
                 DateTime clock = new DateTime(2026, 11, 3, 1, 0, 0), due;
                 if (!Reminders.Parse("in 30 seconds", clock, out due) || (due - clock).TotalSeconds != 30 || !Reminders.Parse("in 2 hours", clock, out due) || (due - clock).TotalHours != 2)
                     throw new Exception("A timer in seconds wasn't understood.");
-                // A brain that works jobs out pauses only when something plays, and hears what the player said.
+                // A brain that works jobs out pauses only when something plays, and hears what the player said. The song is
+                // named only when they ask what is playing (8aeebdc), so the paused line leaves it out.
                 List<string> asked = new List<string>();
                 Func<string, string> says = delegate(string text) { return "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":" + Voice.Quote(text) + "}}]}"; };
                 Func<string, string, string> calls = delegate(string name, string json) { return "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"c1\",\"type\":\"function\",\"function\":{\"name\":\"" + name + "\",\"arguments\":" + Voice.Quote(json) + "}}]}}]}"; };
@@ -533,7 +535,7 @@ namespace CapriDesktop
                 string[] heard;
                 lock (asked) heard = asked.ToArray();
                 if (reply != "It's already paused, choom." || string.Join(",", did.ToArray()) != "media:pause" || sent.Count != 0 || heard.Length != 2
-                    || !heard[0].Contains("A timer is a reminder") || !heard[0].Contains("pausing never starts the music") || !heard[1].Contains("Nothing's playing: Spotify is already paused on Consume by Chase Atlantic."))
+                    || !heard[0].Contains("A timer is a reminder") || !heard[0].Contains("pausing never starts the music") || !heard[1].Contains("Nothing's playing: Spotify is already paused.") || heard[1].Contains("Consume"))
                     throw new Exception("Her planner's pause flipped the music or didn't hear the player: " + reply + " / " + string.Join(",", did.ToArray()) + " / " + heard.Length + " calls");
                 checks.Add("PASS everyday asks go by what's there: pause only pauses and play only plays by what Windows says is playing, a player that ignores the press is said plainly, next and previous name the song they landed on, what's playing covers Spotify, a browser tab or anything else, a brain's play_pause for pause or unpause can't flip the music the wrong way, with no player to read the keys work as before; an app in the tray says so instead of not open, and minimizing one is already done; set a timer for 10 minutes, 30 seconds or a 5 minute timer is a reminder on every brain, and cancel my timer or stop the 10 min timer cancels it");
                 checks.Add("LIMIT pause, play and skip on their own players: Spotify, a YouTube tab and a game's music each report through Windows' media session in their own way");
@@ -557,9 +559,8 @@ namespace CapriDesktop
             }
         }
 
-        // A question she asked, answered. Her brain is told to call remember with the key, and most of them do not: the
-        // question was asked, the answer given, and me.md stayed blank. So the answer to her own question is written
-        // down from what they said whenever her brain's turn ends without it, and only then.
+        // A question she asked, answered: when her brain's turn ends without calling remember, the answer is written
+        // down from what they said.
         private void SmokeProbeAnswers(List<string> checks)
         {
             Func<string, string> thinkWas = Think;
@@ -687,10 +688,9 @@ namespace CapriDesktop
                     Dynamics.Kept = dynamic;
                     if (Math.Abs(Dynamics.ProbeWait - 45) > 0.01 || Math.Abs(Dynamics.ProbeLow - 1) > 0.01 || Math.Abs(Dynamics.ProbeHigh - 2) > 0.01)
                         throw new Exception("probe wait was not read as seconds, or it changed the hours beside it: wait " + Dynamics.ProbeWait + ", min " + Dynamics.ProbeLow + ", max " + Dynamics.ProbeHigh);
-                    // Out of range either way, and a line she cannot read, all leave something sensible. The two
-                    // are deliberately different lengths: she reads a file again when its time or its size has
-                    // moved, and two writes of the same size in the same millisecond look to her like no change
-                    // at all. A person editing by hand never hits that; a check writing twice in a row always does.
+                    // Out of range either way, or unreadable, leaves something sensible. The two writes differ in
+                    // length, since she re-reads on a change of time or size and two same-size writes in one
+                    // millisecond look unchanged.
                     System.IO.File.WriteAllText(dynamic, "# Dynamic\r\n\r\nprobe wait: 9000\r\n", new System.Text.UTF8Encoding(false));
                     double capped = Dynamics.ProbeWait;
                     System.IO.File.WriteAllText(dynamic, "# Dynamic\r\n\r\nprobe wait: not a time at all\r\n", new System.Text.UTF8Encoding(false));
@@ -809,6 +809,50 @@ namespace CapriDesktop
                     throw new Exception("Her moods folder did not come across whole.");
                 if (System.IO.Directory.Exists(moods)) throw new Exception("Her moods folder was copied rather than moved.");
 
+                // Her game notes: the old data\games comes into personalSettings\games even when chess.md made that folder first,
+                // a note already there is never written over, and the game notes reader finds what moved.
+                string oldGames = System.IO.Path.Combine(root, Sides.Games), newGames = System.IO.Path.Combine(settings, Sides.Games);
+                System.IO.Directory.CreateDirectory(oldGames);
+                System.IO.Directory.CreateDirectory(newGames);
+                System.IO.File.WriteAllText(System.IO.Path.Combine(newGames, "chess.md"), "her board\r\n", new System.Text.UTF8Encoding(false));
+                System.IO.File.WriteAllText(System.IO.Path.Combine(oldGames, "chess.md"), "an old board\r\n", new System.Text.UTF8Encoding(false));
+                System.IO.File.WriteAllText(System.IO.Path.Combine(oldGames, "valorant.md"), "# Valorant\r\n\r\nwritten by them\r\n", new System.Text.UTF8Encoding(false));
+                string gamesWent = Merged(root, Sides.Games);
+                string gamesFolderWas = GameNotes.Folder;
+                string gameRead;
+                try { GameNotes.Folder = gamesWent; gameRead = GameNotes.Brief("Valorant"); }
+                finally { GameNotes.Folder = gamesFolderWas; }
+                if (gamesWent != newGames || !System.IO.File.Exists(System.IO.Path.Combine(newGames, "valorant.md")) || System.IO.File.Exists(System.IO.Path.Combine(oldGames, "valorant.md"))
+                    || System.IO.File.ReadAllText(System.IO.Path.Combine(newGames, "chess.md")) != "her board\r\n" || !System.IO.File.Exists(System.IO.Path.Combine(oldGames, "chess.md"))
+                    || gameRead.IndexOf("written by them", StringComparison.Ordinal) < 0)
+                    throw new Exception("Her game notes did not come into " + Personalities.SettingsName + "\\" + Sides.Games + " whole: " + gamesWent + " / " + gameRead);
+                checks.Add("PASS her game notes live in " + Personalities.SettingsName + "\\games beside chess.md: an old data\\games comes in file by file even when that folder already exists, one already there is never written over, and her game notes reader finds them there");
+
+                // personality.md is one file in personalSettings now, read whichever side is on. Kept per side before: the side
+                // in use wins, the other side's copy stays beside it as a spare only when its words differ, and no side keeps one.
+                string sharedName = Sides.Shared[0];
+                // A personalSettings of its own: the moves above leave a personality.md and its spare in theirs.
+                string joinedSettings = System.IO.Path.Combine(root, "joined", Personalities.SettingsName);
+                string plainCopy = System.IO.Path.Combine(joinedSettings, Personalities.PlainName, sharedName), senpaiCopy = System.IO.Path.Combine(joinedSettings, Personalities.SenpaiName, sharedName);
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(plainCopy));
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(senpaiCopy));
+                System.IO.File.WriteAllText(plainCopy, "You are Capri, kind to them.\r\n", new System.Text.UTF8Encoding(false));
+                System.IO.File.WriteAllText(senpaiCopy, "You are Capri, other words.\r\n", new System.Text.UTF8Encoding(false));
+                string sharedAt = Sides.Joined(joinedSettings, sharedName, false);
+                System.Collections.Generic.List<string> sharedSpares = SpareFiles.Of(sharedAt);
+                if (sharedAt != System.IO.Path.Combine(joinedSettings, sharedName) || System.IO.File.ReadAllText(sharedAt) != "You are Capri, kind to them.\r\n" || System.IO.File.Exists(plainCopy) || System.IO.File.Exists(senpaiCopy)
+                    || sharedSpares.Count != 1 || System.IO.File.ReadAllText(sharedSpares[0]) != "You are Capri, other words.\r\n")
+                    throw new Exception("Her two personality.md copies did not become one in " + Personalities.SettingsName + " with the other kept as a spare: " + sharedAt + " / " + sharedSpares.Count + " spare(s)");
+                foreach (string spare in sharedSpares) System.IO.File.Delete(spare);
+                System.IO.File.Delete(sharedAt);
+                System.IO.File.WriteAllText(plainCopy, "Same words.\r\n", new System.Text.UTF8Encoding(false));
+                System.IO.File.WriteAllText(senpaiCopy, "Same words.\n", new System.Text.UTF8Encoding(false));
+                sharedAt = Sides.Joined(joinedSettings, sharedName, true);
+                if (System.IO.File.Exists(plainCopy) || System.IO.File.Exists(senpaiCopy) || SpareFiles.Of(sharedAt).Count != 0 || !System.IO.File.ReadAllText(sharedAt).StartsWith("Same words", StringComparison.Ordinal))
+                    throw new Exception("Two personality.md copies with the same words left a spare or a side copy behind.");
+                if (Sides.Joined(joinedSettings, sharedName, false) != sharedAt || SpareFiles.Of(sharedAt).Count != 0) throw new Exception("Joining personality.md a second time changed it.");
+                checks.Add("PASS personality.md is one file in " + Personalities.SettingsName + ": an install with a copy per side keeps the one of the side in use, the other side's copy as a spare only when its words differ, and no copy in either side folder");
+
                 // Asking again changes nothing: a second start must not move anything a second time.
                 foreach (string name in theirs)
                     if (Mine(root, name) != System.IO.Path.Combine(settings, name)) throw new Exception("A second start moved " + name + " again.");
@@ -846,9 +890,12 @@ namespace CapriDesktop
             if (!IsNewer("v0.9.427", new Version(0, 9, 426)) || IsNewer("v0.9.427pi", new Version(0, 9, 426)))
                 throw new Exception("An older build's view of the release tags changed.");
             if (ReleaseFile.Own("0.9.427pi") != "0.9.427" || ReleaseFile.Own("0.9.426") != "0.9.426" || ReleaseFile.Own("0.9.070") != "0.9.070"
-                || !ReleaseFile.Address("capri-codex-1.pack", "0.9.425").EndsWith("/releases/download/v0.9.425/capri-codex-1.pack", StringComparison.Ordinal))
+                || !ReleaseFile.Address("capri-codex-1.pack", "0.9.425").EndsWith("/releases/download/v0.9.425/capri-codex-1.pack", StringComparison.Ordinal)
+                || !ReleaseFile.Address(Codex.NameFor("0.9.432test"), "0.9.432test").EndsWith("/releases/download/v0.9.432/capri-codex-0.9.432test.pack", StringComparison.Ordinal))
                 throw new Exception("A release file was looked for under the wrong tag.");
-            checks.Add("PASS release tags: 0.9.427pi is 0.9.427 to her update check, so v0.9.428 replaces it; an older build sees v0.9.427 and not v0.9.427pi; her own files come from the numbers-only tag");
+            if (Codex.Name != Codex.NameFor(string.IsNullOrEmpty(CodexSum.Tag) ? Companion.Built : CodexSum.Tag) || Codex.NameFor("0.9.433") != "capri-codex-0.9.433.pack")
+                throw new Exception("Her codex isn't named for the release that carries it: " + Codex.Name);
+            checks.Add("PASS release tags: 0.9.427pi is 0.9.427 to her update check, so v0.9.428 replaces it; an older build sees v0.9.427 and not v0.9.427pi; her own files come from the numbers-only tag; her codex is named for its release, capri-codex-0.9.432test.pack from v0.9.432");
         }
 
         // A site that is also an app: the app first, what they use or say decides it after, and a question when they
@@ -1055,9 +1102,8 @@ namespace CapriDesktop
                     }
                 }
 
-                // A pack she does not ship has no stock to go back to, so a reset marker set in it resets nothing
-                // and the file is left exactly as it was. It used to be replaced with a two-line stub, which is
-                // somebody's own personality deleted by a flag they were told was safe.
+                // A pack she doesn't ship has no stock to go back to, so a reset marker in it resets nothing and the
+                // file is left as it was.
                 string theirs = System.IO.Path.Combine(Personalities.Plain, "Ourown.md");
                 string wrote = "# Ourown\r\nreset to stock: 1\r\n\r\n## Her character\r\n\r\nWritten here, shipped nowhere.\r\n";
                 System.IO.File.WriteAllText(theirs, wrote, new System.Text.UTF8Encoding(false));
@@ -1083,9 +1129,8 @@ namespace CapriDesktop
             while (reply == null && waited.ElapsedMilliseconds < 3000) { Application.DoEvents(); Thread.Sleep(5); }
         }
 
-        // One app's own volume in a pretend volume mixer: Spotify, two Discord processes, a game, a muted Chrome and an app that
-        // ignores changes. Each change is read back from the mixer, and nothing touches their real apps' sound (Lachy, 3 Nov: "turn
-        // the game down" works for a brain that works jobs out).
+        // One app's volume in a pretend mixer: Spotify, two Discord processes, a game, muted Chrome and an app ignoring
+        // changes. Each change is read back, and their real apps' sound is never touched (Lachy).
         private static void SmokeAppVolume(List<string> checks)
         {
             Func<List<AppSound>> soundsWas = Hands.Sounds;
@@ -1215,9 +1260,8 @@ namespace CapriDesktop
             }
         }
 
-        // How their PC is doing on a pretend PC that's busy with a game, Chrome and OBS: the processor, memory, the apps using the
-        // most, one app by name, drives and a laptop's battery, read only. Then a real read of this PC, which changes nothing
-        // (Lachy, 3 Nov: "my game's lagging" gets an answer from what's really using it).
+        // How their PC is doing on a pretend busy PC: processor, memory, top apps, one app by name, drives and battery,
+        // read only; then a real read of this PC that changes nothing (Lachy).
         private static void SmokePcStatus(List<string> checks)
         {
             Func<PcUse> useWas = Hands.Use;
@@ -1293,8 +1337,7 @@ namespace CapriDesktop
         }
 
         // Their internet on pretend connections: working, dropping out, down, a name lookup that fails and no network at all, with
-        // nothing pinged from the checks; only this PC's own links are read for real (Lachy, 3 Nov: "is my internet down" or "what's
-        // my ping" answered from the connection itself).
+        // nothing pinged from the checks; only this PC's own links are read for real (Lachy).
         private static void SmokeInternetStatus(List<string> checks)
         {
             Func<string, NetUse> netWas = Hands.Net;
@@ -1367,9 +1410,9 @@ namespace CapriDesktop
             }
         }
 
-        // An ask opens each app, site or song once, however many times her brain repeats the call (a tester saw YouTube or Spotify
-        // open about 20 times in a row on 0.7.10): her one-shot hands writing the same call over and over, and a planner calling it
-        // twenty times at once and again a round later. Media still goes twice, like skipping two songs.
+        // An ask opens each app, site or song once however often her brain repeats the call, whether one-shot hands
+        // writing it over and over or a planner calling it twenty times. Media still goes twice, like skipping two
+        // songs.
         private static void SmokeOpensOnce(List<string> checks)
         {
             string openAiWas = Brain.OpenAi, notesWas = Brain.MemoryPath, memoriesWas = Brain.MemoriesPath, transcriptsWas = Brain.TranscriptPath, logWas = Brain.LogPath;
@@ -1477,9 +1520,8 @@ namespace CapriDesktop
             checks.Add("PASS self knowledge and her help page cover her window tool, the settings she can change herself, pausing only what's playing, timers, one app's own volume, looking at the monitor they name, how their PC is doing and Close and switch apps and tabs, with exact menu names");
         }
 
-        // Her settings tool's sliders and everyday switches on pretend settings: a step by name, by number or one step up or down,
-        // read back afterwards, with the ends and a slider that won't move said plainly, and nothing she mustn't touch in reach
-        // (Lachy, 3 Nov: "make yourself bigger" or "stop wandering" works through the brain).
+        // Her settings tool's sliders and switches on pretend settings: a step by name, number or one up or down, read
+        // back after, ends and stuck sliders said plainly, and nothing off-limits within reach (Lachy).
         private static void SmokeSettingsTool(List<string> checks)
         {
             Func<string, bool?> settingWas = Hands.SettingOn;
@@ -1539,7 +1581,7 @@ namespace CapriDesktop
                     || Hands.Checking("capri_settings", bigger) || Security.Needs("capri_settings", bigger) != -1)
                     throw new Exception("Her settings tool's calls weren't checked.");
                 // Nothing she mustn't touch is in reach: keys, brains, her voice service, SECURITY, memories or "Hey Capri". Every one of
-                // her own settings is (Lachy, 3 Nov: her brain can change any of them).
+                // her own settings is (Lachy).
                 string tools = Hands.KitFor().WorkTools;
                 int at = tools.IndexOf("\"name\":\"capri_settings\"", StringComparison.Ordinal);
                 string spec = at < 0 ? "" : tools.Substring(at, tools.IndexOf("}}", tools.IndexOf("\"level\"", at), StringComparison.Ordinal) - at);
@@ -1733,9 +1775,9 @@ namespace CapriDesktop
             }
         }
 
-        // "Play Bloons TD 6" is one job that opens the game and keeps playing, by voice or text and with any brain, and a song is still a
-        // song (Lachy, 3 and 7 Nov: "she just did not do it"). Every voice chat reply with no tool behind it gets her own brain's second
-        // look, and a brain's pick is never swapped (Lachy, 8 Nov).
+        // "Play Bloons TD 6" is one job that opens the game and keeps playing, by voice or text with any brain, and a
+        // song is still a song (Lachy). Every voice reply with no tool behind it gets her brain's second look; a
+        // brain's pick is never swapped.
         private void SmokePlayJobs(List<string> checks)
         {
             Func<List<InstalledApp>> catalogWas = Hands.Catalog;
@@ -1898,9 +1940,9 @@ namespace CapriDesktop
             checks.Add("PASS play jobs: \"play Bloons TD 6\" is one job that opens the game and keeps playing, by voice or text, and it starts as she hears it in voice chat; open, wanting to play and apps for listening still only open; a bare title is left to a brain, and a brain's or the agent's pick is never swapped; every voice reply with no tool behind it gets her brain's second look, plain chat and a question back too, except a reply they talked over and the agent's own call, and a promise still runs when her brain can't look");
         }
 
-        // Her own brain on their PC holds every tool once it says a message is a job, and answers chat without carrying them (Lachy,
-        // 8 Nov: brains use the tools they have freely). A plain ask goes straight to its tools, set phrases don't run before it, and
-        // a model that turns tools down goes back to her hands' shortcuts.
+        // Her own brain holds every tool once it says a message is a job, and answers chat without them (Lachy). A
+        // plain ask goes straight to its tools, set phrases don't run first, and a model that refuses tools falls back
+        // to her hands' shortcuts.
         private static void SmokeLocalWorkingOut(List<string> checks)
         {
             string ollamaWas = Brain.Ollama, notesWas = Brain.MemoryPath, memoriesWas = Brain.MemoriesPath, transcriptsWas = Brain.TranscriptPath, logWas = Brain.LogPath;
@@ -1989,14 +2031,8 @@ namespace CapriDesktop
             checks.Add("PASS a personality whose file is gone: the saved choice falls back to her own lines and is written back, her own lines and Dynamic are modes rather than files and are never treated as missing, and every pack she lists is seen as present");
         }
 
-        // A sweep of everything she has written, looking for the senpai side in a censored install.
-        //
-        // Her wall is built in a dozen places: a folder not made, a section not written, a tab not listed, a
-        // band that reads as nothing. Each has its own check, and each could be right while the install as a
-        // whole still has a trace in it, because the thing that leaks is whichever one nobody thought of.
-        //
-        // So this one does not test a mechanism. It reads every file she has written and looks for what only
-        // exists on the senpai side.
+        // A sweep of everything she has written, for the senpai side in a censored install: not a test of one
+        // mechanism, but every file read for what only exists with the switch on.
         private void SmokeCensoredSweep(List<string> checks)
         {
             List<string> problems = new List<string>();
@@ -2026,19 +2062,9 @@ namespace CapriDesktop
                 foreach (string named in new[] { Interests.FileName, Interests.HersName, Interests.YoursName, Interests.WasFileName, Interests.WasHersName, Interests.WasYoursName })
                     if (!string.IsNullOrEmpty(named) && System.IO.File.Exists(System.IO.Path.Combine(folder, named))) problems.Add("a senpai file exists: " + named);
 
-                // Every line of the senpai halves of every pack and mood she ships, which is what a leak would
-                // be made of. Read from the build rather than from a list written by hand, so a pack added
-                // later is swept without anybody remembering to add it here.
-                // Only the lines the senpai side has and the censored side does not.
-                //
-                // Being in a senpai section is not the same as being senpai. She ships plain greetings to both
-                // halves on purpose, so "There you are, %petname%." sat in a senpai pool and in Caregiver,
-                // Devoted and Welcome Home, and the sweep called three affectionate greetings a leak on
-                // every censored install. A check that cries wolf is worse than no check: the next real one
-                // is read as the same noise.
-                //
-                // So the censored halves are collected first and taken out of the senpai set. What is left is
-                // what only exists with the switch on, which is the only thing finding one proves.
+                // Every line of the senpai halves she ships that the censored halves don't have, read from the build so
+                // a later pack is swept too. Lines shipped to both halves are taken out first, so a shared greeting is
+                // never called a leak.
                 HashSet<string> plainLines = new HashSet<string>(StringComparer.Ordinal);
                 List<string> senpaiLines = new List<string>();
                 foreach (string pack in Personalities.Shipped())
@@ -2063,21 +2089,9 @@ namespace CapriDesktop
                     }
                 }
 
-                // The fixture has to exist before the sweep means anything. This check hunts a censored install
-                // for lines that only exist with the switch on, and it builds that list out of the senpai text
-                // compiled into the build. Hand it an empty list and it searches for nothing, finds nothing,
-                // and passes: "0 senpai lines looked for, no senpai folder, file, heading or line anywhere".
-                //
-                // The one check that proves non-exposure would then never fail again, which is the worst shape
-                // a safety net can fail in. It is also exactly what taking the senpai text out of the build and
-                // into a fetched pack would do to it, so the guard goes in before that move rather than after.
-                // Found by the Sapphire box as F-22.
-                //
-                // The floor is well under today's count and is there to catch nothing-at-all rather than to
-                // police the number: the list was 476 lines when this was written.
-                // Nothing attached is not an empty fixture: a build with no senpai half has nothing to hide
-                // and nothing to look for, and that is the build that ships. The floor only means something
-                // when something did attach. Said either way, so a sweep that checked nothing says so.
+                // The sweep needs its list: an empty one finds nothing and passes, so a floor well under today's count
+                // catches nothing-at-all. With nothing attached there is nothing to look for, which is the build that
+                // ships; said either way.
                 bool attached = Personalities.SenpaiFor != null;
                 if (attached && senpaiLines.Count < 100)
                     throw new Exception("The censored sweep had almost nothing to look for: " + senpaiLines.Count
@@ -2098,12 +2112,7 @@ namespace CapriDesktop
                     read++;
                     string named = file.Substring(folder.Length).TrimStart('\\');
                     if (Legacy.HasTag(body)) problems.Add("a senpai heading is in " + named);
-                    // Whole lines, not anywhere in the text. A senpai line that happens to be the opening of
-                    // a longer censored one was found inside it: "There you are, %petname%." is a line of
-                    // its own in a senpai pool and the start of "There you are, %petname%. Have you had a
-                    // drink of water today?" in Caregiver, so the sweep called that a leak on every
-                    // censored install. A line she says is a line, and a check that cries wolf is worse
-                    // than no check, because the next real one reads as the same noise.
+                    // Whole lines, not substrings: a senpai line that opens a longer censored one isn't a leak.
                     HashSet<string> inFile = new HashSet<string>(StringComparer.Ordinal);
                     foreach (string raw in body.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n')) inFile.Add(raw.Trim());
                     foreach (string line in senpaiLines)
@@ -2302,15 +2311,15 @@ namespace CapriDesktop
                 string said = Moments.Pick(Moments.PopIn, stock);
                 if (said == null || Array.IndexOf(stock, said) >= 0) problems.Add("popping in did not come from her file: " + (said ?? "nothing"));
 
-                // Their own line is the one she says when it is the only one there, and topping up leaves it alone.
+                // Their own line is the one she says when it is the only one there, and between versions the file is left as
+                // they wrote it: a section they took out stays out until a new version writes the file new.
                 System.IO.File.WriteAllText(Moments.Kept, "# Capri's own moments\r\n\r\n## " + Moments.Woken + "\r\n\r\nOi.\r\n");
                 said = Moments.Pick(Moments.Woken, stock);
                 if (said != "Oi.") problems.Add("a file with one line of theirs said something else: " + (said ?? "nothing"));
                 Moments.Write(false);
                 had = System.IO.File.ReadAllText(Moments.Kept);
-                if (had.IndexOf("Oi.", StringComparison.Ordinal) < 0) problems.Add("topping up her moments file lost their line");
-                foreach (string heading in Moments.Headings)
-                    if (had.IndexOf("## " + heading, StringComparison.Ordinal) < 0) problems.Add("topping up did not put back the missing section " + heading);
+                if (had.IndexOf("Oi.", StringComparison.Ordinal) < 0) problems.Add("writing her moments file lost their line");
+                if (had.IndexOf("## " + Moments.PopIn, StringComparison.Ordinal) >= 0) problems.Add("a section they took out was put back between versions");
 
                 // A section emptied on purpose falls back to the lines in the build rather than leaving her mute.
                 System.IO.File.WriteAllText(Moments.Kept, "# Capri's own moments\r\n\r\n## " + Moments.PopIn + "\r\n\r\n");
@@ -2328,12 +2337,12 @@ namespace CapriDesktop
                 try { System.IO.Directory.Delete(folder, true); } catch (System.IO.IOException) { }
             }
             if (problems.Count > 0) throw new Exception("Her own moments went wrong: " + string.Join("; ", problems.ToArray()));
-            checks.Add("PASS the lines she says on her own come out of moments.md: every pool the code asks for is a section in it, a line of theirs is what she says, topping it up puts back a missing section without touching their line, and an emptied section or a deleted file falls back to the lines in the build rather than leaving her mute");
+            checks.Add("PASS the lines she says on her own come out of moments.md: every pool the code asks for is a section in it, a line of theirs is what she says, their file is left as they wrote it between versions, and an emptied section or a deleted file falls back to the lines in the build rather than leaving her mute");
         }
 
-        // Her spells away from the PC: that short ones are not sleep, that a long one gets a question rather than a
-        // guess, that their answer decides what it was, and that the hour she expects them in bed follows the
-        // nights she has seen. Driven with made-up spells, because the real thing takes a week of nights.
+        // Her spells away from the PC: short ones aren't sleep, long ones get a question, their answer decides, and the
+        // bedtime she expects follows the nights she has seen. Driven with made-up spells, since the real thing takes a
+        // week.
         private void SmokeAwaySpells(List<string> checks)
         {
             List<string> problems = new List<string>();
@@ -2413,9 +2422,8 @@ namespace CapriDesktop
                 Away.Add(one.AddDays(1), one.AddDays(1).AddHours(7), "");
                 if (Away.SleepsAt() != -1) problems.Add("two nights were treated as a routine: " + Away.SleepsAt());
 
-                // Their own answer, written the way people actually write it. A real one here was "about midday,
-                // and then it ends at probably like 3 to 5 a.m": the first range in that is "3 to 5", and reading
-                // it alone told her their whole day was one hour long in the middle of the night.
+                // Their own answer as people really write it: "about midday, and then it ends at probably like 3 to 5
+                // a.m" means a day from midday to the small hours, not the one-hour range inside it.
                 int said, until;
                 Hours.Told = "Uh, probably about midday, and then it ends at probably like 3 to 5 a.m";
                 if (!Hours.Usual(out said, out until) || said != 12 || until != 4) problems.Add("a day written as midday until 5am read as " + said + " to " + until);

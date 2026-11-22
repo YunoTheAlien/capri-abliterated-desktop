@@ -7,12 +7,8 @@ using System.Windows.Forms;
 
 namespace CapriDesktop
 {
-    // Her first launch on a new install (Lachy, 12 Nov): she glitches in, says hi and a small card in the Mainframe's look
-    // opens beside her. It picks a brain (her own on this PC is the default, a free key or their plan is one click away), sets
-    // how she sounds and her mic, then the EXTRAS. Every screen can be skipped, and so can the whole card: she just stands there
-    // ready, or the Mainframe opens if she still has no brain. Her own brain is a 3 GB download, so it starts the moment they
-    // press Next and the voice and EXTRAS screens run while it comes down, with its progress on the card. Her first real reply
-    // comes when it's in, wherever they are by then.
+    // Her first launch on a new install (Lachy): she glitches in, says hi, and a card beside her sets her brain, voice,
+    // mic and EXTRAS, any of it skippable. Her own brain downloads from the first Next while the other screens run.
     internal static class FirstRun
     {
         internal const int None = 0, Pick = 1, Key = 2, Online = 3, Voice = 4, Extras = 5, Plan = 6, Wait = 7, Alone = 8;
@@ -126,6 +122,7 @@ namespace CapriDesktop
                 // She's always on top and this sits beside her, so it is too.
                 TopMost = true;
                 FormBorderStyle = FormBorderStyle.None;
+                Neon.NeverFullScreen(this);
                 StartPosition = FormStartPosition.Manual;
                 AutoScaleMode = AutoScaleMode.None;
                 BackColor = Ground;
@@ -149,10 +146,8 @@ namespace CapriDesktop
                 pulse.Tick += delegate { Pulse(); };
             }
 
-            // The tallest a screen gets, in the card's own px. This is what the card is scaled against so its longest
-            // screen still fits above the taskbar, and it was 700, measured from FREE KEY with her stopped download
-            // along the bottom. The real tallest is the extras screen with that download under it, at 740, so on a
-            // short screen the bottom 40px of the first card a new person sees was below the taskbar.
+            // The tallest screen in the card's own px, which the card is scaled against so it always fits above the
+            // taskbar: the extras screen with the download under it.
             internal const int Tallest = 740;
 
             internal static float FitScale(float wanted, int roomHigh) { return Math.Min(wanted, Math.Max(0.75f, (roomHigh - 8) / (float)Tallest)); }
@@ -437,9 +432,8 @@ namespace CapriDesktop
             // Each screen built, counted, so its controls' handlers know when they're from a screen that's gone.
             private int built;
 
-            // A handler that only runs while its screen is the one showing: a click or key already on its way to a control when
-            // the card moves on (her brain coming online, Skip all, a pick in the Mainframe), is rebuilt or is finished does
-            // nothing, so it can't reach a screen whose pieces are gone.
+            // A handler that only runs while its screen is the one showing, so a click already on its way when the card
+            // moves on, is rebuilt or finishes does nothing.
             private EventHandler Live(EventHandler handler)
             {
                 int screen = built;
@@ -668,9 +662,8 @@ namespace CapriDesktop
                     extras[i] = box;
                     Caption(notes[i], 28, y + 32, Wide - 56, 24, Body(17), Faint);
                 }
-                // Who she is, and nothing else. There is no handling pick here and there is not to be one: it is
-                // the first card a new person sees, and asking how she likes being handled before they have met
-                // her reads as something it is not. The setting itself still exists in her files and the Mainframe.
+                // Who she is, and nothing else: no handling pick on the first card a new person sees, since asking that
+                // before they have met her reads wrong. The setting stays in her files and the Mainframe.
                 Caption("WHO SHE IS", 28, 430, 200, 20, Mono(15), Faint);
                 whoPick = MakeKey(Personalities.Chosen, 28, 454, Wide - 56, 40, Body(18, true), Rose,
                     delegate { owner.FirstRunPersonalities(whoPick, this); });
@@ -1292,7 +1285,7 @@ namespace CapriDesktop
             return saved.Welcomed ? saved.FirstRunStep > 0 : fresh && !startedFresh;
         }
 
-        // At her first launch: she wanders now and then (the new install default since 31 Oct), the card's first step is kept
+        // At her first launch: she wanders now and then (the new install default), the card's first step is kept
         // at once so quitting before it shows still brings it back, and it opens once she's arrived, where her hello would be.
         private void StartFirstRun()
         {
@@ -1432,10 +1425,8 @@ namespace CapriDesktop
 
         internal void FirstRunType() { if (!typer.Visible) OpenTyper(); }
 
-        // The card's done, finished or skipped (Lachy, 12 Nov: Skip all ends the whole thing). With a brain, or hers on its way,
-        // or with No AI picked, she just stands there ready; with none, the Mainframe opens on Set up her brain so they can see
-        // where to get one.
-        // EXTRAS never pops up after it. Her news and holiday lines wait for her hello, which the card stood in for.
+        // The card's done, finished or skipped (Lachy). With a brain coming or No AI picked she stands ready; with
+        // none, the Mainframe opens on Set up her brain. Her news and holiday lines wait for her hello.
         internal void FirstRunDone(bool brainComing)
         {
             firstRun = null;

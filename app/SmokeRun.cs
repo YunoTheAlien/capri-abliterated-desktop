@@ -40,13 +40,8 @@ namespace CapriDesktop
     internal static class SmokeRun
     {
         private const string WorkerVariable = "CAPRI_SMOKE_WORKER";
-        // A folder whose contents are laid into each worker's data folder before it starts.
-        //
-        // Every attempt gets a fresh folder, made here and named with a new guid, so there is nowhere to put
-        // anything a run should find: mods, a settings file, a pack to test against. Setting the data folder
-        // by hand is no use either, since this overwrites it per attempt and sharing one across attempts
-        // would lose the isolation retries depend on. So the seed is copied in instead, and each attempt
-        // still starts from its own clean folder.
+        // A folder laid into each worker's fresh data folder before it starts, so a run can find mods, settings or
+        // packs while every attempt still starts clean.
         private const string SeedVariable = "CAPRI_SMOKE_SEED";
         // Sections run inside another, so --only can name a child and its parent still runs to reach it.
         private static readonly Dictionary<string, string[]> Children = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
@@ -349,11 +344,8 @@ namespace CapriDesktop
         {
             int testLimit;
             if (Fault("HANG", step) && int.TryParse(Environment.GetEnvironmentVariable("CAPRI_SMOKE_TEST_SECONDS"), out testLimit) && testLimit > 0 && testLimit <= 60) return testLimit;
-            // Step 0 exercises many UI/render paths and two media joins. Step 1 includes four 60 s transcode waits,
-            // a 30 s fake voice-server wait, and the Mainframe/voice integration checks. Step 22 runs the talk, Listen for
-            // Capri, voice switch and gaming checks, each waiting on her voice, which took over 60 s on a busy PC.
-            // Step 1 had 600 s until 5 Nov, when a three-screen PC ran out of it twice about two thirds through, its
-            // thread busy redrawing the Mainframe the whole time, so it gets 25 minutes. A real hang still fails.
+            // Step 0 covers UI and render paths; step 1 has long transcode and voice-server waits, so it gets 25
+            // minutes; step 22 runs talk and voice checks that can each take over a minute. A real hang still fails.
             return step == 0 ? 180 : step == 1 ? 1500 : step == 22 ? 180 : 60;
         }
 
@@ -491,9 +483,16 @@ namespace CapriDesktop
                         string stamp = null;
                         Stopwatch deadline = Stopwatch.StartNew();
                         int seconds = 60;
-                        bool timedOut = false;
+                        bool timedOut = false, escaped = false;
                         while (!child.WaitForExit(100))
                         {
+                            if (EscPressed(child.Id, Process.GetCurrentProcess().Id))
+                            {
+                                escaped = true;
+                                job.Stop();
+                                child.WaitForExit(5000);
+                                break;
+                            }
                             string[] progress = ReadProgress(child.Id);
                             if (progress != null && progress[2] != stamp)
                             {
@@ -510,6 +509,12 @@ namespace CapriDesktop
                         string[] last = ReadProgress(child.Id);
                         if (last != null) active = last;
                         checks = Checks();
+                        if (escaped)
+                        {
+                            checks.Add("FAIL smoke stopped with Esc" + (active != null && active.Length > 1 ? " during " + active[0] + " " + active[1] : ""));
+                            File.AppendAllText(Path.Combine(folder, "failure.txt"), checks[checks.Count - 1] + Environment.NewLine);
+                            break;
+                        }
                         if (active != null && active[0] == "done")
                         {
                             if (timedOut) checks.Add("FAIL smoke shutdown: timed out after " + seconds + " s");
@@ -556,10 +561,8 @@ namespace CapriDesktop
                 + " / LIMIT " + checks.FindAll(delegate(string line) { return line.StartsWith("LIMIT ", StringComparison.Ordinal); }).Count
                 + " / FAIL " + checks.FindAll(IsFailure).Count
                 + " / SKIP " + checks.FindAll(delegate(string line) { return line.StartsWith("SKIP ", StringComparison.Ordinal); }).Count
-                // How many sections were actually entered, which the totals never said. A run that stops early
-                // reads exactly like a clean one otherwise: a full run on this source enters a known number of
-                // them, so a smaller number here is the only sign that something ended the run rather than
-                // finishing it. A failing section was found on this box that a full run had not reported.
+                // How many sections were actually entered: a full run enters a known number, so fewer here is the only
+                // sign something ended the run early.
                 + " / SECTIONS " + Entered());
             Flush(checks);
             Begin("finished", failed ? "failed" : "passed", 0);
@@ -567,6 +570,76 @@ namespace CapriDesktop
         }
 
         private static bool IsFailure(string line) { return line.StartsWith("FAIL ", StringComparison.Ordinal); }
+
+        // Esc stops a test run only while one of its own windows is in front (an intro, a window under test, or her),
+        // never from their apps. Checks send Esc as a window message, never a key; the first read clears an old press.
+        internal static Func<bool> EscKey = delegate { return (CapriDesktop.Native.GetAsyncKeyState(0x1B) & 0x8001) != 0; };
+        private static bool escCleared;
+
+        // The process whose window is in front, or -1.
+        internal static Func<int> InFront = delegate
+        {
+            try
+            {
+                IntPtr front = CapriDesktop.Native.GetForegroundWindow();
+                int process;
+                if (front == IntPtr.Zero || CapriDesktop.Native.GetWindowThreadProcessId(front, out process) == 0) return -1;
+                return process;
+            }
+            catch (Exception) { return -1; }
+        };
+
+        // A press read either way, so one in their own app is used up there and never counts later.
+        internal static bool EscPressed(params int[] run)
+        {
+            bool pressed = EscKey();
+            if (!escCleared) { escCleared = true; return false; }
+            return pressed && Array.IndexOf(run, InFront()) >= 0;
+        }
+
+        // Esc stops a run with one of its windows in front and never with their own app in front; a press from before the run
+        // never counts.
+        internal static void EscCheck(List<string> checks)
+        {
+            Func<bool> keyWas = EscKey;
+            Func<int> frontWas = InFront;
+            bool clearedWas = escCleared;
+            try
+            {
+                int run = 4242, theirs = 777;
+                EscKey = delegate { return true; };
+                escCleared = false;
+                InFront = delegate { return run; };
+                if (EscPressed(run)) throw new Exception("A press from before the run stopped it.");
+                InFront = delegate { return theirs; };
+                if (EscPressed(run, run + 1)) throw new Exception("Esc in their own app stopped a run.");
+                InFront = delegate { return run + 1; };
+                if (!EscPressed(run, run + 1)) throw new Exception("Esc with a run window in front didn't stop it.");
+                InFront = delegate { return -1; };
+                if (EscPressed(run)) throw new Exception("Esc with no window in front stopped a run.");
+                checks.Add("PASS Esc stops a test run only with one of its windows in front: Esc in their own app or with nothing in front leaves it running, and a press from before the run never counts");
+            }
+            finally { EscKey = keyWas; InFront = frontWas; escCleared = clearedWas; }
+        }
+
+        internal static void EscStops(System.Windows.Forms.Form app, Action quit)
+        {
+            int own = Process.GetCurrentProcess().Id;
+            System.Threading.Thread watch = new System.Threading.Thread(delegate()
+            {
+                EscKey();
+                while (true)
+                {
+                    System.Threading.Thread.Sleep(100);
+                    if (!EscKey() || InFront() != own) continue;
+                    try { app.BeginInvoke(quit); } catch (Exception) { }
+                    System.Threading.Thread.Sleep(2000);
+                    Environment.Exit(3);
+                }
+            });
+            watch.IsBackground = true;
+            watch.Start();
+        }
 
         private static string[] ReadProgress(int process)
         {
@@ -642,5 +715,31 @@ namespace CapriDesktop
         }
         internal void Stop() { if (!TerminateJobObject(handle, 99)) throw new System.ComponentModel.Win32Exception(); }
         public void Dispose() { if (handle != IntPtr.Zero) { CloseHandle(handle); handle = IntPtr.Zero; } }
+    }
+
+    // The screen she treats as home: the primary for her own runs. A test run takes CAPRI_TEST_SCREEN (0 is the first
+    // Windows lists), else the last screen that isn't the primary, else the primary, so it stays off the one in use.
+    internal static class Displays
+    {
+        internal const string ScreenVariable = "CAPRI_TEST_SCREEN";
+        // Set at the start of a bench or shots run; a smoke worker is known by its own variable.
+        internal static bool Testing;
+
+        // A bench, shots or smoke worker run.
+        internal static bool Test { get { return Testing || SmokeRun.Worker; } }
+
+        internal static System.Windows.Forms.Screen Home
+        {
+            get
+            {
+                System.Windows.Forms.Screen primary = System.Windows.Forms.Screen.PrimaryScreen;
+                if (!Test) return primary;
+                System.Windows.Forms.Screen[] all = System.Windows.Forms.Screen.AllScreens;
+                int picked;
+                if (int.TryParse(Environment.GetEnvironmentVariable(ScreenVariable) ?? "", NumberStyles.Integer, CultureInfo.InvariantCulture, out picked) && picked >= 0 && picked < all.Length) return all[picked];
+                for (int i = all.Length - 1; i >= 0; i--) if (!all[i].Primary) return all[i];
+                return primary;
+            }
+        }
     }
 }

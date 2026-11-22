@@ -204,3 +204,18 @@ Running on this PC	Tumatakbo sa PC na ito
 NORMAL	NORMAL
 OFF	OFF
 Local server address	Local server address
+Remember panel position	Tandaan ang puwesto ng panel
+Custom colours	Sariling mga kulay
+Custom colours...	Sariling mga kulay...
+Choose	Pumili
+Hers	Sa kanya
+Quiet	Tahimik
+Quiet min	Tahimik min
+Quiet max	Tahimik max
+Until I turn it off	Hanggang patayin ko ito
+Quiet on calls	Tahimik sa mga tawag
+Quiet in videos	Tahimik sa mga video
+Quiet until {n}:{n}	Tahimik hanggang {n}:{n}
+Quiet until turned off	Tahimik hanggang patayin
+Export settings	I-export ang settings
+Import settings	I-import ang settings

@@ -26,11 +26,9 @@ namespace CapriDesktop
         internal CableState(List<MixDevice> active, List<MixDevice> all, string detail) { Active = active; All = all; Detail = detail; }
     }
 
-    // VB-CABLE's own setup, from the copy of VB-Audio's driver pack she carries (F66; Lachy: "It has to be pre packaged or easily
-    // downloadable"). VB-Audio's licensing page (vb-audio.com/Services/licensing.htm, "VB-CABLE Distribution with other product")
-    // lets other programs carry the pack, even inside their installs, as long as it stays donationware: people know it's VB-CABLE,
-    // where it's from, and that they can donate. So Settings credits it with a link to VB-Audio's page, and on their click she
-    // unpacks the pack untouched and opens VB-Audio's own setup, Windows asks them to let it run, and they click Install Driver in it.
+    // VB-CABLE's own setup, from the VB-Audio pack she carries (Lachy). Its licence lets other programs carry it as
+    // donationware, so Settings credits it with a link, and on their click she unpacks it untouched and opens
+    // VB-Audio's setup.
     internal static class CableSetup
     {
         internal const string Resource = "Capri.VBCABLE.zip";
@@ -73,10 +71,9 @@ namespace CapriDesktop
         private static readonly object folders = new object();
         private static readonly DateTime began = DateTime.UtcNow;
 
-        // The pack's setup unpacked to a new folder of its own, after checking the pack is VB-Audio's, byte for byte. The setup
-        // comes back held open in kept, read-only for everyone, and checked again through that hold, so nothing can change it
-        // between here and Windows running it elevated. Its driver files carry their own signatures, which Windows checks before
-        // it installs them. A folder that didn't unpack whole goes again. Throws when it can't be unpacked.
+        // The pack's setup unpacked to a new folder after a byte-for-byte check that it is VB-Audio's, then held open
+        // read-only and checked again so nothing can change it before Windows runs it elevated. Throws when it can't be
+        // unpacked.
         internal static string Unpack(out FileStream kept)
         {
             lock (folders) return UnpackAt(out kept);

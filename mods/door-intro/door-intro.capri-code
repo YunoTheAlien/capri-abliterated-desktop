@@ -1,7 +1,7 @@
 // capri-mod: 1
 // id: door-intro
 // name: Door Intro
-// version: 1.7.0
+// version: 1.10.0
 // author: Yuno
 // description: A door of hexagons builds from the middle out where she lands while alerts pop up on every screen, opens, and she wakes in it.
 // intro: yes
@@ -15,7 +15,7 @@ using System.IO;
 using System.Windows.Forms;
 using CapriDesktop;
 
-public class DoorIntro : ICapriMod, ICapriIntro, ICapriIntroNames
+public class DoorIntro : ICapriMod, ICapriIntro, ICapriIntroNames, ICapriIntroStops
 {
     // The door's shape: a sideways pill with a larger circle through its middle that bulges above and below it, and an
     // opening in that circle where she comes through. Sizes are shares of her height.
@@ -23,7 +23,9 @@ public class DoorIntro : ICapriMod, ICapriIntro, ICapriIntroNames
     // A hexagon fits in a square no larger than this, in pixels.
     private const float LargestHex = 60f;
     // The screensaver's alert red, so the door reads as the same panel.
-    private static readonly Color Alert = Color.FromArgb(255, 30, 38);
+    // The hexagons' colour: its own, or what they set in Custom colours under this mod's fold-down.
+    private static readonly Color AlertUsual = Color.FromArgb(255, 30, 38);
+    private static Color Alert = AlertUsual;
     // Her idle strip sits a little right of the others, the same nudge she draws it with.
     private const float IdleShift = 11f / 384 * 1.11f;
     // The screensaver's hexagon words, and danger.
@@ -69,15 +71,19 @@ public class DoorIntro : ICapriMod, ICapriIntro, ICapriIntroNames
     {
         capri = host;
         on = Switched();
+        Tint();
+        host.Ui.ColoursChanged += Tint;
     }
+
+    // Its colours, named for Custom colours and read back, as any mod's are.
+    private void Tint() { Alert = capri.Ui.Colour("Hexagons", AlertUsual); }
 
     // sys.md's start-up intro list, with no ">" in front of door.
     private bool Switched()
     {
         try
         {
-            string file = Path.Combine(Home(), "personalSettings", "sys.md");
-            if (!File.Exists(file)) file = Path.Combine(Home(), "sys.md");
+            string file = SysFile(Home());
             if (!File.Exists(file)) return false;
             bool inside = false;
             foreach (string raw in File.ReadAllLines(file))
@@ -431,6 +437,12 @@ public class DoorIntro : ICapriMod, ICapriIntro, ICapriIntroNames
         catch (Exception error) { capri.Log(error.Message); EndPopups(); }
     }
 
+    // Esc during the intro: its pop-ups on every screen close now, not when its time runs out.
+    public void StopIntro()
+    {
+        EndPopups();
+    }
+
     private void EndPopups()
     {
         if (popupBeat != null) { popupBeat.Stop(); popupBeat.Dispose(); popupBeat = null; }
@@ -494,4 +506,25 @@ public class DoorIntro : ICapriMod, ICapriIntro, ICapriIntroNames
     private string Home() { return Path.GetDirectoryName(Path.GetDirectoryName(capri.Folder)) ?? ""; }
 
     private static double Clamp(double value) { return value < 0 ? 0 : value > 1 ? 1 : value; }
+
+    // Her sys.md now sits in a folder of its own under personalSettings, one per side, and only the one she is
+    // using is written as she starts. So the newest sys.md under personalSettings is hers; the old places are the
+    // fallback for an older Capri.
+    private static string SysFile(string home)
+    {
+        string newest = null;
+        DateTime when = DateTime.MinValue;
+        try
+        {
+            string settings = Path.Combine(home, "personalSettings");
+            if (Directory.Exists(settings))
+                foreach (string one in Directory.GetFiles(settings, "sys.md", SearchOption.AllDirectories))
+                {
+                    DateTime at = File.GetLastWriteTimeUtc(one);
+                    if (newest == null || at > when) { newest = one; when = at; }
+                }
+        }
+        catch (Exception) { newest = null; }
+        return newest ?? Path.Combine(home, "sys.md");
+    }
 }

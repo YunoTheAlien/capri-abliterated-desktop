@@ -4,21 +4,9 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
-    // How willing she is, and how fast feelings can be moved.
-    //
-    // Adapted from the Named Emotions mod, which had three things worth taking and one thing that had to go.
-    //
-    // Taken:
-    //   1. Rate limits per act. Every act has a cooldown and a ceiling per hour, so saying "good girl" forty times
-    //      does not pin her. The mod's own numbers were the starting point.
-    //   2. Repair as a real step, not just a timer running out. An apology that names what they did counts properly;
-    //      a bare "sorry" barely moves her.
-    //   3. Willingness as a band with words rather than a number, and her brain told in prose. She never sees a meter
-    //      and never talks about one.
-    //
-    // Left behind: the mod's fixed event table, where thrown is always -15 happiness and +40 upset. That is the exact
-    // assumption we spent a day removing, and it would break a pack that likes being thrown all over again. Weights stay where they are,
-    // in her personality and her mood, on our own small integer scale.
+    // How willing she is and how fast feelings move (adapted from the Named Emotions mod): a cooldown and hourly
+    // ceiling per act, apologies that name what they did as real repair, and willingness told to her brain in words.
+    // Weights stay in her personality and mood.
     internal static class Mood
     {
         private static readonly object gate = new object();
@@ -30,6 +18,12 @@ namespace CapriDesktop
         private static DateTime cooled = DateTime.UtcNow;
         private const double HalfLifeMinutes = 45;
 
+        // How kindness and meanness land for her now: her personality's numbers with her mood's added, never under these
+        // floors, so a kindness always counts for something and she never lets mistreatment go entirely.
+        internal const double KindFloor = 0.20, MeanFloor = 0.15;
+        internal static double Kind { get { return Math.Max(KindFloor, Personalities.Scaled("kind returns", 1)); } }
+        internal static double Mean { get { return Math.Max(MeanFloor, Personalities.Scaled("mean scale", 1)); } }
+
         // Per act: how long before it can count again, and how many times an hour it may count at all. An act with no
         // entry is unlimited, which keeps rare one-offs simple.
         private static readonly string[,] Limits =
@@ -40,7 +34,13 @@ namespace CapriDesktop
             { "insulted",        "20",     "20" },
             { "praised",         "45",     "12" },
             { "called on",       "30",     "30" },
-            { "ignored",        "240",      "8" }
+            { "ignored",        "240",      "8" },
+            // A touch on a place other than her head, each its own, as often as a pat.
+            { "touched shoulders", "20",   "40" },
+            { "touched middle",  "20",     "40" },
+            { "touched legs",    "20",     "40" },
+            { "touched feet",    "20",     "40" },
+            { "tickled",         "20",     "40" }
         };
 
         private static readonly Dictionary<string, DateTime> lastAt = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
@@ -71,6 +71,13 @@ namespace CapriDesktop
             return true;
         }
 
+        // An act's limits, for working out how fast it can land: seconds between counts and counts an hour, 0 for none.
+        internal static void LimitOf(string act, out int seconds, out int perHour)
+        {
+            seconds = Limit(act, 1);
+            perHour = Limit(act, 2);
+        }
+
         private static int Limit(string act, int column)
         {
             for (int row = 0; row < Limits.GetLength(0); row++)
@@ -98,30 +105,29 @@ namespace CapriDesktop
             }
         }
 
-        // One act, already weighted by her personality and her mood. Positive feeds warmth, negative feeds upset.
-        //
-        // Repetition is not symmetric, which is the part the mod got wrong by falling off both ways. Saying something
-        // nice for the fifth time in half an hour is worth less than the first; doing something she hates for the
-        // fifth time is worth more. Flattery wears thin and goading builds up, which is how people actually work
-        //.
+        // One act, already weighted by her personality and mood: positive feeds warmth, negative upset. Repetition is
+        // uneven: flattery wears thin and goading builds up.
         internal static void Took(string act, int worth)
         {
             if (worth == 0) return;
             Cool();
             int again = Lately(act);
+            double kind = Kind, mean = Mean;
             lock (gate)
             {
                 if (worth > 0)
                 {
-                    // Diminishing: full the first time, then less each time, never quite nothing.
-                    double much = worth / (1.0 + again * 0.6);
+                    // Diminishing: full the first time, then less each time, never quite nothing. Her personality's "kind
+                    // returns", with her mood's added, sets how fast: under 1 a needy or clingy one keeps more of each.
+                    double much = worth / (1.0 + again * 0.6 * kind);
                     if (much < 0.4) much = 0.4;
                     warmth = Math.Min(60, warmth + much);
                 }
                 else
                 {
-                    // Escalating, capped at two and a half times so a bad run cannot run away entirely.
-                    double much = -worth * Math.Min(2.5, 1.0 + again * 0.35);
+                    // Escalating, capped at two and a half times so a bad run cannot run away entirely. Her personality's "mean
+                    // scale", with her mood's added, sets how much it hurts: a devoted one lets most of it go.
+                    double much = -worth * mean * Math.Min(2.5, 1.0 + again * 0.35);
                     sore = Math.Min(60, sore + much);
                     // A bad moment takes some of the goodwill with it, but only a little: counting it twice, once in
                     // upset and again as lost warmth, was what made three slips enough to stop her helping.
@@ -197,9 +203,8 @@ namespace CapriDesktop
                     default: said = "You are not in the mood to do things for them. You will still talk, and you say no plainly rather than sulking in silence."; break;
                 }
                 if (Upset >= 20) said += " You are genuinely upset with them. A real apology, one that names what they did, would change that. A bare \"sorry\" would not.";
-                // Willingness, which is what every band above actually says: "You will help with normal things"
-                // is not a feeling. It read "How you feel right now", so the label promised her mood and handed
-                // her a rule about helping, and Persona's own comment beside this calls it how willing she is.
+                // Labelled as willingness, which is what every band above says; they're rules about helping, not
+                // feelings.
                 return "How willing you are to do things for them right now, which you never mention as a number or a score: " + said;
             }
         }

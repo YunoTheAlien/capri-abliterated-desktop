@@ -204,3 +204,18 @@ Running on this PC	Fut ezen a PC-n
 NORMAL	NORMÁL
 OFF	KI
 Local server address	Helyi szerver címe
+Remember panel position	Panel helyének megjegyzése
+Custom colours	Egyéni színek
+Custom colours...	Egyéni színek...
+Choose	Kiválasztás
+Hers	Az övéi
+Quiet	Csend
+Quiet min	Csend min
+Quiet max	Csend max
+Until I turn it off	Amíg ki nem kapcsolom
+Quiet on calls	Csend hívások alatt
+Quiet in videos	Csend videóknál
+Quiet until {n}:{n}	Csend {n}:{n}-ig
+Quiet until turned off	Csend kikapcsolásig
+Export settings	Beállítások exportálása
+Import settings	Beállítások importálása

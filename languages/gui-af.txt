@@ -204,3 +204,18 @@ Running on this PC	Loop op hierdie rekenaar
 NORMAL	NORMAAL
 OFF	AF
 Local server address	Plaaslike bedieneradres
+Remember panel position	Onthou paneelposisie
+Custom colours	Eie kleure
+Custom colours...	Eie kleure...
+Choose	Kies
+Hers	Hare eie
+Quiet	Stil
+Quiet min	Stil min
+Quiet max	Stil max
+Until I turn it off	Totdat ek dit afskakel
+Quiet on calls	Stil tydens oproepe
+Quiet in videos	Stil in video's
+Quiet until {n}:{n}	Stil tot {n}:{n}
+Quiet until turned off	Stil tot afgeskakel
+Export settings	Voer instellings uit
+Import settings	Voer instellings in

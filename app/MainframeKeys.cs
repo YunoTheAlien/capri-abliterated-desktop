@@ -75,21 +75,9 @@ namespace CapriDesktop
             else mainframe.Restore();
         }
 
-        // Her Mainframe on a screen shorter than this one. Nothing could check this before: the fit reads the
-        // real monitor's height, so a laptop at 768 or an old 600 px panel was only findable by somebody on
-        // one, and the report that her Mainframe gets bigger while the text does not came from exactly that.
-        //
-        // What is checked is the arithmetic the fit does, not the layout: every size she offers comes back no
-        // taller than the screen allows, and the floor is the floor. The layout itself above 125 per cent is
-        // still only checkable on a real screen.
-        // Her whole Settings page at every size she offers, rather than one message at one size.
-        //
-        // The sweep that existed checked one retained-key line. This opens Settings and asks the page itself:
-        // nothing overlapping, nothing outside the window, at 100 through 200 per cent.
-        //
-        // And it says which sizes the screen actually granted. The fit caps a size against the monitor, so on
-        // a short screen asking for 200 gives something smaller, and a check that did not say so would report
-        // five sizes while testing one twice over.
+        // Her Mainframe on a screen shorter than this one: the fit's arithmetic keeps every offered size inside the
+        // screen. Then Settings at each size from 100 to 200%, nothing overlapping or outside, naming the sizes the
+        // screen granted.
         private void SmokeMainframeSizes(List<string> checks)
         {
             int was = MainframeSize;
@@ -123,7 +111,8 @@ namespace CapriDesktop
             int needs = mainframe.NeedsTall;
             if (needs <= 0) { checks.Add("LIMIT Mainframe fit: her panel has no height yet, so there is nothing to measure"); return; }
             List<string> wrong = new List<string>();
-            int[] rooms = { 2160, 1440, 1080, 900, 768, 600 };
+            // 984 and 728: a 1280 x 1024 and a 1366 x 768 screen less a 40 px taskbar.
+            int[] rooms = { 2160, 1440, 1080, 984, 900, 768, 728, 600 };
             int[] sizes = { 100, 125, 150, 175, 200 };
             foreach (int room in rooms)
                 foreach (int size in sizes)
@@ -141,11 +130,66 @@ namespace CapriDesktop
             // And the thing the report was actually about, written down as a number: on a short screen a bigger
             // size cannot give bigger text, because the whole window scales together and the fit caps it.
             float small = mainframe.FitsIn(600, 2f), large = mainframe.FitsIn(2160, 2f);
-            checks.Add("PASS her Mainframe fits every screen it is given: 100 to 200 per cent across 2160, 1440, 1080, 900, 768 and 600 px, never taller than the screen and never under the 0.6 floor. Her panel needs "
+            checks.Add("PASS her Mainframe fits every screen it is given: 100 to 200 per cent across 2160, 1440, 1080, 984, 900, 768, 728 and 600 px, never taller than the screen and never under the 0.6 floor. Her panel needs "
                 + needs + " px at 100 per cent, so 200 per cent on a 600 px screen comes back as "
                 + small.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " against "
                 + large.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
                 + " on 2160: a small screen caps the size, which is why bigger text there wants text scaling of its own rather than a bigger window");
+        }
+
+        // Her main page on a short screen as it comes out: Auto, 100 and 200 on 1280 x 1024 and 1366 x 768 areas, no
+        // taller than the area and kept inside it. Pictured as mainframe-fit-<width>x<height>-<size>.png.
+        private void SmokeMainframeShortScreens(List<string> checks, string output)
+        {
+            int sizeWas = MainframeSize, roomWas = Mainframe.RoomForChecks;
+            bool shownWas = mainframe.Visible, settingsWas = mainframe.SettingsShown;
+            FormWindowState stateWas = mainframe.WindowState;
+            List<string> wrong = new List<string>(), got = new List<string>();
+            try
+            {
+                mainframe.WindowState = FormWindowState.Normal;
+                mainframe.Show();
+                mainframe.ShowSettings(false);
+                foreach (Size screen in new[] { new Size(1280, 1024), new Size(1366, 768) })
+                {
+                    Rectangle area = new Rectangle(0, 0, screen.Width, screen.Height - 40);
+                    Mainframe.RoomForChecks = area.Height;
+                    foreach (int size in new[] { 0, 100, 200 })
+                    {
+                        mainframe.SizeMainframe(size);
+                        // Auto picked already changes nothing, so the room given is fitted to on purpose.
+                        mainframe.Refit();
+                        Application.DoEvents();
+                        string named = (size == 0 ? "Auto" : size + "%") + " on " + screen.Width + "x" + screen.Height;
+                        KeyValuePair<int, string> gap = mainframe.MainGap();
+                        got.Add(named + " " + mainframe.Height + " px, " + gap.Key + " px under " + gap.Value);
+                        if (mainframe.Height > area.Height) wrong.Add(named + ": " + mainframe.Height + " px tall in " + area.Height);
+                        Point kept = Mainframe.KeptIn(new Rectangle(new Point(area.Left + 400, area.Top + 68), mainframe.Size), area);
+                        Rectangle placed = new Rectangle(kept, mainframe.Size);
+                        if (!area.Contains(placed)) wrong.Add(named + ": kept at " + placed + ", outside " + area);
+                        using (Bitmap frame = new Bitmap(area.Width, area.Height))
+                        {
+                            using (Graphics drawing = Graphics.FromImage(frame)) drawing.Clear(Color.FromArgb(52, 56, 66));
+                            using (Bitmap window = new Bitmap(mainframe.Width, mainframe.Height))
+                            {
+                                mainframe.DrawToBitmap(window, new Rectangle(Point.Empty, window.Size));
+                                using (Graphics drawing = Graphics.FromImage(frame)) drawing.DrawImageUnscaled(window, placed.Left - area.Left, placed.Top - area.Top);
+                            }
+                            frame.Save(System.IO.Path.Combine(output, "mainframe-fit-" + screen.Width + "x" + screen.Height + "-" + (size == 0 ? "auto" : size.ToString()) + ".png"), System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                Mainframe.RoomForChecks = roomWas;
+                mainframe.SizeMainframe(sizeWas);
+                mainframe.ShowSettings(settingsWas);
+                mainframe.WindowState = stateWas;
+                if (!shownWas) mainframe.Hide();
+            }
+            if (wrong.Count > 0) throw new Exception("Her Mainframe hung off a short screen: " + string.Join("; ", wrong.ToArray()));
+            checks.Add("PASS her main page on a short screen: " + string.Join(", ", got.ToArray()) + ", each no taller than the working area and kept inside it from 68 px down (mainframe-fit-*.png)");
         }
 
         private void SmokeMainframeKey(List<string> checks)
@@ -249,6 +293,8 @@ namespace CapriDesktop
             foreach (Stop stop in stops)
             {
                 stop.Section = -1;
+                // Her title bar stays put while the page scrolls under it, so a heading scrolled above it never takes its keys.
+                if (titleRow.Contains(stop.Control)) continue;
                 for (int i = 0; i < heads.Count; i++)
                     if (ColumnOf(heads[i]) == ColumnOf(stop.Control) && heads[i].Band(s).Top <= stop.Middle) { stop.Section = i; stop.Head = heads[i]; }
             }
@@ -515,7 +561,7 @@ namespace CapriDesktop
                 CheckFocusMark(checks);
                 if (Control.MouseButtons != MouseButtons.None) { checks.Add("LIMIT Mainframe keyboard: a mouse button is held"); return; }
                 if (!more.Focus() || !more.Focused) { checks.Add("LIMIT Mainframe keyboard: Windows did not give the Mainframe keyboard focus"); return; }
-                CheckMarkPictures(checks);
+                if (!CheckMarkPictures(checks)) return;
                 CheckPageKeys(checks);
                 CheckSectionKeys(checks);
                 CheckArrowKeys(checks);
@@ -550,7 +596,7 @@ namespace CapriDesktop
             }
         }
 
-        private void CheckMarkPictures(List<string> checks)
+        private bool CheckMarkPictures(List<string> checks)
         {
             WindowState = FormWindowState.Normal;
             LayoutScale(96, 100);
@@ -558,25 +604,28 @@ namespace CapriDesktop
             if (!capri.AdvancedSettings) capri.ToggleAdvancedSettings();
             ShowSettings(true);
             if (Math.Abs(Unit() - 1) > 0.001 || volume.Stepper || !frameSize.Stepper) throw new Exception("Her mark pictures need 100% and both slider kinds.");
-            CheckMarkPicture(onTop, "switch", true);
+            // A mark shows only while the Mainframe is the window in front. Another window taking it mid-check (theirs, on the
+            // screen the run shares) is a limit of the run, not a fault of hers.
+            if (!CheckMarkPicture(onTop, "switch", true)) { checks.Add(Unfocused); return false; }
             Native.SendMessage(Handle, 0x0127, new IntPtr(1 | (1 << 16)), IntPtr.Zero);
             CheckMarkPicture(onTop, "none", false);
-            CheckMarkPicture(more, "key", true);
-            CheckMarkPicture(volume, "slider", true);
-            CheckMarkPicture(frameSize, "steps", true);
-            CheckMarkPicture(nickname, "entry", true);
+            if (!CheckMarkPicture(more, "key", true) || !CheckMarkPicture(volume, "slider", true) || !CheckMarkPicture(frameSize, "steps", true) || !CheckMarkPicture(nickname, "entry", true)) { checks.Add(Unfocused); return false; }
             ShowSettings(false);
-            CheckMarkPicture(rungs[0], "row", true);
-            CheckMarkPicture(close, "title", true);
+            if (!CheckMarkPicture(rungs[0], "row", true) || !CheckMarkPicture(close, "title", true)) { checks.Add(Unfocused); return false; }
             checks.Add("PASS Mainframe mark pictures: seven kinds and an unmarked switch page saved at 100%. Saved pixels show white on all four sides, and none around the unmarked switch.");
+            return true;
         }
 
-        private void CheckMarkPicture(Control control, string kind, bool marked)
+        private const string Unfocused = "LIMIT Mainframe mark pictures: another window came in front during the check, so her keyboard mark could not show";
+
+        // False when the Mainframe is not the window in front, so the mark cannot show; otherwise it is checked and saved.
+        private bool CheckMarkPicture(Control control, string kind, bool marked)
         {
             if (marked) Hold(control);
             Settle();
             Update();
             string name = "mainframe-mark-" + kind + ".png";
+            if (marked && Held() == control && !HeldMarked() && Form.ActiveForm != this) return false;
             if (!control.Visible || !control.Enabled || (marked ? Held() != control || !HeldMarked() : HeldMarked()))
             {
                 Control held = Held();
@@ -610,6 +659,7 @@ namespace CapriDesktop
                     CheckMarkPixel(picture, around.Right - 2, y, 1, 0, marked, name);
                 }
             }
+            return true;
         }
 
         private static void CheckMarkPixel(Bitmap picture, int x, int y, int dx, int dy, bool marked, string name)
@@ -666,10 +716,10 @@ namespace CapriDesktop
             more.Focus();
             string modPage = TabWalk(1, 12);
             Strike(Keys.H);
-            if (main != "BRAIN VOICE CAPRI" || mainBack != "CAPRI VOICE BRAIN" || fromTitle != "CAPRI" || page != "YOU VOICE MOVES KEYS GAMES CLIPS WEATHER DOOMSCROLL CAPRI WATCH BRAIN HABITS SOUNDS"
-                || pageBack != "SOUNDS HABITS BRAIN WATCH CAPRI DOOMSCROLL WEATHER CLIPS GAMES KEYS MOVES VOICE YOU" || fromMiddle != "KEYS" || !first || modPage != "MODS INSTALLED COLORS")
+            if (main != "BRAIN VOICE CAPRI" || mainBack != "CAPRI VOICE BRAIN" || fromTitle != "CAPRI" || page != "YOU VOICE SOUNDS CLIPS MOVES GAMES WEATHER GENERAL SETTINGS CAPRI DOOMSCROLL WATCH BRAIN KEYS"
+                || pageBack != "KEYS BRAIN WATCH DOOMSCROLL CAPRI GENERAL SETTINGS WEATHER GAMES MOVES CLIPS SOUNDS VOICE YOU" || fromMiddle != "GAMES" || !first || modPage != "MODS INSTALLED COLORS")
                 throw new Exception("Tab between her Mainframe's sections went wrong: main " + main + " / back " + mainBack + " / from the title " + fromTitle + " / Settings " + page + " / back " + pageBack + " / from Dance to music " + fromMiddle + ", first " + first + " / Mods " + modPage);
-            checks.Add("PASS Mainframe Tab and Shift+Tab: Tab jumps to the first option of the next section and Shift+Tab to the one before, BRAIN, VOICE, CAPRI on her main page, YOU, VOICE, MOVES, KEYS and on through both columns of Settings, and MODS, INSTALLED, COLORS on Mods, wrapping at either end");
+            checks.Add("PASS Mainframe Tab and Shift+Tab: Tab jumps to the first option of the next section and Shift+Tab to the one before, BRAIN, VOICE, CAPRI on her main page, YOU, VOICE, SOUNDS, CLIPS and on through both columns of Settings, and MODS, INSTALLED, COLORS on Mods, wrapping at either end");
         }
 
         private void CheckArrowKeys(List<string> checks)

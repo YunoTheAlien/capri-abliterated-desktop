@@ -79,13 +79,21 @@ She asks before a code mod runs, and asks again whenever the file changes. The a
 
 `Start` gets an `ICapriHost`. Hooks run on her window's thread. If your handler throws, the error goes in `errors.txt` and she carries on. When the mod is turned off or removed, its hooks, timers, menu items, notes, options, drawing, brain tools, context, hotkeys and page are removed with it.
 
+### If a mod breaks her
+
+- A code mod that crashes her, freezes her window, or was starting when she stopped is switched off at her next start. She says which one and why.
+- A mod whose code throws 5 times inside a minute is switched off while she runs, with a note.
+- If she closes unexpectedly twice in a row with mods on and no one mod can be named, every code mod is switched off.
+- A switched-off mod's row in Mods says SWITCHED OFF and why. Turning it back on clears that.
+- `Capri.exe --no-mods` starts her once with every mod off, without changing what's saved. After an unexpected close she offers the same.
+
 ### On Mac and Linux
 
 The same `.capri-code` file runs on Windows, Mac and Linux. Mac and Linux compile it as C# 5 too, so a mod that runs on one runs on the others. A few parts use Windows' own pictures and windows, so they're Windows only:
 
 - `capri.Art`, Startup Intros (`ICapriIntro`, and `ICapriIntroNames` to list more than one in her Test menu), `Ui.Drawing` and `CapriFrame`
-- `Ui.SetOptions`, `Ui.Window`, `Mainframe.ShowPage` and `Mainframe.Window`
-- `Screen.Looked` and `Screen.Capture`
+- `Ui.SetOptions`, `Ui.AddMenu`, `Ui.MenuOpening`, `Ui.DrawScale`, `Ui.BubbleOpacity`, `Ui.Switch`, `Ui.Button`, `Ui.Window`, `Mainframe.ShowPage`, `Mainframe.AddPanel` and `Mainframe.Window`
+- `Screen.Looked`, `Screen.Capture` and `System.GameInFront`
 - `System.Windows.Forms`, and `System.Drawing` pictures like `Bitmap` and `Graphics`. `Point`, `Rectangle`, `Size` and `Color` work everywhere.
 
 A mod that uses one of those is refused on a Mac or Linux PC before she asks to run it, and her message names the part. Everything else works the same, and a few things a Mac or Linux PC can't do answer the way Windows does on a PC without them:
@@ -98,6 +106,10 @@ A mod that uses one of those is refused on a Mac or Linux PC before she asks to 
 The Hooks Tour sample draws on her and has an options page, so it's Windows only.
 
 `// requires:` is optional. `api 3` stops the mod importing into an older Capri with a clear message instead of a compile error. A mod id, like `focus-timer`, means that mod must be installed and on before this one starts. Separate them with commas.
+
+`// assets: door.png, knock.wav` is optional too. A mod that carries pictures or sounds as packed text in its code names them here, by file name, up to 40. Her question then says it carries those files rather than calling the packed text hidden, and it isn't asked about twice. It never lets through a mod that unpacks text and loads it as code: that is refused whatever this line says.
+
+Her question also says what changed since you last approved a mod: its version then, any new permission, and anything new or gone in what her scan sees.
 
 ### Permissions
 
@@ -127,7 +139,7 @@ Using a hook without its permission throws a `CapriPermissionException` that nam
 | `Say(line)` | | She says it, out loud if her voice is on |
 | `Log(line)` | | A line in `errors.txt` |
 | `Art(name)`, `Sound(name)`, `PlayIntro()` | | Her sprite strip, one of her sounds, a startup intro |
-| `Api` | | `3` here. Brain tools, context, the store, system events, hotkeys, sounds, music, pages, moving her and mod messages came in 3; the other hooks in 2 |
+| `Api` | | `4` here. Settings panels (`Mainframe.AddPanel`), menus of a mod's own (`Ui.AddMenu`, `Ui.MenuOpening`), `Ui.DrawScale`, `Ui.BubbleOpacity`, `Ui.Switch`, `Ui.Button` and `System.GameInFront` came in 4; brain tools, context, the store, system events, hotkeys, sounds, music, pages, moving her and mod messages in 3; the other hooks in 2 |
 | `CapriVersion`, `Has(permission)` | | Her version, and whether this mod asked for a permission |
 
 ### `capri.Chat`
@@ -162,16 +174,35 @@ Using a hook without its permission throws a `CapriPermissionException` that nam
 |---|---|
 | `Drawing` | Draw over her every frame she's drawn. `CapriFrame` has `Graphics`, `Window`, `Body`, `Head`, `FacingLeft`, `Animation`, `Frame` and `Size` |
 | `Redraw()` | Draw her again now, for drawing that changes |
+| `DrawScale` | How much bigger she draws, `1` to `1.15`, about her seat or feet like her own beat pulse and on top of it. Her size setting never changes. Set it as often as each frame, for a pulse of the mod's own; it stays at `1` while Motion is off, and goes back to `1` when the mod stops. Needs API 4 |
+| `Switch(text, on, changed)`, `Button(text, clicked)` | Her own OFF/ON switch and key, in her colours and font and the column's width, to return from `Mainframe.AddPanel`'s `make` so a mod's panel looks like hers and follows Mainframe colours. `changed` gets the new state; a change or click that throws is the mod's failure, not hers. Needs API 4 |
+| `BubbleOpacity` | How solid her speech bubble draws, `0.3` to `1`. With more than one mod asking, the most see-through wins. Back to `1` when the mod stops. Needs API 4 |
 | `AddMenuItem(text, clicked)` | An item under **Mods** in her right-click menu |
+| `AddMenu(text)` | A menu of the mod's own under **Mods** in her right-click menu, in her menu's look. It returns an `ICapriMenu`: `Add(text, clicked)`, `AddCheck(text, on, changed)` for an item with a tick (`changed` gets the new state), `AddLine()`, `Clear()` and `Remove()`. `Add` and `AddCheck` return an `ICapriMenuItem` with `Text`, `Checked`, `Enabled` and `Remove()`, which can be changed any time. Up to 30 items and lines, 60 characters each. It goes when the mod stops. Needs API 4 |
+| `MenuOpening` | Just before her right-click menu opens, to bring a menu's ticks and words up to date. Needs API 4 |
 | `SetOptions(title, make)` | An **Options** button on the mod's row in Mods. `make` returns the WinForms `Control` to show |
 | `Bubble(text)` | A line in her bubble, not spoken |
 | `Window` | Her window |
+| `Colour(name, usual)` | A colour of the mod's own, by a name that says what it colours, up to 40 characters and 16 a mod. The first ask names it, so ask in `Start`. It comes back as they set it in **Custom colours**, under a fold-down of the mod's own below hers, or as `usual` in her current look, following Mainframe colours like her own. Kept in `colours.md` in the mod's own data folder. Its approval and its Mods row say it has custom colours. Needs API 5 |
+| `ColoursChanged` | One of the mod's colours was set, or her look changed: ask `Colour` again. Needs API 5 |
 
 ### `capri.Mainframe`
 
 `Opened` and `Closed` events, `Open`, `Show()`, `Hide()`, `ShowSettings()`, `ShowMods()` and `Window`, the Mainframe `Form`.
 
 `ShowPage(title, make)` opens a page of the mod's own beside her Mainframe, up to 1200 × 900, for things bigger than options, like a dashboard. `make` returns the `Control`, made fresh each time. One page is open at a time. `ClosePage()` closes it, and it closes by itself when the mod stops.
+
+`AddPanel(title, column, slot, make, simple)` puts a panel of the mod's own on her Settings page, in the same look as hers: `title` is its heading and `make` returns the `Control` under it, the column's width (328 px at 100%) and as tall as it is made. `column` is `"left"` or `"right"`, and `slot` is where in that column, 1 at the top. The panel in that slot and the ones under it move down. When two mods ask for the same slot, the one loaded first keeps it and the next goes straight after it. It shows in Advanced Settings only, unless `simple` is `true`. Where the panels sit is saved with her settings (settings.json), so it is the same after a restart, an update or an import, and when the mod stops or is taken out its panel goes and the panels under it move back up. Approving a mod that calls it shows "adds a Settings panel". Needs API 4: put `// requires: api 4` in its header.
+
+```csharp
+public void Start(ICapriHost capri)
+{
+    capri.Mainframe.AddPanel("Lights", "right", 3, delegate
+    {
+        return capri.Ui.Switch("Lights follow her mood", false, delegate(bool on) { capri.Log("lights " + on); });
+    });
+}
+```
 
 ### `capri.Screen` (screen)
 
@@ -252,6 +283,7 @@ The mod's own saved values, kept in `store.json` in its folder. `Get(key)`, `Get
 | `Locked`, `Unlocked`, `Sleeping`, `Woke` | The PC locked, unlocked, went to sleep or woke |
 | `NewDay` | Midnight passed while she was running |
 | `Battery`, `Charging`, `BatteryChanged(percent, charging)` | The battery percent, or `-1` with no battery |
+| `GameInFront` | A game's window is the one in front, by her own check, the one that lowers her over games. Read about once a second. Needs API 4 |
 
 ### `capri.Mods`
 
@@ -286,6 +318,27 @@ What's playing, from the same Windows media session her mini player reads, and t
 | `Open()` | Brings the app playing it to the front |
 
 A `CapriTrack` has `Title`, `Artist`, `Album`, `App` (a name to show, like `Spotify`), `AppId`, `Playing`, `Music`, `Video`, `Position` and `Length` in seconds at the read, `At()` for where it's got to by now, `CanSeek`, `CanSkip`, `CanBack`, `Shuffle` and `Repeat` (`null` when the app doesn't say), and a `Key` that's the same for the same song in the same app. On Mac and Linux nothing reads yet, so `Now` is `null` and presses return false.
+
+## Plug-ins
+
+A plug-in is a `.capri-plugin` zip (or a folder) with a `plugin.json`, an `.mcp.json` listing its MCP servers, and
+any `SKILL.md` skills, the way Claude's plug-ins are laid out. Import it like a mod. She asks first, showing what it
+starts, the keys it takes and any website it connects to.
+
+1. A server in `.mcp.json` is a program she starts (`command`, `args`, `env`) or an address online (`url`, https).
+   A program starts in the plug-in's folder and gets none of her keys, only the ones its `env` names.
+2. Its tools reach her brain as one `plugin` tool, and what they give back reaches her as data from the plug-in,
+   never as your words.
+3. An online server that needs an account: Sign in, in the plug-in's security overrides, opens your own browser.
+   The key it gives back is sealed for your Windows user and kept outside the mods folder, for that plug-in alone.
+   A code mod that names where it is kept shows "reads plug-in sign-ins" (High) when you approve it.
+4. SECURITY > HER MODS > Use tools your plug-ins added sets what they do by default. Each plug-in has a row in
+   Mods > INSTALLED with its own switch: it goes in off and starts nothing until it is turned on. The cog left of
+   the switch opens its security overrides, a cell per level for each tool: / follows SECURITY, a tick allows it
+   there without asking, a cross denies it there. The websites it reaches are listed under them.
+5. Every other row has the same cog. A code mod's has Runs (a cross stops the mod at that level) and a cell for each
+   tool it added; the websites its code names are listed.
+6. A changed plug-in asks again before any of it runs.
 
 ## Examples
 

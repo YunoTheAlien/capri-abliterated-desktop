@@ -27,19 +27,126 @@ namespace CapriDesktop
         private const string ApprovedFile = "approved.txt";
         private static readonly Regex HeaderLine = new Regex(@"^//\s*([a-z-]+)\s*:\s*(.*?)\s*$");
 
-        // What a code mod reaches for, named so somebody approving one sees it without reading 256 KB. Not a
-        // block: a code mod is code and the approval is the boundary. The case this exists for is a mod whose
-        // source reads as nothing because the behaviour is packed, encrypted or fetched at run time.
+        // Code mods Capri's makers have checked: each by id and the SHA-256 of the exact file, line ends read as LF.
+        // Built in, so nothing on the PC can add to it; the mods this build carries are on it as carried.
+        private static readonly string[,] CheckedList =
+        {
+            { "auto-game-hologram", "636a671f75e6513991a883497acf908f569c0345e92190297468ebfc16077447" },
+            { "capri-bezel-led", "d46da1632e1f63466cf5c7c80eae4743166bcf07ee9980e3d9ff790c4ed46a0b" },
+            { "hologram-speech-glass", "d0ad7c2932d5f4ec6461b6846d22bd42182417916743d4756a60b31e5e76fd13" },
+        };
+
+        // What a checked mod's question and row say, and why an unchecked one is off while untested mods are.
+        internal const string CheckedNote = "Checked by Capri's makers. Not a promise it's safe.";
+        internal const string UncheckedNote = "Not tested by Capri's makers.";
+        internal const string UncheckedOff = "not checked. Turn on Load untested mods";
+
+        // Whether code mods off the list may ask to run: Load untested mods in Mods, kept in her settings. Her checks run with it
+        // on, as they bring in mods of their own, except the check that is about it.
+        internal static bool UntestedForChecks;
+        internal static volatile bool Untested;
+        internal static bool LoadUntested { get { return UntestedForChecks || Untested; } }
+
+        private static Dictionary<string, string> carriedHashes;
+
+        // A code mod's cog, kept beside the plug-ins' under its own id: the Runs row stops it at a level where it is crossed.
+        // A tick or / lets it run, as SECURITY stops no code mod at any level.
+        internal const string RunsRow = "runs";
+        internal static string CogId(string id) { return "mod:" + id; }
+        internal static bool StoppedHere(string id) { return PluginSettings.Now(CogId(id), PluginSettings.Run, RunsRow) == PluginSettings.Denied; }
+
+        // SECURITY moved, or a cog's Runs row changed: each code mod that is on and stopped at this level stops, and each one
+        // that is on and no longer stopped starts again.
+        internal void Resecured(Action<Action> onWindow)
+        {
+            List<Mod> starting = new List<Mod>();
+            foreach (Mod mod in All)
+            {
+                if (!mod.Code || !mod.On) continue;
+                bool stopped = StoppedHere(mod.File.Id);
+                if (stopped && running.ContainsKey(mod.File.Id)) StopOne(mod.File.Id);
+                else if (!stopped && !running.ContainsKey(mod.File.Id)) starting.Add(mod);
+            }
+            if (starting.Count > 0) StartSome(starting, onWindow);
+        }
+
+        // Whether this exact file of this mod is on the checked list.
+        internal static bool OnCheckedList(string id, byte[] file)
+        {
+            if (string.IsNullOrEmpty(id) || file == null) return false;
+            string hash = CheckedHash(file);
+            for (int i = 0; i < CheckedList.GetLength(0); i++)
+                if (CheckedList[i, 0] == id && string.Equals(CheckedList[i, 1], hash, StringComparison.OrdinalIgnoreCase)) return true;
+            Dictionary<string, string> carried = carriedHashes;
+            if (carried == null)
+            {
+                carried = new Dictionary<string, string>(StringComparer.Ordinal);
+                try
+                {
+                    Assembly carrying = typeof(Mods).Assembly;
+                    foreach (string name in carrying.GetManifestResourceNames())
+                    {
+                        if (!name.StartsWith(CarriedPrefix, StringComparison.Ordinal) && !name.StartsWith(CheckedPrefix, StringComparison.Ordinal)) continue;
+                        byte[] bytes;
+                        using (Stream from = carrying.GetManifestResourceStream(name))
+                        using (MemoryStream copy = new MemoryStream()) { from.CopyTo(copy); bytes = copy.ToArray(); }
+                        try { carried[ReadCode(Words(bytes)).Id] = CheckedHash(bytes); }
+                        catch (ModException) { }
+                    }
+                }
+                catch (Exception caughtOne) { Brain.Caught(caughtOne); }
+                carriedHashes = carried;
+            }
+            string own;
+            return carried.TryGetValue(id, out own) && string.Equals(own, hash, StringComparison.OrdinalIgnoreCase);
+        }
+
+        // Mods carried only to be checked against, never laid in.
+        private const string CheckedPrefix = "Capri.Checked.";
+
+        // A file's hash for the list: its bytes with each CR LF read as LF.
+        internal static string CheckedHash(byte[] file)
+        {
+            using (MemoryStream plain = new MemoryStream(file.Length))
+            {
+                for (int i = 0; i < file.Length; i++)
+                    if (!(file[i] == 13 && i + 1 < file.Length && file[i + 1] == 10)) plain.WriteByte(file[i]);
+                return HashOf(plain.ToArray());
+            }
+        }
+
+        // Refused before anyone is asked: a mod off the list while untested mods are off.
+        private static void RefuseUnchecked(ModFile read)
+        {
+            if (LoadUntested || read.Checked) return;
+            throw new ModException((read.Name ?? read.Id) + " isn't on Capri's checked list, so it can't run while Load untested mods is off.");
+        }
+
+        // What a code mod reaches for, named so somebody approving it sees that without reading the source. Not a
+        // block, since approval is the boundary: it is for a mod whose behaviour is packed, encrypted or fetched at run
+        // time.
         internal const string Loads = "loads code while it runs", Packs = "unpacks hidden text", Contacts = "contacts ";
+        internal const string ChangesSecurity = "changes Capri's security";
+        internal const string WritesFiles = "writes or deletes files", Pieces = "builds names out of pieces, so this list may not see what they name";
 
         private static readonly string[,] Reaches =
         {
-            { Loads, @"Assembly\.Load|AssemblyLoadContext|AppDomain|ExecuteAssembly|CreateInstanceAndUnwrap|Reflection\.Emit|DynamicMethod|CompileAssembly|CodeProvider|CSharpCompilation" },
+            // AppDomain only when it loads or runs something: its GetData and SetData are a slot mods share, nothing more.
+            { Loads, @"Assembly\.Load|AssemblyLoadContext|AppDomain\.(?:CurrentDomain\.)?(?:Load|ExecuteAssembly|CreateInstance|DefineDynamicAssembly|CreateDomain)|ExecuteAssembly|CreateInstanceAndUnwrap|Reflection\.Emit|DynamicMethod|CompileAssembly|CodeProvider|CSharpCompilation" },
             { Packs, @"FromBase64String|Aes\.|AesManaged|Rijndael|TripleDES|DESCryptoServiceProvider|GZipStream|DeflateStream|BrotliStream" },
             // Windows' own lock on saved keys and cookies, which is how a mod would read one of hers back out.
             { "unlocks saved secrets", @"ProtectedData|CryptUnprotectData|\.dpapi\b" },
+            // Where her plug-ins' sign-ins are kept: no mod has a reason to name it.
+            { "reads plug-in sign-ins", @"McpSignIn|signin\.json|keys[\\/]+plugins" },
+            // Her security overrides, the mods and plug-ins switched on, what was approved and the crash guard: only her own
+            // windows change these.
+            { ChangesSecurity, @"PluginSettings|keys[\\/]+overrides|""keys""\s*,\s*""overrides""|approved\.txt|approved-what\.txt|guard\.txt|plugins-on\.txt|Security\.(?:Pick|Set|Load)\b" },
             { "calls Windows directly", @"DllImport|LibraryImport|Marshal\.|GetProcAddress|VirtualAlloc" },
             { "starts programs", @"Process\.Start|ProcessStartInfo|cmd\.exe|powershell" },
+            // Writing anywhere: a wipe of their documents must never read as nothing at all.
+            { WritesFiles, @"File\.(?:Write\w*|Delete|Move|Copy|Create\w*|Append\w*|Replace|SetAttributes)\s*\(|Directory\.(?:Delete|Move)\s*\(|new\s+(?:System\.IO\.)?(?:FileStream|StreamWriter|FileInfo)\s*\(" },
+            // Starting itself with Windows: the Run key, the Startup folder or a scheduled task.
+            { "makes itself start with Windows", @"CurrentVersion\\{1,2}Run|SpecialFolder\.Startup\b|schtasks|TaskScheduler|\\{1,2}Start Menu\\{1,2}Programs\\{1,2}Startup" },
             // Anything above can be reached by its name in a string instead, which none of those rows can see:
             // Type.GetType("System.Diagnostics.Process").GetMethod("Start"). Named so a mod that calls by name
             // says it does, whatever it calls.
@@ -47,6 +154,7 @@ namespace CapriDesktop
             { "uses the network", @"HttpClient|WebClient|WebRequest|TcpClient|UdpClient|Socket\(|ClientWebSocket" },
             { "reaches outside her folder", @"SpecialFolder|Registry|DriveInfo|GetTempPath|GetEnvironmentVariable" },
             { "reads the keyboard", @"GetAsyncKeyState|SetWindowsHookEx|keybd_event|SendKeys" },
+            { "adds a Settings panel", @"\.AddPanel\s*\(" },
             // What her brain is told, which is the one a readout of permissions never used to mention. A mod
             // can ask her brain and can claim a pool of her lines, and both change what she is told or says.
             { "changes what her brain is told", @"ICapriBrain|ICapriChat|Zones\.|ChatMessage|AddTool|AddContext|\.Sending\b|\.Replying\b|ToolUsing|Personality\.(?:Add|Remove|Clear)\b|system prompt" },
@@ -98,10 +206,8 @@ namespace CapriDesktop
             return found < 0 ? text.Length : found;
         }
 
-        // Source with every comment taken out and everything quoted left in, which is what her reach and
-        // address checks read. A comment cannot run, so a word in one says nothing about what the mod does,
-        // and flagging it was the false warning that made a case-blind check look noisy. A string can be
-        // handed to something that runs it, so strings stay, and the checks stay blind to case.
+        // Source with comments taken out and strings left in, for her reach and address checks: a comment can't run,
+        // but a string can be handed to something that runs it.
         internal static string Uncommented(string text)
         {
             if (string.IsNullOrEmpty(text)) return text;
@@ -149,14 +255,8 @@ namespace CapriDesktop
             return kept.ToString();
         }
 
-        // Source with the whitespace taken out of it, put back so somebody can read it before approving it.
-        // No model and nothing sent anywhere: braces, semicolons and strings still delimit everything, so
-        // this is exact rather than a guess. It gives back the code itself, which is the point. Asking her
-        // to describe a mod would give back her opinion of it, and approving on that means approving
-        // something that is not what runs.
-        //
-        // Strings, chars and comments are copied through untouched, so a brace or a semicolon inside one
-        // cannot move a line.
+        // Minified source laid back out so a person can read it before approving: exact, not a guess, since braces,
+        // semicolons and strings delimit everything. Strings, chars and comments are copied through untouched.
         internal static string Tidied(string text)
         {
             if (string.IsNullOrEmpty(text)) return text;
@@ -243,10 +343,8 @@ namespace CapriDesktop
             for (int one = 0; one < deep; one++) made.Append("    ");
         }
 
-        // Whether the source is something a person can actually read. A mod whose behaviour is minified,
-        // packed onto one line or carried in a long run of base64 is not disclosed by naming what it
-        // reaches for: the point of reading it is lost either way. Said rather than refused, so the person
-        // deciding knows it and decides.
+        // Whether a person can actually read the source: minified, one-line or long base64 code isn't disclosed by
+        // naming what it reaches for. Said rather than refused, so the person deciding knows.
         internal static string Unreadable(string text)
         {
             bool packed;
@@ -279,6 +377,21 @@ namespace CapriDesktop
         }
 
         // The list for one mod's source, in the order above, each named once.
+        // "// assets: door.png, knock.wav": up to 40 file names, each a plain name of up to 80 characters.
+        internal static string[] ReadAssets(string value)
+        {
+            List<string> names = new List<string>();
+            foreach (string one in (value ?? "").Split(','))
+            {
+                string name = one.Trim();
+                if (name.Length == 0) continue;
+                if (name.Length > 80 || name.IndexOfAny(new[] { '/', '\\', ':' }) >= 0) throw new ModException("An assets line names files by name only, up to 80 characters each: " + name);
+                if (!names.Contains(name)) names.Add(name);
+            }
+            if (names.Count > 40) throw new ModException("An assets line names up to 40 files.");
+            return names.ToArray();
+        }
+
         internal static string[] Reaching(string text)
         {
             List<string> found = new List<string>();
@@ -288,7 +401,29 @@ namespace CapriDesktop
             string code = Uncommented(text);
             for (int at = 0; at < Reaches.GetLength(0); at++)
                 if (Regex.IsMatch(code, Reaches[at, 1], RegexOptions.IgnoreCase)) found.Add(Reaches[at, 0]);
+            if (Pieced(code)) found.Add(Pieces);
             return found.ToArray();
+        }
+
+        // "Pro" + "cess.Start": a name only whole once its pieces are joined, which is how a name gets past a list like the
+        // one above. Literals joined with + are put together and read again; a piece that already names it alone is not this.
+        private static readonly Regex Joined = new Regex(@"""(?:[^""\\\r\n]|\\.){1,40}""(?:\s*\+\s*""(?:[^""\\\r\n]|\\.){1,40}"")+");
+        private static readonly Regex Named = new Regex(@"Process|ProcessStartInfo|Assembly|Registry|FromBase64|Invoke|kernel32|user32|ntdll|cmd\.exe|powershell|ProtectedData|Activator|GetMethod|Load|Delete", RegexOptions.IgnoreCase);
+
+        private static bool Pieced(string code)
+        {
+            foreach (Match chain in Joined.Matches(code))
+            {
+                List<string> parts = new List<string>();
+                foreach (Match part in Regex.Matches(chain.Value, @"""((?:[^""\\\r\n]|\\.)*)""")) parts.Add(part.Groups[1].Value);
+                string whole = string.Join("", parts.ToArray());
+                Match name = Named.Match(whole);
+                if (!name.Success) continue;
+                bool alone = false;
+                foreach (string part in parts) if (part.IndexOf(name.Value, StringComparison.OrdinalIgnoreCase) >= 0) alone = true;
+                if (!alone) return true;
+            }
+            return false;
         }
 
         // That the list says what the source does, including the shape this is for: a mod that looks empty
@@ -341,12 +476,50 @@ namespace CapriDesktop
             if (contacts != Contacts + "evil.com, github.com" || shouted.Places.Length != 3)
                 throw new Exception("Addresses were not one line per site with every address kept: [" + contacts + "] and " + shouted.Places.Length + " addresses");
             string asked = Consent(shouted, "0");
-            if (asked.IndexOf("contacts github.com\n      https://github.com/one/a\n      https://github.com/two/b", StringComparison.Ordinal) < 0)
+            if (asked.IndexOf("contacts github.com\n        https://github.com/one/a\n        https://github.com/two/b", StringComparison.Ordinal) < 0)
                 throw new Exception("The question did not list each address under its site: " + asked);
             checks.Add("PASS a code mod's reach is read from its code and strings, blind to case, and not from its comments: \"CMD.EXE\" in a string is named, \"process.start\" in a comment is not; the mods list says each site once and the question lists every address under its site");
 
             checks.Add("PASS a code mod that both unpacks hidden text and loads code while it runs is refused, since the source somebody reads is then not what runs; the other six reaches are named and left to them");
             checks.Add("PASS a code mod says what it reaches for before it is approved: loading code while it runs, unpacking hidden text, calling Windows directly, starting programs, using the network, reaching outside her folder, reading the keyboard. A mod whose source reads as nothing because the payload is packed is the case it exists for");
+
+            // Stage 4: writing files, starting with Windows and names built from pieces are named; AppDomain's shared slot
+            // is not loading code; and the compiled code is read for the calls its source hides behind an alias.
+            Func<string, string[]> scan = delegate(string body) { return Reaching(header + "using System;\nclass M { void Go() { " + body + " } }"); };
+            if (Array.IndexOf(scan("System.IO.File.Delete(\"x\");"), WritesFiles) < 0 || Array.IndexOf(scan("new System.IO.StreamWriter(\"x\");"), WritesFiles) < 0)
+                throw new Exception("Writing or deleting a file wasn't named.");
+            if (Array.IndexOf(scan("string k = @\"Software\\Microsoft\\Windows\\CurrentVersion\\Run\";"), "makes itself start with Windows") < 0)
+                throw new Exception("Starting with Windows from the Run key wasn't named.");
+            if (Array.IndexOf(scan("string p = \"Pro\" + \"cess.Start\";"), Pieces) < 0 || Array.IndexOf(scan("string p = \"Process\" + \".Start\";"), Pieces) >= 0
+                || Array.IndexOf(scan("string p = \"Hello \" + \"there\";"), Pieces) >= 0)
+                throw new Exception("A name built from pieces was missed, or a whole one or plain words were taken for one.");
+            if (Array.IndexOf(scan("object s = AppDomain.CurrentDomain.GetData(\"k\"); AppDomain.CurrentDomain.SetData(\"k\", 1);"), Loads) >= 0
+                || Array.IndexOf(scan("AppDomain.CurrentDomain.Load(new byte[0]);"), Loads) < 0)
+                throw new Exception("AppDomain's shared slot was taken for loading code, or a real load was missed.");
+#if !CROSS
+            string aliased = header + "using System; using CapriDesktop; using F = System.IO.File; using P = System.Diagnostics.Process;\n"
+                + "public class M : ICapriMod { public void Start(ICapriHost h) { F.Delete(\"nothing-here\"); P.Start(\"nothing-here\"); } public bool Heard(string w) { return false; } public void Stop() { } }";
+            string[] sourceSays = Reaching(aliased), compiledSays = CompiledCalls(Build(aliased));
+            if (Array.IndexOf(sourceSays, WritesFiles) >= 0 || Array.IndexOf(compiledSays, WritesFiles) < 0 || Array.IndexOf(compiledSays, "starts programs") < 0)
+                throw new Exception("The compiled code's calls behind an alias weren't found: source " + string.Join(", ", sourceSays) + "; compiled " + string.Join(", ", compiledSays));
+#endif
+            // Stage 3: art carried as packed text and named on an assets line is said as that and asks nothing twice; the
+            // same blob unnamed still asks; and naming assets never lets a mod that unpacks and loads code through.
+            string artBlob = new string('Q', 3000);
+            string art = "// capri-mod: 1\n// id: art\n// name: Art\n// version: 1\n// author: Smoke\n// description: A test.\n// assets: door.png, knock.wav\n"
+                + "using System;\nclass M { byte[] Door() { return Convert.FromBase64String(\"" + artBlob + "\"); } }";
+            ModFile withAssets = ReadCode(art), withoutAssets = ReadCode(art.Replace("// assets: door.png, knock.wav\n", ""));
+            if (withAssets.Assets.Length != 2 || Array.IndexOf(withAssets.Reaches, Packs) >= 0 || withAssets.AskTwice || withAssets.Unreadable != null
+                || !Array.Exists(withAssets.Reaches, each => each.StartsWith("carries 2 files", StringComparison.Ordinal)))
+                throw new Exception("Art named on an assets line was still read as hidden text: " + string.Join(" | ", withAssets.Reaches));
+            if (withoutAssets.Unreadable == null || Array.IndexOf(withoutAssets.Reaches, Packs) < 0)
+                throw new Exception("The same packed blob with no assets line wasn't said as hidden text.");
+            string sneaky = null;
+            try { ReadCode(art.Replace("return Convert.FromBase64String", "System.Reflection.Assembly.Load(Convert.FromBase64String(\"x\")); return Convert.FromBase64String")); }
+            catch (ModException stopped) { sneaky = stopped.Message; }
+            if (sneaky == null) throw new Exception("Naming assets let a mod that unpacks and loads code through.");
+            checks.Add("PASS stage 3: art carried packed and named on an assets line is said as that and asks nothing twice, the same blob unnamed still asks, and naming assets never lets a mod that unpacks and loads code through");
+            checks.Add("PASS stage 4: writing or deleting files, starting with Windows and names built from pieces are named; AppDomain's shared slot isn't taken for loading code; and the compiled code is read for calls its source hides behind an alias, before anyone is asked and without running any of it");
         }
         private readonly Dictionary<string, ICapriMod> running = new Dictionary<string, ICapriMod>();
         private readonly Dictionary<string, ICapriHost> hosts = new Dictionary<string, ICapriHost>();
@@ -362,9 +535,8 @@ namespace CapriDesktop
         partial void Unload(ICapriMod mod);
 
 #if !CROSS
-        // The intro she starts with: one at random from every intro mod with something switched on. Null when none
-        // has, so she arrives the ordinary way rather than waiting on an intro of no length. It used to be the first
-        // intro mod found, so a second one never ran at all.
+        // The intro she starts with: one at random from every intro mod with something switched on; null when none has,
+        // so she arrives the ordinary way.
         internal ICapriIntro Intro
         {
             get
@@ -438,15 +610,15 @@ namespace CapriDesktop
                     case "intro": read.Intro = value == "yes"; break;
                     case "permissions": read.Permissions = ReadPermissions(value); break;
                     case "requires": ReadRequires(value, read); break;
+                    case "assets": read.Assets = ReadAssets(value); break;
                 }
             }
             if (!marked) throw new ModException("A code mod starts with a // capri-mod: 1 line.");
             CheckDetails(read);
             read.Reaches = Reaching(text);
-            // And where it would reach, so the question says the address rather than only that there is one.
-            // Each site once on the short line, and every whole address kept beside it for the question, which
-            // lists them under their site. One site with ten addresses is one line in her mods list and ten in
-            // the question, so the list stays tidy and the detail is still there to read before saying yes.
+            read.Colours = System.Text.RegularExpressions.Regex.IsMatch(text, @"\.Colour\s*\(");
+            // Where it would reach: each site once on the short line, every whole address kept for the question, which
+            // lists them under their site.
             string[] where = Addresses(Uncommented(text));
             read.Places = where;
             if (where.Length > 0)
@@ -477,6 +649,16 @@ namespace CapriDesktop
             // it carries. Packed data in a mod that never starts anything is a picture or a sound, usually.
             read.AskTwice = hidden != null && (!packed || Array.IndexOf(read.Reaches, "starts programs") >= 0
                 || Array.IndexOf(read.Reaches, "calls Windows directly") >= 0 || Array.IndexOf(read.Reaches, "calls code by its name") >= 0);
+            // Files it says it carries packed: their packing is said as that, not as hidden text, and asks nothing twice.
+            // Decided after the refusal above, so naming assets never lets a mod that unpacks and loads code through.
+            if (read.Assets.Length > 0)
+            {
+                List<string> saying = new List<string>(read.Reaches);
+                saying.Remove(Packs);
+                saying.Insert(0, "carries " + read.Assets.Length + " file" + (read.Assets.Length == 1 ? "" : "s") + " of its own packed into its code, named on its assets line: " + string.Join(", ", read.Assets));
+                read.Reaches = saying.ToArray();
+                if (packed) { hidden = null; read.Unreadable = null; read.AskTwice = false; }
+            }
             if (hidden != null)
             {
                 List<string> saying = new List<string>(read.Reaches);
@@ -519,7 +701,7 @@ namespace CapriDesktop
             using (SHA256 sha = SHA256.Create()) return BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-", "").ToLowerInvariant();
         }
 
-        private static string Words(byte[] bytes) { return new UTF8Encoding(false).GetString(bytes); }
+        internal static string Words(byte[] bytes) { return new UTF8Encoding(false).GetString(bytes); }
 
         private Mod LoadCode(string file, HashSet<string> off)
         {
@@ -529,6 +711,7 @@ namespace CapriDesktop
             if (!string.Equals(read.Id, Path.GetFileNameWithoutExtension(file), StringComparison.OrdinalIgnoreCase)) throw new ModException("its file name doesn't match its id, " + read.Id + ".");
             string hash = HashOf(bytes), approved;
             bool same = Approved().TryGetValue(read.Id, out approved) && approved == hash;
+            read.Checked = OnCheckedList(read.Id, bytes);
             // One dropped into the folder, not approved yet, is refused here if it can't run on this platform.
             if (!same) CheckPlatform(text);
             return new Mod { File = read, Path = file, Code = true, Hash = hash, Changed = !same, On = same && !off.Contains(read.Id) };
@@ -548,8 +731,23 @@ namespace CapriDesktop
             ModFile read = ReadCode(text);
             CheckPlatform(text);
             bool stay = keepOff != null && keepOff.Contains(read.Id);
-            if (!ask(read, hash)) return null;
+            read.Checked = OnCheckedList(read.Id, bytes);
+            RefuseUnchecked(read);
+            // A mod on the checked list needs no question, the list being what was asked, unless it was approved here as another
+            // file: then it asks, and the question says what changed.
+            bool listed = read.Checked && !ApprovedAsOther(read.Id, hash);
+            ApprovedWhatPath = Path.Combine(folder, ApprovedWhatFile);
+#if !CROSS
+            // Built before anyone is asked, so what the compiled code calls is in the question, and code that won't build
+            // is refused first. Nothing of it runs until Make, after the yes.
+            Type built = Build(text);
+            Compiled(read, built);
+            if (!listed && !ask(read, hash)) return null;
+            ICapriMod made = Make(built);
+#else
+            if (!listed && !ask(read, hash)) return null;
             ICapriMod made = Compile(text);
+#endif
             string home = Path.Combine(folder, read.Id + CodeExtension);
             try
             {
@@ -560,13 +758,14 @@ namespace CapriDesktop
                 if (File.Exists(home)) File.Delete(home);
                 File.Move(writing, home);
                 Approve(read.Id, hash);
+                RememberApproved(read);
                 HashSet<string> off = Off();
                 if (!stay && off.Remove(read.Id)) WriteOff(off);
             }
             catch (IOException error) { Unload(made); throw new ModException("Couldn't save that mod: " + error.Message); }
             catch (UnauthorizedAccessException error) { Unload(made); throw new ModException("Couldn't save that mod: " + error.Message); }
             Load();
-            if (stay) return All.Find(mod => mod.File.Id == read.Id);
+            if (stay || StoppedHere(read.Id)) { if (!stay) Unload(made); return All.Find(mod => mod.File.Id == read.Id); }
             try { StartOne(read.Id, made); }
             catch (ModException error)
             {
@@ -590,15 +789,29 @@ namespace CapriDesktop
                 mod.On = false;
                 return true;
             }
+            if (StoppedHere(mod.File.Id)) throw new ModException((mod.File.Name ?? mod.File.Id) + "'s security overrides stop it at this SECURITY level. Its cog can change that.");
             byte[] bytes = File.ReadAllBytes(mod.Path);
             string hash = HashOf(bytes), approved;
-            bool same = Approved().TryGetValue(mod.File.Id, out approved) && approved == hash;
+            mod.File.Checked = OnCheckedList(mod.File.Id, bytes);
+            RefuseUnchecked(mod.File);
+            // Approved here as this exact file, or never approved here and on the checked list. One approved as another file asks,
+            // checked or not.
+            bool same = Approved().TryGetValue(mod.File.Id, out approved) ? approved == hash : mod.File.Checked;
             CheckPlatform(Words(bytes));
+            ApprovedWhatPath = Path.Combine(folder, ApprovedWhatFile);
+#if !CROSS
+            Type built = Build(Words(bytes));
+            Compiled(mod.File, built);
+            if (!same && !ask(mod.File, hash)) return false;
+            ICapriMod made = Make(built);
+#else
             if (!same && !ask(mod.File, hash)) return false;
             ICapriMod made = Compile(Words(bytes));
+#endif
             StartOne(mod.File.Id, made);
-            if (!same) Approve(mod.File.Id, hash);
+            if (!same) { Approve(mod.File.Id, hash); RememberApproved(mod.File); }
             if (off.Remove(mod.File.Id)) WriteOff(off);
+            ModGuard.Forget(mod.File.Id);
             mod.Hash = hash;
             mod.Changed = false;
             mod.On = true;
@@ -612,17 +825,100 @@ namespace CapriDesktop
             if (approved.Remove(mod.File.Id)) WriteApproved(approved);
         }
 
-        private Dictionary<string, string> Approved()
+        // Approved here, but as another file than this one.
+        private bool ApprovedAsOther(string id, string hash)
+        {
+            string approved;
+            return Approved().TryGetValue(id, out approved) && approved != hash;
+        }
+
+        private Dictionary<string, string> Approved() { return ApprovedAt(Path.Combine(folder, ApprovedFile)); }
+
+        // What was approved, as signed by her own windows. Changed or unsigned outside her, none of it counts: every code mod and
+        // plug-in is unapproved and asks again, the file starts empty, and she warns them.
+        internal static Dictionary<string, string> ApprovedAt(string file)
         {
             Dictionary<string, string> approved = new Dictionary<string, string>();
-            string file = Path.Combine(folder, ApprovedFile);
-            if (File.Exists(file))
-                foreach (string line in File.ReadAllLines(file))
-                {
-                    string[] parts = line.Split(' ');
-                    if (parts.Length == 2) approved[parts[0]] = parts[1];
-                }
+            bool good;
+            List<string> lines = PluginSettings.ReadSigned(file, out good);
+            if (!good)
+            {
+                PluginSettings.WriteSigned(file, new List<string>());
+                PluginSettings.Refused(file, "The list of mods and plug-ins you approved was changed outside Capri, so she isn't using it: each code mod and plug-in asks again before it runs.");
+                return approved;
+            }
+            foreach (string line in lines)
+            {
+                string[] parts = line.Split(' ');
+                if (parts.Length == 2) approved[parts[0]] = parts[1];
+            }
             return approved;
+        }
+
+        internal static void WriteApprovedAt(string file, Dictionary<string, string> approved)
+        {
+            List<string> lines = new List<string>();
+            foreach (KeyValuePair<string, string> entry in approved) lines.Add(entry.Key + " " + entry.Value);
+            PluginSettings.WriteSigned(file, lines);
+        }
+
+        // For checks: an approval written as her own windows write one.
+        internal void ApproveForChecks(string id, string hash) { Approve(id, hash); }
+
+        // What each mod was when it was approved: its version, what her scan saw and what it asked for, kept beside approved.txt
+        // so the question for a changed copy can say what changed. Its own file, since older builds read approved.txt as
+        // exactly an id and a hash per line.
+        internal const string ApprovedWhatFile = "approved-what.txt";
+        internal static string ApprovedWhatPath;
+
+        private void RememberApproved(ModFile read)
+        {
+            ApprovedWhatPath = Path.Combine(folder, ApprovedWhatFile);
+            Dictionary<string, string> kept = WhatApproved();
+            kept[read.Id] = (read.Version ?? "").Replace('\t', ' ') + "\t" + string.Join("|", read.Reaches ?? new string[0]).Replace('\t', ' ')
+                + "\t" + string.Join(",", read.Permissions ?? new string[0]);
+            List<string> lines = new List<string>();
+            foreach (KeyValuePair<string, string> one in kept) lines.Add(one.Key + "\t" + one.Value);
+            try { Directory.CreateDirectory(folder); File.WriteAllLines(ApprovedWhatPath, lines.ToArray()); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+
+        internal static Dictionary<string, string> WhatApproved()
+        {
+            Dictionary<string, string> kept = new Dictionary<string, string>(StringComparer.Ordinal);
+            try
+            {
+                if (ApprovedWhatPath != null && File.Exists(ApprovedWhatPath))
+                    foreach (string line in File.ReadAllLines(ApprovedWhatPath))
+                    {
+                        int tab = line.IndexOf('\t');
+                        if (tab > 0) kept[line.Substring(0, tab)] = line.Substring(tab + 1);
+                    }
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            return kept;
+        }
+
+        // What changed in a mod since it was approved, one line each, or "" when it was never approved here.
+        internal static string ChangedSince(ModFile now)
+        {
+            string was;
+            if (now == null || now.Id == null || !WhatApproved().TryGetValue(now.Id, out was)) return "";
+            string[] parts = was.Split('\t');
+            string version = parts.Length > 0 ? parts[0] : "";
+            List<string> reachedThen = new List<string>(parts.Length > 1 && parts[1].Length > 0 ? parts[1].Split('|') : new string[0]);
+            List<string> askedThen = new List<string>(parts.Length > 2 && parts[2].Length > 0 ? parts[2].Split(',') : new string[0]);
+            StringBuilder said = new StringBuilder();
+            // Each change marked with the group it belongs to, as the rows behind the handle are.
+            foreach (string asked in now.Permissions ?? new string[0]) if (!askedThen.Contains(asked)) said.Append("\n[[").Append(GroupOf(asked)).Append("]]new permission: ").Append(asked);
+            foreach (string asked in askedThen) if (Array.IndexOf(now.Permissions ?? new string[0], asked) < 0) said.Append("\n[[").Append(GroupOf(asked)).Append("]]no longer asks: ").Append(asked);
+            foreach (string reach in now.Reaches ?? new string[0]) if (!reachedThen.Contains(reach)) said.Append("\n[[").Append(GroupOf(reach.StartsWith(Contacts, StringComparison.Ordinal) ? "uses the network" : reach)).Append("]]new: ").Append(reach);
+            foreach (string reach in reachedThen) if (Array.IndexOf(now.Reaches ?? new string[0], reach) < 0) said.Append("\n[[").Append(GroupOf(reach.StartsWith(Contacts, StringComparison.Ordinal) ? "uses the network" : reach)).Append("]]gone: ").Append(reach);
+            return "Changed since you approved " + (version.Length == 0 ? "it" : "version " + version) + ":"
+                + (said.Length == 0 ? "\n- nothing her scan shows; only the file itself" : said.ToString())
+                + "\n- its fingerprint is different, as it is for any change\n\n";
         }
 
         private void Approve(string id, string hash)
@@ -634,10 +930,10 @@ namespace CapriDesktop
 
         private void WriteApproved(Dictionary<string, string> approved)
         {
-            List<string> lines = new List<string>();
-            foreach (KeyValuePair<string, string> entry in approved) lines.Add(entry.Key + " " + entry.Value);
             Directory.CreateDirectory(folder);
-            File.WriteAllLines(Path.Combine(folder, ApprovedFile), lines);
+            WriteApprovedAt(Path.Combine(folder, ApprovedFile), approved);
+            // In her settings.json's mods block, so it is written with her other settings (on close, before an update).
+            SettingsFile.Changed();
         }
 
 #if !CROSS
@@ -657,10 +953,9 @@ namespace CapriDesktop
             { DoorId, 1 }, { FrontId, 3 }
         };
 
-        // The mods she carries, laid into the mods folder and approved, since she vouches for them. Once per version: one
-        // somebody deleted stays deleted until a newer one ships, and a newer one they wrote themselves is left alone.
-        // The build a mod is compiled against, named in a compile failure: an older Capri run over a folder a newer one
-        // stocked fails every mod it carries, and without this the line never said which build it was.
+        // The mods she carries, laid in and approved, once per version: one they deleted stays deleted until a newer
+        // one ships, and one they wrote is left alone. The build a mod is compiled against is named in a compile
+        // failure.
         private static string Against()
         {
             try
@@ -708,9 +1003,8 @@ namespace CapriDesktop
                     }
                     ModFile carried = ReadCode(Words(bytes));
                     Dictionary<string, string> stocked = Pairs(Path.Combine(folder, StockedFile));
-                    // A door's sound and pop-up pictures, kept together in its own folder beside its other files. Laid
-                    // once, whether or not the door itself is new, and never over a file that is already there; copies
-                    // an earlier build laid in her shared sound and picture folders move across to the first door.
+                    // A door's sound and pop-up pictures in its own folder, laid once and never over an existing file.
+                    // Copies an earlier build laid in her shared folders move to the first door.
                     string artPrefix, packWas;
                     int pack, packHad;
                     if (!PackOf.TryGetValue(carried.Id, out pack)) pack = 1;
@@ -729,6 +1023,21 @@ namespace CapriDesktop
                     {
                         try { lay = Newer(carried.Version, ReadCode(Words(File.ReadAllBytes(home))).Version); }
                         catch (ModException) { lay = true; }
+                        // Same version, but neither this build's file nor on the checked list: an earlier build's copy
+                        // of a mod changed under the same number. Hers goes in, and the old one is kept in the mod's
+                        // data folder.
+                        if (!lay)
+                        {
+                            byte[] onDisk = File.ReadAllBytes(home);
+                            if (CheckedHash(onDisk) != CheckedHash(bytes) && !OnCheckedList(carried.Id, onDisk))
+                            {
+                                string kept = Path.Combine(folder, carried.Id + "-data");
+                                Directory.CreateDirectory(kept);
+                                File.WriteAllBytes(Path.Combine(kept, "replaced-" + carried.Version + ".txt"), onDisk);
+                                Brain.Log("mods", -1, carried.Id + " " + carried.Version + " on disk was not this build's and not on the checked list; kept as " + carried.Id + "-data\\replaced-" + carried.Version + ".txt.");
+                                lay = true;
+                            }
+                        }
                     }
                     // Already stocked at this version is skipped, unless the copy on disk is older: an older build that
                     // could not compile this one laid its own back, and this build takes its own copy back again.
@@ -737,9 +1046,9 @@ namespace CapriDesktop
                     if (lay)
                     {
                         File.WriteAllBytes(home, bytes);
-                        Dictionary<string, string> approved = Pairs(Path.Combine(folder, ApprovedFile));
+                        Dictionary<string, string> approved = ApprovedAt(Path.Combine(folder, ApprovedFile));
                         approved[carried.Id] = HashOf(bytes);
-                        WritePairs(Path.Combine(folder, ApprovedFile), approved);
+                        WriteApprovedAt(Path.Combine(folder, ApprovedFile), approved);
                         Brain.Log("mods", -1, "Laid in " + carried.Id + " " + carried.Version + ", approved.");
                     }
                     stocked[carried.Id] = carried.Version;
@@ -844,7 +1153,97 @@ namespace CapriDesktop
 #endif
 
 #if !CROSS
-        private static ICapriMod Compile(string text)
+        private static ICapriMod Compile(string text) { return Make(Build(text)); }
+
+        // Its one ICapriMod made, which runs the mod's own code for the first time: only after it is approved.
+        private static ICapriMod Make(Type mod)
+        {
+            try { return (ICapriMod)Activator.CreateInstance(mod); }
+            catch (Exception error) { throw new ModException("That mod failed while loading: " + Inner(error).Message); }
+        }
+
+        // What the compiled code really calls, whatever the source called it: each call in each method is read off its IL
+        // and named the way her list names it. Nothing of the mod runs to read it. Only adds to what the list already says.
+        private static readonly string[,] Calls =
+        {
+            { "System.Diagnostics.Process::Start", "starts programs" },
+            { "System.Reflection.Assembly::Load", Loads },
+            { "System.AppDomain::Load", Loads },
+            { "System.AppDomain::ExecuteAssembly", Loads },
+            { "System.Reflection.Emit.", Loads },
+            { "System.Convert::FromBase64", Packs },
+            { "System.IO.Compression.", Packs },
+            { "System.Security.Cryptography.ProtectedData::Unprotect", "unlocks saved secrets" },
+            { "System.Runtime.InteropServices.Marshal::", "calls Windows directly" },
+            { "System.Reflection.MethodBase::Invoke", "calls code by its name" },
+            { "System.Type::GetMethod", "calls code by its name" },
+            { "System.Type::InvokeMember", "calls code by its name" },
+            { "System.Type::GetType", "calls code by its name" },
+            { "System.Activator::CreateInstance", "calls code by its name" },
+            { "System.Net.", "uses the network" },
+            { "System.IO.File::Write", WritesFiles },
+            { "System.IO.File::Delete", WritesFiles },
+            { "System.IO.File::Move", WritesFiles },
+            { "System.IO.File::Copy", WritesFiles },
+            { "System.IO.File::Create", WritesFiles },
+            { "System.IO.File::Append", WritesFiles },
+            { "System.IO.File::Replace", WritesFiles },
+            { "System.IO.Directory::Delete", WritesFiles },
+            { "System.IO.Directory::Move", WritesFiles },
+            { "System.IO.FileInfo::Delete", WritesFiles },
+            { "System.IO.FileStream::.ctor", WritesFiles },
+            { "System.IO.StreamWriter::.ctor", WritesFiles },
+            { "Microsoft.Win32.Registry", "reaches outside her folder" },
+        };
+
+        internal static string[] CompiledCalls(Type built)
+        {
+            List<string> found = new List<string>();
+            Module module = built.Module;
+            foreach (Type type in built.Assembly.GetTypes())
+                foreach (MethodBase method in Members(type))
+                {
+                    byte[] il;
+                    try { MethodBody body = method.GetMethodBody(); if (body == null) continue; il = body.GetILAsByteArray(); }
+                    catch (Exception) { continue; }
+                    for (int at = 0; at + 4 < il.Length; at++)
+                    {
+                        // call, callvirt and newobj, each followed by a method token: a MethodDef, MemberRef or MethodSpec.
+                        if (il[at] != 0x28 && il[at] != 0x6F && il[at] != 0x73) continue;
+                        int token = BitConverter.ToInt32(il, at + 1), table = (token >> 24) & 0xFF;
+                        if (table != 0x06 && table != 0x0A && table != 0x2B) continue;
+                        MethodBase called;
+                        try { called = module.ResolveMethod(token, type.IsGenericType ? type.GetGenericArguments() : null, method.IsGenericMethod ? method.GetGenericArguments() : null); }
+                        catch (Exception) { continue; }
+                        if (called == null) continue;
+                        string name = called.DeclaringType == null ? called.Name : called.DeclaringType.FullName + "::" + called.Name;
+                        string label = (called.Attributes & MethodAttributes.PinvokeImpl) != 0 ? "calls Windows directly" : null;
+                        for (int each = 0; label == null && each < Calls.GetLength(0); each++)
+                            if (name.StartsWith(Calls[each, 0], StringComparison.Ordinal)) label = Calls[each, 1];
+                        if (label != null && !found.Contains(label)) found.Add(label);
+                        at += 4;
+                    }
+                }
+            return found.ToArray();
+        }
+
+        private static IEnumerable<MethodBase> Members(Type type)
+        {
+            const BindingFlags all = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+            foreach (MethodInfo method in type.GetMethods(all)) yield return method;
+            foreach (ConstructorInfo made in type.GetConstructors(all)) yield return made;
+        }
+
+        // What the compiled code calls, added to what the source said, before anyone is asked.
+        private static void Compiled(ModFile read, Type built)
+        {
+            List<string> said = new List<string>(read.Reaches ?? new string[0]);
+            foreach (string call in CompiledCalls(built))
+                if (!said.Contains(call) && !(call == "uses the network" && said.Exists(each => each.StartsWith(Contacts, StringComparison.Ordinal)))) said.Add(call);
+            read.Reaches = said.ToArray();
+        }
+
+        private static Type Build(string text)
         {
             CompilerResults built;
             List<Type> mods = new List<Type>();
@@ -874,8 +1273,7 @@ namespace CapriDesktop
             catch (IOException error) { throw new ModException("Couldn't compile that mod: " + error.Message); }
             catch (UnauthorizedAccessException error) { throw new ModException("Couldn't compile that mod: " + error.Message); }
             if (mods.Count != 1) throw new ModException("A code mod needs exactly one class that implements ICapriMod. That one has " + mods.Count + ".");
-            try { return (ICapriMod)Activator.CreateInstance(mods[0]); }
-            catch (Exception error) { throw new ModException("That mod failed while loading: " + Inner(error).Message); }
+            return mods[0];
         }
 #endif
 
@@ -887,6 +1285,7 @@ namespace CapriDesktop
             string missing = MissingRequired(id);
             if (missing != null) { Unload(made); throw new ModException("That mod needs " + missing + " installed and on first."); }
             ICapriHost host = HostFor(id);
+            ModGuard.Loaded(made.GetType().Assembly, id);
             try { made.Start(host); }
             catch (Exception error)
             {
@@ -927,14 +1326,21 @@ namespace CapriDesktop
 
         internal void StartCode(Action<Action> onWindow)
         {
-            List<Mod> wanted = All.FindAll(mod => mod.Code && mod.On);
+            ModGuard.Folder(folder);
+            List<Mod> wanted = ModGuard.NoneThisRun ? new List<Mod>() : All.FindAll(mod => mod.Code && mod.On && !StoppedHere(mod.File.Id));
             CodeSettled = wanted.Count == 0;
             if (wanted.Count == 0) return;
+            StartSome(wanted, onWindow);
+        }
+
+        private void StartSome(List<Mod> wanted, Action<Action> onWindow)
+        {
             ThreadPool.QueueUserWorkItem(delegate
             {
                 foreach (Mod mod in wanted)
                 {
                     Mod starting = mod;
+                    ModGuard.Starting(starting.File.Id);
                     try
                     {
                         byte[] bytes = File.ReadAllBytes(starting.Path);
@@ -949,9 +1355,9 @@ namespace CapriDesktop
                             if (own == null || HashOf(own) == HashOf(bytes)) throw;
                             File.WriteAllBytes(starting.Path, own);
                             string approvedPath = Path.Combine(Path.GetDirectoryName(starting.Path), ApprovedFile);
-                            Dictionary<string, string> approved = Pairs(approvedPath);
+                            Dictionary<string, string> approved = ApprovedAt(approvedPath);
                             approved[starting.File.Id] = HashOf(own);
-                            WritePairs(approvedPath, approved);
+                            WriteApprovedAt(approvedPath, approved);
                             starting.Hash = HashOf(own);
                             made = Compile(Words(own));
                             Brain.Log("mods", -1, starting.File.Id + " could not compile here (" + failed.Message + "), so this build's own copy was laid back in and started.");
@@ -960,17 +1366,78 @@ namespace CapriDesktop
                         {
                             try { StartOne(starting.File.Id, made); }
                             catch (ModException error) { StartFailed(starting, error); }
+                            ModGuard.Started(starting.File.Id);
                         });
                     }
                     catch (Exception error)
                     {
                         if (!(error is ModException || error is IOException || error is UnauthorizedAccessException)) throw;
                         Exception failed = error;
-                        onWindow(delegate { StartFailed(starting, failed); });
+                        onWindow(delegate { StartFailed(starting, failed); ModGuard.Started(starting.File.Id); });
                     }
                 }
                 onWindow(delegate { CodeSettled = true; });
             });
+        }
+
+        // At her start, before any code mod runs: the ones the guard names are switched off and kept off, with the reason
+        // on her Mods page. Returns her line about it, or null. With --no-mods every mod is off for this run, nothing saved.
+        internal string GuardAtStart()
+        {
+            ModGuard.Folder(folder);
+            if (LoadUntested) ModGuard.ForgetUnchecked();
+            if (ModGuard.NoneThisRun)
+            {
+                foreach (Mod mod in All) mod.On = false;
+                return "Every mod is off for this run, as asked. They come back as they were next time.";
+            }
+            List<string> named = new List<string>(), untested = UncheckedOffNow();
+            List<string> on = new List<string>();
+            foreach (Mod mod in All) if (mod.Code && mod.On) on.Add(mod.File.Id);
+            List<KeyValuePair<string, string>> off = ModGuard.AtStart(on);
+            foreach (KeyValuePair<string, string> one in off)
+            {
+                Mod mod = All.Find(each => each.File.Id == one.Key);
+                if (mod == null || !mod.On) continue;
+                SwitchOff(mod, one.Value);
+                named.Add((mod.File.Name ?? mod.File.Id) + " (" + one.Value + ")");
+            }
+            string said = untested.Count == 0 ? "" : "I switched off " + string.Join(", ", untested.ToArray()) + ": " + (untested.Count == 1 ? "it isn't" : "they aren't")
+                + " on Capri's checked list. Turn on Load untested mods in Mods to use " + (untested.Count == 1 ? "it" : "them") + ".";
+            if (named.Count > 0) said += (said.Length == 0 ? "" : " ") + "I switched off " + string.Join(", ", named.ToArray()) + ". Turn " + (named.Count == 1 ? "it" : "them") + " back on in Mods if you trust " + (named.Count == 1 ? "it" : "them") + ".";
+            return said.Length == 0 ? null : said;
+        }
+
+        // Code mods off the checked list stay off while untested mods are: switched off with the reason on their row,
+        // nothing of them deleted. At her start, and when the switch in Mods is turned off. Their names.
+        internal List<string> UncheckedOffNow()
+        {
+            List<string> untested = new List<string>();
+            if (LoadUntested) return untested;
+            foreach (Mod mod in All)
+            {
+                if (!mod.Code || !mod.On) continue;
+                byte[] file;
+                try { file = File.ReadAllBytes(mod.Path); }
+                catch (IOException) { continue; }
+                catch (UnauthorizedAccessException) { continue; }
+                if (OnCheckedList(mod.File.Id, file)) continue;
+                SwitchOff(mod, UncheckedOff);
+                untested.Add(mod.File.Name ?? mod.File.Id);
+            }
+            return untested;
+        }
+
+        // Off and kept off, with why, whatever it was doing. Her own carried mods too: one that breaks her is no different.
+        internal void SwitchOff(Mod mod, string reason)
+        {
+            if (mod.Code) StopOne(mod.File.Id);
+            HashSet<string> off = Off();
+            off.Add(mod.File.Id);
+            WriteOff(off);
+            mod.On = false;
+            ModGuard.Why(mod.File.Id, reason);
+            Brain.Log("mods", -1, (mod.File.Name ?? mod.File.Id) + " was switched off: " + reason + ".");
         }
 
         private void StartFailed(Mod mod, Exception error)
@@ -993,21 +1460,237 @@ namespace CapriDesktop
         }
     }
 
+    // Which mod broke her: a mod starting is written down first; a crash or freeze names the mod on the stack, and
+    // throwing hooks are counted. Next start those are switched off; with no mod named after repeated crashes, all code
+    // mods are.
+    internal static class ModGuard
+    {
+        internal const string GuardFile = "guard.txt", WhyFile = "switched-off.txt";
+        internal const int MostThrows = 5, Unexplained = 2;
+        internal const double ThrowSpell = 60;
+        private static string folder;
+        private static readonly Dictionary<Assembly, string> assemblies = new Dictionary<Assembly, string>();
+        private static readonly Dictionary<string, Queue<DateTime>> throws = new Dictionary<string, Queue<DateTime>>(StringComparer.Ordinal);
+        private static readonly object gate = new object();
+        private static volatile string stuckIn;
+        // "--no-mods": every mod off for this one run, nothing saved.
+        internal static volatile bool NoneThisRun;
+        // Her last run ended without her quitting.
+        internal static bool ClosedBadly;
+
+        internal static void Args(string[] args) { NoneThisRun = Array.IndexOf(args ?? new string[0], "--no-mods") >= 0; }
+
+        internal static void Folder(string mods) { folder = mods; }
+
+        internal static void Loaded(Assembly code, string id)
+        {
+            if (code == null || id == null) return;
+            lock (gate) assemblies[code] = id;
+        }
+
+        // The mod whose compiled code is in this stack, nearest first, or null.
+        internal static string In(System.Diagnostics.StackTrace trace)
+        {
+            if (trace == null) return null;
+            lock (gate)
+            {
+                if (assemblies.Count == 0) return null;
+                for (int i = 0; i < trace.FrameCount; i++)
+                {
+                    MethodBase method = trace.GetFrame(i).GetMethod();
+                    string id;
+                    if (method != null && method.DeclaringType != null && assemblies.TryGetValue(method.DeclaringType.Assembly, out id)) return id;
+                }
+            }
+            return null;
+        }
+
+        internal static string In(Exception error)
+        {
+            for (Exception at = error; at != null; at = at.InnerException)
+            {
+                string id = In(new System.Diagnostics.StackTrace(at, false));
+                if (id != null) return id;
+            }
+            return null;
+        }
+
+        // Called from her crash handler: the mod on the crash's stack, written down for her next start.
+        internal static void CrashedIn(Exception error, string what)
+        {
+            try { string id = In(error); if (id != null) Blame(id, "it crashed her: " + what); }
+            catch (Exception) { }
+        }
+
+        // Called while her window is stuck: the mod on the stuck stack, kept until she is ended for it.
+        internal static void Saw(System.Diagnostics.StackTrace trace) { try { stuckIn = In(trace); } catch (Exception) { } }
+
+        // Called when her watchdog ends or replaces her for a freeze.
+        internal static void BlameStuck() { string id = stuckIn; if (id != null) Blame(id, "it froze her"); }
+
+        internal static void Starting(string id) { Line("starting\t" + id); }
+
+        internal static void Started(string id) { Drop("starting\t" + id); }
+
+        internal static void Blame(string id, string reason)
+        {
+            Line("blame\t" + id + "\t" + (reason ?? "").Replace('\t', ' ').Replace('\r', ' ').Replace('\n', ' '));
+        }
+
+        // A hook threw. True once a mod has thrown MostThrows times inside ThrowSpell seconds; its count starts again.
+        internal static bool Threw(string id)
+        {
+            DateTime now = DateTime.UtcNow;
+            lock (gate)
+            {
+                Queue<DateTime> times;
+                if (!throws.TryGetValue(id, out times)) throws[id] = times = new Queue<DateTime>();
+                times.Enqueue(now);
+                while (times.Count > 0 && (now - times.Peek()).TotalSeconds > ThrowSpell) times.Dequeue();
+                if (times.Count < MostThrows) return false;
+                times.Clear();
+                return true;
+            }
+        }
+
+        // At her start: which code mods to switch off, and why. Clears what it read, and keeps count of closes nobody
+        // could be named for.
+        internal static List<KeyValuePair<string, string>> AtStart(ICollection<string> codeOn)
+        {
+            List<KeyValuePair<string, string>> off = new List<KeyValuePair<string, string>>();
+            if (folder == null) return off;
+            string path = Path.Combine(folder, GuardFile);
+            int unexplained = 0;
+            try
+            {
+                if (File.Exists(path))
+                    foreach (string line in File.ReadAllLines(path))
+                    {
+                        string[] parts = line.Split('\t');
+                        if (parts.Length >= 2 && parts[0] == "starting" && ClosedBadly) Add(off, parts[1], "she stopped while it was starting");
+                        else if (parts.Length >= 3 && parts[0] == "blame") Add(off, parts[1], parts[2]);
+                        else if (parts.Length >= 2 && parts[0] == "unexplained") int.TryParse(parts[1], out unexplained);
+                    }
+                bool any = false;
+                foreach (string id in codeOn) { any = true; break; }
+                if (ClosedBadly && off.Count == 0 && any)
+                {
+                    unexplained++;
+                    if (unexplained >= Unexplained)
+                    {
+                        foreach (string id in codeOn) Add(off, id, "she closed unexpectedly " + unexplained + " times in a row with mods on, and no one mod could be named");
+                        unexplained = 0;
+                    }
+                }
+                else if (!ClosedBadly) unexplained = 0;
+                Directory.CreateDirectory(folder);
+                File.WriteAllText(path, unexplained > 0 ? "unexplained\t" + unexplained + Environment.NewLine : "");
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            return off;
+        }
+
+        private static void Add(List<KeyValuePair<string, string>> off, string id, string reason)
+        {
+            if (string.IsNullOrEmpty(id) || off.Exists(each => each.Key == id)) return;
+            off.Add(new KeyValuePair<string, string>(id, reason));
+        }
+
+        // Why each mod was switched off, for her Mods page; a mod turned back on is taken off the list.
+        internal static void Why(string id, string reason)
+        {
+            Dictionary<string, string> why = Reasons();
+            why[id] = reason;
+            WriteReasons(why);
+        }
+
+        internal static void Forget(string id)
+        {
+            Dictionary<string, string> why = Reasons();
+            if (why.Remove(id)) WriteReasons(why);
+        }
+
+        // Load untested mods turned on: the mods switched off for it lose that reason. They stay off until turned on in their
+        // rows, each asking first.
+        internal static void ForgetUnchecked()
+        {
+            Dictionary<string, string> why = Reasons();
+            List<string> gone = new List<string>();
+            foreach (KeyValuePair<string, string> one in why) if (one.Value == Mods.UncheckedOff) gone.Add(one.Key);
+            foreach (string id in gone) why.Remove(id);
+            if (gone.Count > 0) WriteReasons(why);
+        }
+
+        internal static Dictionary<string, string> Reasons()
+        {
+            Dictionary<string, string> why = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (folder == null) return why;
+            try
+            {
+                string path = Path.Combine(folder, WhyFile);
+                if (File.Exists(path))
+                    foreach (string line in File.ReadAllLines(path))
+                    {
+                        int tab = line.IndexOf('\t');
+                        if (tab > 0) why[line.Substring(0, tab)] = line.Substring(tab + 1);
+                    }
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            return why;
+        }
+
+        private static void WriteReasons(Dictionary<string, string> why)
+        {
+            if (folder == null) return;
+            List<string> lines = new List<string>();
+            foreach (KeyValuePair<string, string> one in why) lines.Add(one.Key + "\t" + one.Value);
+            try { Directory.CreateDirectory(folder); File.WriteAllLines(Path.Combine(folder, WhyFile), lines.ToArray()); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+
+        private static void Line(string line)
+        {
+            if (folder == null) return;
+            try { lock (gate) { Directory.CreateDirectory(folder); File.AppendAllText(Path.Combine(folder, GuardFile), line + Environment.NewLine); } }
+            catch (Exception) { }
+        }
+
+        private static void Drop(string line)
+        {
+            if (folder == null) return;
+            try
+            {
+                lock (gate)
+                {
+                    string path = Path.Combine(folder, GuardFile);
+                    if (!File.Exists(path)) return;
+                    List<string> kept = new List<string>(File.ReadAllLines(path));
+                    if (kept.Remove(line)) File.WriteAllLines(path, kept.ToArray());
+                }
+            }
+            catch (Exception) { }
+        }
+    }
+
 #if !CROSS
     internal sealed partial class Companion
     {
         private const double LongestIntro = 25, IntroWait = 8;
         private IntroScreen introScreen;
 
+        // An intro is due on this start: she is held for it, unseen, rather than drawn first.
+        private bool IntroDue { get { return !testing && !instant && preferences.Motion && !(preferences.NoIntro && !ModList.DoorFirst) && !hidden && ModList.WantsIntro; } }
+
         private bool HoldForIntro(Action arrival, bool spawn)
         {
-            if (testing || instant || !preferences.Motion || preferences.NoIntro && !ModList.DoorFirst || hidden || !ModList.WantsIntro || FullScreenDisplay) return false;
+            if (!IntroDue || FullScreenDisplay) return false;
             if (spawn) SpawnInMiddle();
             introSpawn = spawn;
-            // Door 2's first showing waits for her mods to have started rather than for a clock: they start only
-            // once her window is up, and with her network failing at start that was 32 to 38 s on a test PC, so a
-            // fixed 20 s gave up first and the door everybody was meant to see once never played. DoorCap only
-            // stops mods that never settle from holding her for good.
+            // Door 2's first showing waits for her mods to start rather than a clock, so a slow network at start can't
+            // make it give up. DoorCap only stops mods that never settle from holding her for good.
             WaitForIntro(arrival, ModList.DoorFirst ? DoorCap : IntroWait);
             return true;
         }
@@ -1016,8 +1699,114 @@ namespace CapriDesktop
         // She was put in the middle for this start's intro, so she is put there again as it starts.
         private bool introSpawn;
 
-        // An intro is on screen, or her arrival is still being held for one.
-        internal bool IntroShowing(double now) { return introScreen != null || now < veilUntil; }
+        // An intro is showing, her arrival is held for one, or her start hasn't yet decided whether one plays, so
+        // nothing she says shows over it. Gives way after a minute and a half, and never holds her checks.
+        internal bool IntroShowing(double now) { return introScreen != null || now < veilUntil || (!introDecided && !testing && now < IntroDecidedBy); }
+
+        private bool introDecided;
+        private const double IntroDecidedBy = 90;
+
+        // An intro's own hold on her, apart from the veil her emotes use: a chair or a hand-off veils her too, and her
+        // answers come through those.
+        private bool introHeld;
+
+        // What holds her bubble, the words over her head and her typing box: an intro on screen or held for, or her start
+        // not yet knowing whether one plays. An emote's veil does not.
+        internal bool IntroPlaying(double now) { return introScreen != null || (introHeld && now < veilUntil) || (!introDecided && !testing && now < IntroDecidedBy); }
+
+        // An intro that ends as it starts and draws nothing, for checking where one is played.
+        private sealed class StubIntro : ICapriIntro
+        {
+            public double Seconds { get { return 0; } }
+            public void Begin(Bitmap desktop, Rectangle screen, Rectangle her) { }
+            public void Draw(Graphics graphics, Rectangle screen, Rectangle her, double at) { }
+        }
+
+        // A test run keeps her and any intro on its own screen, whatever screen was saved, and a save made before she
+        // is placed writes no place.
+        private void SmokeIntroScreen(List<string> checks)
+        {
+            Rectangle home = Displays.Home.Bounds, primary = Screen.PrimaryScreen.Bounds;
+            Point anchorWas = anchor, locationWas = Location;
+            bool hadPosition = preferences.HasPosition;
+            int xWas = preferences.X, yWas = preferences.Y;
+            try
+            {
+                Point elsewhere = home == primary ? new Point(home.X + 40, home.Y + 40) : new Point(primary.X + 40, primary.Y + 40);
+                preferences.HasPosition = true;
+                preferences.X = elsewhere.X;
+                preferences.Y = elsewhere.Y;
+                Point start = StartSpot();
+                if (!home.Contains(new Point(start.X + Width / 2, start.Y + Height / 2))) throw new Exception("A test run would start her off its own screen: " + start + " for " + home);
+                // Only her anchor is put elsewhere, never her window, so nothing of hers shows on their screen.
+                anchor = elsewhere;
+                IntroWasOn = Rectangle.Empty;
+                IntroLikeStart(new StubIntro());
+                if (IntroWasOn != home) throw new Exception("A test run's intro was given " + IntroWasOn + ", not its own screen " + home);
+                placed = false;
+                preferences.HasPosition = false;
+                SaveNow();
+                bool stamped = preferences.HasPosition;
+                placed = true;
+                if (stamped) throw new Exception("A save before she was placed wrote a place for her.");
+                SmokeRun.EscCheck(checks);
+                checks.Add("PASS a test run keeps her and any intro on its own screen: a place saved on another screen starts her on hers, an intro is given hers even with her last placed elsewhere, and a save before she is placed writes no place");
+            }
+            finally
+            {
+                placed = true;
+                preferences.HasPosition = hadPosition;
+                preferences.X = xWas;
+                preferences.Y = yWas;
+                anchor = anchorWas;
+                Location = locationWas;
+                SavePreferences();
+            }
+        }
+
+        // While an intro plays nothing of hers shows: a remark, words over her head and her typing box all wait, and come
+        // once it is over.
+        private void SmokeIntroGate(List<string> checks)
+        {
+            double veilWas = veilUntil;
+            bool heldWas = introHeld;
+            try
+            {
+                CloseTalk();
+                Say(null);
+                if (typer.Visible) typer.Hide();
+                // A chair's veil alone holds nothing back.
+                veilUntil = clock.Elapsed.TotalSeconds + 30;
+                introHeld = false;
+                Say("Through an emote.");
+                bool through = speech == "Through an emote.";
+                Say(null);
+                introHeld = true;
+                Remark("", "Held until the intro is over.", true);
+                Say("Over her head.");
+                OpenTyper();
+                bool held = through && talkState == TalkState.Off && speech == null && !typer.Visible;
+                veilUntil = -1;
+                introHeld = false;
+                DateTime until = DateTime.UtcNow.AddSeconds(6);
+                while (DateTime.UtcNow < until && (speech == null || talkState == TalkState.Off))
+                {
+                    System.Windows.Forms.Application.DoEvents();
+                    System.Threading.Thread.Sleep(50);
+                }
+                bool after = speech != null && talkState != TalkState.Off;
+                if (!held || !after)
+                    throw new Exception("Something of hers showed over an intro, or never came after it: held " + held + ", came after " + after + " (words " + (speech ?? "none") + ", bubble " + talkState + ")");
+                checks.Add("PASS while an intro plays nothing of hers shows: a remark, words over her head and her typing box wait, and the lines come once it is over; an emote's veil, like her chair, holds none of it");
+            }
+            finally
+            {
+                veilUntil = veilWas;
+                introHeld = heldWas;
+                Say(null);
+                CloseTalk();
+            }
+        }
 
         // The intro owns the screen and the speakers until it ends: what any other mod says, plays or cues meanwhile
         // waits, and goes through the moment it is over. The mod playing the intro is never held.
@@ -1051,20 +1840,23 @@ namespace CapriDesktop
             if (intro == null || introScreen != null) return;
             SpawnInMiddle();
             veilUntil = clock.Elapsed.TotalSeconds + LongestIntro + 5;
+            introHeld = true;
             Play(idle);
             RenderFrame();
-            RunIntro(intro, delegate { veilUntil = 0; drawnClip = null; });
+            RunIntro(intro, delegate { veilUntil = 0; introHeld = false; drawnClip = null; });
         }
 
         // Waits until the intro is running or her code mods have all started, and gives up after patience.
         private void WaitForIntro(Action arrival, double patience)
         {
             veilUntil = clock.Elapsed.TotalSeconds + patience + LongestIntro + 5;
+            introHeld = true;
             Play(idle);
             RenderFrame();
             Action release = delegate
             {
                 veilUntil = 0;
+                introHeld = false;
                 drawnClip = null;
                 arrival();
                 IntroOver();
@@ -1090,10 +1882,14 @@ namespace CapriDesktop
             wait.Start();
         }
 
+        // The screen the last intro was given, for the check that a test run keeps it on its own screen.
+        internal Rectangle IntroWasOn;
+
         private void RunIntro(ICapriIntro intro, Action done)
         {
             Rectangle body = BodyOnScreen(anchor, Body);
             Rectangle screen = Screen.FromRectangle(body).Bounds;
+            IntroWasOn = screen;
             body.Offset(-screen.X, -screen.Y);
             double length = LongestIntro;
             try { length = Math.Max(0, Math.Min(LongestIntro, intro.Seconds)); }
@@ -1129,9 +1925,17 @@ namespace CapriDesktop
             private readonly Action finished, skipped;
             private readonly System.Diagnostics.Stopwatch ran = new System.Diagnostics.Stopwatch();
             private readonly System.Windows.Forms.Timer beat = new System.Windows.Forms.Timer { Interval = 15 };
+            // Her frame timer starves while a window repaints nonstop, taking the Esc check and the end with it, so
+            // this runs on its own thread and ends the intro with a posted message, which goes ahead of repaints.
+            private System.Threading.Timer guard;
+            private int forced;
+            internal const double Overdue = 3;
+            internal static bool StarveForTest;
+            // Esc held on the keyboard; her checks hold it here instead of on the real key.
+            internal static Func<bool> EscHeld = delegate { return (Native.GetAsyncKeyState(0x1B) & 0x8000) != 0; };
             private Native.Surface surface;
             private Bitmap desktop;
-            private bool over;
+            private volatile bool over;
 
             internal IntroScreen(ICapriIntro mod, Rectangle screen, Rectangle body, double seconds, Action done, Action stopped)
             {
@@ -1177,8 +1981,31 @@ namespace CapriDesktop
                     return;
                 }
                 ran.Start();
+                guard = new System.Threading.Timer(Guard, null, 50, 50);
+                if (StarveForTest) return;
                 beat.Start();
                 Frame();
+            }
+
+            private void Guard(object state)
+            {
+                if (over || !IsHandleCreated) return;
+                bool escape = EscHeld();
+                if (!escape && ran.Elapsed.TotalSeconds < length + Overdue) return;
+                if (System.Threading.Interlocked.Exchange(ref forced, 1) != 0) return;
+                try { BeginInvoke((Action)delegate { Stop(escape); }); }
+                catch (InvalidOperationException) { }
+            }
+
+            // Esc, or the intro still up past its length: the intro closes its own windows, then this one goes.
+            private void Stop(bool escape)
+            {
+                if (over) return;
+                ICapriIntroStops stops = intro as ICapriIntroStops;
+                try { if (stops != null) stops.StopIntro(); } catch (Exception error) { Brain.Log("mod intro", -1, error.ToString()); }
+                if (escape) { if (skipped != null) skipped(); }
+                else Brain.Log("intro", -1, "The intro was still up " + Overdue + " s past its length, so it was closed.");
+                End();
             }
 
             private void Frame()
@@ -1188,14 +2015,7 @@ namespace CapriDesktop
                 if (at >= length) { End(); return; }
                 // Esc is the one way out of an intro: it plays over everything, takes no clicks, and the first one
                 // plays once. The intro closes its own windows, and her sound for it is cut.
-                if ((Native.GetAsyncKeyState(0x1B) & 0x8000) != 0)
-                {
-                    ICapriIntroStops stops = intro as ICapriIntroStops;
-                    try { if (stops != null) stops.StopIntro(); } catch (Exception error) { Brain.Log("mod intro", -1, error.ToString()); }
-                    if (skipped != null) skipped();
-                    End();
-                    return;
-                }
+                if (EscHeld()) { Stop(true); return; }
                 try
                 {
                     using (Graphics graphics = Graphics.FromImage(surface.Image))
@@ -1216,6 +2036,7 @@ namespace CapriDesktop
             {
                 if (over) return;
                 over = true;
+                if (guard != null) guard.Dispose();
                 beat.Dispose();
                 Close();
                 Dispose();
@@ -1225,10 +2046,11 @@ namespace CapriDesktop
             }
         }
 
-        private sealed class TestIntro : ICapriIntro
+        private sealed class TestIntro : ICapriIntro, ICapriIntroStops
         {
-            internal int Drawn;
+            internal int Drawn, Stopped;
             internal bool Throws;
+            public void StopIntro() { Stopped++; }
             public double Seconds { get { return 0.3; } }
             public void Begin(Bitmap desktop, Rectangle screen, Rectangle her) { }
             public void Draw(Graphics graphics, Rectangle screen, Rectangle her, double at)
@@ -1253,6 +2075,33 @@ namespace CapriDesktop
                 if (!until(() => ended) || stub.Drawn == 0 || introScreen != null) throw new Exception("An intro that " + (throws ? "throws" : "runs") + " did not end cleanly.");
             }
             checks.Add("PASS mod intros: an intro plays and ends, and one that throws still ends");
+            // Her frame timer starved, the way a window repainting without pause starves it: the guard still ends the
+            // intro once it is past its length, and the intro is told to close its own windows.
+            TestIntro starved = new TestIntro();
+            bool starvedEnded = false;
+            IntroScreen.StarveForTest = true;
+            System.Diagnostics.Stopwatch starvedFor = System.Diagnostics.Stopwatch.StartNew();
+            try { RunIntro(starved, delegate { starvedEnded = true; }); }
+            finally { IntroScreen.StarveForTest = false; }
+            if (!until(() => starvedEnded) || introScreen != null || starved.Stopped != 1 || starvedFor.Elapsed.TotalSeconds > starved.Seconds + IntroScreen.Overdue + 2)
+                throw new Exception("An intro whose frames stopped stayed up: ended " + starvedEnded + ", told to stop " + starved.Stopped + ", after " + starvedFor.Elapsed.TotalSeconds.ToString("0.0") + " s.");
+            checks.Add("PASS mod intros: one whose frame timer is starved still closes " + IntroScreen.Overdue + " s past its length, from a timer of its own, and is told to close its windows");
+            // Esc with the frame timer starved: the guard sees the key, stops it at once, and the intro closes its own windows.
+            TestIntro escaped = new TestIntro();
+            bool escapedEnded = false;
+            Func<bool> escWas = IntroScreen.EscHeld;
+            IntroScreen.StarveForTest = true;
+            System.Diagnostics.Stopwatch escapedFor = System.Diagnostics.Stopwatch.StartNew();
+            try
+            {
+                RunIntro(escaped, delegate { escapedEnded = true; });
+                IntroScreen.EscHeld = delegate { return true; };
+                until(() => escapedEnded);
+            }
+            finally { IntroScreen.StarveForTest = false; IntroScreen.EscHeld = escWas; }
+            if (!escapedEnded || introScreen != null || escaped.Stopped != 1 || escapedFor.Elapsed.TotalSeconds > 1.5)
+                throw new Exception("Esc did not stop an intro whose frames stopped: ended " + escapedEnded + ", told to stop " + escaped.Stopped + ", after " + escapedFor.Elapsed.TotalSeconds.ToString("0.0") + " s.");
+            checks.Add("PASS mod intros: Esc stops an intro at once even with its frame timer starved, and the intro is told to close its windows");
             bool arrived = false;
             Clip clipWas = clip;
             bool settledWas = ModList.CodeSettled;
@@ -1312,7 +2161,7 @@ namespace CapriDesktop
                         paper.DrawImage(frame, cell);
                         using (Font label = new Font("Consolas", 11f)) paper.DrawString(at.ToString("0.00") + "s", label, Brushes.Yellow, cell.X + 3, cell.Y + 3);
                     }
-                    // A frame caught by a garbage collection or a busy PC (83 ms once on 5 Nov) is drawn again, so only a frame
+                    // A frame caught by a garbage collection or a busy PC (83 ms once) is drawn again, so only a frame
                     // that's slow every time fails. Her frames depend only on the time, and each sound plays once.
                     if (worst > 60)
                     {
@@ -1431,12 +2280,543 @@ namespace CapriDesktop
                 checks.Add("PASS code mods: broken code is refused with its reason, and a mod that throws can't take her down");
                 CheckModHooks(checks, output);
                 CheckIntros(checks, output);
+                CheckModGuard(checks, sample, code);
             }
             finally
             {
                 mainframe.ModAsk = askWas;
                 mods.StopCode();
                 foreach (Mod left in mods.All.ToArray()) mods.Remove(left);
+            }
+        }
+
+        // The guard that switches off a mod that breaks her, and the checked list: with untested mods off, a mod off
+        // the list is refused or switched off with its reason; with them on it is asked about; a listed one never is.
+        private void CheckTrust(List<string> checks, Func<string, string, string> sample)
+        {
+            Mods mods = ModList;
+            bool untestedWas = Mods.UntestedForChecks;
+            Func<ModFile, string, bool> askWas = mainframe.ModAsk;
+            int asked = 0;
+            string lastAsked = null;
+            mainframe.ModAsk = delegate(ModFile read, string hash) { asked++; lastAsked = Mods.Consent(read, hash); return true; };
+            try
+            {
+                // Each listed fork's hash is its file's in the source this build came from, so a fork changed without a
+                // new hash on the list fails here. Read from the nearest source tree up from the exe.
+                string forks = null;
+                for (DirectoryInfo up = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory); up != null && forks == null; up = up.Parent)
+                    foreach (string here in new[] { Path.Combine(up.FullName, "mods", "forks"), Path.Combine(up.FullName, "CapriSourceFiles", "mods", "forks") })
+                        if (forks == null && Directory.Exists(here)) forks = here;
+                if (forks != null)
+                    foreach (string file in Directory.GetFiles(forks, "*" + Mods.CodeExtension))
+                    {
+                        byte[] bytes = File.ReadAllBytes(file);
+                        string forkId = Mods.ReadCode(Mods.Words(bytes)).Id;
+                        if (!Mods.OnCheckedList(forkId, bytes)) throw new Exception(Path.GetFileName(file) + " isn't on the checked list as it is in the source.");
+                        // The same file saved with the other line ends is the same file.
+                        List<byte> other = new List<byte>();
+                        for (int at = 0; at < bytes.Length; at++)
+                        {
+                            if (bytes[at] == 13 && at + 1 < bytes.Length && bytes[at + 1] == 10) continue;
+                            if (bytes[at] == 10) other.Add(13);
+                            other.Add(bytes[at]);
+                        }
+                        if (!Mods.OnCheckedList(forkId, other.ToArray())) throw new Exception(Path.GetFileName(file) + " with its line ends changed isn't on the checked list.");
+                    }
+                foreach (string door in new[] { Mods.DoorId, Mods.FrontId })
+                {
+                    byte[] bytes = Mods.CarriedBytes(door);
+                    if (bytes == null || !Mods.OnCheckedList(door, bytes) || Mods.OnCheckedList(door, Encoding.UTF8.GetBytes("other"))) throw new Exception(door + " isn't on the checked list as this build carries it, or another copy of it is.");
+                }
+                // Startup Intros and grammar are carried only to be checked against, at what this build carries. The
+                // public build leaves grammar out, as it was never published, so only one this exe carries is held to it.
+                List<string> carriedHere = new List<string>(typeof(Mods).Assembly.GetManifestResourceNames());
+                foreach (string carriedOnly in new[] { "startup-intros", "grammar" })
+                {
+                    string source = forks == null ? null : Path.Combine(Path.GetDirectoryName(forks), carriedOnly + Mods.CodeExtension);
+                    bool carries = carriedHere.Contains("Capri.Checked." + carriedOnly + Mods.CodeExtension);
+                    if (!carries && carriedOnly == "startup-intros") throw new Exception("This build doesn't carry Startup Intros to check against.");
+                    if (carries && source != null && File.Exists(source) && !Mods.OnCheckedList(carriedOnly, File.ReadAllBytes(source))) throw new Exception(carriedOnly + " as the source has it isn't on the checked list.");
+                    if (Mods.OnCheckedList(carriedOnly, Encoding.UTF8.GetBytes("other"))) throw new Exception("Another copy of " + carriedOnly + " is on the checked list.");
+                }
+
+                string body = "// capri-mod: 1\n// id: untested\n// name: Untested\n// version: 1.0.0\n// author: Smoke\n// description: A test.\n// permissions: chat\n"
+                    + "using System; using CapriDesktop;\npublic class M : ICapriMod { public void Start(ICapriHost h) { } public bool Heard(string w) { return false; } public void Stop() { } }";
+                Mods.UntestedForChecks = false;
+                if (Mods.Untested) throw new Exception("Untested mods start on; they should start off.");
+                if (mainframe.ImportMod(sample("untested" + Mods.CodeExtension, body)) || asked != 0 || mainframe.ModStatusText.IndexOf("checked list", StringComparison.Ordinal) < 0)
+                    throw new Exception("A mod off the checked list wasn't refused before asking: asked " + asked + ", " + mainframe.ModStatusText);
+
+                Mods.UntestedForChecks = true;
+                if (!mainframe.ImportMod(sample("untested" + Mods.CodeExtension, body)) || asked != 1 || lastAsked.IndexOf(Mods.UncheckedNote, StringComparison.Ordinal) < 0)
+                    throw new Exception("With untested mods on, a mod off the list wasn't asked about as untested: " + mainframe.ModStatusText);
+                Mod untested = mods.All.Find(each => each.File.Id == "untested");
+                if (untested == null || !untested.On) throw new Exception("The untested mod didn't run with untested mods on.");
+
+                Mods.UntestedForChecks = false;
+                string said = mods.GuardAtStart();
+                Dictionary<string, string> reasons = ModGuard.Reasons();
+                string reason;
+                if (untested.On || !reasons.TryGetValue("untested", out reason) || reason != Mods.UncheckedOff || !File.Exists(untested.Path) || said == null || said.IndexOf("checked list", StringComparison.Ordinal) < 0)
+                    throw new Exception("A mod off the list wasn't switched off at her start with its reason, or was deleted: " + (said ?? "nothing said"));
+                string row = mainframe.PictureMods(Path.Combine(Path.GetDirectoryName(sample("trust-out.txt", "")), "mods-switched-off.png"), "untested");
+                if (row == null || !row.StartsWith("SWITCHED OFF: " + Mods.UncheckedOff, StringComparison.Ordinal)) throw new Exception("The switched-off mod's row doesn't say why: " + (row ?? "no row"));
+                bool refused = false;
+                try { refused = !mods.Set(untested, true, mainframe.ModAsk); }
+                catch (ModException) { refused = true; }
+                if (!refused || untested.On) throw new Exception("A mod off the list was turned back on with untested mods off.");
+                CheckUntestedSwitch(checks, mods, untested, sample);
+                mods.Remove(untested);
+
+                // A listed one is never asked, with untested mods off: the speech glass fork, as the source has it, goes
+                // straight in, and comes out again.
+                string glass = forks == null ? null : Path.Combine(forks, "hologram-speech-glass" + Mods.CodeExtension);
+                int before = asked;
+                Mods.UntestedForChecks = false;
+                if (glass != null && File.Exists(glass) && mods.All.Find(each => each.File.Id == "hologram-speech-glass") == null)
+                {
+                    try
+                    {
+                        if (!mainframe.ImportMod(glass) || asked != before) throw new Exception("A mod on the checked list was asked about, or refused: " + mainframe.ModStatusText);
+                    }
+                    finally
+                    {
+                        Mod listed = mods.All.Find(each => each.File.Id == "hologram-speech-glass");
+                        if (listed != null) mods.Remove(listed);
+                    }
+                }
+                CheckChangedChecked(checks, mods, forks);
+                CheckOverridesKept(checks, sample);
+                checks.Add("PASS the checked list: the forks are on it as their source files are and the doors as this build carries them; with Load untested mods no, as sys.md ships, a mod off it is refused before anyone is asked, one already on is switched off at her start with its reason on its row and nothing deleted, and it can't be turned back on; with it yes the mod is asked about as not tested; a listed mod is never asked");
+            }
+            finally
+            {
+                Mods.UntestedForChecks = untestedWas;
+                mainframe.ModAsk = askWas;
+                Mod left = mods.All.Find(each => each.File.Id == "untested");
+                if (left != null) mods.Remove(left);
+            }
+        }
+
+        // Only her own windows change her security: overrides are signed in a gated folder, one changed outside her is
+        // dropped with a warning, a mod naming any of it is flagged High, and nothing a mod can switch is a security
+        // setting.
+        private void CheckOverridesKept(List<string> checks, Func<string, string, string> sample)
+        {
+            string settingsWas = PluginSettings.Settings;
+            Func<bool> sideWas = PluginSettings.SecondSide;
+            Action<string> tamperedWas = PluginSettings.Tampered;
+            string folder = Path.Combine(Path.GetDirectoryName(sample("overrides-out.txt", "")), "overrides-" + Guid.NewGuid().ToString("N").Substring(0, 6));
+            try
+            {
+                string warned = null;
+                PluginSettings.Tampered = delegate(string said) { warned = said; };
+                PluginSettings.SecondSide = delegate { return false; };
+                // One from before signing, in the side's own folder: moved in once, signed, and the old one gone.
+                string old = Path.Combine(folder, Personalities.PlainName, PluginSettings.FileName);
+                Directory.CreateDirectory(Path.GetDirectoryName(old));
+                File.WriteAllText(old, "tool\tsmoke-old\tread\t" + Security.Lockdown + "\tallow\r\n");
+                PluginSettings.Settings = folder;
+                PluginSettings.Reseal();
+                bool moved = PluginSettings.Of("smoke-old", PluginSettings.Tool, "read", Security.Lockdown) == PluginSettings.Allowed && !File.Exists(old)
+                    && File.ReadAllText(PluginSettings.Path).Contains(PluginSettings.Signed) && warned == null;
+                bool gated = true;
+                try { gated = McpSignIn.Gated(PluginSettings.Folder); }
+                catch (PlatformNotSupportedException) { }
+                // Her cog's write is kept and read back after the key is opened again from its sealed file.
+                PluginSettings.Set("smoke-kept", PluginSettings.Tool, "write", Security.Trusted, PluginSettings.Denied);
+                PluginSettings.Reseal();
+                bool kept = PluginSettings.Of("smoke-kept", PluginSettings.Tool, "write", Security.Trusted) == PluginSettings.Denied && warned == null;
+                // Changed outside her: a cross turned into a tick by hand is not used, every cell is back to /, and she says so.
+                string path = PluginSettings.Path;
+                File.WriteAllText(path, File.ReadAllText(path).Replace("\tdeny", "\tallow"));
+                File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddSeconds(5));
+                bool refused = PluginSettings.Of("smoke-kept", PluginSettings.Tool, "write", Security.Trusted) == PluginSettings.Follows
+                    && PluginSettings.Of("smoke-old", PluginSettings.Tool, "read", Security.Lockdown) == PluginSettings.Follows
+                    && warned != null && warned.IndexOf("changed outside Capri", StringComparison.Ordinal) >= 0;
+                // A file with its signing line taken off is refused the same way.
+                warned = null;
+                PluginSettings.Set("smoke-kept", PluginSettings.Tool, "write", Security.Trusted, PluginSettings.Denied);
+                List<string> rows = new List<string>(File.ReadAllLines(path));
+                rows.RemoveAll(row => row.StartsWith(PluginSettings.Signed, StringComparison.Ordinal));
+                File.WriteAllLines(path, rows.ToArray());
+                File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddSeconds(10));
+                bool unsigned = PluginSettings.Of("smoke-kept", PluginSettings.Tool, "write", Security.Trusted) == PluginSettings.Follows && warned != null;
+                // Her settings.json's copy: read out as text and put back signed, the import being their own choice.
+                warned = null;
+                PluginSettings.Set("smoke-kept", PluginSettings.Tool, "write", Security.Guarded, PluginSettings.Allowed);
+                string snapshot = PluginSettings.Snapshot();
+                PluginSettings.Set("smoke-kept", PluginSettings.Tool, "write", Security.Guarded, PluginSettings.Follows);
+                PluginSettings.Restore(snapshot);
+                PluginSettings.Reseal();
+                bool restored = PluginSettings.Of("smoke-kept", PluginSettings.Tool, "write", Security.Guarded) == PluginSettings.Allowed && warned == null;
+                // approved.txt: one from before signing is taken once and signed; after that a hand-made approval isn't used, every
+                // approval goes, and she warns them.
+                warned = null;
+                string approvals = Path.Combine(folder, "mods", "approved.txt");
+                Directory.CreateDirectory(Path.GetDirectoryName(approvals));
+                File.WriteAllText(approvals, "smoke-door abc\r\nplugin:smoke-plug def\r\n");
+                bool takenOnce = Mods.ApprovedAt(approvals).Count == 2 && File.ReadAllText(approvals).Contains(PluginSettings.Signed) && warned == null;
+                Dictionary<string, string> mine = Mods.ApprovedAt(approvals);
+                mine["smoke-new"] = "123";
+                Mods.WriteApprovedAt(approvals, mine);
+                bool signedKept = Mods.ApprovedAt(approvals).Count == 3 && warned == null;
+                File.WriteAllText(approvals, File.ReadAllText(approvals).Replace("smoke-door abc", "smoke-door fff"));
+                bool handRefused = Mods.ApprovedAt(approvals).Count == 0 && warned != null && warned.IndexOf("asks again", StringComparison.Ordinal) >= 0;
+                warned = null;
+                File.WriteAllText(approvals, "smoke-door abc\r\n");
+                bool unsignedRefused = Mods.ApprovedAt(approvals).Count == 0 && warned != null;
+                bool approvalsKept = takenOnce && signedKept && handRefused && unsignedRefused;
+                // Her mouse in a job: a press or key aimed at her Mainframe or a window it opened is refused before anything
+                // moves, and her other windows and everyone else's are left alone.
+                Func<Point, IntPtr> windowWas = Computer.WindowAt;
+                string handsOff, elsewhere;
+                bool mainframeKnown, ownedKnown;
+                try
+                {
+                    mainframeKnown = Computer.HerMainframe(mainframe.Handle) && !Computer.HerMainframe(IntPtr.Zero) && !Computer.HerMainframe(Handle);
+                    using (Form owned = new Form { ShowInTaskbar = false, Opacity = 0 })
+                    {
+                        owned.Show(mainframe);
+                        ownedKnown = Computer.HerMainframe(owned.Handle);
+                        owned.Close();
+                    }
+                    Computer.WindowAt = delegate { return mainframe.Handle; };
+                    handsOff = Computer.Member("left_click", new ToolArguments(), null);
+                    Computer.WindowAt = delegate { return IntPtr.Zero; };
+                    elsewhere = Computer.Member("cursor_position", new ToolArguments(), null);
+                }
+                finally { Computer.WindowAt = windowWas; }
+                bool mouseKept = mainframeKnown && ownedKnown && handsOff == Computer.HandsOff && elsewhere != Computer.HandsOff;
+                // A mod naming any of it is High before anyone says yes.
+                bool flagged = true;
+                foreach (string named in new[] { "File.WriteAllText(Path.Combine(root, \"keys\", \"overrides\", \"plain.txt\"), x);", "string f = \"keys/overrides/plain.txt\";", "PluginSettings.Set(a, b, c, 0, 1);",
+                    "File.AppendAllText(Path.Combine(mods, \"approved.txt\"), line);", "File.WriteAllText(\"plugins-on.txt\", id);", "Security.Pick(3);" })
+                    if (Array.IndexOf(Mods.Reaching(named), Mods.ChangesSecurity) < 0) flagged = false;
+                flagged = flagged && Mods.GroupOf(Mods.ChangesSecurity) == 'H';
+                // Nothing a mod's Settings.Turn or SetLevel, or her own set tool, can reach is a security setting.
+                List<string> reachable = new List<string>();
+                for (int i = 0; i < Hands.OwnSwitches.GetLength(0); i++) reachable.Add(Hands.OwnSwitches[i, 0]);
+                for (int i = 0; i < Hands.OwnLevels.GetLength(0); i++) reachable.Add(Hands.OwnLevels[i, 0]);
+                string reaching = reachable.Find(name => System.Text.RegularExpressions.Regex.IsMatch(name, "secur|lockdown|guarded|trusted|blackwall|override|untested|approv|plug|mods?_|_mods?$|permission", System.Text.RegularExpressions.RegexOptions.IgnoreCase));
+                if (!moved || !gated || !kept || !refused || !unsigned || !restored || !flagged || reaching != null || !approvalsKept || !mouseKept)
+                    throw new Exception("Her security overrides could be changed outside her windows: moved in once and signed " + moved + ", folder gated " + gated + ", kept " + kept + ", a changed file refused with a warning " + refused
+                        + ", an unsigned one refused " + unsigned + ", settings.json's copy put back signed " + restored + ", flagged High in a mod " + flagged + ", a security setting a mod or her set tool can switch " + (reaching ?? "none")
+                        + ", approved.txt: one from before taken once " + takenOnce + ", her own write kept " + signedKept + ", a hand edit refused " + handRefused + ", an unsigned one refused " + unsignedRefused
+                        + ", her mouse kept off her Mainframe " + mouseKept);
+                checks.Add("PASS only her own windows change her security: the overrides are kept signed in a gated folder, a file changed or unsigned outside her is not used and every cell goes back to / with a warning, one from before signing moves in once, approved.txt is signed the same way (one from before taken once, a hand edit or unsigned one leaves every mod and plug-in asking again, with a warning), her mouse in a job refuses her Mainframe and every window it opened, settings.json's copy goes back signed, a mod naming the overrides, approved.txt, plugins-on.txt or SECURITY is flagged High, and no setting a mod or her set tool can switch is a security one");
+            }
+            finally
+            {
+                PluginSettings.Settings = settingsWas;
+                PluginSettings.SecondSide = sideWas;
+                PluginSettings.Tampered = tamperedWas;
+                PluginSettings.Reseal();
+            }
+        }
+
+        // A listed mod approved here as another file asks before it runs, saying what changed: the list only stands in
+        // for a mod never approved here. No leaves it off; Yes runs it and records this file.
+        private void CheckChangedChecked(List<string> checks, Mods mods, string forks)
+        {
+            const string id = "hologram-speech-glass";
+            string glass = forks == null ? null : Path.Combine(forks, id + Mods.CodeExtension);
+            if (glass == null || !File.Exists(glass) || mods.All.Find(each => each.File.Id == id) != null)
+            {
+                checks.Add("SKIP a changed checked mod asks again: no speech glass fork in the source beside this build");
+                return;
+            }
+            Func<ModFile, string, bool> askWas = mainframe.ModAsk;
+            bool untestedWas = Mods.UntestedForChecks;
+            int asked = 0;
+            bool answer = false;
+            string question = "";
+            mainframe.ModAsk = delegate(ModFile read, string hash) { asked++; question = Mods.Consent(read, hash); return answer; };
+            Func<Mod> current = delegate { return mods.All.Find(each => each.File.Id == id); };
+            string approvedFile = Path.Combine(mods.Folder, "approved.txt"), other = new string('0', 64);
+            Func<string> recorded = delegate
+            {
+                foreach (string row in File.ReadAllLines(approvedFile)) if (row.StartsWith(id + " ", StringComparison.Ordinal)) return row.Substring(id.Length + 1);
+                return null;
+            };
+            try
+            {
+                Mods.UntestedForChecks = true;
+                if (!mainframe.ImportMod(glass) || asked != 0 || current() == null) throw new Exception("The checked fork wasn't taken in unasked: " + mainframe.ModStatusText);
+                string own = recorded();
+                // Off, then its record made another file's, the way an older approval of it reads.
+                Action approvedAsOther = delegate
+                {
+                    mods.Set(current(), false, mainframe.ModAsk);
+                    mods.ApproveForChecks(id, other);
+                    mods.Load();
+                    mainframe.FillMods();
+                };
+                List<string> wrong = new List<string>();
+                Action<string, bool, Action> route = delegate(string name, bool untested, Action turnOn)
+                {
+                    approvedAsOther();
+                    Mods.UntestedForChecks = untested;
+                    int was = asked;
+                    answer = false;
+                    question = "";
+                    turnOn();
+                    Mod now = current();
+                    bool once = asked == was + 1, says = question.IndexOf("Changed since you approved", StringComparison.Ordinal) >= 0;
+                    bool off = now != null && !now.On && now.Changed, kept = recorded() == other;
+                    if (!once || !says || !off || !kept) wrong.Add(name + ": asked " + (asked - was) + ", says what changed " + says + ", stayed off " + off + ", its record kept " + kept);
+                    Mods.UntestedForChecks = true;
+                };
+                route("row switch", true, delegate { mainframe.SwitchModForTest(id); });
+                route("row switch with untested mods off", false, delegate { mainframe.SwitchModForTest(id); });
+                route("import", true, delegate { mainframe.ImportMod(glass); });
+                route("update", true, delegate { mainframe.UpdateMod(glass, id); });
+                route("dropped into the folder", true, delegate { mainframe.DropForTest(current().Path); });
+                // Yes runs it and records this file.
+                approvedAsOther();
+                answer = true;
+                int before = asked;
+                bool yes = mainframe.SwitchModForTest(id) && asked == before + 1 && current().On && !current().Changed && recorded() == own;
+                if (wrong.Count > 0 || !yes)
+                    throw new Exception("A checked mod approved as another file ran without asking what changed: " + string.Join("; ", wrong.ToArray()) + (yes ? "" : "; Yes didn't run it and record it"));
+                checks.Add("PASS a mod on the checked list that was approved as another file asks before it runs, from the row switch with untested mods on or off, import, an update and a drop into the folder, saying what changed; No leaves it off with its record as it was, Yes runs it and records the file");
+            }
+            finally
+            {
+                Mods.UntestedForChecks = untestedWas;
+                mainframe.ModAsk = askWas;
+                Mod left = current();
+                if (left != null) mods.Remove(left);
+            }
+        }
+
+        // The switch in Mods > MODS keeps this in her settings: off switches off a running mod not on the checked list,
+        // with its reason. An older sys.md or settings.json hands its answer over once, from this side's file.
+        private void CheckUntestedSwitch(List<string> checks, Mods mods, Mod untested, Func<string, string, string> sample)
+        {
+            bool forChecksWas = Mods.UntestedForChecks, keptWas = preferences.LoadUntested;
+            try
+            {
+                Mods.UntestedForChecks = true;
+                if (!mods.Set(untested, true, mainframe.ModAsk) || !untested.On) throw new Exception("The untested mod didn't go back on with untested mods on.");
+                Mods.UntestedForChecks = false;
+                SetUntested(false);
+                mainframe.FillMods();
+                bool shownOff = !mainframe.UntestedOn;
+                mainframe.TurnUntested(true);
+                bool on = preferences.LoadUntested && Mods.Untested && untested.On && LoadPreferences().LoadUntested;
+                mainframe.TurnUntested(false);
+                Dictionary<string, string> reasons = ModGuard.Reasons();
+                string reason;
+                bool off = !preferences.LoadUntested && !Mods.Untested && !untested.On && reasons.TryGetValue("untested", out reason) && reason == Mods.UncheckedOff && File.Exists(untested.Path);
+                // On again: the reason leaves its row and the status line, and the mod stays off until it is turned on, asking.
+                string offStatus = mainframe.ModStatusText;
+                mainframe.TurnUntested(true);
+                string rowOn = mainframe.PictureMods(Path.Combine(Path.GetDirectoryName(sample("trust-out.txt", "")), "mods-untested-on.png"), "untested");
+                Func<bool> cleared = delegate { return !ModGuard.Reasons().ContainsKey("untested") && !untested.On; };
+                bool clickCleared = cleared() && rowOn != null && !rowOn.StartsWith("SWITCHED OFF", StringComparison.Ordinal)
+                    && offStatus.IndexOf("Switched off", StringComparison.Ordinal) >= 0 && mainframe.ModStatusText.IndexOf("Switched off", StringComparison.Ordinal) < 0;
+                mainframe.TurnUntested(false);
+                ModGuard.Why("untested", Mods.UncheckedOff);
+                // A sys.md from before, with its section saying yes and a line of theirs elsewhere.
+                string newline = Environment.NewLine, fresh = SysLines.Text;
+                bool shipsNone = fresh.IndexOf(SysLines.UntestedKey, StringComparison.OrdinalIgnoreCase) < 0 && fresh.IndexOf(SysLines.UntestedHeading, StringComparison.Ordinal) < 0;
+                string section = string.Join(newline, new[] { SysLines.UntestedHeading, "", ">! no: only code mods on Capri's checked list run. yes: any code mod can ask to run, yours too.",
+                    ">! A mod switched off for this says so in Mainframe > Mods. Nothing of it is deleted.", "", SysLines.UntestedKey + ":   yes", "", "" });
+                string old = fresh.Replace("## Never watch these", section + "## Never watch these");
+                string path = sample("sys-before-the-switch.md", old);
+                File.WriteAllText(path, old, new UTF8Encoding(false));
+                MoveUntested(path);
+                string after = File.ReadAllText(path);
+                bool moved = preferences.LoadUntested && Mods.Untested && after == fresh;
+                bool moveCleared = cleared();
+                ModGuard.Why("untested", Mods.UncheckedOff);
+                SetUntested(false);
+                MoveUntested(path);
+                bool once = !preferences.LoadUntested && File.ReadAllText(path) == fresh;
+                // A settings.json from before: this side's yes goes to her setting, the other side's is not used, nothing is
+                // listed as missing.
+                string folder = Path.Combine(Path.GetDirectoryName(path), "moved-" + Guid.NewGuid().ToString("N").Substring(0, 6));
+                string side = Brain.SenpaiOn ? Personalities.SenpaiName : Personalities.PlainName, other = Brain.SenpaiOn ? Personalities.PlainName : Personalities.SenpaiName;
+                foreach (string one in new[] { side, other })
+                {
+                    Directory.CreateDirectory(Path.Combine(folder, one));
+                    File.WriteAllText(Path.Combine(folder, one, SysLines.FileName), fresh, new UTF8Encoding(false));
+                }
+                SettingsFile.Dump dump = new SettingsFile.Dump { Files = new Dictionary<string, Dictionary<string, Dictionary<string, string>>>() };
+                dump.Files[other + "/" + SysLines.FileName] = new Dictionary<string, Dictionary<string, string>> { { "Untested mods", new Dictionary<string, string> { { SysLines.UntestedKey, "yes" } } } };
+                int set;
+                List<string> missing = SettingsFile.Import(dump, folder, out set);
+                bool otherIgnored = !preferences.LoadUntested;
+                dump.Files.Clear();
+                dump.Files[side + "/" + SysLines.FileName] = new Dictionary<string, Dictionary<string, string>> { { "Untested mods", new Dictionary<string, string> { { SysLines.UntestedKey, "yes" } } } };
+                missing.AddRange(SettingsFile.Import(dump, folder, out set));
+                bool routed = preferences.LoadUntested && Mods.Untested && File.ReadAllText(Path.Combine(folder, side, SysLines.FileName)) == fresh;
+                bool importCleared = cleared();
+                // On at her start, from a settings.json edited while she was closed.
+                ModGuard.Why("untested", Mods.UncheckedOff);
+                mods.GuardAtStart();
+                bool startCleared = cleared();
+                mainframe.FillMods();
+                if (!shownOff || !on || !off || !shipsNone || !moved || !once || !otherIgnored || !routed || missing.Count != 0)
+                    throw new Exception("Load untested mods didn't move from sys.md to its switch cleanly: shown off " + shownOff + ", on " + on + ", off " + off + ", fresh sys.md without it " + shipsNone
+                        + ", taken from an old sys.md " + moved + ", only once " + once + ", the other side's ignored " + otherIgnored + ", routed from settings.json " + routed + ", missing " + string.Join(", ", missing.ToArray()));
+                if (!clickCleared || !moveCleared || !importCleared || !startCleared)
+                    throw new Exception("Turning Load untested mods on left a mod marked switched off for it, or turned it on: by a click " + clickCleared + " (row " + (rowOn ?? "none") + ", status " + mainframe.ModStatusText
+                        + "), from an old sys.md " + moveCleared + ", from a settings.json " + importCleared + ", at her start " + startCleared);
+                List<string> shots = mainframe.PictureUntested(Path.GetDirectoryName(path));
+                checks.Add("PASS turning Load untested mods on, by a click, an old sys.md, a settings.json or at her start, takes the switched-off reason off each mod it was on, and the status line with it; the mods stay off until turned on, each asking");
+                checks.Add("PASS Load untested mods lives in her settings, not sys.md: the switch in Mods > MODS keeps it, off switches off a running mod off the checked list with its reason; a fresh sys.md has no line for it, an old one hands its answer over once and loses only that section, and a settings.json from before routes this side's answer to the switch (pictures: " + string.Join(", ", shots.ToArray()) + ")");
+            }
+            finally
+            {
+                Mods.UntestedForChecks = forChecksWas;
+                SetUntested(keptWas);
+                mainframe.FillMods();
+            }
+        }
+
+        private void CheckModGuard(List<string> checks, Func<string, string, string> sample, Func<string, string, string> code)
+        {
+            Mods mods = ModList;
+            ModGuard.Folder(mods.Folder);
+            bool badlyWas = ModGuard.ClosedBadly, noneWas = ModGuard.NoneThisRun;
+            string guard = Path.Combine(mods.Folder, ModGuard.GuardFile), why = Path.Combine(mods.Folder, ModGuard.WhyFile);
+            Func<Func<bool>, bool> until = delegate(Func<bool> done)
+            {
+                for (int i = 0; i < 120 && !done(); i++) { Application.DoEvents(); Thread.Sleep(25); }
+                return done();
+            };
+            try
+            {
+                for (int i = 1; i < ModGuard.MostThrows; i++) if (ModGuard.Threw("counted")) throw new Exception("A mod was counted out after " + i + " throws.");
+                if (!ModGuard.Threw("counted") || ModGuard.Threw("counted")) throw new Exception("A mod's throws were not counted out at " + ModGuard.MostThrows + ", or its count did not start again.");
+                checks.Add("PASS mod guard: a mod's hook throws are counted, it is counted out at " + ModGuard.MostThrows + " inside a minute, and its count starts again");
+
+                MethodInfo compile = typeof(Mods).GetMethod("Compile", BindingFlags.NonPublic | BindingFlags.Static);
+                ICapriMod crasher = (ICapriMod)compile.Invoke(null, new object[] { code("crasher", "public class M : ICapriMod { public void Start(ICapriHost h) { } public bool Heard(string w) { throw new InvalidOperationException(\"crash\"); } public void Stop() { } }") });
+                ModGuard.Loaded(crasher.GetType().Assembly, "crasher");
+                string named = null;
+                try { crasher.Heard("go"); }
+                catch (Exception thrown) { named = ModGuard.In(thrown); }
+                if (named != "crasher") throw new Exception("A crash in a mod's code didn't name the mod: " + (named ?? "nobody"));
+                checks.Add("PASS mod guard: a crash in a mod's code names that mod from the crash's own stack");
+
+                Func<bool, string[], List<KeyValuePair<string, string>>> start = delegate(bool badly, string[] on)
+                {
+                    ModGuard.ClosedBadly = badly;
+                    return ModGuard.AtStart(new List<string>(on));
+                };
+                File.WriteAllText(guard, "starting\talpha" + Environment.NewLine);
+                List<KeyValuePair<string, string>> off = start(true, new[] { "alpha", "beta" });
+                if (off.Count != 1 || off[0].Key != "alpha" || off[0].Value.IndexOf("starting", StringComparison.Ordinal) < 0) throw new Exception("A mod that was starting when she stopped wasn't named.");
+                File.WriteAllText(guard, "starting\talpha" + Environment.NewLine);
+                if (start(false, new[] { "alpha" }).Count != 0) throw new Exception("A mod was named after a clean close.");
+                File.WriteAllText(guard, "blame\tbeta\tit froze her" + Environment.NewLine);
+                off = start(true, new[] { "alpha", "beta" });
+                if (off.Count != 1 || off[0].Key != "beta" || off[0].Value != "it froze her") throw new Exception("A mod blamed for a freeze wasn't named with why.");
+                File.WriteAllText(guard, "");
+                if (start(true, new[] { "alpha", "beta" }).Count != 0) throw new Exception("One unexplained close switched mods off.");
+                off = start(true, new[] { "alpha", "beta" });
+                if (off.Count != 2) throw new Exception("Two unexplained closes in a row with mods on didn't switch them all off: " + off.Count);
+                start(true, new string[0]);
+                if (start(false, new[] { "alpha" }).Count != 0 || File.ReadAllText(guard).Length != 0) throw new Exception("A clean close didn't start the count again.");
+                checks.Add("PASS mod guard: after a bad close the mod that was starting or was blamed is named with why, a clean close names nobody, and " + ModGuard.Unexplained + " unexplained closes in a row with mods on switch them all off");
+
+                string body = "public class M : ICapriMod { public void Start(ICapriHost h) { } public bool Heard(string w) { return false; } public void Stop() { } }";
+                if (!mainframe.ImportMod(sample("guarded" + Mods.CodeExtension, code("guarded", body)))) throw new Exception("The guard's test mod was refused: " + mainframe.ModStatusText);
+                Mod guarded = mods.All.Find(each => each.File.Id == "guarded");
+                ModGuard.ClosedBadly = true;
+                File.WriteAllText(guard, "blame\tguarded\tit crashed her: InvalidOperationException: crash" + Environment.NewLine);
+                string said = mods.GuardAtStart();
+                if (said == null || said.IndexOf("guarded", StringComparison.Ordinal) < 0 || guarded.On || mods.Running != 0
+                    || !File.ReadAllText(Path.Combine(mods.Folder, "off.txt")).Contains("guarded") || !ModGuard.Reasons().ContainsKey("guarded"))
+                    throw new Exception("A mod that crashed her wasn't switched off and kept off with why: " + (said ?? "nothing said"));
+                if (!mods.Set(guarded, true, delegate { return true; }) || !guarded.On || ModGuard.Reasons().ContainsKey("guarded")) throw new Exception("Turning a switched-off mod back on kept its reason.");
+                checks.Add("PASS mod guard: at her start a mod that crashed her is switched off, kept off and named in her line with why, and turning it back on clears that");
+
+                mods.Remove(guarded);
+                string thrower = "public class M : ICapriMod { public void Start(ICapriHost h) { h.Timers.Every(0.05, delegate { throw new InvalidOperationException(\"again\"); }); } public bool Heard(string w) { return false; } public void Stop() { } }";
+                if (!mainframe.ImportMod(sample("thrower" + Mods.CodeExtension, code("thrower", thrower)))) throw new Exception("The throwing test mod was refused: " + mainframe.ModStatusText);
+                Mod throwing = mods.All.Find(each => each.File.Id == "thrower");
+                string why2;
+                if (!until(() => !throwing.On) || mods.Running != 0 || !ModGuard.Reasons().TryGetValue("thrower", out why2) || why2.IndexOf("failed", StringComparison.Ordinal) < 0)
+                    throw new Exception("A mod whose hooks kept throwing was not switched off.");
+                CloseTalk();
+                checks.Add("PASS mod guard: a mod whose hooks keep throwing is switched off with a note and stays off");
+                mods.Remove(throwing);
+
+                if (!mainframe.ImportMod(sample("guarded" + Mods.CodeExtension, code("guarded", body)))) throw new Exception("The guard's test mod was refused again.");
+                mods.StopCode();
+                string offWas = File.ReadAllText(Path.Combine(mods.Folder, "off.txt"));
+                ModGuard.NoneThisRun = true;
+                string none = mods.GuardAtStart();
+                bool started = false;
+                mods.StartCode(delegate(Action act) { act(); started = true; });
+                if (none == null || mods.Running != 0 || started || mods.All.Exists(each => each.On) || File.ReadAllText(Path.Combine(mods.Folder, "off.txt")) != offWas)
+                    throw new Exception("--no-mods started a mod or saved them off.");
+                checks.Add("PASS mod guard: --no-mods starts no mod and leaves what's saved as it was");
+                ModGuard.NoneThisRun = false;
+
+                // Stage 2: what was approved is kept beside approved.txt, and the question for a changed copy says what changed.
+                string first = "// capri-mod: 1\n// id: changing\n// name: changing\n// version: 1.2.0\n// author: Smoke\n// description: A test.\n// permissions: chat\n"
+                    + "using System; using CapriDesktop;\npublic class M : ICapriMod { public void Start(ICapriHost h) { } public bool Heard(string w) { return false; } public void Stop() { } }";
+                if (!mainframe.ImportMod(sample("changing" + Mods.CodeExtension, first))) throw new Exception("The changing test mod was refused: " + mainframe.ModStatusText);
+                string second = first.Replace("1.2.0", "1.3.0").Replace("// permissions: chat", "// permissions: chat, memory")
+                    .Replace("public void Stop() { }", "public void Stop() { } void Go() { new System.Net.WebClient().DownloadString(\"https://api.example-weather.com/v1/now\"); }");
+                ModFile changed = Mods.ReadCode(second);
+                string whatChanged = Mods.ChangedSince(changed), consent = Mods.Consent(changed, "abc");
+                if (whatChanged.IndexOf("Changed since you approved version 1.2.0", StringComparison.Ordinal) < 0 || whatChanged.IndexOf("new permission: memory", StringComparison.Ordinal) < 0
+                    || whatChanged.IndexOf("new: contacts api.example-weather.com", StringComparison.Ordinal) < 0 || consent.IndexOf(whatChanged, StringComparison.Ordinal) < 0
+                    || Mods.ChangedSince(Mods.ReadCode(first.Replace("id: changing", "id: neverseen"))).Length != 0)
+                    throw new Exception("The question for a changed mod didn't say what changed: " + whatChanged);
+                mods.Remove(mods.All.Find(each => each.File.Id == "changing"));
+                checks.Add("PASS stage 2: what a mod was when approved is kept beside approved.txt, and the question for a changed copy names the version it was approved at, each new permission, each new or gone thing her scan sees, and that the fingerprint changed");
+
+                // Stage 1: rows grouped by how serious, counted on the question's face, behind a handle that is open when anything is High.
+                string[,] table = { { "chat", "H" }, { "transcripts", "H" }, { "screen", "H" }, { "voice", "H" }, { "tools", "H" }, { "hotkeys", "H" }, { "memory", "M" }, { "brain", "M" }, { "personality", "M" },
+                    { "settings", "M" }, { "system", "M" }, { "skins", "L" }, { "music", "L" }, { "starts programs", "H" }, { "reads the keyboard", "H" }, { "calls Windows directly", "H" }, { "unlocks saved secrets", "H" }, { "reads plug-in sign-ins", "H" }, { Mods.ChangesSecurity, "H" },
+                    { "calls code by its name", "M" }, { Mods.WritesFiles, "M" }, { "reaches outside her folder", "M" }, { "uses the network", "M" }, { Mods.Pieces, "M" }, { "changes what her brain is told", "L" } };
+                for (int i = 0; i < table.GetLength(0); i++)
+                    if (Mods.GroupOf(table[i, 0]) != table[i, 1][0]) throw new Exception("\"" + table[i, 0] + "\" is in group " + Mods.GroupOf(table[i, 0]) + ", not " + table[i, 1]);
+                if (Mods.PermissionWords.GetLength(0) != 13) throw new Exception("A permission was added or taken away without a group in this check.");
+                Func<ModFile, string> counted = delegate(ModFile mod)
+                {
+                    string made = Mods.Grouped(mod);
+                    Dictionary<char, int> rows = new Dictionary<char, int>();
+                    Marked.Line face = null;
+                    foreach (Marked.Line line in Marked.Parse(made))
+                    {
+                        if (line.Kind == 'c') face = line;
+                        if ("HML".IndexOf(line.Kind) >= 0) { int had; rows[line.Kind] = rows.TryGetValue(line.Kind, out had) ? had + 1 : 1; }
+                    }
+                    string want = "", got = "";
+                    foreach (char group in "HML") { int n; if (rows.TryGetValue(group, out n)) want += group + " " + n + (group == 'H' ? " high" : group == 'M' ? " medium" : " low") + ";"; }
+                    if (face != null) foreach (KeyValuePair<char, string> count in face.Counts) got += count.Key + " " + count.Value + ";";
+                    if (want != got || Marked.Plain(made).IndexOf("[[", StringComparison.Ordinal) >= 0) throw new Exception("Her face counts don't match her rows (" + got + " for " + want + "): " + made);
+                    return made;
+                };
+                string grouped = counted(changed);
+                int network = 0;
+                for (int at = grouped.IndexOf("uses the network", StringComparison.Ordinal); at >= 0; at = grouped.IndexOf("uses the network", at + 1, StringComparison.Ordinal)) network++;
+                if (grouped.IndexOf("[[f+]]", StringComparison.Ordinal) < 0 || grouped.IndexOf("[[l]]", StringComparison.Ordinal) >= 0 || network != 1
+                    || grouped.IndexOf("[[M]]uses the network:\n    contacts api.example-weather.com\n        https://api.example-weather.com/v1/now", StringComparison.Ordinal) < 0 || grouped.IndexOf("(0)", StringComparison.Ordinal) >= 0)
+                    throw new Exception("A mod asking for chat wasn't open with its network once and its addresses under it: " + grouped);
+                string quiet = counted(new ModFile { Name = "Quiet Skin", Permissions = new[] { "skins" } });
+                if (quiet.IndexOf("[[f-]]", StringComparison.Ordinal) < 0 || quiet.IndexOf("[[h]]", StringComparison.Ordinal) >= 0 || quiet.IndexOf("What her scan could see in Quiet Skin's code (0): none of the things on her list.", StringComparison.Ordinal) < 0)
+                    throw new Exception("A mod with only a Low row wasn't shut, or didn't say her scan saw nothing: " + quiet);
+                string empty = counted(new ModFile { Name = "Empty" });
+                if (empty.IndexOf("[[", StringComparison.Ordinal) >= 0 || empty.IndexOf("It asks for none of Capri's permissions.", StringComparison.Ordinal) < 0 || empty.IndexOf("Empty's code (0)", StringComparison.Ordinal) < 0)
+                    throw new Exception("A mod with nothing to show didn't say so in plain words: " + empty);
+                CheckTrust(checks, sample);
+                checks.Add("PASS stage 1: every permission and scan row is in the group the preview table gives it; the counts on the question's face match the rows behind its handle, which is open when anything is High and shut otherwise; a group with nothing in it is left out; the network is one row with its sites and addresses under it; a scan that saw nothing says (0) and that it isn't proof; and the plain copy carries no markup");
+            }
+            finally
+            {
+                ModGuard.ClosedBadly = badlyWas;
+                ModGuard.NoneThisRun = noneWas;
+                try { File.Delete(guard); File.Delete(why); } catch (IOException) { }
             }
         }
     }

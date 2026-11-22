@@ -370,3 +370,19 @@ Eyes	Oczy
 Edges	Krawędzie
 Body	Ciało
 Reset colors	Zresetuj kolory
+Remember panel position	Zapamiętaj położenie panelu
+Custom colours	Własne kolory
+Custom colours...	Własne kolory...
+Choose	Wybierz
+Hers	Jej
+Quiet	Cisza
+Quiet min	Cisza min
+Quiet max	Cisza max
+Until I turn it off	Dopóki tego nie wyłączę
+Quiet on calls	Cisza podczas rozmów
+Quiet in videos	Cisza przy filmach
+Quiet until {n}:{n}	Cisza do {n}:{n}
+Quiet until turned off	Cisza do wyłączenia
+Export settings	Eksportuj ustawienia
+Import settings	Importuj ustawienia
+GENERAL SETTINGS	USTAWIENIA OGÓLNE

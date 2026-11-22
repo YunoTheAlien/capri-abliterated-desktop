@@ -4,24 +4,8 @@ using System.Drawing;
 
 namespace CapriDesktop
 {
-    // Every font she draws with, made once and kept.
-    //
-    // Her windows rebuild their fonts whenever anything rescales: a DPI change, her zoom, her text size. The
-    // old ones were freed when they were replaced, which is correct right up until something is still holding
-    // one. Windows answers a freed font with "Parameter is not valid." from inside GDI, which fails a
-    // measurement and kills her outright in a paint, and the places that hold one are the places nobody
-    // thinks about: a paint already on its way, a menu's own copy, a control measuring itself.
-    //
-    // Freeing them a layout later rather than immediately only moved the window the fault lives in: a full
-    // suite that rescales constantly made it more frequent, not less.
-    //
-    // So nothing is freed. A font is made once for a family, size, style and unit, and every caller that asks
-    // for that same one gets the same object for as long as she runs. Rescaling to a size she has drawn
-    // before costs nothing, and no font is ever pulled out from under anything.
-    //
-    // What this costs: one small GDI object per distinct size she has ever drawn at. Her zoom and text size
-    // have a handful of steps each, so the set is bounded by what the interface actually uses and settles
-    // within a few rescales. What it buys: the whole class of fault is gone rather than made rarer.
+    // Every font she draws with, made once per family, size, style and unit and never freed: a font freed while a paint
+    // or a menu still holds it fails inside GDI. The cost is one small GDI object per size she has drawn at.
     internal static class Fonts
     {
         private static readonly object gate = new object();
@@ -34,16 +18,8 @@ namespace CapriDesktop
 
         internal static int Count { get { lock (gate) return held.Count; } }
 
-        // A family she loaded herself and one Windows has can carry the same name, and then one key would
-        // hand out the wrong face: a narrow embedded one where a full system face was asked for, which draws
-        // every letter it has no glyph for as a box.
-        //
-        // So the name is not the key on its own, the name and the shape of the face are. Two faces that
-        // share a name do not share their em height and their ascent, and a face's own numbers do not
-        // change, so this stays the same answer for the same family however often it is asked. Keying on
-        // the family object instead would have been simpler and wrong: a Font makes its own, so the same
-        // family arrives as a different object each time, which would both miss the cache and hold every
-        // one of them for ever.
+        // A loaded family and a Windows one can share a name, so the key is the name plus the face's em height and
+        // ascent, which never change. Not the family object: a Font makes a new one each time.
         private static string Tag(FontFamily family)
         {
             try

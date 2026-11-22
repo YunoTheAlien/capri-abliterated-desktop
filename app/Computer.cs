@@ -147,9 +147,8 @@ namespace CapriDesktop
         internal const string OffScreen = "That isn't on the screenshot";
         internal const string NoClick = "Couldn't see where to click, so I stopped.";
         internal const string Exact = "\nTheir exact words: ";
-        // Blackwall mode (Bypass all permissions before 0.7.4) is now toggles 8 to 10 of her SECURITY window: with all three on
-        // she never stops to check, even to buy or delete, and nothing here refuses a step. True while they're all on. Setting
-        // it sets toggles 1 to 10 to Blackwall's or Trusted's, like the old switch, and leaves "Hey Capri" alone.
+        // Blackwall mode is toggles 8 to 10 of her SECURITY window: with all three on she never stops to check, even to
+        // buy or delete. True while all are on; setting it sets toggles 1 to 10 to Blackwall's or Trusted's.
         internal static bool Bypass
         {
             get { return Security.On(Security.Pays) && Security.On(Security.Unasked) && Security.On(Security.Secrets); }
@@ -204,7 +203,7 @@ namespace CapriDesktop
             "A video you open starts playing by itself, so once it's open don't click it again or press space or k, which pause it: check its time is moving, and press k only if it still hasn't started a few seconds later.\n" +
             "When the job is done, stop calling tools and say what you did in one plain sentence. If you're stuck, say what went wrong in one plain sentence.";
 
-        // What a game job's brain gets after her hands' prompt (Lachy, 30 Oct, after her live stream).
+        // What a game job's brain gets after her hands' prompt (Lachy).
         private const string PlayingChat = "\nIf a chat is on screen, like the game's or a stream's, read it but keep playing quietly. Only answer a message worth answering, like a question for Capri, a dare or a donation, in one short line as Capri herself, and answer each message once: old messages stay on screen after you answer, so skip any you already did. To answer in the game's own chat, open it first, like / in Roblox or t in Minecraft. Never comment on the game to chat between messages.";
         internal static string PlayingNow { get { return Streaming ? Playing.Replace(PlayingChat, "") : Playing; } }
 
@@ -251,7 +250,7 @@ namespace CapriDesktop
               "{\"type\":\"object\",\"properties\":{\"text\":{\"type\":\"string\",\"description\":\"What to type\"},\"target\":{\"type\":\"string\",\"description\":\"The box's number or exact name, if it isn't focused\"},\"enter\":{\"type\":\"string\",\"description\":\"Press Enter after\",\"enum\":[\"yes\",\"no\"]}},\"required\":[\"text\"]}" },
             { "press", "Press keys or a shortcut, like enter, tab, esc, ctrl+l, ctrl+t or alt+tab.",
               "{\"type\":\"object\",\"properties\":{\"keys\":{\"type\":\"string\",\"description\":\"The keys, joined with +\"}},\"required\":[\"keys\"]}" },
-            // Lachy, 30 Oct: "they wouldn't hold w and click space if they were stuck under a block".
+            // Holding keys while pressing another, so she can walk and jump out from under a block (Lachy).
             { "hold_and_press", "Hold keys down in a game while pressing another key, like holding w and pressing space to walk forward and jump out from under a block or up a ledge. Without press it just holds the keys, like w to walk.",
               "{\"type\":\"object\",\"properties\":{\"hold\":{\"type\":\"string\",\"description\":\"The key or keys to hold down, joined with +, like w or shift+w\"},\"press\":{\"type\":\"string\",\"description\":\"A key to press while they're held, like space\"},\"times\":{\"type\":\"string\",\"description\":\"How many times to press it, if not one every half second\"},\"seconds\":{\"type\":\"string\",\"description\":\"How long to hold, in seconds, if not 2\"}},\"required\":[\"hold\"]}" },
             { "scroll", "Scroll the window, or the numbered thing given.",
@@ -348,7 +347,7 @@ namespace CapriDesktop
         private static readonly Regex Channel = new Regex(@"^\W*subscribe(\s+to\s+.+)?\W*$", RegexOptions.IgnoreCase);
 
         // Only a close inside the page counts: a browser's tab and window buttons are called Close too, and pointing her at them
-        // closed YouTube under her (a tester, 30 Oct). A window with no page gets no hint.
+        // closed YouTube under her (a tester). A window with no page gets no hint.
         internal static Target PopupWayOut(Sight sight, string job)
         {
             if (sight == null || Promo.IsMatch(job ?? "") || !(sight.Words.Exists(word => Promo.IsMatch(word)) || sight.Targets.Exists(target => Promo.IsMatch(target.Name) && !Channel.IsMatch(target.Name)))) return null;
@@ -447,6 +446,20 @@ namespace CapriDesktop
         [DllImport("advapi32.dll", SetLastError = true)] private static extern bool GetTokenInformation(IntPtr token, int kind, out int value, int size, out int returned);
         [DllImport("user32.dll")] private static extern bool IsWindow(IntPtr window);
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetWindowText(IntPtr window, StringBuilder text, int size);
+
+        // One line in her log for each thing she does on their screen: what, and in which window by its title. What she types
+        // is counted, never written down; a key is named.
+        private static string Logged(string name, ToolArguments args, IntPtr window)
+        {
+            string title = "";
+            try { StringBuilder text = new StringBuilder(256); GetWindowText(window, text, text.Capacity); title = text.ToString(); }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            if (title.Length > 80) title = title.Substring(0, 80);
+            string what = name == "type" ? "typed " + (args.Text ?? "").Length + " characters"
+                : name == "key" || name == "hold_key" ? name.Replace('_', ' ') + " " + (args.Text ?? "")
+                : name.Replace('_', ' ');
+            return "Control: " + what + (title.Length > 0 ? " in " + Voice.Quote(title) : "") + ".";
+        }
 
         private static string Describe(int i, string ask) { return Specs[i, 0] == "ask" ? ask : Specs[i, 1]; }
 
@@ -836,7 +849,7 @@ namespace CapriDesktop
             bool enter = (tool == "type" && args.Enter == "yes") || (tool == "press" && Regex.IsMatch(args.Keys ?? "", @"^\s*enter\s*$", RegexOptions.IgnoreCase));
             if (!enter) return null;
             // A game's own Enter starts, skips and confirms things. Roblox has a chat, so its "Enter: skip tutorial" held her job to
-            // ask "Should I send that?" and it sounded like she'd given up (Lachy, 6 Nov). Straight after typing, Enter still sends
+            // ask "Should I send that?" and it sounded like she'd given up (Lachy). Straight after typing, Enter still sends
             // what she typed into the game's chat.
             if (tool == "press" && !typedFirst && GameWindow(sight)) return null;
             Target box = (tool == "type" ? target : null) ?? (sight == null ? null : sight.Targets.Find(found => found.Focused));
@@ -938,12 +951,9 @@ namespace CapriDesktop
 
         private const string OnlyAsk = "Only call ask before you buy or pay, or before a send, post, delete or install their job didn't mention; Capri stops you herself before any step that needs their OK.";
 
-        // Her hands' prompt follows SECURITY's toggles 8 to 10 like her ask tool: Type passwords and card numbers lets her type
-        // them, Pay, buy and book drops asking before paying, and with Things your request didn't mention on too she never
-        // stops to ask. Trusted gets the prompt as written and Blackwall gets Blackwall mode's.
-        // A stream (Lachy, 1 Nov: "I had way more viewers when she actually spoke to chat"): her job is the whole stream, she's
-        // shown the chat once a minute, and she answers it out loud with say beside her moves. Only Esc ends it. --stream
-        // keeps it on until she's restarted; asking for it in words keeps it on for that job.
+        // Her hands' prompt follows SECURITY's toggles 8 to 10 like her ask tool; Trusted gets it as written and
+        // Blackwall gets Blackwall's. A stream job (Lachy): she sees chat once a minute and answers aloud; only Esc
+        // ends it.
         internal static bool Streaming { get { return Hands.Streaming; } set { Hands.Streaming = value; } }
         internal static bool StreamingAlways;
         internal const string LockedIn = "That wasn't said: you're locked in on the game until your next chat time, so keep playing.";
@@ -1000,7 +1010,7 @@ namespace CapriDesktop
             return (GameTitles.IsMatch(text) || GameWords.IsMatch(text)) && !Watching.IsMatch(text) && !Messaging.IsMatch(text);
         }
 
-        // A job that means talking to people, like Mic Up or making friends in a game, puts her on the game's call (Lachy, 6 Nov).
+        // A job that means talking to people, like Mic Up or making friends in a game, puts her on the game's call (Lachy).
         private static readonly Regex Sociable = new Regex(@"\b(mic up|mike up|make (?:(?:some|a few|new|more) )*friends|meet (?:(?:some|new) )*people|(?:talk|chat|speak|sociali[sz]e|hang out|vibe|joke around) (?:to|with) (?:the )?(?:(?:other|some|new|random) )*(?:people|players|everyone|everybody|strangers|randoms|folks|kids|others|them|guys|lobby|server)|say (?:hi|hello) to (?:people|everyone|everybody|players|them)|(?:roast|rizz up|troll|prank|befriend|entertain) (?:the )?(?:(?:other|some|random) )*(?:people|players|everyone|everybody|strangers|randoms|kids)|voice ?chat)\b", RegexOptions.IgnoreCase);
 
         internal static bool Social(string job) { return Sociable.IsMatch(job ?? ""); }
@@ -1226,7 +1236,7 @@ namespace CapriDesktop
         internal static Rectangle Display()
         {
             OpenWindow picked = Pick();
-            return (picked == null ? System.Windows.Forms.Screen.PrimaryScreen : System.Windows.Forms.Screen.FromHandle(picked.Handle)).Bounds;
+            return (picked == null ? Displays.Home : System.Windows.Forms.Screen.FromHandle(picked.Handle)).Bounds;
         }
 
         private static Bitmap Copy(Rectangle area)
@@ -1254,8 +1264,8 @@ namespace CapriDesktop
         // One copy at a time: a game that's stopped answering holds it for ever.
         private static int copying;
 
-        // That window copied by itself, for the parts of the screen that are hers. Everything else stays as it is on screen, because that's what her clicks land on.
-        // Windows hands back black or an old frame for some games, so a copy that doesn't look like the screen is left out.
+        // That window copied by itself for the parts of the screen that are hers; the rest stays as on screen, since
+        // that is what her clicks land on. A copy that doesn't look like the screen, as some games give, is left out.
         internal static bool WindowOver(Bitmap shot, Rectangle area, IntPtr window, Rectangle[] hers)
         {
             Box client;
@@ -1516,10 +1526,28 @@ namespace CapriDesktop
         // that's running forward, so she has to be quit first.
         internal const string AsAdmin = "right-click me > Quit Capri, then right-click Capri's shortcut and pick Run as administrator";
         internal const string AdminWindow = "Couldn't click or type there: that window runs as administrator, and Windows keeps other apps' clicks and keys out of it. Do that part yourself, or " + AsAdmin + ".";
+        internal const string HandsOff = "Couldn't click or type there: that is her Mainframe, where SECURITY, mods, plug-ins and their cogs change only by their own hand. Ask them to do it themselves.";
 
-        // Windows quietly keeps an app's clicks and keys out of a window that runs as administrator unless the app does too, so
-        // her cursor moved and nothing clicked (ticket 81; Task Manager runs as administrator on most PCs). Only a token that
-        // says so counts: a game's anti-cheat can hide its token, and that game still takes her input.
+        // Her Mainframe and every window it opened (SECURITY, a cog, a mod's options): a job's clicks and keys never land there,
+        // so nothing she is told, by them, a mod or a plug-in's words, changes her security through her own mouse.
+        internal static Func<IntPtr, bool> HerMainframe = delegate(IntPtr window)
+        {
+            if (window == IntPtr.Zero) return false;
+            int id;
+            GetWindowThreadProcessId(window, out id);
+            if (id != Process.GetCurrentProcess().Id) return false;
+            try
+            {
+                System.Windows.Forms.Form form = System.Windows.Forms.Control.FromHandle(window) as System.Windows.Forms.Form;
+                for (int depth = 0; form != null && depth < 8; depth++, form = form.Owner)
+                    if (form is Mainframe) return true;
+            }
+            catch (InvalidOperationException) { return true; }
+            return false;
+        };
+
+        // Windows keeps an app's input out of an admin window unless the app is admin too, so her clicks did nothing.
+        // Only a token saying so counts, since anti-cheat can hide a game's token and that game still takes her input.
         internal static Func<IntPtr, bool> AboveHer = delegate(IntPtr window)
         {
             if (window == IntPtr.Zero) return false;
@@ -1551,14 +1579,31 @@ namespace CapriDesktop
 
         internal static Func<Point, IntPtr> WindowAt = delegate(Point at) { return Native.GetAncestor(Native.WindowFromPoint(new Native.Point(at.X, at.Y)), 2); };
 
+        private static readonly string[] Actions =
+        {
+            "left_click", "right_click", "middle_click", "double_click", "triple_click", "left_click_drag", "mouse_move",
+            "left_mouse_down", "left_mouse_up", "cursor_position", "scroll", "type", "key", "hold_key", "wait"
+        };
+
         internal static string Member(string name, ToolArguments args, Picture shown)
         {
             if (args == null) args = new ToolArguments();
             Point at;
             bool placed = Spot(args.Coordinate, shown, out at);
             if (args.Coordinate != null && !placed) return OffScreen + (shown == null ? "." : ", which is " + shown.Size.Width + "x" + shown.Size.Height + ".");
+            // An action that doesn't exist, or a scroll that can't go that way, says so before any window is looked at,
+            // so the Mainframe's guard never answers for a mistake that has nothing to do with it.
+            if (Array.IndexOf(Actions, name) < 0) return "There's no action called " + name + ".";
+            if (name == "scroll")
+            {
+                string wayAsked = (args.Way ?? "down").Trim().ToLowerInvariant();
+                if (wayAsked != "up" && wayAsked != "down" && wayAsked != "left" && wayAsked != "right") return "Couldn't scroll that way. Use up, down, left or right.";
+            }
             Sight sight = shown == null ? null : shown.Sight;
-            if (name != "cursor_position" && name != "wait" && AboveHer(name == "type" || name == "key" || name == "hold_key" ? sight == null ? Hands.Foreground() : sight.Window : WindowAt(placed ? at : HerAt))) return AdminWindow;
+            IntPtr aimed = name == "type" || name == "key" || name == "hold_key" ? sight == null ? Hands.Foreground() : sight.Window : WindowAt(placed ? at : HerAt);
+            if (name != "cursor_position" && name != "wait" && AboveHer(aimed)) return AdminWindow;
+            if (name != "cursor_position" && name != "wait" && HerMainframe(aimed)) { Brain.Log("hands", -1, "Refused a job's " + name + " on her Mainframe."); return HandsOff; }
+            if (name != "cursor_position" && name != "wait" && name != "screenshot") Brain.Log("hands", -1, Logged(name, args, aimed));
             string ready;
             short[] held;
             switch (name)
@@ -1868,9 +1913,8 @@ namespace CapriDesktop
         // Whether Esc is down right now. The smoke test presses it without a keyboard.
         internal static Func<bool> Escape = delegate { return (GetAsyncKeyState(0x1B) & 0x8000) != 0; };
 
-        // Her right-click or tray menu is open. Bringing the game to the front closes it, so mid-job Quit could never be clicked
-        // (Mika, 1 Nov: "QUITTING DOESNT WORK"). Her hands wait for it to close before their next step, up to a minute, unless
-        // they're on her UI thread, which the menu needs.
+        // Her right-click or tray menu is open, and bringing the game forward would close it (Mika). Her hands wait up
+        // to a minute for it to close, unless they're on her UI thread, which the menu needs.
         internal static volatile bool MenuOpen;
 
         internal static void MenuWait()
@@ -1919,6 +1963,7 @@ namespace CapriDesktop
             if (tool == "wait_for") return WaitFor(args.Text, args.Seconds);
             if (sight == null || sight.Window == IntPtr.Zero || !Alive(sight.Window)) return "There's no app window to use. Open one first.";
             if (AboveHer(sight.Window)) return AdminWindow;
+            if (HerMainframe(sight.Window)) { Brain.Log("hands", -1, "Refused a job's " + tool + " on her Mainframe."); return HandsOff; }
             Target target = sight.Find(args.Target);
             if (!string.IsNullOrEmpty(args.Target) && target == null) return "There's no number " + args.Target + " on screen.";
             if (tool == "hold_and_press")
@@ -2295,7 +2340,7 @@ namespace CapriDesktop
 
         private static void Wheel(int notches) { Mouse(0x0800, notches * 120); }
 
-        // Every press, scroll and key she sends holds her sign up (#106), and a button or key she's holding down keeps it up
+        // Every press, scroll and key she sends holds her sign up, and a button or key she's holding down keeps it up
         // until she lets go of it.
         private static void Mouse(int flags, int data)
         {
@@ -2473,10 +2518,8 @@ namespace CapriDesktop
         internal void Own(uint at) { ownAt = at; owned = true; }
     }
 
-    // How long since they last touched the PC, with a deadzone for a mouse that drifts by itself. Windows counts a
-    // one pixel twitch of the sensor as input, so a mouse on a shiny desk said they were back while the room was
-    // empty. Input with the cursor still where it rested is a key, a click or the wheel, and counts. Input with the
-    // cursor a few pixels off its rest is the desk, and does not. Past the deadzone it is a hand on the mouse.
+    // How long since they last touched the PC, ignoring a mouse that drifts by itself: input with the cursor a few
+    // pixels off its rest is the desk, not them. Keys, clicks, the wheel and real moves count.
     internal sealed class SteadyInput
     {
         private uint lastReal;
@@ -2542,7 +2585,7 @@ namespace CapriDesktop
         private bool Consults { get { Func<bool> advised = Advised; return Drive != null && advised != null && advised(); } }
 
         // A game job that stops short gets sent back three times at most: games hitch, and players get lost. A long stretch of play
-        // clears the count, because a run ending isn't the job ending (Lachy, 7 Nov: "play until they tell me to stop").
+        // clears the count, because a run ending isn't the job ending (Lachy).
         private bool Hitched(string words)
         {
             if (!Playing) return false;
@@ -2589,9 +2632,9 @@ namespace CapriDesktop
         internal Func<string, bool, bool> Says;
         private DateTime saidAt = DateTime.MinValue;
         private readonly HashSet<string> saidLines = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        // One sentence at most every 8 seconds, so her voice keeps up with her hands. A short cry like "AAAH!" keeps the sentence after it,
-        // and a now line skips the wait for a jump scare. It answers in words the brain can act on, so a line that wasn't said never
-        // reads as said.
+        // One sentence at most every 8 seconds, so her voice keeps up with her hands; a short cry keeps the sentence
+        // after it, and a now line skips the wait. The answer says whether it was said, so an unsaid line never reads
+        // as said.
         internal string Narrate(string words, bool now = false)
         {
             Func<string, bool, bool> say = Says;
@@ -2726,7 +2769,7 @@ namespace CapriDesktop
             bool theirs = !string.IsNullOrWhiteSpace(asked) && !string.Equals(asked.Trim(), task.Trim(), StringComparison.OrdinalIgnoreCase);
             Task = theirs ? task + Computer.Exact + Voice.Quote(asked.Trim()) : task;
             Words = theirs ? asked.Trim() : task.Trim();
-            // Their "play the real slim shady" doesn't make a job for a YouTube video a game (a tester, 30 Oct).
+            // Their "play the real slim shady" doesn't make a job for a YouTube video a game (a tester).
             Playing = Computer.Gaming(task) || (theirs && Computer.Gaming(asked) && !Computer.Media(task));
             Computer.KeysOk = false;
             told.UnionWith(Computer.Allowed(task));
@@ -2737,10 +2780,8 @@ namespace CapriDesktop
             if (Computer.Unsent(asked)) told.Remove("send");
         }
 
-        // Whether a step needs their OK first, by their SECURITY toggles. What their job asked for needs Send, post and delete
-        // what you asked for (or Pay, buy and book), what it didn't mention needs Things your request didn't mention as well,
-        // and keys like Win + R need that one. Their yes to a kind of step earlier in the job covers the rest of it. Trusted
-        // asks just where it always did: before paying, and before a send, delete or install the job didn't mention.
+        // Whether a step needs their OK first, by their SECURITY toggles: asked-for steps, unmentioned ones and keys
+        // like Win + R each have their own. A yes to a kind of step covers the rest of the job.
         internal bool Needs(string danger)
         {
             if (danger == null || approved.Contains(danger)) return false;
@@ -2753,7 +2794,7 @@ namespace CapriDesktop
 
         internal bool Asking { get { return Waiting.Key != null; } }
 
-        // Something they said mid-job (Lachy, 29 Oct: "she needs to actually listen to me mid way through"). Its next turn has
+        // Something they said mid-job (Lachy). Its next turn has
         // her do it, then carry on with the job.
         internal void Tell(string words)
         {
@@ -2803,7 +2844,7 @@ namespace CapriDesktop
         // A game job gets her game lines, what kind of game this is and what she's learned about it before.
         private string Briefed() { return Playing ? Computer.PlayingNow + (Consults ? Computer.Consulting : "") + GameNotes.Brief(Game()) : ""; }
 
-        // Her hands' prompt for a turn. A stream gets its note on every brain, so she talks to chat whichever one she's on (Lachy, 1 Nov).
+        // Her hands' prompt for a turn. A stream gets its note on every brain, so she talks to chat whichever one she's on (Lachy).
         internal string Prompted(string hands)
         {
             string skills = Hands.SkillNote(), read;
@@ -2893,7 +2934,7 @@ namespace CapriDesktop
         }
 
         // A brain error partway through, like a rate limit mid-drag, still lets go of the mouse and hands it back. Her sign is
-        // up for the whole job, on any brain, thinking included, and goes once she's handed their mouse back (#106).
+        // up for the whole job, on any brain, thinking included, and goes once she's handed their mouse back.
         internal string Run()
         {
             InControl.Begin();
@@ -3204,9 +3245,8 @@ namespace CapriDesktop
             }
         }
 
-        // The advisor hadn't answered when this reply stopped: the API paused the turn, or it ran out of room right there. Sent back
-        // as it is, the server carries on from where it stopped. Anything added after it is refused with a 400, which is what ended
-        // her overnight stream on 1 Nov.
+        // The advisor hadn't answered when this reply stopped, paused or out of room. Sent back as it is, the server
+        // carries on; anything added after it is refused with a 400.
         private static bool Hanging(ClaudeReply reply)
         {
             if (reply.StopReason == "pause_turn") return true;
@@ -3382,9 +3422,9 @@ namespace CapriDesktop
         {
             bool broken = false, hit = false;
             bool acts = Array.Exists(batch, call => call.Name != "read_skill" && call.Name != TreeEyes.Tool && call.Name != TreeEyes.PageTool && (call.Toolset != "computer" || (call.Name != "screenshot" && call.Name != "zoom")));
-            // The window in front changed while it was thinking, so its coordinates are stale. Keys that need no spot on the screen
-            // still go ahead, as they bring back the window in its screenshot first; next to anything else they don't, since a click
-            // that's skipped might be what the keys after it were for.
+            // The window in front changed while it thought, so its coordinates are stale. Keys needing no spot still
+            // go, bringing the window back first; keys next to anything else don't, since a skipped click may be what
+            // they were for.
             bool moved = !resumed && next == 0 && acts && looked != IntPtr.Zero && Computer.Front() != looked
                 && !Array.TrueForAll(batch, call => Computer.KeysOnly(call.Name, call.Input) || call.Toolset == "computer" && (call.Name == "screenshot" || call.Name == "zoom"));
             for (; next < batch.Length; next++, resumed = false)
@@ -3689,7 +3729,7 @@ namespace CapriDesktop
         }
 
         // What she typed waits in its box until her next step that does something else. An Enter straight after it sends it, so
-        // in a game that's the one Enter that can ask first (Lachy, 6 Nov).
+        // in a game that's the one Enter that can ask first (Lachy).
         private void Track(string tool, ToolArguments args, bool failed)
         {
             if (tool == "type")

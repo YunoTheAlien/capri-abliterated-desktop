@@ -6,15 +6,8 @@ using System.Windows.Forms;
 
 namespace CapriDesktop
 {
-    // What she is writing down, while she writes it.
-    //
-    // Her faults go to errors.txt and the lines she builds go to lines-log.txt, and both are read after the
-    // fact, by somebody who already noticed something was wrong and went looking. A window that shows them
-    // arriving turns that round: the odd line is on screen the moment she says it, with who she was at the
-    // time beside it.
-    //
-    // Output only, deliberately. There is nothing to type into it and nothing it can do to her: it opens the
-    // files she is already writing, reads what has been added since it last looked, and shows it.
+    // What she is writing down as she writes it: errors.txt and lines-log.txt shown as they grow, with who she was
+    // beside each line. Output only; nothing in it can act on her.
     internal sealed class LogSheet : Form, LookWindow, IMessageFilter
     {
         // The wheel goes to whatever has focus, so a pointer resting on the log without a click first scrolled
@@ -65,6 +58,7 @@ namespace CapriDesktop
             ShowInTaskbar = false;
             TopMost = true;
             FormBorderStyle = FormBorderStyle.None;
+            Neon.NeverFullScreen(this);
             StartPosition = FormStartPosition.CenterScreen;
             AutoScaleMode = AutoScaleMode.None;
             BackColor = Neon.Ground;
@@ -244,9 +238,8 @@ namespace CapriDesktop
 
         private void Add(string said)
         {
-            // Held, new lines wait rather than going in. Putting them in means replacing the box's text, and
-            // that sends the view back to the top: every line she wrote yanked the view away from where it
-            // had been scrolled to, which is what made the log read as one that could not be scrolled.
+            // Held, new lines wait: putting them in replaces the box's text, which would throw the view back to the top
+            // on every line.
             if (!following)
             {
                 pending.Append(said);

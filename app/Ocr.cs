@@ -176,7 +176,7 @@ namespace CapriDesktop
         // A gap this many word heights wide ends a label.
         private const double LabelGap = 1.2;
 
-        // The reader calls a whole row of a menu one line, so a row splits at its wide gaps and each button gets its own place (SoChi, 1 Nov).
+        // The reader calls a whole row of a menu one line, so a row splits at its wide gaps and each button gets its own place (SoChi).
         internal static List<ReadWord> Labels(string line, List<ReadWord> words)
         {
             List<int> heights = words.ConvertAll(read => read.Box.Height);

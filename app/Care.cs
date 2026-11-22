@@ -190,108 +190,21 @@ namespace CapriDesktop
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(path));
                     using (StreamWriter writer = new StreamWriter(new FileStream(path, FileMode.CreateNew, FileAccess.Write))) writer.Write(Defaults);
+                    Renew.Wrote(path, Defaults);
                 }
                 else
                 {
+                    // A file holding none of her check-ins gets them below what it has. One that has them is theirs as it is
+                    // until a new version writes it new (Renew).
                     string existing = File.ReadAllText(path);
                     bool written = existing.IndexOf("# Capri's check-ins", StringComparison.Ordinal) >= 0;
                     foreach (string heading in Care.Names) if (existing.IndexOf("## " + heading, StringComparison.Ordinal) >= 0) written = true;
                     if (!written) File.AppendAllText(path, "\n\n" + Defaults);
-                    else TopUp(existing);
                 }
                 return true;
             }
             catch (IOException) { return false; }
             catch (UnauthorizedAccessException) { return false; }
-        }
-
-        // A check-in she ships that their file has not got. This used to do nothing at all: the file was written
-        // once and never touched again, so a whole new kind of check-in, or a line added to one, reached new
-        // installs and nobody else. Same fault her packs, her moods, lines.md and sys.md each had.
-        //
-        // A missing section goes on the end. A section they already have keeps every line in it and gains the ones
-        // she ships that are not there, matched exactly, so a line they reworded stays reworded.
-        private void TopUp(string existing)
-        {
-            try
-            {
-                List<string> made = new List<string>(existing.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'));
-                string adding = "";
-                string under = null;
-                List<string> lines = new List<string>();
-                List<KeyValuePair<string, List<string>>> stock = new List<KeyValuePair<string, List<string>>>();
-                foreach (string raw in Defaults.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
-                {
-                    string one = raw.Trim();
-                    if (one.StartsWith("##", StringComparison.Ordinal))
-                    {
-                        if (under != null) stock.Add(new KeyValuePair<string, List<string>>(under, lines));
-                        under = one.TrimStart('#').Trim();
-                        lines = new List<string>();
-                        continue;
-                    }
-                    if (under == null || one.Length == 0 || one.StartsWith(">", StringComparison.Ordinal)) continue;
-                    lines.Add(one);
-                }
-                if (under != null) stock.Add(new KeyValuePair<string, List<string>>(under, lines));
-
-                foreach (KeyValuePair<string, List<string>> section in stock)
-                {
-                    int from = -1, to = made.Count;
-                    for (int row = 0; row < made.Count; row++)
-                    {
-                        string one = made[row].Trim();
-                        if (!one.StartsWith("#", StringComparison.Ordinal)) continue;
-                        if (from < 0)
-                        {
-                            if (string.Equals(one.TrimStart('#').Trim(), section.Key, StringComparison.OrdinalIgnoreCase)) from = row + 1;
-                            continue;
-                        }
-                        to = row;
-                        break;
-                    }
-                    if (from < 0)
-                    {
-                        adding += "\n## " + section.Key + "\n";
-                        foreach (string line in section.Value) adding += line + "\n";
-                        continue;
-                    }
-                    int after = from;
-                    List<string> theirs = new List<string>();
-                    for (int row = from; row < to; row++)
-                    {
-                        string one = made[row].Trim();
-                        if (one.Length > 0) after = row + 1;
-                        if (one.Length == 0 || one.StartsWith(">", StringComparison.Ordinal)) continue;
-                        theirs.Add(one);
-                    }
-                    List<string> missing = new List<string>();
-                    foreach (string line in section.Value)
-                    {
-                        bool known = false;
-                        foreach (string mine in theirs) if (string.Equals(mine, line, StringComparison.OrdinalIgnoreCase)) { known = true; break; }
-                        if (!known) missing.Add(line);
-                    }
-                    if (missing.Count == 0) continue;
-                    made.InsertRange(after, missing);
-                }
-
-                // The line at the top promised that deleting a bullet switched it off, which the top up above
-                // undoes on her next start. Swapped wherever the old wording is, or the file keeps the lie.
-                for (int row = 0; row < made.Count; row++)
-                    if (made[row].IndexOf("Remove a bullet to stop using it", StringComparison.Ordinal) >= 0) made[row] = Preamble;
-
-                string body = string.Join(Environment.NewLine, made.ToArray());
-                if (adding.Length > 0)
-                {
-                    if (!body.EndsWith("\n")) body += Environment.NewLine;
-                    body += adding.Replace("\n", Environment.NewLine);
-                }
-                if (body == existing) return;
-                File.WriteAllText(path, body, new System.Text.UTF8Encoding(false));
-            }
-            catch (IOException) { }
-            catch (UnauthorizedAccessException) { }
         }
 
         internal string Pick(CareKind kind)

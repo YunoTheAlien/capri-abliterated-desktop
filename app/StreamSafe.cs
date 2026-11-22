@@ -8,18 +8,9 @@ using System.Text;
 
 namespace CapriDesktop
 {
-    // Stand-in desktop icons and windows, for when she is on camera.
-    //
-    // Her rampage picks up the real desktop: real icon pictures and, worse, the real names under them. On a stream that
-    // is a folder of someone's full name, a client's name, a save file that says where they work. Same for the fake
-    // windows she throws about, which would otherwise carry real titles.
-    //
-    // So with stream-safe on, nothing from the desktop is drawn. Every icon becomes a generic one of ours, with a
-    // generic label, and the order is fixed so the desktop's real arrangement is not readable from the stand-ins either.
-    //
-    // The pictures are drawn here rather than shipped or downloaded: no licensing to pass on, nothing fetched, and they
-    // come out identical on any machine. They are written once into her own assets folder as PNGs so they can be seen,
-    // swapped or replaced - drop your own PNG over one and she uses yours.
+    // Stand-in desktop icons and windows for when she is on camera: with stream-safe on, nothing from the desktop is
+    // drawn, only generic icons and labels in a fixed order. Drawn here and saved as PNGs in her assets; drop your own
+    // over one.
     internal static class StreamSafe
     {
         internal static volatile bool On;

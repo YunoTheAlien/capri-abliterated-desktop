@@ -21,10 +21,8 @@ namespace CapriDesktop
         internal float Size = 1f, Speed = 1f;
         internal byte Solid = 255;
         internal bool EveryScreen = true;
-        // How hard it is allowed to flash. Nought holds everything steady, which is what reduced motion gets
-        // and what anyone who finds flashing difficult should have. One is as fast as it goes, and even then
-        // no hexagon crosses three flashes a second: that is the line past which flashing can hurt people,
-        // and a screensaver is exactly the thing somebody walks back in on.
+        // How hard it may flash: 0 holds steady (what reduced motion gets), 1 is fastest, and no hexagon ever passes
+        // three flashes a second.
         internal float Flash = 1f;
         internal string Sound;
         internal int Volume = 20;
@@ -75,22 +73,8 @@ namespace CapriDesktop
         }
     }
 
-    // Her screensaver, while the PC is left alone.
-    //
-    // Terminals is what it does unless they say otherwise: little windows open one after another across the
-    // screen, each one writing its own output, until there is no room left and it starts over. It is meant to
-    // look like a lot is going on, and none of it is: every line is built out of shapes and made-up names, so
-    // there is nothing to read and nothing of theirs can end up on screen.
-    //
-    // Hexes is a red alert panel: hexagons fill the screen a row at a time and flash, with a warning band
-    // over them. Code is the terminal lines without the windows, written in columns, and Rain is characters
-    // falling. The last two are there because some people want one plain thing rather than a busy screen.
-    //
-    // Off unless sys.md says otherwise, since it covers the screen, and everything about how it looks is in
-    // that file too, read once as it opens.
-    //
-    // Spacebar ends it, and Escape. A mouse move does not, which is how a screensaver normally works and was
-    // wrong here: a leant-on desk took it down a second after it arrived. See Woken, and the plate it draws.
+    // Her screensaver while the PC is left alone: Terminals (made-up output, nothing of theirs), Hexes, Code or Rain.
+    // Off unless sys.md turns it on, styled from that file. Space or Escape ends it, not the mouse; see Woken.
     internal sealed class Screensaver : Overlay
     {
         private const double TypedPerSecond = 46, HoldFullSeconds = 5;
@@ -132,9 +116,8 @@ namespace CapriDesktop
         private bool drawn;
         private Point woke;
 
-        // What holds it back and takes it down, which is never the idle clock: time with the PC left alone is
-        // what puts it up, and a deliberate move is what takes it away. Watching idle time for both meant the
-        // smallest nudge of a mouse killed it a second after it appeared.
+        // What holds it back and takes it down, never the idle clock: time left alone puts it up and only a deliberate
+        // key takes it away.
         internal Func<bool> Over = delegate { return false; };
 
         // Nothing dismisses it for this long after it opens. The click that asks for it from her menu is an
@@ -147,19 +130,16 @@ namespace CapriDesktop
         internal const string Way = "[ Spacebar to exit ]";
         internal const string AnyWay = "[ Any key to exit ]";
 
-        // A prank takes any key rather than the spacebar, and still never the mouse. It arrives without being
-        // asked for, so anything typed should end it, but a prank that dies on a nudge of the desk is no prank
-        // at all, which is the same reason the screensaver stopped watching the mouse.
+        // A prank ends on any key, since nobody asked for it, but still never on the mouse, so a nudged desk doesn't
+        // end it.
         internal bool AnyKey;
 
         // Seconds it gives itself, or nought to stay until it is sent away. Her alert is a few seconds of
         // noise, not a thing somebody has to go and turn off.
         internal double Ends;
 
-        // One key and one key only. Anything that moves ends it is how a screensaver normally works and it is
-        // wrong here: a desk leant on or a mouse sitting on a sensitive sensor took it down a second after it
-        // arrived. The way out is on screen, so nothing is trapped by it. Escape works too, because a window
-        // covering every screen should always answer the key that closes things.
+        // One key only: space, or Escape; movement doesn't end it, since a leant-on desk would. The way out is on
+        // screen.
         private bool Woken()
         {
             if (age < Settles) return false;
@@ -571,12 +551,8 @@ namespace CapriDesktop
         // from whatever they were looking at to nothing.
         internal const double FadeIn = 5;
 
-        // The window's own alpha, ramped from nothing to whatever they set over those five seconds. It is the
-        // whole layered window, so the black and what is drawn on it come up together, which is what fading in
-        // a background means here: the hexagons do not appear over an already black screen.
-        //
-        // Reduced motion gets it at once. Somebody who has asked for no animation has not asked for a five
-        // second one, and this is the only thing on screen at the time.
+        // The whole layered window's alpha, ramped over five seconds, so the black and its drawing come up together.
+        // Reduced motion gets it at once.
         private byte Fading() { return FadeTo(look.Solid, shown, Motion); }
 
         // The ramp on its own, so it can be checked without a screen to put a window on.
@@ -911,11 +887,8 @@ namespace CapriDesktop
         }
     }
 
-    // A .wav of theirs, looping for as long as the screensaver is up.
-    //
-    // Nothing like this ships with her, and nothing here goes looking for one: it plays the file named in
-    // sys.md and no other. Her sound switch turns it off with everything else, and her volume is applied to
-    // the samples, since the player Windows gives us has no volume of its own.
+    // A .wav of theirs, looped while the screensaver is up: only the file sys.md names, none ships. Her sound switch
+    // mutes it, and her volume is applied to the samples, since the player has no volume of its own.
     internal static class SaverSound
     {
         private static System.Media.SoundPlayer playing;
@@ -1000,10 +973,8 @@ namespace CapriDesktop
         private double saverCheckedAt;
         private bool saverHeldLogged;
 
-        // Shown because they asked for it, from her menu. The pause is still needed even though a click no longer
-        // ends it: a menu item taken with the keyboard is taken with the spacebar, which is the one key that does,
-        // so without it the screensaver would close on the keypress that asked for it. The idle rule is the only
-        // thing left off, and everything it never covers still holds.
+        // Shown from her menu: the pause stays, since the spacebar that picks the menu item is also the key that ends
+        // it. Only the idle rule is left off.
         internal void ShowSaverNow() { ShowSaverNow(null); }
 
         internal void ShowSaverNow(string style)
@@ -1015,12 +986,8 @@ namespace CapriDesktop
             ShowSaver(style, 1.4);
         }
 
-        // Twice a second is plenty: it is a screensaver, not a frame rate.
-        //
-        // Idle time only ever starts it. What ends it is the windows themselves, each watching for the spacebar
-        // or Escape, so this has one job besides starting: if they have all gone and a
-        // sound is still looping, stop it. A window that closes itself cannot reach into here to do that, and
-        // a sound outliving the screen it belonged to is worse than no sound at all.
+        // Twice a second is plenty. Idle time only starts it; the windows end themselves, so this also stops a sound
+        // still looping after they have all gone.
         private void SaverTick(double now)
         {
             if (now - saverCheckedAt < 0.5) return;
@@ -1046,15 +1013,13 @@ namespace CapriDesktop
         private bool SaverHeld()
         {
             bool busy = quitting || Brain.OnAir || working != null || MidJob(job) || lentOut || dragging || pressed;
-            // A prank chat set off is meant to land on the stream, so those two are lifted while one runs and
-            // everything else still holds: never while she has the mouse, is mid-job, is being dragged or is
-            // shutting down, because those are where getting in the way would actually break something.
+            // A prank chat set off is meant to land on the stream, so full screen and streaming are lifted while one
+            // runs; mouse, mid-job, dragging and shutting down still hold.
             return bullySaver ? busy : busy || FullScreen() || Computer.Streaming;
         }
 
-        // Left alone, with no sound. The alarm belongs to a prank: a screensaver that starts itself while
-        // somebody is out of the room and sounds an alarm at an empty chair is not a thing anybody asked
-        // for. It still plays when the screensaver is asked for from her menu, so the setting can be heard.
+        // Left alone, it plays no sound: an alarm at an empty chair isn't wanted. It still plays when asked for from
+        // her menu, so the setting can be heard.
         private void ShowSaver() { ShowSaver(null, 0.6, false); }
 
         private void ShowSaver(string style, double settles) { ShowSaver(style, settles, true); }
@@ -1109,12 +1074,8 @@ namespace CapriDesktop
             else SaverSound.Off();
         }
 
-        // red_alert: her hexagon alert with the alarm on top of it, for a few seconds, ending on any key. The
-        // same windows her screensaver uses, in hexes whatever style they chose, because an alert is red
-        // hexagons or it is nothing.
-        //
-        // Six seconds, near enough her fake crash's five, and it undoes itself the same way: nothing here has
-        // to be turned off by hand.
+        // red_alert: her hexagon alert with the alarm, in hexes whatever style was chosen, for six seconds, ending on
+        // any key and undoing itself.
         private const double AlertSeconds = 6;
         private bool bullySaver;
 

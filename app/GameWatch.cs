@@ -49,9 +49,8 @@ namespace CapriDesktop
             Stopwatch watch = Stopwatch.StartNew();
             double kept = 0, checkedFront = -1, bannerAt = -10;
             bool live = false;
-            // Each moment goes to her reactions and comments. While her reactions run, a moment also gets a look, at most every
-            // 1.5 s, for the big words a game shows when they win, lose, die or get a kill, read off the watcher on a worker so
-            // the frames keep coming (F67).
+            // Each moment goes to her reactions and comments; while reactions run it also gets a look, at most every
+            // 1.5 s, for a game's big win, lose, die or kill words, read on a worker so the frames keep coming.
             Action<string> noticed = delegate(string kind)
             {
                 byte[] was = before, now = after;

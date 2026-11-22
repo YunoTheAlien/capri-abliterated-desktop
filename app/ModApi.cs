@@ -8,16 +8,9 @@ using System.Windows.Forms;
 
 namespace CapriDesktop
 {
-    // The code mod API, compiled into the Windows app and the Mac and Linux one, so a mod written for one runs on the other.
-    // What a code mod can reach besides Say, Log, Art, Sound and PlayIntro. Everything here is on ICapriHost, so a mod written for
-    // the first API still compiles. Hooks run on her window's thread, and a mod that throws in one is logged, never let take her down.
-    //
-    // On Mac and Linux, the parts whose types only Windows has are left out: Art, ICapriIntro, CapriFrame and Ui.Drawing (GDI's
-    // Bitmap and Graphics), Ui.SetOptions, Ui.Window, Mainframe.ShowPage and Mainframe.Window (WinForms' Control and Form), and
-    // Screen's Looked and Capture (Bitmap). A mod that uses one doesn't compile there, so she refuses it at import and names
-    // what's Windows-only, before asking to run it. Everything else is on every platform, and a feature a Mac or Linux PC
-    // doesn't have answers the way Windows does on a PC without it, never with an error: a hotkey that can't be taken is false,
-    // no battery is -1, and an event that never happens there, like Locked, never fires.
+    // The code mod API, the same on Windows, Mac and Linux, on ICapriHost so first-API mods still compile. Hooks run on
+    // her window's thread; a throwing mod is only logged. Windows-only parts are refused at import elsewhere, and a
+    // missing feature answers as on a PC without it.
 
     public interface ICapriHost
     {
@@ -162,6 +155,27 @@ namespace CapriDesktop
         bool WriteMemories(string text);
     }
 
+#if !CROSS
+    // A mod's own menu: up to 30 items, each up to 60 characters. API 4.
+    public interface ICapriMenu
+    {
+        ICapriMenuItem Add(string text, Action clicked);
+        // An item with a tick, ticked or not to start with; changed gets the new state on each click.
+        ICapriMenuItem AddCheck(string text, bool on, Action<bool> changed);
+        void AddLine();
+        void Clear();
+        void Remove();
+    }
+
+    public interface ICapriMenuItem
+    {
+        string Text { get; set; }
+        bool Checked { get; set; }
+        bool Enabled { get; set; }
+        void Remove();
+    }
+#endif
+
     public interface ICapriUi
     {
 #if !CROSS
@@ -171,6 +185,26 @@ namespace CapriDesktop
         void AddMenuItem(string text, Action clicked);
 #if !CROSS
         void SetOptions(string title, Func<Control> make);
+        // A menu of the mod's own under Mods in her right-click menu, with items, ticks and lines it can change later.
+        // It goes when the mod stops. API 4.
+        ICapriMenu AddMenu(string text);
+        // Just before her right-click menu opens, so a menu's ticks and words can be brought up to date. API 4.
+        event Action MenuOpening;
+        // How much bigger she draws, 1 to 1.15, about her seat or feet like her own beat pulse and on top of it, never her
+        // size setting. Held at 1 while Motion is off, and back to 1 when the mod stops. API 4.
+        float DrawScale { get; set; }
+        // How solid her speech bubble draws, 0.3 to 1. With more than one mod asking, the most see-through wins; back to 1 when
+        // the mod stops. API 4.
+        float BubbleOpacity { get; set; }
+        // Her own OFF/ON switch and key, in her colours and font, for a panel of the mod's own (Mainframe.AddPanel). changed
+        // gets the new state on each flip. Text is up to 60 characters. API 4.
+        Control Switch(string text, bool on, Action<bool> changed);
+        Control Button(string text, Action clicked);
+        // A colour of the mod's own, named for what it colours (40 characters, 16 a mod): the one set in Custom colours
+        // under the mod's fold-down, or usual, following Mainframe colours. Ask first in Start; ColoursChanged says
+        // when to ask again. API 5.
+        Color Colour(string name, Color usual);
+        event Action ColoursChanged;
 #endif
         void Bubble(string text);
 #if !CROSS
@@ -189,6 +223,9 @@ namespace CapriDesktop
         void ShowMods();
 #if !CROSS
         void ShowPage(string title, Func<Control> make);
+        // A panel of the mod's own on her Settings page: its title and control, at slot (1 is the top) in the "left" or
+        // "right" column; the first loaded keeps a shared slot. simple shows it in Simple Settings too. API 4.
+        void AddPanel(string title, string column, int slot, Func<Control> make, bool simple = false);
 #endif
         void ClosePage();
 #if !CROSS
@@ -313,6 +350,10 @@ namespace CapriDesktop
         bool IsAway { get; }
         int Battery { get; }
         bool Charging { get; }
+#if !CROSS
+        // A game's window is in front, by her own check, read about once a second. API 4.
+        bool GameInFront { get; }
+#endif
     }
 
     public interface ICapriMods
@@ -373,9 +414,9 @@ namespace CapriDesktop
         }
     }
 
-    // What's playing on the PC and the presses that go back to the app playing it, the same session her mini player reads. Presses
-    // go off her window's thread and the next read shows them. On Mac and Linux nothing reads yet: Now is null, presses are false,
-    // Levels are all 0, and Changed and Updated never fire.
+    // What's playing on the PC and presses back to its app, the session her mini player reads; presses go off her
+    // thread and the next read shows them. On Mac and Linux nothing reads yet: Now null, presses false, Levels 0, no
+    // events.
     public interface ICapriMusic
     {
         // A new song, or null when nothing has a title any more.
@@ -416,7 +457,7 @@ namespace CapriDesktop
 
     internal sealed partial class Mods
     {
-        internal const int Api = 3;
+        internal const int Api = 5;
 
         // What each permission lets a code mod do, as her approve box says it.
         internal static readonly string[,] PermissionWords =
@@ -466,36 +507,8 @@ namespace CapriDesktop
             return asked.ToArray();
         }
 
-        // What her box says before a code mod runs, the same on every platform: what it asks for, that it runs with full access to
-        // the PC, and its fingerprint.
-        // What its code reaches for, read off the source, in the question itself and not only in her mods list.
-        // Each site it contacts is a line, with every whole address it names folded under that site.
+        // The most whole addresses her question lists under the sites a mod contacts; the rest is a count.
         private const int MostPlaces = 12;
-
-        private static string Reached(ModFile mod)
-        {
-            string[] reaches = mod.Reaches ?? new string[0], places = mod.Places ?? new string[0];
-            if (reaches.Length == 0) return "";
-            System.Text.StringBuilder said = new System.Text.StringBuilder("Read from its code, it:");
-            foreach (string one in reaches)
-            {
-                if (!one.StartsWith(Contacts, StringComparison.Ordinal)) { said.Append("\n- ").Append(one); continue; }
-                List<string> sites = new List<string>();
-                foreach (string place in places) { string site = Site(place); if (site.Length > 0 && !sites.Contains(site)) sites.Add(site); }
-                int shown = 0;
-                foreach (string site in sites)
-                {
-                    said.Append("\n- contacts ").Append(site);
-                    foreach (string place in places)
-                    {
-                        if (Site(place) != site) continue;
-                        if (shown++ < MostPlaces) said.Append("\n      ").Append(place);
-                    }
-                }
-                if (shown > MostPlaces) said.Append("\n      and ").Append(shown - MostPlaces).Append(" more addresses");
-            }
-            return said.Append("\n\n").ToString();
-        }
 
         // The second question, for code that cannot be read. When it is only laid out badly, a readable copy is
         // saved and named so it can be read first. When it carries packed data, nothing can open it, and that
@@ -519,15 +532,148 @@ namespace CapriDesktop
                 + "Generated code can look like this too, so it isn't proof of anything. If you didn't expect it from this mod, don't run it.\n\nRun it anyway?";
         }
 
+        // How serious each thing a mod asks for, or her scan sees in it, is: High sees or does private things, Medium changes
+        // her or reaches past her, Low is looks and sound. By its permission name or its scan row.
+        internal static char GroupOf(string row)
+        {
+            string one = (row ?? "").Trim();
+            foreach (string high in new[] { "chat", "transcripts", "screen", "voice", "tools", "hotkeys", Loads, Packs, "unlocks saved secrets", "reads plug-in sign-ins", ChangesSecurity, "calls Windows directly", "starts programs", "reads the keyboard", "makes itself start with Windows" })
+                if (one == high) return 'H';
+            foreach (string low in new[] { "skins", "music", "changes what her brain is told", "adds a Settings panel" })
+                if (one == low) return 'L';
+            return 'M';
+        }
+
+        // Stage 1 of her mod question: what it asks for and what her scan saw, counted by group on its face, with every row
+        // grouped behind a handle that opens straight away when anything is High (Notice.Marked draws it).
+        internal static string Grouped(ModFile mod)
+        {
+            List<KeyValuePair<char, string>> rows = new List<KeyValuePair<char, string>>();
+            foreach (string permission in mod.Permissions ?? new string[0]) rows.Add(new KeyValuePair<char, string>(GroupOf(permission), "asks to " + PermissionMeaning(permission)));
+            int asked = rows.Count;
+            string[] reaches = mod.Reaches ?? new string[0], places = mod.Places ?? new string[0];
+            bool contacts = Array.Exists(reaches, one => one.StartsWith(Contacts, StringComparison.Ordinal));
+            foreach (string one in reaches)
+            {
+                // Addresses sit under the one network row, never as rows of their own.
+                if (one == "uses the network" && contacts) continue;
+                if (!one.StartsWith(Contacts, StringComparison.Ordinal)) { rows.Add(new KeyValuePair<char, string>(GroupOf(one), one)); continue; }
+                List<string> sites = new List<string>();
+                foreach (string place in places) { string site = Site(place); if (site.Length > 0 && !sites.Contains(site)) sites.Add(site); }
+                int shown = 0;
+                System.Text.StringBuilder said = new System.Text.StringBuilder("uses the network:");
+                foreach (string site in sites)
+                {
+                    said.Append("\n    contacts ").Append(site);
+                    foreach (string place in places)
+                    {
+                        if (Site(place) != site) continue;
+                        if (shown++ < MostPlaces) said.Append("\n        ").Append(place);
+                    }
+                }
+                if (shown > MostPlaces) said.Append("\n        and ").Append(shown - MostPlaces).Append(" more addresses");
+                rows.Add(new KeyValuePair<char, string>(GroupOf("uses the network"), said.ToString()));
+            }
+            // A count of 0 only when her scan saw nothing, worded so it never reads as "needs nothing".
+            string none = asked == 0 ? "It asks for none of Capri's permissions.\n\n" : "";
+            string zero = rows.Count > asked ? "" : "What her scan could see in " + (mod.Name ?? mod.Id ?? "this mod") + "'s code (0): none of the things on her list. Her scan reads the code's text only, so this isn't proof it's safe.\n\n";
+            if (rows.Count == 0) return none + zero;
+            string[] names = { "high", "medium", "low" }, heads = { "High: sees or does private things", "Medium: changes her or reaches past her", "Low: looks and sound" };
+            char[] groups = { 'H', 'M', 'L' };
+            System.Text.StringBuilder made = new System.Text.StringBuilder("[[c]]What it asks for and what her scan saw:");
+            for (int g = 0; g < 3; g++)
+            {
+                int count = rows.FindAll(row => row.Key == groups[g]).Count;
+                if (count > 0) made.Append('|').Append(groups[g]).Append('|').Append(count).Append(' ').Append(names[g]);
+            }
+            bool high = rows.Exists(row => row.Key == 'H');
+            made.Append("\n[[f").Append(high ? '+' : '-').Append("]]What we could see (").Append(rows.Count).Append(")");
+            for (int g = 0; g < 3; g++)
+            {
+                if (!rows.Exists(row => row.Key == groups[g])) continue;
+                made.Append("\n[[").Append(char.ToLowerInvariant(groups[g])).Append("]]").Append(heads[g]);
+                foreach (KeyValuePair<char, string> row in rows)
+                    if (row.Key == groups[g])
+                    {
+                        string[] lines = row.Value.Split('\n');
+                        made.Append("\n[[").Append(groups[g]).Append("]]").Append(lines[0]);
+                        for (int i = 1; i < lines.Length; i++) made.Append("\n").Append(lines[i]);
+                    }
+            }
+            return none + made.Append("\n[[e]]\n\n").ToString() + zero;
+        }
+
+        // What her box says before a code mod runs, the same on every platform: what it asks for and what her scan saw,
+        // what changed since it was approved, that it runs with full access to the PC, and its fingerprint.
         internal static string Consent(ModFile mod, string hash)
         {
-            string asks = "";
-            foreach (string permission in mod.Permissions ?? new string[0]) asks += "\n- " + PermissionMeaning(permission);
             return mod.Name + (string.IsNullOrEmpty(mod.Version) ? "" : " v" + mod.Version) + (string.IsNullOrEmpty(mod.Author) ? "" : ", which says it's by " + mod.Author) + ", is a code mod.\n\n"
-                + (asks.Length == 0 ? "It asks for none of Capri's permissions.\n\n" : "Through Capri, it asks to:" + asks + "\n\n")
-                + Reached(mod)
+                + (mod.Checked ? CheckedNote : UncheckedNote) + "\n\n"
+                + Grouped(mod)
+                + (mod.Colours ? "Has custom colours: you can change them under GENERAL SETTINGS > Custom colours.\n\n" : "")
+                + ChangedSince(mod)
                 + "Code mods run as part of Capri with full access to your PC: your files, your accounts and the API keys she has saved. Nothing limits what it can do, and Capri doesn't check whether it's safe.\n\n"
                 + "Only run it if you wrote it, or you've read it and trust who did.\n\nFile fingerprint (SHA-256):\n" + hash + "\n\nRun this code?";
+        }
+    }
+
+    // The text half of the markup her questions read (Notice.cs draws it): kept here so every platform can show a
+    // marked message as plain text.
+    internal static partial class Marked
+    {
+        internal sealed class Line
+        {
+            internal char Kind = ' ';
+            internal string Text = "";
+            internal bool Open;
+            internal readonly List<KeyValuePair<char, string>> Counts = new List<KeyValuePair<char, string>>();
+        }
+
+        internal static List<Line> Parse(string message)
+        {
+            List<Line> lines = new List<Line>();
+            foreach (string raw in (message ?? "").Replace("\r\n", "\n").Split('\n'))
+            {
+                Line line = new Line();
+                string text = raw;
+                if (text.StartsWith("[[", StringComparison.Ordinal))
+                {
+                    int close = text.IndexOf("]]", StringComparison.Ordinal);
+                    string tag = close > 2 ? text.Substring(2, close - 2) : "";
+                    if (tag.Length == 1 && "HMLhmlce".IndexOf(tag[0]) >= 0) { line.Kind = tag[0]; text = text.Substring(close + 2); }
+                    else if (tag == "f+" || tag == "f-") { line.Kind = 'f'; line.Open = tag == "f+"; text = text.Substring(close + 2); }
+                }
+                if (line.Kind == 'c')
+                {
+                    string[] parts = text.Split('|');
+                    text = parts[0];
+                    for (int i = 1; i + 1 < parts.Length; i += 2) if (parts[i].Length == 1) line.Counts.Add(new KeyValuePair<char, string>(parts[i][0], parts[i + 1]));
+                }
+                line.Text = text;
+                lines.Add(line);
+            }
+            return lines;
+        }
+
+        // The message as plain text, for copying, a screen reader and Windows' own box: rows as "- text", every row shown.
+        internal static string Plain(string message)
+        {
+            if ((message ?? "").IndexOf("[[", StringComparison.Ordinal) < 0) return message;
+            List<string> said = new List<string>();
+            foreach (Line line in Parse(message))
+            {
+                if (line.Kind == 'e') continue;
+                if (char.IsUpper(line.Kind)) said.Add("- " + line.Text);
+                else if (line.Kind == 'f') said.Add(line.Text + ":");
+                else if (line.Kind == 'c')
+                {
+                    List<string> counts = new List<string>();
+                    foreach (KeyValuePair<char, string> count in line.Counts) counts.Add(count.Value);
+                    said.Add(line.Text + (counts.Count == 0 ? "" : " " + string.Join(", ", counts.ToArray())));
+                }
+                else said.Add(line.Text);
+            }
+            return string.Join("\n", said.ToArray());
         }
     }
 

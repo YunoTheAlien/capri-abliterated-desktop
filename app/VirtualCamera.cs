@@ -7,31 +7,9 @@ using System.Threading;
 
 namespace CapriDesktop
 {
-    // Capri as a camera device, so anything that takes a webcam takes her: Discord, Zoom, Meet, a browser, OBS as a
-    // source. No stream, no viewers, nothing leaves the machine.
-    //
-    // How it works. OBS's virtual camera is a DirectShow capture filter that is already registered on any machine with
-    // OBS installed, and that filter does not talk to OBS at all: it reads NV12 frames out of a named shared-memory
-    // queue called OBSVirtualCamVideo and scales them to whatever the app asked for. OBS is only ever the writer. So we
-    // write the queue ourselves and the device shows her instead, with OBS never launched.
-    //
-    // The layout below is obs-studio's plugins/win-dshow/shared-memory-queue.c, matched field for field. If it is
-    // wrong the filter simply shows its placeholder image, so a mistake here is visible and harmless.
-    //
-    //   struct queue_header {            // 80 bytes, 8-aligned
-    //       volatile uint32_t write_idx;   //  0
-    //       volatile uint32_t read_idx;    //  4
-    //       volatile uint32_t state;       //  8
-    //       uint32_t offsets[3];           // 12 20
-    //       uint32_t type;                 // 24
-    //       uint32_t cx;                   // 28
-    //       uint32_t cy;                   // 32   (4 bytes padding at 36)
-    //       uint64_t interval;             // 40
-    //       uint32_t reserved[8];          // 48 79
-    //   }
-    //
-    // Three frame slots follow, each 32 bytes of header (a uint64 timestamp at the front) then the NV12 bytes, every
-    // slot starting on a 32-byte boundary.
+    // Capri as a camera: OBS's virtual camera filter reads NV12 frames from the OBSVirtualCamVideo queue, so we write
+    // it and OBS never runs. Header per obs-studio's shared-memory-queue.c (80 bytes: write_idx 0, read_idx 4, state 8,
+    // offsets 12, type 24, cx 28, cy 32, interval 40), then three 32-byte-aligned NV12 slots.
     internal static class VirtualCamera
     {
         private const string Mapping = "OBSVirtualCamVideo";
@@ -58,6 +36,14 @@ namespace CapriDesktop
         private static MemoryMappedViewAccessor view;
         private static Thread pump;
         private static volatile bool running;
+        // Capri Camera, her own camera device, when it is installed: the same picture goes to it instead of OBS's queue,
+        // so OBS itself can take her as a video source, which it cannot do with its own virtual camera.
+        private static CapriCamera own;
+
+        internal static bool OwnReady { get { try { return CapriCamera.State == "ready"; } catch (Exception) { return false; } } }
+
+        // The camera name to pick in Discord or OBS while she is on.
+        internal static string DeviceName { get { return own != null ? "Capri Camera" : "OBS Virtual Camera"; } }
 
         private static int width, height, rate;
         private static readonly int[] slotAt = new int[Slots];
@@ -68,9 +54,8 @@ namespace CapriDesktop
         private static unsafe byte* shared;
         private static bool held;
 
-        // Everything that makes up one picture of her: her body, and every overlay that belongs with it, each with the
-        // screen rectangle it occupies. She is drawn across several layered windows, so her speech bubble, her clones
-        // and her emotes are separate windows from her body and would otherwise never reach the camera at all.
+        // Everything that makes up one picture of her, with each screen rectangle: her body and every overlay with it,
+        // since her bubble, clones and emotes are separate windows that would otherwise never reach the camera.
         private sealed class Shot : IDisposable
         {
             internal readonly List<Bitmap> Parts = new List<Bitmap>();
@@ -104,8 +89,11 @@ namespace CapriDesktop
 
         internal static bool On { get { return running; } }
 
-        // True when OBS's filter is registered, which is what decides whether this is available at all.
-        internal static bool Available
+        // True when Capri Camera is installed or OBS's filter is registered, which is what decides whether this is
+        // available at all.
+        internal static bool Available { get { return OwnReady || ObsAvailable; } }
+
+        internal static bool ObsAvailable
         {
             get
             {
@@ -135,6 +123,22 @@ namespace CapriDesktop
                 rate = Math.Max(5, Math.Min(60, fps));
                 behind = fill;
                 transparent = clear;
+
+                if (OwnReady)
+                {
+                    // Her own camera takes 24-bit frames with sides a multiple of 4.
+                    width &= ~3;
+                    height &= ~3;
+                    own = new CapriCamera();
+                    written = 0;
+                    running = true;
+                    pump = new Thread(Pump);
+                    pump.IsBackground = true;
+                    pump.Name = "Capri virtual camera";
+                    pump.Start();
+                    Brain.Log("camera", -1, "Capri Camera on at " + width + "x" + height + " " + rate + "fps. Pick \"Capri Camera\" in Discord or OBS.");
+                    return null;
+                }
 
                 int frameSize = width * height * 3 / 2;
                 int size = Align32(HeaderSize);
@@ -204,6 +208,9 @@ namespace CapriDesktop
 
         private static unsafe void Shut()
         {
+            CapriCamera mine = own;
+            own = null;
+            try { if (mine != null) mine.Dispose(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             try { if (held && view != null) view.SafeMemoryMappedViewHandle.ReleasePointer(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             held = false;
             shared = null;
@@ -368,6 +375,19 @@ namespace CapriDesktop
 
         private static unsafe void Push(Bitmap canvas)
         {
+            CapriCamera mine = own;
+            if (mine != null)
+            {
+                if (!running) return;
+                int w = canvas.Width & ~3, h = canvas.Height & ~3;
+                if (w < 4 || h < 4) return;
+                byte[] bgr = new byte[w * h * 3];
+                System.Drawing.Imaging.BitmapData data = canvas.LockBits(new Rectangle(0, 0, w, h), System.Drawing.Imaging.ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+                try { for (int y = 0; y < h; y++) System.Runtime.InteropServices.Marshal.Copy(IntPtr.Add(data.Scan0, y * data.Stride), bgr, y * w * 3, w * 3); }
+                finally { canvas.UnlockBits(data); }
+                mine.SendRaw(bgr, w, h);
+                return;
+            }
             lock (gate)
             {
                 if (!running || shared == null) return;

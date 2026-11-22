@@ -441,6 +441,10 @@ namespace CapriDesktop
             WriteWindowStyle(Handle, ExtendedStyle, ReadWindowStyle(Handle, ExtendedStyle) & ~ComposedStyle);
             slideCover.Bounds = ClientRectangle;
             slideCover.BringToFront();
+            // Her title band is up for the whole slide, though at rest it hides while the page is at its top, so the
+            // page's picture never passes under her title keys with nothing behind them.
+            titleBand.Visible = paged;
+            TitleToFront();
             topRim.BringToFront();
             bottomRim.BringToFront();
             slideCover.Visible = true;
@@ -590,6 +594,79 @@ namespace CapriDesktop
             }
         }
 
+        // Her title band on screen through slides a notch at a time, from the top of the page and back to it, at the
+        // sizes picked for it: each frame, the gap beside Back shows the band's own colour, never the page sliding under it.
+        internal void CheckBandWhileSliding(List<string> checks)
+        {
+            bool pagedWas = paged, topWas = TopMost;
+            int sizeWas = capri.MainframeSize;
+            FormWindowState stateWas = WindowState;
+            // Where it sits when not minimised: a minimised window reports itself far off every screen.
+            Point placeWas = WindowState == FormWindowState.Normal ? Location : RestoreBounds.Location;
+            try
+            {
+                if (WindowState != FormWindowState.Normal) WindowState = FormWindowState.Normal;
+                if (!Visible) Show();
+                Location = Displays.Home.WorkingArea.Location;
+                TopMost = true;
+                LayoutScale(96, 125, false);
+                SizeMainframe(0);
+                ShowSettings(true);
+                ScrollPage(36);
+                Settle();
+                Pause(500);
+                Point gap = new Point(more.Left - Scaled(8), more.Top + more.Height / 2);
+                Color band = Grab(gap);
+                ScrollPage(0);
+                Settle();
+                Pause(300);
+                List<string> wrong = new List<string>();
+                int frames = 0;
+                for (int notch = 0; notch < 4; notch++)
+                {
+                    Wheel(notch < 3 ? -1 : 3, false);
+                    for (int frame = 0; frame < 6; frame++)
+                    {
+                        Pause(16);
+                        frames++;
+                        if (!sliding && pageScroll == 0 && !glide.Enabled) continue;
+                        Color seen = Grab(gap);
+                        if (Math.Abs(seen.R - band.R) + Math.Abs(seen.G - band.G) + Math.Abs(seen.B - band.B) > 36)
+                            wrong.Add("notch " + notch + " frame " + frame + " (slid to " + slideAt + "): " + seen + " for " + band);
+                    }
+                    Pause(600);
+                }
+                if (wrong.Count > 0) throw new Exception("Her title band didn't cover the page while it slid: " + string.Join("; ", wrong.ToArray()));
+                checks.Add("PASS her title band covers the page through every frame of a slide a notch at a time, from the top of the page and back to it, at text 125% and size Auto (" + frames + " frames read off the screen)");
+            }
+            finally
+            {
+                TopMost = topWas;
+                LayoutScale(0, 0);
+                SizeMainframe(sizeWas);
+                ShowSettings(pagedWas);
+                Location = placeWas;
+                if (WindowState != stateWas) WindowState = stateWas;
+            }
+        }
+
+        private static void Pause(int ms)
+        {
+            System.Diagnostics.Stopwatch wait = System.Diagnostics.Stopwatch.StartNew();
+            while (wait.ElapsedMilliseconds < ms) { Application.DoEvents(); System.Threading.Thread.Sleep(5); }
+        }
+
+        // A pixel of her window as the screen shows it.
+        private Color Grab(Point inside)
+        {
+            Point at = PointToScreen(inside);
+            using (Bitmap one = new Bitmap(1, 1))
+            {
+                using (Graphics g = Graphics.FromImage(one)) g.CopyFromScreen(at, Point.Empty, new Size(1, 1));
+                return one.GetPixel(0, 0);
+            }
+        }
+
         private Bitmap RealPage()
         {
             Bitmap real = new Bitmap(ClientSize.Width, ClientSize.Height, PixelFormat.Format32bppArgb);
@@ -709,8 +786,9 @@ namespace CapriDesktop
             Settle();
 
             FinishPicture();
-            more.Invalidate();
-            if (!pieceQueued.Contains(more)) return "A control that repainted wasn't redrawn in the picture.";
+            // A row of the page; her title bar stays put, so it is never in the picture.
+            onTop.Invalidate();
+            if (!pieceQueued.Contains(onTop)) return "A control that repainted wasn't redrawn in the picture.";
             FinishPicture();
 
             ScrollWheel(-120);

@@ -58,9 +58,9 @@ namespace CapriDesktop
             StringBuilder text = new StringBuilder(256);
             return GetWindowText(window, text, text.Capacity) > 0 ? text.ToString() : null;
         };
-        // Keys meant for the window in her last screenshot can go to it, to a dialog or menu it opened, or to another window of
-        // the same app. Not to another window of the shell or of the store apps' frame host: each runs windows that have
-        // nothing to do with each other in one process.
+        // Keys meant for the window in her last screenshot can go to it, a dialog or menu it opened, or another window
+        // of the same app; never another of the shell's or store frame host's, which run unrelated windows in one
+        // process.
         private static readonly Regex SharedHost = new Regex("^(explorer|ApplicationFrameHost)$", RegexOptions.IgnoreCase);
         internal static Func<IntPtr, IntPtr, bool> SameWindow = delegate(IntPtr one, IntPtr two)
         {
@@ -78,9 +78,8 @@ namespace CapriDesktop
             return name == "key" || name == "hold_key" || name == "type" || name == "press" || name == "walk" || name == "look" || name == "look_around" || name == "mouse_hold" || name == "hold_and_press";
         }
 
-        // Keys that need no spot on the screen can still go after the window in front changes, as her keys bring back the window
-        // in her screenshot first. A type that clicks its box first, or a look at a spot in the picture, needs a fresh look, since
-        // that spot was on the old screen.
+        // Keys that need no spot on screen can still go after the front window changes, since her keys bring back the
+        // screenshot's window first. A type that clicks its box first, or a look at a spot, needs a fresh look.
         internal static bool KeysOnly(string name, ToolArguments args)
         {
             return KeyAction(name) && (args == null || string.IsNullOrEmpty(args.Target) && args.X == null && args.Y == null && args.Coordinate == null);
@@ -311,10 +310,8 @@ namespace CapriDesktop
             return middle;
         }
 
-        // Some games, like Cyberpunk 2077, hide the real cursor and draw their own, and only look at where the real one is when mouse
-        // movement comes in. Placing it moves nothing they can see, so she rocks it a couple of counts, which cancel out. Roblox
-        // shows the real cursor but still goes by real movement (a tester's clicks and hovers missed in a Roblox game), so any game's
-        // window under her press gets the rock too.
+        // Some games draw their own cursor and only read movement, so after placing the cursor she rocks it a couple of
+        // counts that cancel out. Any game window under her press gets it.
         private static bool steered;
 
         // Whether the window under a spot is a game's, by its title or its program's folder, like Roblox.
@@ -337,7 +334,7 @@ namespace CapriDesktop
             return GetCursorInfo(ref state) && state.Flags == 0;
         };
 
-        // Rocking and turning move their mouse too, so both hold her sign up (#106).
+        // Rocking and turning move their mouse too, so both hold her sign up.
         private static void Steer(Point at)
         {
             steered = CursorHidden() || GameUnder(at);
@@ -444,9 +441,8 @@ namespace CapriDesktop
             return named.Length > 0 && Regex.Replace((task ?? "").ToLowerInvariant(), @"[^\p{L}\p{N}]+", "").Contains(named);
         }
 
-        // The game a job is playing, for its brief: a real game window first, wherever it is, then a browser tab a skill names. A tab
-        // the job names wins over one nearer the front, and a job that names a game she knows, like "play minecraft", never takes a
-        // tab of another game, so it waits for that one to open.
+        // The game a job is playing, for its brief: a real game window first, then a browser tab a skill names. A tab
+        // the job names wins; a job naming a known game never takes another game's tab and waits for its own to open.
         internal static string PlayingGame(string task)
         {
             string open = GameOpen();
@@ -571,7 +567,7 @@ namespace CapriDesktop
                         y = named.Box.Y + named.Box.Height / 2.0;
                     }
                     if (placed) args.Coordinate = new[] { x, y };
-                    // Those words said where to click. Left in, her hands read them as keys to hold down and refuse the click (SoChi, 1 Nov).
+                    // Those words said where to click. Left in, her hands read them as keys to hold down and refuse the click (SoChi).
                     if (placed) args.Text = null;
                     if (move != "scroll") return move == "click" ? "left_click" : move;
                     args.Way = args.Direction ?? args.Way;
@@ -773,9 +769,9 @@ namespace CapriDesktop
             return sight != null && sight.Bounds.Width > 200 && sight.Bounds.Height > 200 ? sight.Bounds : Display();
         }
 
-        // Turns toward what's wanted in steps and watches the view slide after each one, so she learns any game's mouse as she goes
-        // and lands where she meant to. She always turns: looking at open sky, there's nothing to measure yet and she mustn't get stuck.
-        // Pixels the middle of the view slides per radian, for a usual game's field of view.
+        // Turns toward what's wanted in steps, watching the view slide after each, so she learns any game's mouse and
+        // lands where she meant. She always turns, since open sky gives nothing to measure. Pixels per radian, for a
+        // usual field of view.
         private static double Focal(Rectangle area) { return area.Height * 0.75; }
 
         // The part of a gray frame with the world in it rather than a game's HUD.

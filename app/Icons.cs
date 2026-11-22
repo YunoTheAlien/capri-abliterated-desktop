@@ -11,8 +11,8 @@ using System.Windows.Forms;
 
 namespace CapriDesktop
 {
-    // One desktop icon: where it is in the list view and the name she matches it back by (F72, Lachy: "move around
-    // shortcuts/icons temporarily and or make them dissapear"). Her prank only ever reads and moves; it never touches a file.
+    // One desktop icon: where it is in the list view and the name she matches it back by (Lachy). Her prank only ever reads
+    // and moves icons; it never touches a file.
     internal sealed class IconSpot
     {
         internal readonly int Index;
@@ -21,9 +21,9 @@ namespace CapriDesktop
         internal IconSpot(int index, string name, Point at) { Index = index; Name = name; At = at; }
     }
 
-    // The desktop's own icons, read and moved through the shell's view of the desktop (IFolderView), the documented way in, so
-    // nothing of Explorer's is opened or written to. Positions are 32-bit, so an icon on a monitor left of the main one isn't
-    // truncated. The smoke test points Open at a fake view of its own, so this never runs on the real desktop.
+    // The desktop icons, read and moved through the shell's IFolderView, the documented way, so nothing of Explorer's
+    // is opened or written. 32-bit positions, so icons left of the main monitor aren't truncated; the smoke test uses a
+    // fake view.
     internal static class DesktopIcons
     {
         internal static Func<IntPtr> Target = DefaultTarget;
@@ -314,10 +314,9 @@ namespace CapriDesktop
             }
         }
 
-        // One batch of shell calls on a thread of its own, so a frozen Explorer can't hold her up: she waits 2 seconds at most
-        // and a batch that runs out counts as failed. Only one batch is ever out, even while its thread is still stuck there.
-        // The thread is free-threaded because calls into Explorer come back about a third sooner than from an STA (75 icons read
-        // in 60 ms against 95), and her window waits on every one.
+        // One batch of shell calls on its own thread, so a frozen Explorer can't hold her up: 2 seconds at most, and
+        // one batch out at a time. Free-threaded, since calls into Explorer come back about a third sooner than from an
+        // STA.
         private static bool Run(IntPtr list, Action<View, Batch> action)
         {
             if (list == IntPtr.Zero || System.Threading.Interlocked.CompareExchange(ref busy, 1, 0) != 0) return false;
@@ -549,10 +548,8 @@ namespace CapriDesktop
         internal static bool Hidden(IntPtr list) { return list != IntPtr.Zero && !IsWindowVisible(list); }
     }
 
-    // The gag itself: she scatters the desktop icons around for a while then puts every one back exactly, or she makes them all
-    // vanish and brings them back after 10 to 20 seconds. Safety first: before any change she writes the originals to a file in
-    // her app data, so a crash, a kill or Esc still gets them home, and her next start puts right anything that file still holds.
-    // Icons someone moved by hand meanwhile are left where they put them.
+    // The gag: she scatters the desktop icons or hides them, then puts every one back. The originals are written to a
+    // file first, so a crash, kill or Esc still gets them home; icons moved by hand meanwhile stay put.
     internal sealed class IconMischief
     {
         internal static string Marker;
@@ -890,9 +887,8 @@ namespace CapriDesktop
         internal IconItem(string name, Point at, byte[] id) { Name = name; At = at; Id = id; }
     }
 
-    // The desktop icons' pictures, kept by address and size. Asking the shell for 75 of them takes 1 to 8 seconds the first
-    // time (measured on a real desktop, 10 Nov), far too long for her window to wait, so they're fetched on threads of their
-    // own and a rampage starts once they're all in. After that they're kept, so the next one starts at once.
+    // The desktop icons' pictures, kept by address and size: the first fetch of 75 takes seconds, so it runs on threads
+    // of its own and a rampage starts once they're in; later ones start at once.
     internal static class IconPictures
     {
         internal const int Workers = 4, LimitMilliseconds = 10000, KeepSeconds = 600, Most = 600;
@@ -955,9 +951,9 @@ namespace CapriDesktop
             return Has(items, size);
         }
 
-        // Fetches the pictures that aren't kept yet on a few threads of their own, then says whether every one is in. One
-        // that fails beside the others is tried once more alone: the shell now and then refuses one of several asked at once.
-        // A call that never comes back only strands its own thread. done runs on one of those threads, not her window's.
+        // Fetches the missing pictures on a few threads, then says whether all are in. One that fails among others is
+        // retried alone, since the shell sometimes refuses one of several. A hung call strands only its thread; done
+        // runs off her window.
         internal static bool Load(List<IconItem> items, int size, Action<bool> done)
         {
             if (System.Threading.Interlocked.CompareExchange(ref loading, 1, 0) != 0) return false;
@@ -1625,9 +1621,8 @@ namespace CapriDesktop
             IconChaosTick(now);
         }
 
-        // One of chaos mode's random acts while her clones are out. Her first go comes about 5 seconds in, every time, and slides
-        // some icons about (Lachy, 2 Nov: "start stealing icons after like 5 seconds"). After that she has a 1 in 3 chance every
-        // 30 to 70 seconds to scatter or vanish them. Every icon still goes back.
+        // One of chaos mode's random acts while her clones are out: about 5 seconds in she slides some icons (Lachy),
+        // then a 1 in 3 chance every 30 to 70 seconds to scatter or vanish them. Every icon still goes back.
         private void IconChaosTick(double now)
         {
             if (testing || cloneWindow == null || iconChaos != null || iconRampage != null || rampageWaiting) return;
@@ -1717,9 +1712,8 @@ namespace CapriDesktop
 
         private string IconTool(string action) { return InvokeRequired ? (string)Invoke(new Func<string, string>(IconPrank), action) : IconPrank(action); }
 
-        // Starts the rampage: 1 when it's running or on its way, 0 when the desktop is empty, -1 when it can't be done. The
-        // first one after she starts has to fetch the icons' pictures, which takes a second or more, so that happens off her
-        // window's thread while she says her line, and the show starts when they're in.
+        // Starts the rampage: 1 running or on its way, 0 for an empty desktop, -1 when it can't. The first after she
+        // starts fetches the pictures off her window's thread while she says her line, then the show begins.
         private int BeginRampage(bool fetch)
         {
             IconRampage rampage = new IconRampage(random.Next());

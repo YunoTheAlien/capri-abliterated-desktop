@@ -28,8 +28,7 @@ namespace CapriDesktop
         internal string Battery;
     }
 
-    // Reads how their PC is doing over half a second, the way Task Manager does, without changing anything (Lachy, 3 Nov: "ensure
-    // they have the tools they need to perform everything themself").
+    // Reads how their PC is doing over half a second, the way Task Manager does, without changing anything (Lachy).
     internal static class Usage
     {
         internal static PcUse Read()

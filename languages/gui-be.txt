@@ -204,3 +204,18 @@ Running on this PC	Працуе на гэтым ПК
 NORMAL	ЗВЫЧАЙНЫ
 OFF	ВЫКЛ.
 Local server address	Лакальны адрас сервера
+Remember panel position	Запамінаць месца панэлі
+Custom colours	Свае колеры
+Custom colours...	Свае колеры...
+Choose	Выбраць
+Hers	Яе ўласны
+Quiet	Ціха
+Quiet min	Ціха min
+Quiet max	Ціха max
+Until I turn it off	Пакуль я не выключу
+Quiet on calls	Ціха падчас званкоў
+Quiet in videos	Ціха ў відэа
+Quiet until {n}:{n}	Ціха да {n}:{n}
+Quiet until turned off	Ціха да выключэння
+Export settings	Экспарт налад
+Import settings	Імпарт налад
