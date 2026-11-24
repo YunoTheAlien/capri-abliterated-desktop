@@ -94,7 +94,7 @@ namespace CapriDesktop
             lock (gate)
             {
                 doing.RemoveAll(one => string.Equals(one.Key, what, StringComparison.OrdinalIgnoreCase));
-                doing.Add(new KeyValuePair<string, DateTime>(what, DateTime.UtcNow));
+                doing.Add(new KeyValuePair<string, DateTime>(what, SimTime.UtcNow));
                 if (doing.Count > 8) doing.RemoveAt(0);
             }
         }
@@ -117,7 +117,9 @@ namespace CapriDesktop
 
         private static readonly object gate = new object();
         private static readonly Random dice = new Random();
-        private static DateTime next = DateTime.MinValue;
+        private static DateTime next = DateTime.MinValue, rolled = DateTime.MinValue;
+        // While working's stretch now, set by Capri: the window counts that many times longer while they work.
+        internal static Func<double> Stretch = delegate { return 1; };
         private static string waiting;
         private static DateTime asked = DateTime.MinValue;
 
@@ -156,7 +158,7 @@ namespace CapriDesktop
             {
                 waiting = question;
                 PendingKey = key;
-                asked = DateTime.UtcNow;
+                asked = SimTime.UtcNow;
                 Roll();
             }
             try { Asked(question); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
@@ -205,11 +207,21 @@ namespace CapriDesktop
         internal static Func<long> Saved = delegate { return 0; };
         internal static Action<long> Keep = delegate { };
 
+        // When the window ends with While working's stretch on what is left of it, or never at its last step.
+        private static DateTime Ends(DateTime at)
+        {
+            double stretch = Stretch();
+            if (stretch <= 1 || rolled == DateTime.MinValue || at <= rolled) return at;
+            if (double.IsInfinity(stretch)) return DateTime.MaxValue;
+            return rolled.AddTicks((long)((at - rolled).Ticks * Math.Min(Working.Most, stretch)));
+        }
+
         private static void Roll()
         {
             double low = Dynamics.ProbeLow, high = Dynamics.ProbeHigh;
             if (high < low) { double swap = low; low = high; high = swap; }
-            next = DateTime.UtcNow.AddHours(low + dice.NextDouble() * Math.Max(0, high - low));
+            rolled = SimTime.UtcNow;
+            next = rolled.AddHours(low + dice.NextDouble() * Math.Max(0, high - low));
             try { Keep(next.Ticks); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
@@ -225,7 +237,7 @@ namespace CapriDesktop
                 try
                 {
                     DateTime when = new DateTime(had, DateTimeKind.Utc);
-                    if (when <= DateTime.UtcNow.AddHours(Math.Max(Dynamics.ProbeLow, Dynamics.ProbeHigh))) { next = when; return; }
+                    if (when <= SimTime.UtcNow.AddHours(Math.Max(Dynamics.ProbeLow, Dynamics.ProbeHigh))) { next = when; rolled = SimTime.UtcNow; return; }
                 }
                 catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
@@ -275,7 +287,8 @@ namespace CapriDesktop
                     soonKey = null;
                     return true;
                 }
-                if (now.ToUniversalTime() < next && !(flowing && now.ToUniversalTime().AddMinutes(20) >= next)) return false;
+                DateTime due = Ends(next);
+                if (now.ToUniversalTime() < due && !(flowing && now.ToUniversalTime().AddMinutes(20) >= due)) return false;
 
                 // Something about today comes first when there is something to ask, since it goes stale; then a
                 // still-blank line of me.md. A line already answered is never asked again.
@@ -291,7 +304,8 @@ namespace CapriDesktop
                     return true;
                 }
                 // The blank line she asked about longest ago, then its wording asked longest ago, so a line they
-                // brushed off comes back worded another way and only after the others have had a turn.
+                // brushed off comes back worded another way and only after the others have had a turn. One asked in
+                // the last day waits, however many times she restarted since.
                 Dictionary<string, List<string>> blank = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
                 for (int each = 0; each < Asks.GetLength(0); each++)
                 {
@@ -315,9 +329,11 @@ namespace CapriDesktop
                         try { ago = Ago(line); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                         lastAsked = Math.Min(lastAsked, ago);
                     }
+                    if (lastAsked < KeyRest) continue;
                     if (lastAsked > stalest) { pickKey = one.Key; stalest = lastAsked; tied = 1; }
                     else if (lastAsked == stalest && dice.Next(++tied) == 0) pickKey = one.Key;
                 }
+                if (pickKey == null) return false;
                 question = One(blank[pickKey].ToArray());
                 key = pickKey;
                 return true;
@@ -359,6 +375,65 @@ namespace CapriDesktop
             if (hour >= 1 && hour < 5 && Asking("late", 20)) return One(LateAsks);
             return null;
         }
+
+        // A blank line of me.md asked three hours ago, with every other line known, waits; a day on it is asked
+        // again. Her stores are stand-ins and put back after.
+        internal static void KeyRestCheck(List<string> checks)
+        {
+            Func<string, bool> knownWas = Known;
+            Func<string, double, bool> freshWas = Fresh;
+            Func<string, double> agoWas = Ago;
+            Func<double> quietWas = Quiet;
+            Func<int> upsetWas = Upset;
+            Func<string> bandWas = Band;
+            Func<string, string> valueFunc = Value;
+            Func<DateTime, string> backWas = Back;
+            Action<long> keepWas = Keep;
+            DateTime nextWas, rolledWas;
+            string waitingWas, keyWas, soonKeyWas, soonWas;
+            List<KeyValuePair<string, DateTime>> doingWas;
+            lock (gate)
+            {
+                nextWas = next; rolledWas = rolled; waitingWas = waiting; keyWas = PendingKey; soonKeyWas = soonKey; soonWas = soonQuestion;
+                doingWas = new List<KeyValuePair<string, DateTime>>(doing);
+            }
+            try
+            {
+                double hoursAgo = 3;
+                Known = delegate(string key) { return !string.Equals(key, "workHours", StringComparison.OrdinalIgnoreCase); };
+                Ago = delegate(string line) { return hoursAgo; };
+                Fresh = delegate { return false; };
+                Quiet = delegate { return 30; };
+                Upset = delegate { return 0; };
+                Band = delegate { return "steady"; };
+                Value = delegate { return ""; };
+                Back = delegate { return null; };
+                Keep = delegate { };
+                Func<string> ask = delegate
+                {
+                    string question, key;
+                    lock (gate) { next = SimTime.UtcNow.AddHours(-1); rolled = next; waiting = null; PendingKey = null; soonKey = null; soonQuestion = null; doing.Clear(); }
+                    return Due(SimTime.Now, out question, out key) ? key : null;
+                };
+                string early = ask();
+                hoursAgo = KeyRest + 1;
+                string late = ask();
+                if (early != null || late != "workHours") throw new Exception("An unanswered line of me.md didn't wait a day: asked " + (early ?? "nothing") + " after 3 h and " + (late ?? "nothing") + " after a day.");
+                checks.Add("PASS a line of me.md she asked about and got no answer to waits a day before she asks it again, from her saved line store, so restarts don't bring it back sooner");
+            }
+            finally
+            {
+                Known = knownWas; Fresh = freshWas; Ago = agoWas; Quiet = quietWas; Upset = upsetWas; Band = bandWas; Value = valueFunc; Back = backWas; Keep = keepWas;
+                lock (gate)
+                {
+                    next = nextWas; rolled = rolledWas; waiting = waitingWas; PendingKey = keyWas; soonKey = soonKeyWas; soonQuestion = soonWas;
+                    doing.Clear(); doing.AddRange(doingWas);
+                }
+            }
+        }
+
+        // How long a line of me.md she asked about and got no answer to waits before she asks it again.
+        internal const double KeyRest = 24;
 
         private static bool Asking(string kind, double hours = 16)
         {
@@ -456,7 +531,7 @@ namespace CapriDesktop
             lock (gate)
             {
                 Load();
-                Decay(DateTime.UtcNow);
+                Decay(SimTime.UtcNow);
                 bool wasLow = score <= -2.5;
                 score = Math.Max(-8, Math.Min(8, score + Math.Min(2, up) - Math.Min(2, down)));
                 // A new low spell picks how she meets it, and keeps that for the whole spell rather than lurching
@@ -475,7 +550,7 @@ namespace CapriDesktop
         }
 
         // Where they are, roughly: below -2 low, above 2 bright, otherwise nothing worth saying.
-        internal static double Now { get { lock (gate) { Load(); Decay(DateTime.UtcNow); return score; } } }
+        internal static double Now { get { lock (gate) { Load(); Decay(SimTime.UtcNow); return score; } } }
 
         // How she meets a low spell: on their side, a laugh, or a bit of harmless chaos to shake it loose.
         private static readonly string[] Ways =
@@ -505,6 +580,6 @@ namespace CapriDesktop
         internal static bool Bright { get { return Now >= 3.5; } }
 
         // For her checks.
-        internal static void Set(double value) { lock (gate) { loaded = true; score = value; at = DateTime.UtcNow; way = -1; } }
+        internal static void Set(double value) { lock (gate) { loaded = true; score = value; at = SimTime.UtcNow; way = -1; } }
     }
 }

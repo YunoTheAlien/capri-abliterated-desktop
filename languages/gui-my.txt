@@ -204,11 +204,11 @@ Running on this PC	ဤ PC တွင် လည်ပတ်နေသည်
 NORMAL	ပုံမှန်
 OFF	OFF
 Local server address	ဒေသဆာဗာ လိပ်စာ
-Remember panel position	ပန်နယ်တည်နေရာကို မှတ်ထားရန်
 Custom colours	စိတ်ကြိုက်အရောင်များ
 Custom colours...	စိတ်ကြိုက်အရောင်များ...
 Choose	ရွေးရန်
-Hers	သူမ၏
+Reset selected colour	ရွေးထားသောအရောင် ပြန်သတ်မှတ်
+Make a mod	mod ဖန်တီး
 Quiet	တိတ်ဆိတ်
 Quiet min	တိတ်ဆိတ် min
 Quiet max	တိတ်ဆိတ် max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	{n}:{n} အထိ တိတ်ဆိတ်
 Quiet until turned off	ပိတ်သည်အထိ တိတ်ဆိတ်
 Export settings	ဆက်တင်များ ထုတ်ယူရန်
 Import settings	ဆက်တင်များ ထည့်သွင်းရန်
+Save Mainframe position	ပန်နယ်တည်နေရာကို မှတ်ထားရန်

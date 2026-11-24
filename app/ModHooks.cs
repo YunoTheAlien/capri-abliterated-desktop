@@ -630,16 +630,8 @@ namespace CapriDesktop
                 modMenu = new ToolStripMenuItem("Mods");
                 int quit = menu.Items.Count - 2;
                 menu.Items.Insert(Math.Max(0, quit), modMenu);
-                ToolStripDropDownMenu drop = modMenu.DropDown as ToolStripDropDownMenu;
-                if (drop != null)
-                {
-                    drop.Renderer = menu.Renderer;
-                    drop.ForeColor = menu.ForeColor;
-                    drop.BackColor = menu.BackColor;
-                    drop.Font = menu.Font;
-                    drop.ShowImageMargin = false;
-                    drop.ShowCheckMargin = false;
-                }
+                // Dressed as it is made, not as her menu opens, the same as a mod's own submenu is in AddMenu.
+                LikeMenu(modMenu, false);
             }
             modMenu.DropDownItems.Clear();
             foreach (ToolStripMenuItem item in items) modMenu.DropDownItems.Add(item);
@@ -829,13 +821,19 @@ namespace CapriDesktop
                 throw new Exception("A mod's own menu isn't under Mods as it built it, or went past 30 items: " + (own == null ? "none" : own.Text + " " + own.DropDownItems.Count));
             ToolStripDropDownMenu drop = own.DropDown as ToolStripDropDownMenu;
             if (drop == null || !drop.ShowCheckMargin || drop.Renderer != menu.Renderer) throw new Exception("A mod's own menu doesn't wear her menu's look, or has no room for ticks.");
+            // Made after her menu was built, and dressed before its first open, not by her menu opening.
+            if (!sided.Contains(modMenu) || !sided.Contains(own)) throw new Exception("A mod's own menu, or Mods, wasn't dressed as it was made: " + (sided.Contains(modMenu) ? own.Text : "Mods"));
             own.DropDownItems[0].PerformClick();
             own.DropDownItems[2].PerformClick();
             if (mark("run") != "x" || mark("tick") != "True True" || !((ToolStripMenuItem)own.DropDownItems[2]).Checked) throw new Exception("A mod's menu item or tick didn't run, or the tick didn't change: " + mark("tick"));
             if (!modMenuHooked) throw new Exception("MenuOpening didn't hook her right-click menu.");
             ModsMenuOpening();
             if (!until(() => own.DropDownItems[2].Text == "Tick 1")) throw new Exception("MenuOpening couldn't change a mod's menu item: " + own.DropDownItems[2].Text);
-            checks.Add("PASS mod menus: a mod's own submenu sits under Mods in her look, with items, a tick, a line, a greyed item, at most 30 entries, and MenuOpening updates its words");
+            // Opened for real after that, since her menu opening runs MenuOpening again.
+            string landed = OpensBeside(modMenu, own);
+            if (landed != null) throw new Exception("A mod's own menu didn't open beside Mods: " + landed);
+            if (dressedLate != null) throw new Exception(DressedLateSays());
+            checks.Add("PASS mod menus: a mod's own submenu sits under Mods in her look, dressed as it was made and opening beside Mods where Windows has it, with items, a tick, a line, a greyed item, at most 30 entries, and MenuOpening updates its words");
             mods.Remove(mods.All.Find(mod => mod.File.Id == "menus"));
             if (!until(() => !modMenu.Available) || Array.Exists(LiveHosts(), each => each.Id == "menus"))
                 throw new Exception("Removing a mod left its own menu behind: " + modMenu.DropDownItems.Count + " under Mods");
@@ -1115,14 +1113,18 @@ namespace CapriDesktop
             checks.Add("PASS mod hooks: removing a mod takes its brain tools, context, vetoes, hotkeys and page with it");
         }
 
+        // A wait counts on its mod's While working row, so it stretches, pauses or keeps its pace while a work app is in
+        // front; At(time) is wall-clock, like a reminder, and is left alone.
         private sealed class ModTimer : ICapriTimer
         {
             private readonly ModHost host;
             private readonly Action run;
             private readonly double every;
             private readonly DateTime when;
+            private readonly string row;
             private System.Threading.Timer timer;
             private volatile bool over;
+            private double due;
 
             internal ModTimer(ModHost owner, Action action, double first, double repeat, DateTime at)
             {
@@ -1130,7 +1132,18 @@ namespace CapriDesktop
                 run = action;
                 every = repeat;
                 when = at;
+                row = Working.ModMark + owner.Id;
+                if (at == DateTime.MinValue) due = Working.Clock(row) + first;
                 timer = new System.Threading.Timer(delegate { Fire(); }, null, Wait(first), Timeout.Infinite);
+            }
+
+            // Real seconds until its row has run what is left: checked again each second while it isn't at its own pace,
+            // so the end of a work spell is seen.
+            private double Left()
+            {
+                double left = due - Working.Clock(row), rate = Working.RateNow(row);
+                if (left <= 0.005) return 0;
+                return rate <= 0 ? 1 : rate < 1 ? Math.Min(1, left / rate) : left;
             }
 
             private static int Wait(double seconds) { return (int)Math.Max(0, Math.Min(int.MaxValue - 1, seconds * 1000)); }
@@ -1149,6 +1162,11 @@ namespace CapriDesktop
                 if (over || host.Closed) return;
                 // A wait longer than a timer holds, about 24 days, is waited out in steps.
                 if (when != DateTime.MinValue && DateTime.Now < when) { Again((when - DateTime.Now).TotalSeconds); return; }
+                if (when == DateTime.MinValue)
+                {
+                    double wait = Left();
+                    if (wait > 0) { Again(wait); return; }
+                }
                 host.Capri.Post(delegate
                 {
                     if (over || host.Closed) return;
@@ -1156,7 +1174,7 @@ namespace CapriDesktop
                     try { run(); }
                     catch (Exception error) { host.Failed(error); }
                 });
-                if (every > 0) Again(every);
+                if (every > 0) { due = Working.Clock(row) + every; Again(Math.Max(0.01, Left())); }
             }
 
             private void Again(double seconds)
@@ -1246,6 +1264,7 @@ namespace CapriDesktop
                 capri.OnWindow(delegate { capri.DropModHost(this); });
                 if (treeChanged != null) { AddonColours.Changed -= treeChanged; Neon.Repainted -= repainted; }
                 coloursChanged = null;
+                LetGo();
             }
 
             public string Folder
@@ -1736,6 +1755,22 @@ namespace CapriDesktop
                 });
             }
 
+            void ICapriMainframe.AddPanel(string title, string column, int slot, Func<Control> make, bool simple, string group)
+            {
+                if (make == null) throw new ArgumentNullException("make");
+                if (string.IsNullOrWhiteSpace(group)) { ((ICapriMainframe)this).AddPanel(title, column, slot, make, simple); return; }
+                string heading = Clean(string.IsNullOrWhiteSpace(title) ? name : title, 40), shared = Clean(group, 40);
+                int side = string.Equals((column ?? "").Trim(), "left", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+                capri.OnWindow(delegate
+                {
+                    if (over) return;
+                    Control made;
+                    try { made = make(); }
+                    catch (Exception error) { Failed(error); return; }
+                    capri.mainframe.AddGroupPart(id, shared, heading, side, slot, made, simple);
+                });
+            }
+
             void ICapriMainframe.ClosePage() { capri.OnWindow(delegate { capri.mainframe.CloseModPage(id); }); }
             Form ICapriMainframe.Window { get { return capri.mainframe; } }
 
@@ -1761,9 +1796,16 @@ namespace CapriDesktop
                 return timer;
             }
 
+            // A mod's first timer that waits puts it in While working's list, Extend to start.
+            private void Listed()
+            {
+                if (Working.AddMod(id)) capri.OnWindow(delegate { capri.SaveWorkHolds(); if (capri.mainframe != null) capri.mainframe.RefreshWorkApps(); });
+            }
+
             ICapriTimer ICapriTimers.After(double seconds, Action run)
             {
                 if (run == null) throw new ArgumentNullException("run");
+                Listed();
                 return Keep(new ModTimer(this, run, Math.Max(0, seconds), 0, DateTime.MinValue));
             }
 
@@ -1771,6 +1813,7 @@ namespace CapriDesktop
             {
                 if (run == null) throw new ArgumentNullException("run");
                 double gap = Math.Max(0.1, seconds);
+                Listed();
                 return Keep(new ModTimer(this, run, gap, gap, DateTime.MinValue));
             }
 

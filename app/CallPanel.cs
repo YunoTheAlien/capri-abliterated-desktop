@@ -92,7 +92,7 @@ namespace CapriDesktop
 
     internal static class CallInk
     {
-        internal static readonly Color Red = Color.FromArgb(216, 40, 63);
+        internal static Color Red { get { return Neon.Tone(216, 40, 63); } }
         internal static readonly StringFormat Left = Format(StringAlignment.Near);
         internal static readonly StringFormat Centre = Format(StringAlignment.Center);
 

@@ -121,12 +121,12 @@ namespace CapriDesktop
                 {
                     int low = Math.Max(0, Math.Min(10, specialInterestLow)), high = Math.Max(0, Math.Min(10, specialInterestHigh));
                     if (high < low) { int swap = low; low = high; high = swap; }
-                    if (specialInterestNow < 0 || DateTime.UtcNow >= specialInterestUntil)
+                    if (specialInterestNow < 0 || SimTime.UtcNow >= specialInterestUntil)
                     {
                         specialInterestNow = low + dice.Next(high - low + 1);
                         double least = leastHours, most = mostHours;
                         if (most < least) { double swap = least; least = most; most = swap; }
-                        specialInterestUntil = DateTime.UtcNow.AddHours(least + dice.NextDouble() * Math.Max(0.0, most - least));
+                        specialInterestUntil = SimTime.UtcNow.AddHours(least + dice.NextDouble() * Math.Max(0.0, most - least));
                     }
                     return specialInterestNow;
                 }
@@ -384,7 +384,7 @@ namespace CapriDesktop
         {
             Tilt.Tick();
             if (!force && Held && Personalities.Chosen != Personalities.Dynamic) { lock (gate) until = DateTime.MinValue; return; }
-            DateTime now = DateTime.UtcNow;
+            DateTime now = SimTime.UtcNow;
             lock (gate) { if (now < until) return; }
 
             // Every mood rolls its own chance, and the ones that come up form a pool, from which one wins at random. 0
@@ -463,7 +463,7 @@ namespace CapriDesktop
                 long ticks;
                 if (rows.Length < 2 || !long.TryParse(rows[0].Trim(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out ticks)) return;
                 DateTime ends = new DateTime(Math.Max(0, Math.Min(DateTime.MaxValue.Ticks, ticks)), DateTimeKind.Utc);
-                if (ends <= DateTime.UtcNow) return;
+                if (ends <= SimTime.UtcNow) return;
                 string mood = rows[1].Trim();
                 if (mood.Length > 0)
                 {
@@ -476,7 +476,7 @@ namespace CapriDesktop
                 lock (gate) until = ends;
                 if (MoodChanged != null) { try { MoodChanged(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
                 Brain.Log("mood", -1, "Back as " + (mood.Length == 0 ? "herself" : mood.ToLowerInvariant()) + (Held ? ", set by hand" : "")
-                    + ", with " + (ends - DateTime.UtcNow).TotalHours.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "h left on it.");
+                    + ", with " + (ends - SimTime.UtcNow).TotalHours.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "h left on it.");
             }
             catch (Exception bad) { Notes.Failed("reading her mood back in Dynamics.cs", bad); }
         }
@@ -502,13 +502,13 @@ namespace CapriDesktop
                 string first = Personalities.Attitude;
                 DateTime ends;
                 lock (gate) ends = until;
-                if (first.Length == 0 || ends <= DateTime.UtcNow) throw new Exception("Mood: Dynamic on a fixed personality didn't roll a mood on the timer.");
+                if (first.Length == 0 || ends <= SimTime.UtcNow) throw new Exception("Mood: Dynamic on a fixed personality didn't roll a mood on the timer.");
                 Turn();
                 if (Personalities.Attitude != first) throw new Exception("A rolled mood changed before its time was up.");
-                lock (gate) until = DateTime.UtcNow.AddMinutes(-1);
+                lock (gate) until = SimTime.UtcNow.AddMinutes(-1);
                 Turn();
                 lock (gate) ends = until;
-                if (Personalities.Attitude.Length == 0 || ends <= DateTime.UtcNow) throw new Exception("A fixed personality's dynamic mood didn't roll again when its time was up.");
+                if (Personalities.Attitude.Length == 0 || ends <= SimTime.UtcNow) throw new Exception("A fixed personality's dynamic mood didn't roll again when its time was up.");
                 // Every roll lands on a mood while any mood has a chance: a round with no winner rolls again.
                 for (int roll = 0; roll < 200; roll++)
                 {
@@ -543,7 +543,7 @@ namespace CapriDesktop
                 // Held by hand, a mood or no mood, it stays.
                 Held = true;
                 Personalities.Attitude = "Playful";
-                lock (gate) until = DateTime.UtcNow.AddMinutes(-1);
+                lock (gate) until = SimTime.UtcNow.AddMinutes(-1);
                 Turn();
                 if (Personalities.Attitude != "Playful") throw new Exception("A held mood on a fixed personality was rolled away: " + Personalities.Attitude);
                 Personalities.Attitude = "";
@@ -578,7 +578,7 @@ namespace CapriDesktop
                 // A mood with time left on it comes back, and so does the fact that it was set by hand.
                 Personalities.Attitude = "Playful";
                 Held = true;
-                lock (gate) until = DateTime.UtcNow.AddHours(3);
+                lock (gate) until = SimTime.UtcNow.AddHours(3);
                 Remember();
                 Personalities.Attitude = "";
                 Held = false;
@@ -587,10 +587,10 @@ namespace CapriDesktop
                 if (Personalities.Attitude != "Playful" || !Held) throw new Exception("A mood with hours left on it did not come back: " + Personalities.Attitude + ", held " + Held);
                 DateTime back;
                 lock (gate) back = until;
-                if (back <= DateTime.UtcNow) throw new Exception("A mood came back with no time left on it.");
+                if (back <= SimTime.UtcNow) throw new Exception("A mood came back with no time left on it.");
 
                 // One whose time has passed is not hers to keep: she rolls, as she did before any of this.
-                lock (gate) until = DateTime.UtcNow.AddHours(-1);
+                lock (gate) until = SimTime.UtcNow.AddHours(-1);
                 Remember();
                 Personalities.Attitude = "Moody";
                 Held = false;
@@ -598,7 +598,7 @@ namespace CapriDesktop
                 if (Personalities.Attitude != "Moody") throw new Exception("An expired mood overwrote the one she is in: " + Personalities.Attitude);
 
                 // A mood she no longer has, from a file written by an older build or edited by hand.
-                File.WriteAllText(MoodKept, DateTime.UtcNow.AddHours(2).Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                File.WriteAllText(MoodKept, SimTime.UtcNow.AddHours(2).Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture)
                     + Environment.NewLine + "Nonesuch" + Environment.NewLine + "rolled" + Environment.NewLine, new UTF8Encoding(false));
                 Recall();
                 if (Personalities.Attitude != "Moody") throw new Exception("A mood she does not have was restored: " + Personalities.Attitude);
@@ -626,7 +626,7 @@ namespace CapriDesktop
             double least = Least, most = Most;
             if (most < least) { double swap = least; least = most; most = swap; }
             double hours = least + new Random().NextDouble() * Math.Max(0.0, most - least);
-            lock (gate) until = DateTime.UtcNow.AddHours(Math.Max(0.05, hours));
+            lock (gate) until = SimTime.UtcNow.AddHours(Math.Max(0.05, hours));
             Brain.Log("mood", -1, "Her mood's clock started again on a pick, for " + hours.ToString("0.#") + "h.");
             Remember();
         }
@@ -643,7 +643,7 @@ namespace CapriDesktop
             double least = Least, most = Most;
             if (most < least) { double swap = least; least = most; most = swap; }
             double hours = least + new Random().NextDouble() * Math.Max(0.0, most - least);
-            lock (gate) until = DateTime.UtcNow.AddHours(Math.Max(0.05, hours));
+            lock (gate) until = SimTime.UtcNow.AddHours(Math.Max(0.05, hours));
             Brain.Log("mood", -1, "Set to " + (mood == null || mood.Length == 0 ? "no mood" : mood.ToLowerInvariant())
                 + " by hand for " + hours.ToString("0.#") + "h.");
             Remember();
@@ -665,8 +665,9 @@ namespace CapriDesktop
             {
                 FileInfo about = new FileInfo(Kept);
                 if (!about.Exists) return;
-                lock (gate) { if (about.LastWriteTimeUtc == read && about.Length == wasLong) return; }
-                string[] lines = CapriDesktop.Notes.ReadLines(Kept);
+                long size = about.Length + ((long)FileSlots.Generation << 40);
+                lock (gate) { if (about.LastWriteTimeUtc == read && size == wasLong) return; }
+                string[] lines = FileSlots.ReadLines(Kept);
                 string baseName = "Devoted";
                 double least = 4, most = 8, askLow = 1, askHigh = 2, askWait = 90;
                 double tellLow = storyLow, tellHigh = storyHigh;

@@ -15,17 +15,17 @@ namespace CapriDesktop
 
     internal static class Look
     {
-        // Each of these is the palette's, so her bubble follows the Mainframe colours setting like every
-        // other window of hers. The values for Night City are what this file used to hold.
-        internal static Color Panel { get { return CapriDesktop.Neon.Sheet; } }
-        internal static Color Cyan { get { return CapriDesktop.Neon.SpokenEdge; } }
-        internal static Color Red { get { return CapriDesktop.Neon.SpokenTitle; } }
-        internal static Color Yellow { get { return CapriDesktop.Neon.Amber; } }
-        internal static Color Neon { get { return CapriDesktop.Neon.SpokenInk; } }
-        internal static Color Ink { get { return CapriDesktop.Neon.SheetInk; } }
-        internal static Color Dim { get { return CapriDesktop.Neon.SheetDim; } }
+        // The palette's, so her bubble follows the Mainframe colours setting; fields as the older build had them, so a mod
+        // reading one by name finds it (Lachu). The palette sets them again on every change.
+        internal static Color Panel, Cyan, Red, Yellow, Neon, Ink, Dim, Pink;
 
-        internal static Color Pink { get { return CapriDesktop.Neon.SpokenAccent; } }
+        static Look() { Mirror(); }
+
+        internal static void Mirror()
+        {
+            Panel = CapriDesktop.Neon.Sheet; Cyan = CapriDesktop.Neon.SpokenEdge; Red = CapriDesktop.Neon.SpokenTitle; Yellow = CapriDesktop.Neon.Amber;
+            Neon = CapriDesktop.Neon.SpokenInk; Ink = CapriDesktop.Neon.SheetInk; Dim = CapriDesktop.Neon.SheetDim; Pink = CapriDesktop.Neon.SpokenAccent;
+        }
         // Her music player's, set apart from her bubble's in layout.md.
         internal static Color PlayerEdge { get { return CapriDesktop.Neon.PlayerEdge; } }
         internal static Color PlayerAccent { get { return CapriDesktop.Neon.PlayerAccent; } }
@@ -106,7 +106,7 @@ namespace CapriDesktop
                     using (Brush red = new SolidBrush(Color.FromArgb(170, Red))) graphics.FillPolygon(red, Shift(arrow, -1.1f, -0.3f, s));
                     PointF[] body = Shift(arrow, 0, 0, s);
                     using (Brush pink = new SolidBrush(Pink)) graphics.FillPolygon(pink, body);
-                    using (Pen edge = new Pen(Color.FromArgb(20, 6, 14), 1.3f * s)) { edge.LineJoin = LineJoin.Round; graphics.DrawPolygon(edge, body); }
+                    using (Pen edge = new Pen(CapriDesktop.Neon.BubbleTone(20, 6, 14), 1.3f * s)) { edge.LineJoin = LineJoin.Round; graphics.DrawPolygon(edge, body); }
                     using (Pen shine = new Pen(Color.FromArgb(150, 255, 214, 236), 1f * s)) graphics.DrawLine(shine, 3.6f * s, 5.5f * s, 3.6f * s, 17 * s);
                 }
                 using (Graphics graphics = Graphics.FromImage(art))
@@ -904,9 +904,9 @@ namespace CapriDesktop
         internal const int TearFrames = 4;
         // Segments in each of the wave's five bars when it's full: the wave's shape, and the top of the mic level.
         internal static readonly int[] Bars = { 2, 4, 5, 3, 2 };
-        internal static readonly Color Fill = Color.FromArgb(246, 9, 11, 15);
-        internal static readonly Color Unlit = Color.FromArgb(46, 52, 64);
-        internal static readonly Color Caption = Color.FromArgb(168, 174, 184);
+        internal static Color Fill { get { return Color.FromArgb(246, CapriDesktop.Neon.BubbleTone(9, 11, 15)); } }
+        internal static Color Unlit { get { return CapriDesktop.Neon.BubbleTone(46, 52, 64); } }
+        internal static Color Caption { get { return CapriDesktop.Neon.BubbleTone(168, 174, 184); } }
         private const int WashAlpha = 40;
         private static readonly Random random = new Random();
         private readonly Beat ticks = new Beat();
@@ -1104,7 +1104,7 @@ namespace CapriDesktop
                 Rectangle lit = hover == 1 ? Rectangle.FromLTRB(body.Left, body.Top, mid, body.Bottom) : hover == 2 ? Rectangle.FromLTRB(mid, body.Top, body.Right, body.Bottom) : Rectangle.Empty;
                 Plate(graphics, body, s, lit, Look.Pink, Look.Cyan);
                 // A slanted seam where the two halves' hit areas meet.
-                using (Pen seam = new Pen(Color.FromArgb(66, 72, 86), Math.Max(1, (int)Math.Round(s))))
+                using (Pen seam = new Pen(CapriDesktop.Neon.BubbleTone(66, 72, 86), Math.Max(1, (int)Math.Round(s))))
                     graphics.DrawLine(seam, mid + 1.5f * s, body.Top + 10 * s, mid - 1.5f * s, body.Bottom - 10 * s);
                 // Her glitch, like her mini player: slivers of the edge torn loose, cyan at the top right and pink at the bottom left.
                 int sliver = Math.Max(1, (int)Math.Round(s));
@@ -1445,11 +1445,12 @@ namespace CapriDesktop
         internal const double WideLength = 1.2;
         internal const double BurstLength = 1.5;
         internal const double Linger = 0.7;
-        private static readonly Color Crimson = Color.FromArgb(176, 6, 32);
-        private static readonly Color Ink = Color.FromArgb(8, 6, 10);
-        private static readonly Color Bruise = Color.FromArgb(34, 8, 48);
-        private static readonly Color Violet = Color.FromArgb(110, 30, 170);
-        private static readonly Color Hot = Color.FromArgb(255, 120, 140);
+        private static Color Crimson { get { return Own("Crimson"); } }
+        private static Color Ink { get { return Own("Ink"); } }
+        private static Color Violet { get { return Own("Violet"); } }
+        private static Color Hot { get { return Own("Hot pink"); } }
+        // Its colours, from its fold under ADD-ONS in Custom colours.
+        private static Color Own(string name) { return AddonColours.Hers(AddonColours.Tear, name); }
         private readonly Beat ticks = new Beat();
         private readonly System.Diagnostics.Stopwatch watch = new System.Diagnostics.Stopwatch();
         private readonly Random random = new Random();
@@ -1530,18 +1531,18 @@ namespace CapriDesktop
                     int width = wide ? near.Width / 6 + pick.Next(Math.Max(1, near.Width / 2)) : near.Width / 4 + pick.Next(Math.Max(1, near.Width * 3 / 4));
                     int x = near.Left + pick.Next(Math.Max(1, near.Width - width));
                     int kind = pick.Next(10);
-                    Color colour = kind < 4 ? Ink : kind < 8 ? Look.Red : Crimson;
+                    Color colour = kind < 4 ? Ink : kind < 8 ? Own("Red") : Crimson;
                     int alpha = (int)((kind < 4 ? 180 + pick.Next(60) : 150 + pick.Next(100)) * fade);
                     if (alpha <= 0) continue;
                     using (Brush brush = new SolidBrush(Color.FromArgb(alpha, colour))) graphics.FillRectangle(brush, x, y, width, tall);
                     if (kind < 4 && tall > 3)
-                        using (Brush edge = new SolidBrush(Color.FromArgb(alpha * 2 / 3, Look.Red)))
+                        using (Brush edge = new SolidBrush(Color.FromArgb(alpha * 2 / 3, Own("Red"))))
                         {
                             graphics.FillRectangle(edge, x, y, width, 1);
                             graphics.FillRectangle(edge, x, y + tall - 1, width, 1);
                         }
                     if (pick.Next(3) == 0)
-                        using (Brush ghost = new SolidBrush(Color.FromArgb(alpha / 3, Look.Red))) graphics.FillRectangle(ghost, x + pick.Next(-near.Width / 16, near.Width / 16 + 1), y + tall + 1, width / 2, Math.Max(1, tall / 2));
+                        using (Brush ghost = new SolidBrush(Color.FromArgb(alpha / 3, Own("Red")))) graphics.FillRectangle(ghost, x + pick.Next(-near.Width / 16, near.Width / 16 + 1), y + tall + 1, width / 2, Math.Max(1, tall / 2));
                 }
             }
             return image;
@@ -1562,9 +1563,9 @@ namespace CapriDesktop
                 int kind = pick.Next(10);
                 int alpha = (int)((kind < 4 ? 180 + pick.Next(60) : 150 + pick.Next(100)) * fade * 0.4);
                 if (alpha <= 0) continue;
-                using (Brush brush = new SolidBrush(Color.FromArgb(alpha, kind < 4 ? Ink : kind < 8 ? Look.Red : Crimson))) graphics.FillRectangle(brush, x, y, width, tall);
+                using (Brush brush = new SolidBrush(Color.FromArgb(alpha, kind < 4 ? Ink : kind < 8 ? Own("Red") : Crimson))) graphics.FillRectangle(brush, x, y, width, tall);
                 if (pick.Next(3) == 0)
-                    using (Brush ghost = new SolidBrush(Color.FromArgb(alpha / 3, Look.Red))) graphics.FillRectangle(ghost, x + pick.Next(-size.Width / 16, size.Width / 16 + 1), y + tall + 1, width / 2, Math.Max(1, tall / 2));
+                    using (Brush ghost = new SolidBrush(Color.FromArgb(alpha / 3, Own("Red")))) graphics.FillRectangle(ghost, x + pick.Next(-size.Width / 16, size.Width / 16 + 1), y + tall + 1, width / 2, Math.Max(1, tall / 2));
             }
         }
 
@@ -1606,8 +1607,8 @@ namespace CapriDesktop
                 using (Bitmap glow = new Bitmap(Math.Max(1, room.Width / Soft), Math.Max(1, room.Height / Soft), PixelFormat.Format32bppPArgb))
                 {
                     using (Graphics blur = Graphics.FromImage(glow))
-                    using (Brush haze = new SolidBrush(Color.FromArgb((int)(70 * alpha), 210, 12, 96)))
-                    using (Brush halo = new SolidBrush(Color.FromArgb((int)(150 * alpha), 230, 10, 80)))
+                    using (Brush haze = new SolidBrush(Color.FromArgb((int)(70 * alpha), Own("Haze"))))
+                    using (Brush halo = new SolidBrush(Color.FromArgb((int)(150 * alpha), Own("Halo"))))
                     {
                         blur.SmoothingMode = SmoothingMode.AntiAlias;
                         for (int v = 0; v < spines.Count; v++) blur.FillPolygon(haze, Outline(spines[v], widths[v], 1f / Soft, 3.4f, 18 * unit, shiftX[v] - room.X, shiftY[v] - room.Y), FillMode.Winding);
@@ -1630,9 +1631,9 @@ namespace CapriDesktop
                 graphics.SmoothingMode = SmoothingMode.AntiAlias;
                 bool split = progress < 0.1 || jitter.Next(4) == 0;
                 float cut = (2 + jitter.Next(3)) * unit;
-                using (Brush cyan = new SolidBrush(Color.FromArgb((int)(170 * alpha), Shatter.Mint)))
-                using (Brush violet = new SolidBrush(Color.FromArgb((int)(235 * alpha), Shatter.Violet)))
-                using (Brush red = new SolidBrush(Color.FromArgb((int)(255 * alpha), 236, 6, 68)))
+                using (Brush cyan = new SolidBrush(Color.FromArgb((int)(170 * alpha), Own("Mint"))))
+                using (Brush violet = new SolidBrush(Color.FromArgb((int)(235 * alpha), Own("Bright violet"))))
+                using (Brush red = new SolidBrush(Color.FromArgb((int)(255 * alpha), Own("Rim red"))))
                     for (int v = 0; v < spines.Count; v++)
                     {
                         if (split) graphics.FillPolygon(cyan, Outline(spines[v], widths[v], 1, 1, 0, shiftX[v] + cut, shiftY[v] - cut * 0.4f), FillMode.Winding);
@@ -1640,7 +1641,7 @@ namespace CapriDesktop
                         graphics.FillPolygon(red, Outline(spines[v], widths[v], 1, 1, 0, shiftX[v], shiftY[v]), FillMode.Winding);
                     }
                 graphics.SmoothingMode = SmoothingMode.None;
-                using (Brush speck = new SolidBrush(Color.FromArgb((int)(210 * alpha), 255, 222, 232)))
+                using (Brush speck = new SolidBrush(Color.FromArgb((int)(210 * alpha), Own("Specks"))))
                     for (int v = 0; v < spines.Count; v++)
                         for (int k = 1; k < spines[v].Length; k++)
                         {
@@ -1656,7 +1657,7 @@ namespace CapriDesktop
                                 graphics.FillRectangle(speck, a.X + ex * (float)along - ey / reach * (float)across + shiftX[v], a.Y + ey * (float)along + ex / reach * (float)across + shiftY[v], dotSize, dotSize);
                             }
                         }
-                Color[] colours = { Look.Red, Hot, Color.White, Ink, Shatter.Violet, Shatter.Mint };
+                Color[] colours = { Own("Red"), Hot, Own("White"), Ink, Own("Bright violet"), Own("Mint") };
                 for (int v = 0; v < spines.Count; v++)
                 {
                     PointF[] spine = spines[v];
@@ -1845,8 +1846,10 @@ namespace CapriDesktop
         internal const double LeaveLength = 0.95;
         internal const double ArriveLength = 0.72;
         internal const double Handoff = 0.42;
-        internal static readonly Color Violet = Color.FromArgb(122, 60, 255);
-        internal static readonly Color Mint = Color.FromArgb(30, 240, 138);
+        internal static Color Violet { get { return Own("Violet"); } }
+        internal static Color Mint { get { return Own("Mint"); } }
+        // Its colours, from its fold under ADD-ONS in Custom colours.
+        private static Color Own(string name) { return AddonColours.Hers(AddonColours.Shatter, name); }
         private readonly Beat ticks = new Beat();
         private readonly System.Diagnostics.Stopwatch watch = new System.Diagnostics.Stopwatch();
         private readonly Random random = new Random();
@@ -1926,7 +1929,7 @@ namespace CapriDesktop
             List<Shard> made = new List<Shard>();
             int step = Math.Max(6, (int)Math.Round(9 * scale));
             float middleX = self.Width / 2f, middleY = self.Height / 2f;
-            Color[] accents = { Violet, Mint, Color.White, Look.Red, Look.Pink };
+            Color[] accents = { Violet, Mint, Own("White"), Own("Red"), Own("Pink") };
             for (int y = step / 2; y < self.Height; y += step)
                 for (int x = step / 2; x < self.Width; x += step)
                 {
@@ -2034,9 +2037,9 @@ namespace CapriDesktop
                 graphics.FillRectangle(glow, haze);
             }
             using (Pen edge = new Pen(Violet, Math.Max(2, 3 * scale))) graphics.DrawPolygon(edge, outline.ToArray());
-            using (Brush body = new SolidBrush(Look.Red)) graphics.FillPolygon(body, outline.ToArray());
-            using (Brush core = new SolidBrush(Color.FromArgb(245, 255, 255, 255))) graphics.FillRectangle(core, middle - w * 0.16f, upper, w * 0.32f, lower - upper);
-            using (Brush flash = new SolidBrush(Color.FromArgb((int)(150 * Math.Min(1, wide / (30 * scale))), 255, 255, 255))) graphics.FillEllipse(flash, middle - w * 1.6f, lower - w * 0.35f, w * 3.2f, w * 0.7f);
+            using (Brush body = new SolidBrush(Own("Red"))) graphics.FillPolygon(body, outline.ToArray());
+            using (Brush core = new SolidBrush(Color.FromArgb(245, Own("White")))) graphics.FillRectangle(core, middle - w * 0.16f, upper, w * 0.32f, lower - upper);
+            using (Brush flash = new SolidBrush(Color.FromArgb((int)(150 * Math.Min(1, wide / (30 * scale))), Own("White")))) graphics.FillEllipse(flash, middle - w * 1.6f, lower - w * 0.35f, w * 3.2f, w * 0.7f);
         }
 
         // Her picture in slices that slide apart, with a colour split either side. Her ribbons use it too, split in her own colours.
@@ -2056,7 +2059,7 @@ namespace CapriDesktop
                     top += tall;
                 }
             }
-            Color[] bars = { Color.White, one ?? Mint, other ?? Look.Red, other ?? Violet };
+            Color[] bars = { Own("White"), one ?? Mint, other ?? Own("Red"), other ?? Violet };
             for (int i = 0, count = (int)Math.Round(5 * glitch); i < count; i++)
             {
                 int y = at.Y + (int)(self.Height * (0.1 + pick.NextDouble() * 0.8));
@@ -2120,7 +2123,7 @@ namespace CapriDesktop
                 if (green != null) green.Dispose();
                 if (violet != null) violet.Dispose();
             }
-            Color[] bars = { Color.White, Mint, Look.Red, Violet };
+            Color[] bars = { Own("White"), Mint, Own("Red"), Violet };
             float middle = target.X + target.Width / 2, room = target.Width / 2 + (UnderReach - 2) * unit;
             for (int i = 0, count = (int)Math.Round(5 * strength); i < count; i++)
             {
@@ -2146,7 +2149,7 @@ namespace CapriDesktop
         {
             if (u <= 0 || u >= 1) return;
             Random pick = new Random(seed);
-            Color[] colours = { Color.White, Color.White, Color.White, Look.Red, Violet };
+            Color[] colours = { Own("White"), Own("White"), Own("White"), Own("Red"), Violet };
             float near = 120 * scale * (float)(0.7 + 0.9 * Smooth(u));
             int alpha = (int)(235 * (1 - Smooth((u - 0.35) / 0.65)));
             for (int i = 0; i < 28; i++)
@@ -2170,6 +2173,9 @@ namespace CapriDesktop
 
     internal sealed class Takeover : Overlay
     {
+        // Its colours, from its fold under ADD-ONS in Custom colours.
+        private static Color Own(string name) { return AddonColours.Hers(AddonColours.Takeover, name); }
+
         internal const double FaceAt = 0.12;
         internal const double FaceIn = 0.3;
         internal const double FlyAt = 0.95;
@@ -2362,7 +2368,7 @@ namespace CapriDesktop
                         float q = (float)p;
                         RectangleF source = new RectangleF(Zoom.X + (FacePlate.X - Zoom.X) * q, Zoom.Y + (FacePlate.Y - Zoom.Y) * q, Zoom.Width + (FacePlate.Width - Zoom.Width) * q, Zoom.Height + (FacePlate.Height - Zoom.Height) * q);
                         double slices = ghost > 0 ? 0.6 : t < FaceAt + FaceIn ? 1 - (t - FaceAt) / FaceIn : pick.Next(9) == 0 ? 0.5 : 0;
-                        Portal(graphics, face, at, side, source, (ghost == 0 ? flick : 0.32 / ghost) * fade, slices, ghost == 1 ? Shatter.Violet : ghost == 2 ? Shatter.Mint : Color.Empty, scale, unit, p, seed, pick);
+                        Portal(graphics, face, at, side, source, (ghost == 0 ? flick : 0.32 / ghost) * fade, slices, ghost == 1 ? Own("Violet") : ghost == 2 ? Own("Mint") : Color.Empty, scale, unit, p, seed, pick);
                     }
                 }
             }
@@ -2405,9 +2411,9 @@ namespace CapriDesktop
                 using (Brush ghost = new SolidBrush(Color.FromArgb(a, tint))) graphics.FillPolygon(ghost, rim);
                 return;
             }
-            using (Brush violet = new SolidBrush(Color.FromArgb(a, Shatter.Violet))) graphics.FillPolygon(violet, lip);
-            using (Brush red = new SolidBrush(Color.FromArgb(a, 236, 6, 68))) graphics.FillPolygon(red, rim);
-            using (Brush dark = new SolidBrush(Color.FromArgb(a, 10, 8, 14))) graphics.FillPolygon(dark, edge);
+            using (Brush violet = new SolidBrush(Color.FromArgb(a, Own("Violet")))) graphics.FillPolygon(violet, lip);
+            using (Brush red = new SolidBrush(Color.FromArgb(a, Own("Rim red")))) graphics.FillPolygon(red, rim);
+            using (Brush dark = new SolidBrush(Color.FromArgb(a, Own("Dark")))) graphics.FillPolygon(dark, edge);
             int span = Math.Max(2, (int)Math.Ceiling(side * 1.08f));
             if (painted == null || painted.Width != span || paintedFrom != source)
             {
@@ -2421,8 +2427,8 @@ namespace CapriDesktop
             {
                 if (slices > 0.25 && minted == null)
                 {
-                    minted = Baked(face, span, source, Shatter.Mint);
-                    bruised = Baked(face, span, source, Shatter.Violet);
+                    minted = Baked(face, span, source, Own("Mint"));
+                    bruised = Baked(face, span, source, Own("Violet"));
                 }
                 art = new Bitmap(span, span, PixelFormat.Format32bppPArgb);
                 using (Graphics paint = Graphics.FromImage(art))
@@ -2457,14 +2463,14 @@ namespace CapriDesktop
             graphics.InterpolationMode = smooth;
             graphics.PixelOffsetMode = offset;
             if (art != painted) art.Dispose();
-            using (Pen seam = new Pen(Color.FromArgb(a, 10, 8, 14), Math.Max(1.2f, 1.6f * unit))) graphics.DrawPolygon(seam, edge);
+            using (Pen seam = new Pen(Color.FromArgb(a, Own("Dark")), Math.Max(1.2f, 1.6f * unit))) graphics.DrawPolygon(seam, edge);
         }
 
         private static void Hits(Graphics graphics, Rectangle box, double t, float unit, Random pick)
         {
             double fade = 1 - Smooth(t);
             if (fade <= 0.01) return;
-            Color[] colours = { Look.Red, Color.FromArgb(10, 8, 14), Look.Pink, Shatter.Mint, Shatter.Violet };
+            Color[] colours = { Own("Red"), Own("Dark"), Own("Pink"), Own("Mint"), Own("Violet") };
             for (int i = 0, bars = 4 + pick.Next(5); i < bars; i++)
             {
                 float wide = box.Width * (float)(0.25 + pick.NextDouble() * 0.65), tall = (1 + pick.Next(5)) * unit;
@@ -2495,7 +2501,7 @@ namespace CapriDesktop
             for (float x = box.Right; x > box.Left; x -= step) edge.Add(new PointF(x, box.Bottom + (float)(pick.NextDouble() * 2 - 1) * kick));
             for (float y = box.Bottom; y > box.Top; y -= step) edge.Add(new PointF(box.Left + (float)(pick.NextDouble() * 2 - 1) * kick, y));
             PointF[] points = edge.ToArray();
-            Color[] colours = { Shatter.Violet, Color.FromArgb(40, 230, 255), Look.Pink };
+            Color[] colours = { Own("Violet"), Own("Cyan"), Own("Pink") };
             for (int i = 0; i < colours.Length; i++)
                 using (Pen pen = new Pen(Color.FromArgb((int)(220 * alpha), colours[i]), (i == 2 ? 2.4f : 2f) * scale))
                 {
@@ -2515,7 +2521,7 @@ namespace CapriDesktop
             if (alpha <= 0.01) return;
             float reach = 22 * scale, thick = 3 * scale;
             foreach (int pass in new[] { 0, 1 })
-                using (Pen pen = new Pen(Color.FromArgb((int)(230 * alpha), pass == 0 ? Shatter.Violet : Look.Pink), thick))
+                using (Pen pen = new Pen(Color.FromArgb((int)(230 * alpha), pass == 0 ? Own("Violet") : Own("Pink")), thick))
                 {
                     pen.StartCap = LineCap.Square;
                     pen.EndCap = LineCap.Square;
@@ -2534,7 +2540,7 @@ namespace CapriDesktop
             {
                 float cut = slab.Height * 0.35f;
                 shape.AddPolygon(new[] { new PointF(slab.Left + cut, slab.Top), new PointF(slab.Right, slab.Top), new PointF(slab.Right - cut, slab.Bottom), new PointF(slab.Left, slab.Bottom) });
-                using (Brush lip = new SolidBrush(Color.FromArgb(a, Shatter.Violet)))
+                using (Brush lip = new SolidBrush(Color.FromArgb(a, Own("Violet"))))
                 using (Matrix down = new Matrix())
                 using (GraphicsPath under = (GraphicsPath)shape.Clone())
                 {
@@ -2542,8 +2548,8 @@ namespace CapriDesktop
                     under.Transform(down);
                     graphics.FillPath(lip, under);
                 }
-                using (LinearGradientBrush fill = new LinearGradientBrush(slab, Color.FromArgb(a * 94 / 100, 34, 22, 44), Color.FromArgb(a * 96 / 100, 12, 8, 18), LinearGradientMode.Vertical)) graphics.FillPath(fill, shape);
-                using (Pen edge = new Pen(Color.FromArgb(a, Look.Red), 1.6f * scale)) graphics.DrawPath(edge, shape);
+                using (LinearGradientBrush fill = new LinearGradientBrush(slab, Color.FromArgb(a * 94 / 100, Own("Panel top")), Color.FromArgb(a * 96 / 100, Own("Panel foot")), LinearGradientMode.Vertical)) graphics.FillPath(fill, shape);
+                using (Pen edge = new Pen(Color.FromArgb(a, Own("Red")), 1.6f * scale)) graphics.DrawPath(edge, shape);
                 using (Region was = graphics.Clip)
                 {
                 graphics.SetClip(shape, CombineMode.Intersect);
@@ -2551,23 +2557,23 @@ namespace CapriDesktop
                 float y = slab.Top + (slab.Height - font.GetHeight(graphics)) / 2 + 1;
                 int shown = (int)Math.Round((lead.Length + name.Length) * Math.Max(0, Math.Min(1, typed)));
                 string leadShown = lead.Substring(0, Math.Min(lead.Length, shown)), nameShown = shown > lead.Length ? name.Substring(0, Math.Min(name.Length, shown - lead.Length)) : "";
-                using (Brush pink = new SolidBrush(Color.FromArgb(a, Look.Pink)))
-                using (Brush white = new SolidBrush(Color.FromArgb(a, 255, 255, 255)))
+                using (Brush pink = new SolidBrush(Color.FromArgb(a, Own("Pink"))))
+                using (Brush white = new SolidBrush(Color.FromArgb(a, Own("White"))))
                 {
                     graphics.DrawString(leadShown, font, pink, x, y, Spaced);
                     if (nameShown.Length > 0) graphics.DrawString(nameShown, font, white, x + graphics.MeasureString(lead, font, PointF.Empty, Spaced).Width, y, Spaced);
                 }
                 if (glitch)
-                    using (Brush bar = new SolidBrush(Color.FromArgb(a * 3 / 4, pick.Next(2) == 0 ? Shatter.Mint : Look.Pink)))
+                    using (Brush bar = new SolidBrush(Color.FromArgb(a * 3 / 4, pick.Next(2) == 0 ? Own("Mint") : Own("Pink"))))
                         graphics.FillRectangle(bar, slab.Left, slab.Top + (float)pick.NextDouble() * slab.Height, slab.Width * (float)(0.3 + pick.NextDouble() * 0.6), Math.Max(1, 2 * scale));
                 graphics.Clip = was;
                 }
             }
-            using (Brush back = new SolidBrush(Color.FromArgb(a, 10, 8, 14))) graphics.FillRectangle(back, iconAt);
+            using (Brush back = new SolidBrush(Color.FromArgb(a, Own("Dark")))) graphics.FillRectangle(back, iconAt);
             if (face != null)
                 using (ImageAttributes look = Tint(Color.Empty, fade))
                     graphics.DrawImage(face, Rect(iconAt), FacePlate.X, FacePlate.Y, FacePlate.Width, FacePlate.Height, GraphicsUnit.Pixel, look);
-            using (Pen ring = new Pen(Color.FromArgb(a, Shatter.Mint), 1.4f * scale)) graphics.DrawRectangle(ring, iconAt.X, iconAt.Y, iconAt.Width, iconAt.Height);
+            using (Pen ring = new Pen(Color.FromArgb(a, Own("Mint")), 1.4f * scale)) graphics.DrawRectangle(ring, iconAt.X, iconAt.Y, iconAt.Width, iconAt.Height);
         }
 
         protected override void Dispose(bool disposing)
@@ -3463,7 +3469,7 @@ namespace CapriDesktop
 
         internal void Choose(Action<bool> answer)
         {
-            if (answer != null && picked == null) ChoiceSince = DateTime.UtcNow;
+            if (answer != null && picked == null) ChoiceSince = SimTime.UtcNow;
             picked = answer;
             yesButton = noButton = RectangleF.Empty;
             clean = false;

@@ -204,11 +204,11 @@ Running on this PC	Veikia šiame PC
 NORMAL	NORMALUS
 OFF	IŠJUNGTA
 Local server address	Vietinio serverio adresas
-Remember panel position	Įsiminti skydelio vietą
 Custom colours	Pasirinktinės spalvos
 Custom colours...	Pasirinktinės spalvos...
 Choose	Pasirinkti
-Hers	Jos
+Reset selected colour	Atstatyti pasirinktą spalvą
+Make a mod	Sukurti modą
 Quiet	Tyla
 Quiet min	Tyla min
 Quiet max	Tyla max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Tyla iki {n}:{n}
 Quiet until turned off	Tyla, kol išjungsiu
 Export settings	Eksportuoti nustatymus
 Import settings	Importuoti nustatymus
+Save Mainframe position	Įsiminti skydelio vietą

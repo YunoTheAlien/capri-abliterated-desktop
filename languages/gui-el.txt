@@ -204,11 +204,11 @@ Running on this PC	Τρέχει σε αυτόν τον υπολογιστή
 NORMAL	ΚΑΝΟΝΙΚΟ
 OFF	OFF
 Local server address	Διεύθυνση τοπικού διακομιστή
-Remember panel position	Απομνημόνευση θέσης πίνακα
 Custom colours	Προσαρμοσμένα χρώματα
 Custom colours...	Προσαρμοσμένα χρώματα...
 Choose	Επιλογή
-Hers	Δικά της
+Reset selected colour	Επαναφορά επιλεγμένου χρώματος
+Make a mod	Φτιάξε mod
 Quiet	Σιωπή
 Quiet min	Σιωπή min
 Quiet max	Σιωπή max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Σιωπή έως {n}:{n}
 Quiet until turned off	Σιωπή μέχρι να απενεργοποιηθεί
 Export settings	Εξαγωγή ρυθμίσεων
 Import settings	Εισαγωγή ρυθμίσεων
+Save Mainframe position	Απομνημόνευση θέσης πίνακα

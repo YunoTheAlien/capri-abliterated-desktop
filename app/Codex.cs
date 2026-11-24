@@ -119,7 +119,7 @@ namespace CapriDesktop
             }
             s["more"] = string.Join("\n", Interests.SenpaiMore ?? new string[0]);
             if (Sayings.SenpaiSectionFor != null)
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < 5; i++)
                 {
                     try { Put(s, "lines/" + i, Sayings.SenpaiSectionFor(i)); }
                     catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }

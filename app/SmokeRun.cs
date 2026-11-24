@@ -215,7 +215,7 @@ namespace CapriDesktop
                 if (string.Equals(name, item.Trim(), StringComparison.OrdinalIgnoreCase)) whole = true;
             selected.Push(whole);
             outer.Push(new[] { kind, current, limit.ToString(CultureInfo.InvariantCulture) });
-            Begin("section", name, 180);
+            Begin("section", name, name.StartsWith("Probe", StringComparison.Ordinal) ? 14400 : 180);
             timings.Push(new SectionTime { Started = Stopwatch.GetTimestamp(), Name = name, Parent = timings.Count == 0 ? "" : timings.Peek().Name, Recovered = RecoveredChildren(name) });
             return true;
         }
@@ -410,6 +410,25 @@ namespace CapriDesktop
                             return tar.ExitCode;
                         }
                     }
+                }
+                // A stand-in for her being closed from outside: a window that, asked to close, deletes the markers as she
+                // does on the way out ("closes"), or a stuck one that won't close at all ("stays").
+                if (args.Length == 4 && (args[1] == "closes" || args[1] == "stays"))
+                {
+                    bool stays = args[1] == "stays";
+                    string marker = args[2], ready = args[3];
+                    // Stuck: no window for a close request to reach, so only a stop ends it.
+                    if (stays) { File.WriteAllText(ready, "up"); while (true) Thread.Sleep(1000); }
+                    using (System.Windows.Forms.Form stand = new System.Windows.Forms.Form { Text = "Capri stand-in", ShowInTaskbar = false, StartPosition = System.Windows.Forms.FormStartPosition.Manual, Location = new System.Drawing.Point(-3000, -3000), Size = new System.Drawing.Size(120, 80) })
+                    {
+                        stand.FormClosing += delegate(object sender, System.Windows.Forms.FormClosingEventArgs closing)
+                        {
+                            try { File.Delete(marker); File.Delete(Path.Combine(Path.GetDirectoryName(marker), Program.StartMarker)); } catch (IOException) { }
+                        };
+                        stand.Shown += delegate { File.WriteAllText(ready, "up"); };
+                        System.Windows.Forms.Application.Run(stand);
+                    }
+                    return 0;
                 }
                 if (args.Length == 3 && args[1] == "hang")
                 {

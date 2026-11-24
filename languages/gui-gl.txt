@@ -204,11 +204,11 @@ Running on this PC	Funcionando neste PC
 NORMAL	NORMAL
 OFF	DESACTIVADO
 Local server address	Enderezo do servidor local
-Remember panel position	Lembrar a posición do panel
 Custom colours	Cores personalizadas
 Custom colours...	Cores personalizadas...
 Choose	Escoller
-Hers	As súas
+Reset selected colour	Restablecer a cor escollida
+Make a mod	Facer un mod
 Quiet	Silencio
 Quiet min	Silencio min
 Quiet max	Silencio max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Silencio ata as {n}:{n}
 Quiet until turned off	Silencio ata desactivalo
 Export settings	Exportar axustes
 Import settings	Importar axustes
+Save Mainframe position	Lembrar a posición do panel

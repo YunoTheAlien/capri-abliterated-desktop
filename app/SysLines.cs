@@ -26,60 +26,73 @@ namespace CapriDesktop
         // they keep in front; a name here settles it.
         internal const string CalendarKey = "my calendar";
 
-        // Her quiet: how long the quiet asked for in words lasts, and what makes her quiet on her own.
+        // Her quiet left sys.md for the Focus / Quiet settings window and her settings; the names stay so a sys.md from before
+        // is read once and tidied.
         internal const string QuietHeading = "## Her quiet";
         internal const string QuietCallsKey = "quiet on calls";
         internal const string QuietVideoKey = "quiet on videos";
-        // Each quiet lasts a random time between these, in hours; max 0 is until they turn it off. They replaced quiet time.
         internal const string QuietMinKey = "quiet min hours";
         internal const string QuietMaxKey = "quiet max hours";
-        internal const int QuietMostHours = 9;
         internal const string CallAppsKey = "call apps";
+        internal static readonly string[] QuietKeys = { QuietMinKey, QuietMaxKey, QuietCallsKey, QuietVideoKey, CallAppsKey };
         // Titles a window carries only while a call is on, not while the app merely sits open: Zoom's meeting
         // window, a Google Meet tab, a Slack huddle, a Webex meeting, Teams' meeting and call windows.
         internal const string CallAppsStock = "zoom meeting, zoom webinar, meet -, huddle, webex meeting, meeting in, call with, meeting compact view";
 
-        internal static string[] QuietLines()
-        {
-            return new[]
-            {
-                QuietHeading,
-                "",
-                ">! quiet min hours: the shortest her quiet lasts, 1 to 8. Each quiet lasts a random time up to the max.",
-                ">! quiet max hours: the longest, from min + 1 to 9, or 0 until you turn it off. A time you ask for wins.",
-                ">! quiet on calls:  1 is quiet during a call in an app below.",
-                ">! quiet on videos: 1 is quiet during a full screen video.",
-                ">! call apps:       window titles seen only during a call, comma separated.",
-                ">! Asked for quiet in a game, she stays quiet in it until told otherwise.",
-                "",
-                Line(QuietMinKey, "1"),
-                Line(QuietMaxKey, "3"),
-                Line(QuietCallsKey, "1"),
-                Line(QuietVideoKey, "1"),
-                Line(CallAppsKey, CallAppsStock)
-            };
-        }
-
-        internal static int QuietMinHours { get { return Math.Max(1, Math.Min(QuietMostHours - 1, WholeHours(Of(QuietMinKey), 1))); } }
-
-        // 0 is until they turn it off; otherwise never under min + 1.
-        internal static int QuietMaxHours
-        {
-            get
-            {
-                int hours = WholeHours(Of(QuietMaxKey), 3);
-                return hours <= 0 ? 0 : Math.Max(QuietMinHours + 1, Math.Min(QuietMostHours, hours));
-            }
-        }
-
-        private static int WholeHours(string said, int stock)
+        // A whole number of hours as written, or stock when it isn't one.
+        internal static int WholeHours(string said, int stock)
         {
             double hours;
             if (!double.TryParse((said ?? "").Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out hours)) return stock;
             return (int)Math.Round(hours);
         }
 
-        internal static bool QuietOnCalls { get { return Yes(Of(QuietCallsKey), true); } }
+        // A sys.md from before her quiet left it: each quiet line's value by name, the lines and their notes taken out,
+        // and the heading with its notes when nothing of theirs is left under it. Null when it had none.
+        internal static Dictionary<string, string> TakeQuiet(string path)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
+                string text = CapriDesktop.Notes.ReadAll(path);
+                string newline = text.Contains("\r\n") ? "\r\n" : "\n";
+                List<string> rows = new List<string>(text.Replace("\r\n", "\n").Split('\n'));
+                Dictionary<string, string> said = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                bool changed = false;
+                for (int at = 0; at < rows.Count; at++)
+                {
+                    string one = rows[at].Trim();
+                    bool note = one.StartsWith(">", StringComparison.Ordinal);
+                    string plain = note ? one.TrimStart('>', '!').Trim() : one;
+                    foreach (string key in QuietKeys)
+                    {
+                        Match line = Regex.Match(plain, @"^" + Regex.Escape(key) + @"[ \t]*:[ \t]*(.*)$", RegexOptions.IgnoreCase);
+                        if (!line.Success) continue;
+                        if (!note && !said.ContainsKey(key)) said[key] = line.Groups[1].Value.Trim();
+                        rows.RemoveAt(at);
+                        at--;
+                        changed = true;
+                        break;
+                    }
+                }
+                if (!changed) return null;
+                int head = rows.FindIndex(row => row.Trim() == QuietHeading);
+                if (head >= 0)
+                {
+                    int end = head + 1;
+                    bool theirs = false;
+                    for (; end < rows.Count && !rows[end].TrimStart().StartsWith("#", StringComparison.Ordinal); end++)
+                        if (rows[end].Trim().Length > 0 && !rows[end].TrimStart().StartsWith(">", StringComparison.Ordinal)) theirs = true;
+                    if (!theirs) rows.RemoveRange(head, end - head);
+                }
+                Notes.Put(path, string.Join(newline, rows.ToArray()));
+                lock (writing) { read = DateTime.MinValue; wasLong = -1; }
+                return said.Count == 0 ? null : said;
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return null; }
+        }
+
+        internal static bool On(string said, bool blank) { return Yes(said, blank); }
 
         // Load untested mods was a line here before it was the switch in Mainframe > Mods, which keeps it in her settings. The
         // names stay so a sys.md from before can be read once and tidied.
@@ -122,6 +135,37 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return null; }
         }
 
+        // The screensaver's two colours left sys.md for its fold in Custom colours. Each sys.md still holding them hands what
+        // they say over once and loses the lines and their notes; a blank one hands nothing.
+        internal static Dictionary<string, string> TakeSaverColours(string path)
+        {
+            Dictionary<string, string> said = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return said;
+                string text = CapriDesktop.Notes.ReadAll(path);
+                string newline = text.Contains("\r\n") ? "\r\n" : "\n";
+                List<string> rows = new List<string>(text.Replace("\r\n", "\n").Split('\n'));
+                bool took = false;
+                for (int at = 0; at < rows.Count; at++)
+                {
+                    string row = rows[at].Trim();
+                    bool note = row.StartsWith(">! colour:", StringComparison.Ordinal) || row.StartsWith(">! background:", StringComparison.Ordinal);
+                    Match key = Regex.Match(row, @"^(" + Regex.Escape(SaverColourKey) + "|" + Regex.Escape(SaverGroundKey) + @")[ \t]*:[ \t]*(.*)$", RegexOptions.IgnoreCase);
+                    if (!note && !key.Success) continue;
+                    if (key.Success && key.Groups[2].Value.Trim().Length > 0 && !said.ContainsKey(key.Groups[1].Value)) said[key.Groups[1].Value] = key.Groups[2].Value.Trim();
+                    rows.RemoveAt(at);
+                    at--;
+                    took = true;
+                }
+                if (!took) return said;
+                Notes.Put(path, string.Join(newline, rows.ToArray()));
+                lock (writing) { read = DateTime.MinValue; wasLong = -1; }
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            return said;
+        }
+
         // Every sys.md in her settings folder, the one in use first: the other side's, and a loose one from before the split.
         internal static string[] Copies()
         {
@@ -140,18 +184,12 @@ namespace CapriDesktop
             return found.ToArray();
         }
 
-        internal static bool QuietOnVideos { get { return Yes(Of(QuietVideoKey), true); } }
-
-        internal static string[] CallApps
+        // Comma separated window titles, each trimmed and in lower case; one letter alone isn't one.
+        internal static string[] Titles(string said)
         {
-            get
-            {
-                string said = Of(CallAppsKey);
-                if (said == null) said = CallAppsStock;
-                List<string> apps = new List<string>();
-                foreach (string one in said.Split(',')) if (one.Trim().Length > 1) apps.Add(one.Trim().ToLowerInvariant());
-                return apps.ToArray();
-            }
+            List<string> apps = new List<string>();
+            foreach (string one in (said ?? "").Split(',')) if (one.Trim().Length > 1) apps.Add(one.Trim().ToLowerInvariant());
+            return apps.ToArray();
         }
 
         private static bool Yes(string said, bool blank)
@@ -445,10 +483,9 @@ namespace CapriDesktop
         // the same thing and cannot drift apart.
         internal static readonly string[,] SaverStock =
         {
-            { SaverKey, "0" }, { SaverStyleKey, "terminals" }, { SaverColourKey, "" }, { SaverGroundKey, "" },
             { SaverSizeKey, "normal" }, { SaverSpeedKey, "normal" }, { SaverThroughKey, "0" },
             { SaverScreensKey, "all" }, { SaverFlashKey, "on" }, { SaverSoundKey, "" },
-            { SaverVolumeKey, "20" }, { SaverAfterKey, "10" }
+            { SaverVolumeKey, "20" }
         };
 
         internal const string SaverHeading = "## Her screensaver";
@@ -475,10 +512,8 @@ namespace CapriDesktop
             {
                 SaverHeading,
                 "",
-                ">! Shows while the PC is idle. 1 is on, 0 is off. Space or Esc ends it. Never over games or full screen.",
-                ">! style:       terminals, hexes, code or rain.",
-                ">! colour:      a name or hex code. Blank is hers.",
-                ">! background:  blank is near black.",
+                ">! Shows while the PC is idle, when Toggles > Screensaver is on. Space or Esc ends it. Never over games or full screen.",
+                ">! Its colours are in Mainframe > Settings > GENERAL SETTINGS > Custom colours, under ADD-ONS.",
                 ">! size:        small, normal, large, or a number. 1 is normal.",
                 ">! speed:       slow, normal, fast, or a number. 1 is normal.",
                 ">! see through: 0 to 100. 0 is solid.",
@@ -486,20 +521,82 @@ namespace CapriDesktop
                 ">! flashing:    on, gentle or off.",
                 ">! sound:       your own .wav, for her menu and red alert only. Blank is silent.",
                 ">! volume:      0 to 100.",
-                ">! after:       idle minutes. 0.2 is twelve seconds.",
                 ""
             };
         }
 
-        // Whether they turned it on. Off unless the line says one of the words for yes, since it covers the screen.
-        internal static bool Saver
+        // Whether they turned it on: the Screensaver switch in her Toggles, kept in her settings. Off out of the box,
+        // since it covers the screen.
+        internal static Func<bool> SaverOn = delegate { return false; };
+
+        // Its style and how long the PC waits first, from the Screensaver group in her Toggles; sys.md held them before.
+        internal static Func<string> SaverStyleSaved = delegate { return null; };
+        internal static Func<double> SaverAfterSaved = delegate { return 0; };
+
+        // A sys.md from before hands its style and wait over once, by key, and loses those lines and their notes.
+        internal static Dictionary<string, string> TakeSaverPicks(string path)
         {
-            get
+            try
             {
-                string said = (Of(SaverKey) ?? "").Trim();
-                return said == "1" || said.Equals("yes", StringComparison.OrdinalIgnoreCase)
-                    || said.Equals("true", StringComparison.OrdinalIgnoreCase) || said.Equals("on", StringComparison.OrdinalIgnoreCase);
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
+                string text = CapriDesktop.Notes.ReadAll(path);
+                string newline = text.Contains("\r\n") ? "\r\n" : "\n";
+                List<string> rows = new List<string>(text.Replace("\r\n", "\n").Split('\n'));
+                Dictionary<string, string> said = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                bool changed = false;
+                for (int at = 0; at < rows.Count; at++)
+                {
+                    string one = rows[at].Trim();
+                    bool note = one.StartsWith(">", StringComparison.Ordinal);
+                    string plain = note ? one.TrimStart('>', '!').Trim() : one;
+                    foreach (string key in new[] { SaverStyleKey, SaverAfterKey, "style", "after" })
+                    {
+                        Match line = Regex.Match(plain, @"^" + Regex.Escape(key) + @"[ \t]*:[ \t]*(.*)$", RegexOptions.IgnoreCase);
+                        if (!line.Success || (!note && key.Length < 7)) continue;
+                        if (!note && !said.ContainsKey(key)) said[key] = line.Groups[1].Value.Trim();
+                        rows.RemoveAt(at);
+                        at--;
+                        changed = true;
+                        break;
+                    }
+                }
+                if (!changed) return null;
+                Notes.Put(path, string.Join(newline, rows.ToArray()));
+                lock (writing) { read = DateTime.MinValue; wasLong = -1; }
+                return said;
             }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return null; }
+        }
+        internal static bool Saver { get { return SaverOn(); } }
+
+        // The on and off line left sys.md for the switch in Toggles. A sys.md from before hands its answer over once and loses
+        // the line; the rest of the section stays. Null when it had none.
+        internal static bool? TakeSaver(string path)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
+                string text = CapriDesktop.Notes.ReadAll(path);
+                string newline = text.Contains("\r\n") ? "\r\n" : "\n";
+                List<string> rows = new List<string>(text.Replace("\r\n", "\n").Split('\n'));
+                bool? said = null;
+                for (int at = 0; at < rows.Count; at++)
+                {
+                    Match key = Regex.Match(rows[at].Trim(), @"^" + Regex.Escape(SaverKey) + @"[ \t]*:[ \t]*(.*)$", RegexOptions.IgnoreCase);
+                    if (!key.Success) continue;
+                    if (said == null) said = Yes(key.Groups[1].Value.Trim(), false);
+                    rows.RemoveAt(at);
+                    at--;
+                }
+                if (said == null) return null;
+                for (int at = 0; at < rows.Count; at++)
+                    if (rows[at].Trim().StartsWith(">! Shows while the PC is idle. 1 is on, 0 is off.", StringComparison.Ordinal))
+                        rows[at] = ">! Shows while the PC is idle, when Toggles > Screensaver is on. Space or Esc ends it. Never over games or full screen.";
+                Notes.Put(path, string.Join(newline, rows.ToArray()));
+                lock (writing) { read = DateTime.MinValue; wasLong = -1; }
+                return said;
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return null; }
         }
 
         // How long the PC has to be left alone first. Held between six seconds and a day: a typo of 0 would put it
@@ -508,9 +605,8 @@ namespace CapriDesktop
         {
             get
             {
-                double minutes;
-                if (!double.TryParse((Of(SaverAfterKey) ?? "").Trim(), System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out minutes) || minutes <= 0) minutes = 10;
+                double minutes = SaverAfterSaved();
+                if (minutes <= 0) minutes = 10;
                 return Math.Max(0.1, Math.Min(1440, minutes));
             }
         }
@@ -742,7 +838,7 @@ namespace CapriDesktop
         // headings and keys are swapped in place, keeping their answer, and group banners go above their first section.
         private static readonly string[,] Banners =
         {
-            { "############### app settings", IntroHeading },
+            { "############### app settings", "Never watch these" },
             { "############### convo settings", "What goes in front of a line" },
             { "############### colour settings", "Her screensaver" },
             { "### EULA: default blurb ###", "End User Licence Agreement" },
@@ -1099,40 +1195,67 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
-        // Her start-up intro: the names sit under the key with ">" in front, like an interest; take the ">" off to
-        // switch one on, and with several on she picks at random. The switch still comes after, as the file's last
-        // line.
+        // Her start-up intro, sys.md's section before Toggles > Intros. The intro mods ask for each as "intro_<name>".
         internal const string IntroHeading = "Her start-up intro";
         internal static readonly string[] IntroNames = { "shatter", "hijack", "wake", "door", "door2" };
+        internal const string IntroSetting = "intro_";
 
-        internal static string IntroBlock()
-        {
-            StringBuilder made = new StringBuilder();
-            made.AppendLine("## " + IntroHeading);
-            made.AppendLine();
-            made.AppendLine(">! How she turns up. Take the \">\" off one to use it, more than one and she picks.");
-            made.AppendLine(">! Needs the Startup Intros mod in mods, approved once under Mainframe > Mods.");
-            made.AppendLine();
-            made.AppendLine("intros:");
-            foreach (string one in IntroNames) made.AppendLine("> " + one);
-            made.AppendLine();
-            return made.ToString();
-        }
+        // The intros switched on: Toggles > Intros, kept in her settings as their names. Empty means she starts the way she
+        // always has.
+        internal static Func<string> IntrosSaved = delegate { return null; };
 
-        // The intros switched on, in the order they are written. Empty means she starts the way she always has.
         internal static string[] Intros()
         {
             List<string> on = new List<string>();
+            foreach (string named in (IntrosSaved() ?? "").Split(','))
+            {
+                string found = Known(named.Trim());
+                if (found != null && !on.Contains(found)) on.Add(found);
+            }
+            return on.ToArray();
+        }
+
+        // The intro picks left sys.md for Toggles > Intros. A sys.md from before hands its picks over once, in the order
+        // written, and loses the section. Null when it had none.
+        internal static string[] TakeIntros(string path)
+        {
             try
             {
-                if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return on.ToArray();
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
+                string[] picked = IntrosIn(path);
+                if (picked == null) return null;
+                string text = CapriDesktop.Notes.ReadAll(path);
+                string newline = text.Contains("\r\n") ? "\r\n" : "\n";
+                List<string> rows = new List<string>(text.Replace("\r\n", "\n").Split('\n'));
+                int head = rows.FindIndex(row => row.Trim().StartsWith("#", StringComparison.Ordinal) && string.Equals(row.Trim().TrimStart('#').Trim(), IntroHeading, StringComparison.OrdinalIgnoreCase));
+                if (head >= 0)
+                {
+                    int end = head + 1;
+                    while (end < rows.Count && !rows[end].TrimStart().StartsWith("#", StringComparison.Ordinal)) end++;
+                    rows.RemoveRange(head, end - head);
+                }
+                Notes.Put(path, string.Join(newline, rows.ToArray()));
+                lock (writing) { read = DateTime.MinValue; wasLong = -1; }
+                return picked;
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return null; }
+        }
+
+        // The intros a sys.md from before switched on, in the order written; null when it has no intro section.
+        private static string[] IntrosIn(string path)
+        {
+            List<string> on = new List<string>();
+            bool had = false;
+            try
+            {
                 bool inside = false;
-                foreach (string raw in CapriDesktop.Notes.ReadLines(Kept))
+                foreach (string raw in CapriDesktop.Notes.ReadLines(path))
                 {
                     string one = (raw ?? "").Trim();
                     if (one.StartsWith("#", StringComparison.Ordinal))
                     {
                         inside = string.Equals(one.TrimStart('#').Trim(), IntroHeading, StringComparison.OrdinalIgnoreCase);
+                        had |= inside;
                         continue;
                     }
                     if (!inside || one.Length == 0 || one.StartsWith(">", StringComparison.Ordinal)) continue;
@@ -1148,7 +1271,7 @@ namespace CapriDesktop
                 }
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-            return on.ToArray();
+            return had ? on.ToArray() : null;
         }
 
         private static string Known(string said)
@@ -1181,7 +1304,6 @@ namespace CapriDesktop
                 made.AppendLine();
                 made.AppendLine();
                 made.AppendLine("############### app settings");
-                made.Append(IntroBlock());
                 made.AppendLine("## Never watch these");
                 made.AppendLine();
                 made.AppendLine(">! Programs Watch my screen skips. Comma separated, and a partial name is enough:");
@@ -1203,8 +1325,6 @@ namespace CapriDesktop
                 made.AppendLine(">! Comma separated. Any word counts when it is in a window's title or the program's name.");
                 made.AppendLine();
                 made.AppendLine(Line(Doomscroll.ListKey, Doomscroll.Stock));
-                made.AppendLine();
-                foreach (string row in QuietLines()) made.AppendLine(row);
                 made.AppendLine();
                 made.AppendLine();
                 made.AppendLine("############### convo settings");

@@ -204,11 +204,11 @@ Running on this PC	Na-agba ọsọ n'ọnụ kọmputa a
 NORMAL	NKỊTỊ
 OFF	MAPỤ
 Local server address	Adreesị sava obodo
-Remember panel position	Cheta ọnọdụ panel
 Custom colours	Agba nke gị
 Custom colours...	Agba nke gị...
 Choose	Họrọ
-Hers	Nke ya
+Reset selected colour	Tọgharia agwọ a họrọ
+Make a mod	Mee mod
 Quiet	Dara jụụ
 Quiet min	Dara jụụ min
 Quiet max	Dara jụụ max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Dara jụụ ruo {n}:{n}
 Quiet until turned off	Dara jụụ ruo mgbe e gbanyụrụ ya
 Export settings	Bupụ ntọala
 Import settings	Bubata ntọala
+Save Mainframe position	Cheta ọnọdụ panel

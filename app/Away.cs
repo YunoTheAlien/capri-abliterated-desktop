@@ -97,7 +97,7 @@ namespace CapriDesktop
                 {
                     if (!spells[each].Asked || spells[each].Called.Length > 0) continue;
                     spells[each].Called = worked && !slept ? "worked" : slept && !worked ? "slept" : Nightly(spells[each]) ? "slept" : "out";
-                    Write(DateTime.Now);
+                    Write(SimTime.Now);
                     return;
                 }
             }
@@ -153,7 +153,7 @@ namespace CapriDesktop
                 {
                     if (!spells[each].Asked || spells[each].Called.Length > 0) continue;
                     spells[each].Called = label;
-                    Write(DateTime.Now);
+                    Write(SimTime.Now);
                     return;
                 }
             }

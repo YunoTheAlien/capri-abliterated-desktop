@@ -185,7 +185,7 @@ namespace CapriDesktop
             Engine wasLocal = brain.Local;
             string wasServer, wasServerKey;
             brain.GetServer(out wasServer, out wasServerKey);
-            string wasModel = brain.Model;
+            string wasModel = brain.Model, wasNickname = Brain.Nickname;
             List<string> wasModels = cloudModels;
             Func<string> wasPaste = FirstRunPaste;
             bool wasGreeted = greetTried, wasNews = newsPending, wasSettingUp = SettingUp, mainframeShown = mainframe.Visible;
@@ -225,6 +225,9 @@ namespace CapriDesktop
                 PointEars();
                 Brain.Off = false;
                 greetTried = false;
+                Brain.Nickname = null;
+                namedOnCard = false;
+                firstJob = null;
             };
             Action putBack = delegate
             {
@@ -309,7 +312,7 @@ namespace CapriDesktop
                 using (MemoryStream empty = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("{}")))
                     brandNew = (Preferences)new DataContractJsonSerializer(typeof(Preferences)).ReadObject(empty);
                 if (new Preferences().Silent || brandNew.Silent || !FreeChatOn) throw new Exception("A brand new install starts with her voice off, so HOW I SOUND would have TEXT ONLY picked and she'd stay silent.");
-                passed("PASS a brand new install has her voice on, so HOW I SOUND has MY FREE VOICE picked and her free voice downloads from her first second");
+                passed("PASS a brand new install has her voice on, so HOW I SOUND has MY FREE VOICE picked; her free voice downloads when that screen is left with it picked, or when setup ends, not before");
 
                 part("SmokeFirstRunLanguage", delegate
                 {
@@ -542,6 +545,48 @@ namespace CapriDesktop
                     passed("PASS the setup language row fits the first screen with no overlap or clipped text at 100%, 125% and 150%, in English, Traditional Chinese and Indonesian, with and without the free voice strip, inside the room the card is sized for; at 100% the first screen is " + languageTall[0] + " px tall, " + languageTall[1] + " with the strip");
                 });
 
+                part("SmokeFirstRunReady", delegate
+                {
+                    // Her bubble asks first: No keeps the card shut and says she'll ask again; Yes opens it. Her name question
+                    // waits until a little after the card is done.
+                    reset();
+                    int stepWas = preferences.FirstRunStep;
+                    bool welcomedWas = preferences.Welcomed;
+                    double meetWas = meetAt, doneWas = setupDoneAt;
+                    try
+                    {
+                        preferences.Welcomed = true;
+                        preferences.FirstRunStep = FirstRun.Pick;
+                        AskReady(FirstRun.Pick, FirstRun.Local, false);
+                        pump();
+                        bool asked = ReadyAsking && !FirstRunShowing;
+                        ReadyAnswer(false);
+                        pump();
+                        bool waited = !FirstRunShowing && !box.Choosing && box.Reply != null && box.Reply.Contains(FirstRun.LaterLine);
+                        AskReady(FirstRun.Pick, FirstRun.Local, true);
+                        pump();
+                        bool again = ReadyAsking && box.Reply.Contains(FirstRun.ReadyAgainLine);
+                        ReadyAnswer(true);
+                        wait(delegate { return FirstRunShowing; }, "Yes in her bubble didn't open the card.");
+                        if (!asked || !waited || !again) throw new Exception("Her bubble didn't ask before the card: asked " + asked + ", No waited " + waited + ", asked again " + again);
+                        firstRun.SkipAll();
+                        pump();
+                        double now = clock.Elapsed.TotalSeconds;
+                        bool resting = setupDoneAt >= now - 5 && MeetRest >= 20;
+                        if (!resting) throw new Exception("The card ending didn't start her rest before asking their name: " + setupDoneAt + " / " + now);
+                        passed("PASS a new install's card waits for her bubble's \"" + FirstRun.ReadyLine + "\": No keeps it shut with \"" + FirstRun.LaterLine + "\", a later ask says \"" + FirstRun.ReadyAgainLine + "\", Yes opens it; her name question waits " + MeetRest + " s after the card is done");
+                    }
+                    finally
+                    {
+                        if (box.Choosing) box.Choose(null);
+                        preferences.FirstRunStep = stepWas;
+                        preferences.Welcomed = welcomedWas;
+                        meetAt = meetWas;
+                        setupDoneAt = doneWas;
+                        putBack();
+                    }
+                });
+
                 part("SmokeFirstRunLanding", delegate
                 {
                     // The card waits for her to land before it opens beside her, and she doesn't wander off while it's open.
@@ -609,7 +654,7 @@ namespace CapriDesktop
                     // progress on the card, and her first reply comes when it's in, here on the waiting screen.
                     card = open(FirstRun.Pick, FirstRun.Local);
                     foreach (string line in FirstRun.Lines) if (!Said.Knows(line)) throw new Exception("Her card line isn't learnt for translating: " + line);
-                    if (!FirstRunShowing || card.Screen != FirstRun.Pick || card.Picked != FirstRun.Local || card.Count != "1 OF 4" || card.Line != FirstRun.Hello || reply != FirstRun.Hello)
+                    if (!FirstRunShowing || card.Screen != FirstRun.Pick || card.Picked != FirstRun.Local || card.Count != "1 OF 7" || card.Line != FirstRun.Hello || reply != FirstRun.Hello)
                         throw new Exception("The card didn't open on ON THIS PC with her hello: " + card.Screen + " / " + card.Picked + " / " + card.Count + " / " + reply);
                     picture(card, "1-pick");
                     // Her free voice coming down while they pick, as a Store copy's first launch has it.
@@ -627,42 +672,91 @@ namespace CapriDesktop
                     card.Go(FirstRun.Pick);
                     card.Next();
                     pump();
-                    if (setups != 1 || card.Screen != FirstRun.Voice || card.Count != "2 OF 4" || !card.FasterShown || card.GaugeShown == null || !card.GaugeShown.StartsWith("MY BRAIN | ", StringComparison.Ordinal) || reply != FirstRun.WhileLine)
-                        throw new Exception("Next on ON THIS PC didn't start the download and go on to her voice: " + setups + " / " + card.Screen + " / " + card.GaugeShown + " / " + reply);
+                    // WHICH BRAIN: nothing comes down until one is picked and Next pressed; the best fit for this PC is picked first.
+                    if (setups != 0 || card.Screen != FirstRun.Models || card.Count != "2 OF 7" || reply != FirstRun.ModelsLine || card.Model != Math.Max(0, FitIndex) || card.GaugeShown != null)
+                        throw new Exception("Next on ON THIS PC didn't go to WHICH BRAIN with nothing downloading: " + setups + " / " + card.Screen + " / " + card.Count + " / " + card.Model + " / " + reply);
+                    picture(card, "1b-models");
+                    int lighter = Engine.Picks.Length - 1;
+                    card.PickModel(lighter);
+                    card.Next();
+                    pump();
+                    if (fit != Engine.Picks[lighter]) throw new Exception("The brain picked on WHICH BRAIN wasn't the one that came down: " + (fit == null ? "none" : fit.Name));
+                    if (setups != 1 || card.Screen != FirstRun.Me || card.Count != "3 OF 7" || !card.FasterShown || card.GaugeShown == null || !card.GaugeShown.StartsWith("MY BRAIN | ", StringComparison.Ordinal) || reply != FirstRun.WhileLine)
+                        throw new Exception("Next on WHICH BRAIN didn't start the download and go on to MAKE ME YOURS: " + setups + " / " + card.Screen + " / " + card.GaugeShown + " / " + reply);
                     mainframe.ShowProgress(1, "Downloading " + fit.Name, fit.Size / 3, fit.Size);
                     pump();
                     if (card.GaugeShown != "MY BRAIN | " + Engine.Amount(fit.Size / 3) + " of " + fit.Download) throw new Exception("The card didn't show the download's progress: " + card.GaugeShown);
                     Preferences kept = LoadPreferences();
-                    if (kept.FirstRunStep != FirstRun.Voice || kept.FirstRunPick != FirstRun.Local) throw new Exception("The card's step wasn't kept: " + kept.FirstRunStep + " / " + kept.FirstRunPick);
+                    if (kept.FirstRunStep != FirstRun.Me || kept.FirstRunPick != FirstRun.Local) throw new Exception("The card's step wasn't kept: " + kept.FirstRunStep + " / " + kept.FirstRunPick);
+                    if (card.Named != "" || card.VibeShown != Onboarding.VibeOf(Wordiness) || card.LookShown != 0) throw new Exception("MAKE ME YOURS didn't open on no name, her reply length and her own look: " + card.Named + " / " + card.VibeShown + " / " + card.LookShown);
+                    picture(card, "2-me-downloading");
+                    card.Named = "Sam";
+                    card.Vibe(2);
+                    bool chatty = Wordiness == 2 && LoadPreferences().Wordiness == 2;
+                    card.Vibe(0);
+                    if (!chatty || Wordiness != 0 || card.VibeShown != 0) throw new Exception("A vibe on the card didn't set her reply length: " + Wordiness);
+                    card.Dress(2);
+                    pump();
+                    bool dressed = card.LookShown == 2 && FirstRunLookNow == 2 && ModList.All.Exists(mod => mod.File.Id == Mods.MyColors && mod.On) && ModList.ColoursNow[0] == Onboarding.Looks[2].Colours[0];
+                    picture(card, "2-me-look");
+                    card.Dress(0);
+                    pump();
+                    if (!dressed || card.LookShown != 0 || ModList.All.Exists(mod => mod.File.Id == Mods.MyColors)) throw new Exception("A look on the card didn't recolour her and put her back: " + dressed + " / " + card.LookShown);
+                    card.Next();
+                    pump();
+                    if (card.Screen != FirstRun.Voice || card.Count != "4 OF 7" || Brain.Nickname != "Sam" || LoadPreferences().Nickname != "Sam" || !namedOnCard) throw new Exception("Next on MAKE ME YOURS didn't keep their name for her and Get to know me, and go on to her voice: " + card.Screen + " / " + Brain.Nickname);
                     picture(card, "4-voice-downloading");
                     card.Next();
                     pump();
-                    if (card.Screen != FirstRun.Extras || card.Count != "3 OF 4" || card.ExtrasShown != "0000" || !card.FasterShown) throw new Exception("EXTRAS didn't follow her voice during the download: " + card.Screen + " / " + card.ExtrasShown);
+                    if (card.Screen != FirstRun.Extras || card.Count != "5 OF 7" || card.ExtrasShown != "0000" || !card.FasterShown || reply != FirstRun.ExtrasMeetLine) throw new Exception("EXTRAS didn't follow her voice during the download: " + card.Screen + " / " + card.ExtrasShown + " / " + reply);
                     picture(card, "5-extras-downloading");
                     card.Next();
                     pump();
-                    if (card.Screen != FirstRun.Wait || card.Count != "4 OF 4" || reply != FirstRun.WaitLine) throw new Exception("Done during the download didn't wait for her brain: " + card.Screen);
-                    picture(card, "wait");
+                    if (card.Screen != FirstRun.Job || card.Count != "6 OF 7" || reply != Onboarding.JobWaitLine || card.JobChosen == null) throw new Exception("FIRST JOB didn't follow EXTRAS during the download: " + card.Screen + " / " + reply);
+                    picture(card, "6-job-downloading");
+                    string firstPick = card.JobChosen;
+                    card.OwnJob = "   ";
+                    card.PickJob(-1);
+                    card.Next();
+                    pump();
+                    bool refused = card.Screen == FirstRun.Job && card.Told == "Pick one, or type your own.";
+                    card.PickJob(0);
+                    if (!refused || card.JobChosen != firstPick) throw new Exception("Do it with no job picked didn't stay and say so: " + card.Told);
+                    card.Next();
+                    pump();
+                    if (card.Screen != FirstRun.Wait || card.Count != "7 OF 7" || reply != Onboarding.JobQueuedLine || FirstJobWaiting != firstPick || card.Queued != firstPick) throw new Exception("Do it during the download didn't keep the job and wait for her brain: " + card.Screen + " / " + reply + " / " + FirstJobWaiting);
+                    picture(card, "wait-job");
+                    List<string> asked = new List<string>();
+                    Think = delegate(string text) { lock (asked) asked.Add(text); return text != null && text.IndexOf(firstPick, StringComparison.Ordinal) >= 0 ? "On it." : online; };
                     localDone();
-                    wait(delegate { return card.Screen == FirstRun.Online && reply == online; }, "Her brain coming in didn't bring BRAIN ONLINE and her first reply: " + card.Screen + " / " + reply);
-                    if (card.Count != "4 OF 4") throw new Exception("BRAIN ONLINE was numbered " + card.Count);
+                    wait(delegate { return card.Screen == FirstRun.Online && reply == "On it."; }, "Her brain coming in didn't bring BRAIN ONLINE and do her first job: " + card.Screen + " / " + reply);
+                    Think = delegate { return online; };
+                    bool jobAsked;
+                    lock (asked) jobAsked = asked.Exists(text => text != null && text.IndexOf(firstPick, StringComparison.Ordinal) >= 0) && !asked.Exists(text => text != null && text.IndexOf("brand new brain", StringComparison.Ordinal) >= 0);
+                    if (!jobAsked || FirstJobWaiting != null || card.Count != "7 OF 7") throw new Exception("Her first job wasn't what her new brain was asked, in place of her hello: " + string.Join(" | ", asked.ToArray()));
                     picture(card, "3-online-local");
                     card.Next();
                     pump();
                     if (FirstRunShowing || preferences.FirstRunStep != FirstRun.None || !greetTried || mainframe.Visible && mainframe.WindowState != mainframeState) throw new Exception("Done after her brain came in didn't finish the card quietly.");
-                    passed("PASS ON THIS PC is picked first with Start with this!, Next starts her brain's download (a stand-in) and goes on to her voice and EXTRAS with its progress and the free key line on the card, Done waits for it, and her first reply brings BRAIN ONLINE, then Done finishes");
+                    namedOnCard = false;
+                    passed("PASS ON THIS PC is picked first with Start with this!, Next goes to WHICH BRAIN with the best fit picked and nothing downloading, Next there starts the picked brain's download (a stand-in) and goes on to MAKE ME YOURS (their name kept for her and Get to know me, a vibe sets her reply length, a look recolours her and Hers puts her back), her voice, EXTRAS and FIRST JOB with its progress and the free key line on the card; Do it keeps the job and waits, and her brain coming in does that job in place of her hello and brings BRAIN ONLINE, then Done finishes");
 
                     // The free key, Google AI Studio first: the page opens, Paste reads the clipboard once, Connect goes to MEDIUM.
                     reset();
                     card = open(FirstRun.Pick, FirstRun.Local);
                     pickBrain(card, FirstRun.Free);
+                    int pagesBefore = browsed.Count;
                     card.Next();
                     pump();
-                    if (card.Screen != FirstRun.Key || card.Count != "2 OF 5" || browsed.Count == 0 || browsed[browsed.Count - 1] != GeminiKeyPage || reply != FirstRun.GoogleLine) throw new Exception("FREE KEY didn't open Google AI Studio's page with her line: " + card.Screen + " / " + reply);
+                    if (card.Screen != FirstRun.Key || card.Count != "2 OF 7" || browsed.Count != pagesBefore || reply != FirstRun.GoogleLine) throw new Exception("FREE KEY opened a page before it was asked for, or lost her line: " + card.Screen + " / " + browsed.Count + " / " + reply);
+                    card.OpenKeyPage();
+                    if (browsed.Count != pagesBefore + 1 || browsed[browsed.Count - 1] != GeminiKeyPage) throw new Exception("Open the key page didn't open Google AI Studio's page.");
                     picture(card, "2-free-key");
-                    card.Tab(1, true);
+                    card.Tab(1, false);
                     pump();
-                    if (card.Screen != FirstRun.Key || browsed[browsed.Count - 1] != FreeKeyPage || card.Provider != 1) throw new Exception("The NVIDIA tab didn't open its page.");
+                    if (card.Screen != FirstRun.Key || browsed.Count != pagesBefore + 1 || card.Provider != 1) throw new Exception("The NVIDIA tab opened a page when it was only picked.");
+                    card.OpenKeyPage();
+                    if (browsed[browsed.Count - 1] != FreeKeyPage) throw new Exception("Open the key page on the NVIDIA tab didn't open its page.");
                     picture(card, "2-free-key-nvidia");
                     card.Tab(0, true);
                     card.Typed = "hello";
@@ -709,12 +803,16 @@ namespace CapriDesktop
                     Brain.Google = serve(new[] { "{\"data\":[{\"id\":\"gemini-90-flash\"},{\"id\":\"gemini-90-pro\"}]}" });
                     card.Next();
                     wait(delegate { return card.Screen == FirstRun.Online && reply == online; }, "The free key didn't connect and bring her first reply: " + card.Screen + " / " + card.Told + " / " + reply);
-                    if (brain.Remote == null || brain.Remote.Kind != "google" || preferences.Tier != 1 || card.Count != "3 OF 5") throw new Exception("The free key didn't go under MEDIUM INTELLIGENCE.");
+                    if (brain.Remote == null || brain.Remote.Kind != "google" || preferences.Tier != 1 || card.Count != "3 OF 7") throw new Exception("The free key didn't go under MEDIUM INTELLIGENCE.");
                     if (rejected == offline || string.IsNullOrEmpty(rejected)) throw new Exception("A rejected key and no internet said the same thing: " + rejected);
                     picture(card, "3-online-free");
                     card.Next();
                     pump();
-                    if (card.Screen != FirstRun.Voice || card.Count != "4 OF 5" || reply != FirstRun.NoVoiceLine) throw new Exception("Her voice didn't follow BRAIN ONLINE: " + card.Screen + " / " + reply);
+                    if (card.Screen != FirstRun.Me || card.Count != "4 OF 7" || reply != Onboarding.MeLine) throw new Exception("MAKE ME YOURS didn't follow BRAIN ONLINE: " + card.Screen + " / " + reply);
+                    picture(card, "2-me");
+                    card.Next();
+                    pump();
+                    if (card.Screen != FirstRun.Voice || card.Count != "5 OF 7" || reply != FirstRun.NoVoiceLine || Brain.Nickname != null) throw new Exception("Her voice didn't follow MAKE ME YOURS: " + card.Screen + " / " + reply + " / " + Brain.Nickname);
                     // As a new install has it: her voice on, and her free voice coming down since her first second.
                     preferences.Silent = false;
                     bool voiceWasComing = SettingUpVoice;
@@ -745,7 +843,7 @@ namespace CapriDesktop
                     picture(card, "4-voice-heard");
                     card.Next();
                     pump();
-                    if (card.Screen != FirstRun.Extras || card.Count != "5 OF 5" || card.ExtrasShown != "0000" || reply != FirstRun.ExtrasLine || card.FasterShown) throw new Exception("EXTRAS didn't come last with all four off: " + card.ExtrasShown + " / " + reply);
+                    if (card.Screen != FirstRun.Extras || card.Count != "6 OF 7" || card.ExtrasShown != "0000" || reply != FirstRun.ExtrasMeetLine || card.FasterShown) throw new Exception("EXTRAS didn't come before her first job with all four off: " + card.ExtrasShown + " / " + reply);
                     picture(card, "5-extras");
                     card.FlipExtra(0);
                     bool watchOn = preferences.Watch && card.ExtrasShown == "1000";
@@ -753,8 +851,17 @@ namespace CapriDesktop
                     if (!watchOn || preferences.Watch || card.ExtrasShown != "0000") throw new Exception("An EXTRAS switch on the card didn't work both ways.");
                     card.Next();
                     pump();
-                    if (FirstRunShowing || preferences.FirstRunStep != FirstRun.None) throw new Exception("Done on EXTRAS didn't finish the card.");
-                    passed("PASS FREE KEY opens Google AI Studio's page first and each tab its own, Paste reads the clipboard (a stand-in) only when pressed, something that isn't a key and a rejected key stay on the screen saying why, and a free key connects under MEDIUM INTELLIGENCE with her first reply, then her voice, the mic test and EXTRAS, all four off and each switch working");
+                    if (card.Screen != FirstRun.Job || card.Count != "7 OF 7" || reply != Onboarding.JobLine) throw new Exception("FIRST JOB didn't come last with her brain in: " + card.Screen + " / " + reply);
+                    picture(card, "6-job");
+                    card.OwnJob = "  what's 12 times 12  ";
+                    if (card.JobChosen != "what's 12 times 12" || card.JobPicked != -1) throw new Exception("Typing their own job didn't take over from the picks: " + card.JobChosen);
+                    List<string> askedFree = new List<string>();
+                    Think = delegate(string text) { lock (askedFree) askedFree.Add(text); return "144."; };
+                    card.Next();
+                    wait(delegate { return reply == "144."; }, "Do it with her brain in didn't do their own job: " + reply);
+                    Think = delegate { return online; };
+                    if (FirstRunShowing || preferences.FirstRunStep != FirstRun.None || FirstJobWaiting != null) throw new Exception("Do it on FIRST JOB didn't finish the card.");
+                    passed("PASS FREE KEY opens no page by itself: Open the key page opens Google AI Studio's, or the picked tab's, only when pressed, Paste reads the clipboard (a stand-in) only when pressed, something that isn't a key and a rejected key stay on the screen saying why, and a free key connects under MEDIUM INTELLIGENCE with her first reply, then MAKE ME YOURS, her voice, the mic test and EXTRAS, all four off and each switch working, and FIRST JOB last, where their own typed job goes to her brain the moment they press Do it");
 
                     // MY PLAN OR KEY: a plan goes through her own UsePlan, and a paid key goes under MAX by itself.
                     reset();
@@ -762,7 +869,7 @@ namespace CapriDesktop
                     pickBrain(card, FirstRun.Own);
                     card.Next();
                     pump();
-                    if (card.Screen != FirstRun.Plan || card.Count != "2 OF 5" || reply != FirstRun.PlanLine) throw new Exception("MY PLAN OR KEY didn't open its screen.");
+                    if (card.Screen != FirstRun.Plan || card.Count != "2 OF 7" || reply != FirstRun.PlanLine) throw new Exception("MY PLAN OR KEY didn't open its screen.");
                     picture(card, "2-plan");
                     card.Plan("claudecode");
                     if (planned != "claudecode") throw new Exception("Claude plan didn't ask for her Claude plan.");
@@ -774,7 +881,7 @@ namespace CapriDesktop
                     picture(card, "3-online-plan");
                     card.Skip();
                     pump();
-                    if (card.Screen != FirstRun.Voice) throw new Exception("Skip on BRAIN ONLINE didn't move past it.");
+                    if (card.Screen != FirstRun.Me) throw new Exception("Skip on BRAIN ONLINE didn't move past it to MAKE ME YOURS.");
                     card.SkipAll();
                     pump();
                     if (FirstRunShowing || preferences.FirstRunStep != FirstRun.None || mainframe.Visible && mainframe.WindowState == FormWindowState.Normal || mainframe.ExtrasShown != null) throw new Exception("Skip all with a brain didn't just end the card: " + mainframe.ExtrasShown);
@@ -965,10 +1072,13 @@ namespace CapriDesktop
                     card = open(FirstRun.Pick, FirstRun.Local);
                     card.Skip();
                     pump();
-                    if (setups != 1 || card.Screen != FirstRun.Voice || card.Count != "2 OF 3") throw new Exception("Skip on WAKE ME UP didn't move to her voice without a download: " + card.Screen + " / " + card.Count);
+                    if (setups != 1 || card.Screen != FirstRun.Me || card.Count != "2 OF 4") throw new Exception("Skip on WAKE ME UP didn't move to MAKE ME YOURS without a download: " + card.Screen + " / " + card.Count);
                     card.Skip();
                     pump();
-                    if (card.Screen != FirstRun.Extras || card.Count != "3 OF 3") throw new Exception("Skip on her voice didn't move to EXTRAS.");
+                    if (card.Screen != FirstRun.Voice || card.Count != "3 OF 4") throw new Exception("Skip on MAKE ME YOURS didn't move to her voice.");
+                    card.Skip();
+                    pump();
+                    if (card.Screen != FirstRun.Extras || card.Count != "4 OF 4") throw new Exception("Skip on her voice didn't move to EXTRAS.");
                     card.Skip();
                     pump();
                     if (FirstRunShowing || !mainframe.Visible || mainframe.WindowState != FormWindowState.Normal || mainframe.ExtrasShown != null) throw new Exception("Skipping every step with no brain didn't leave them in the Mainframe on Set up her brain.");
@@ -981,7 +1091,7 @@ namespace CapriDesktop
                         int was = card.Screen;
                         card.Skip();
                         pump();
-                        if (was != (pick == FirstRun.Free ? FirstRun.Key : FirstRun.Plan) || card.Screen != FirstRun.Voice) throw new Exception("Skip on " + (pick == FirstRun.Free ? "FREE KEY" : "MY PLAN OR KEY") + " didn't move to her voice.");
+                        if (was != (pick == FirstRun.Free ? FirstRun.Key : FirstRun.Plan) || card.Screen != FirstRun.Me) throw new Exception("Skip on " + (pick == FirstRun.Free ? "FREE KEY" : "MY PLAN OR KEY") + " didn't move to MAKE ME YOURS.");
                         card.SkipAll();
                         putBack();
                     }
@@ -990,20 +1100,25 @@ namespace CapriDesktop
                     card.Next();
                     card.Next();
                     card.Next();
+                    card.Next();
+                    card.Next();
                     pump();
-                    if (card.Screen != FirstRun.Wait) throw new Exception("The waiting screen didn't come.");
+                    if (card.Screen != FirstRun.Job) throw new Exception("FIRST JOB didn't come during the download: " + card.Screen);
+                    card.Skip();
+                    pump();
+                    if (card.Screen != FirstRun.Wait || card.Queued != null || FirstJobWaiting != null) throw new Exception("Skip on FIRST JOB during the download didn't wait with no job: " + card.Screen);
                     card.Skip();
                     pump();
                     bool hidAndKept = !FirstRunShowing && preferences.FirstRunStep == FirstRun.None && SettingUp && !(mainframe.Visible && mainframe.WindowState == FormWindowState.Normal);
                     localDone();
                     wait(delegate { return reply == online; }, "Her brain coming in after the card was hidden didn't bring her hello.");
                     if (!hidAndKept || FirstRunShowing) throw new Exception("Hide this on the waiting screen didn't close the card and leave the download going.");
-                    passed("PASS Skip on every screen moves past that step (WAKE ME UP, FREE KEY, MY PLAN OR KEY, BRAIN ONLINE, her voice, EXTRAS, and Hide this while she waits), and skipping every step with no brain leaves them in the Mainframe on Set up her brain");
+                    passed("PASS Skip on every screen moves past that step (WAKE ME UP, FREE KEY, MY PLAN OR KEY, BRAIN ONLINE, MAKE ME YOURS, her voice, EXTRAS, FIRST JOB, and Hide this while she waits), and skipping every step with no brain leaves them in the Mainframe on Set up her brain");
 
                     // Skip all, and Alt + F4, from every screen ends the whole thing: never EXTRAS, and the Mainframe only when she
                     // still has no brain and none on its way, so they can see where to set one up.
                     foreach (bool viaClose in new[] { false, true })
-                        foreach (int screen in new[] { FirstRun.Pick, FirstRun.Key, FirstRun.Plan, FirstRun.Online, FirstRun.Voice, FirstRun.Extras, FirstRun.Wait })
+                        foreach (int screen in new[] { FirstRun.Pick, FirstRun.Models, FirstRun.Key, FirstRun.Plan, FirstRun.Online, FirstRun.Me, FirstRun.Voice, FirstRun.Extras, FirstRun.Job, FirstRun.Wait })
                             foreach (bool coming in new[] { false, true })
                             {
                                 if (coming && (screen == FirstRun.Key || screen == FirstRun.Plan || screen == FirstRun.Online)) continue;
@@ -1028,6 +1143,8 @@ namespace CapriDesktop
                     reset();
                     setups = 0;
                     card = open(FirstRun.Pick, FirstRun.Local);
+                    card.Next();
+                    card.Next();
                     card.Next();
                     pump();
                     SettingUp = false;
@@ -1146,8 +1263,8 @@ namespace CapriDesktop
                             return problem;
                         }
                     };
-                    string[] names = { "", "desktop-1-pick-1080-middle", "desktop-2-free-key-1080-right", null, "desktop-4-voice-768-middle", null, null, null };
-                    foreach (int screen in new[] { FirstRun.Pick, FirstRun.Key, FirstRun.Plan, FirstRun.Online, FirstRun.Voice, FirstRun.Extras, FirstRun.Wait })
+                    string[] names = { "", "desktop-1-pick-1080-middle", "desktop-2-free-key-1080-right", null, "desktop-4-voice-768-middle", null, null, null, null, null };
+                    foreach (int screen in new[] { FirstRun.Pick, FirstRun.Models, FirstRun.Key, FirstRun.Plan, FirstRun.Online, FirstRun.Voice, FirstRun.Extras, FirstRun.Wait })
                     foreach (Size size in new[] { new Size(1920, 1080), new Size(1366, 768) })
                     {
                         reset();
@@ -1187,17 +1304,17 @@ namespace CapriDesktop
                     foreach (float scale in new[] { 1.25f, 1.5f })
                     {
                         string size = ((int)Math.Round(scale * 100)).ToString();
-                        foreach (int screen in new[] { FirstRun.Pick, FirstRun.Key, FirstRun.Plan, FirstRun.Online, FirstRun.Voice, FirstRun.Extras, FirstRun.Wait })
+                        foreach (int screen in new[] { FirstRun.Pick, FirstRun.Models, FirstRun.Key, FirstRun.Plan, FirstRun.Online, FirstRun.Me, FirstRun.Voice, FirstRun.Extras, FirstRun.Job, FirstRun.Wait })
                         {
                             reset();
                             if (screen == FirstRun.Online) { brain.Remote = new Cloud("AIza-firstrun-test", "gemini-90-flash"); brain.Model = "gemini-90-flash"; preferences.Tier = 1; }
                             if (screen == FirstRun.Voice || screen == FirstRun.Extras || screen == FirstRun.Wait) mainframe.ShowProgress(1, "Downloading " + fit.Name, fit.Size / 3, fit.Size);
                             card = OpenFirstRun(screen == FirstRun.Online ? FirstRun.Pick : screen, screen == FirstRun.Key ? FirstRun.Free : screen == FirstRun.Plan ? FirstRun.Own : FirstRun.Local, false, scale);
                             if (screen == FirstRun.Online) card.BrainOnline();
-                            if (screen == FirstRun.Voice || screen == FirstRun.Extras || screen == FirstRun.Wait) { setups = 0; card.Brain = FirstRun.Coming; SettingUp = true; card.Go(screen); }
+                            if (screen == FirstRun.Me || screen == FirstRun.Voice || screen == FirstRun.Extras || screen == FirstRun.Job || screen == FirstRun.Wait) { setups = 0; card.Brain = FirstRun.Coming; SettingUp = true; card.Go(screen); }
                             pump();
                             if (Math.Abs(card.Unit - scale) > 0.01f) throw new Exception("The card wasn't drawn at " + scale + ": " + card.Unit);
-                            string[] names = { "", "1-pick", "2-free-key", "3-online", "4-voice", "5-extras", "2-plan", "wait" };
+                            string[] names = { "", "1-pick", "2-free-key", "3-online", "4-voice", "5-extras", "2-plan", "wait", "alone", "1b-models", "2-me", "6-job" };
                             picture(card, names[screen] + "-" + size);
                             card.SkipAll();
                             putBack();
@@ -1237,6 +1354,9 @@ namespace CapriDesktop
                 CloseTalk();
                 foreach (System.Net.Sockets.TcpListener server in servers) server.Stop();
                 preferences = wasPreferences;
+                Brain.Nickname = wasNickname;
+                namedOnCard = false;
+                firstJob = null;
                 Brain.Language = wasLanguage;
                 Thread.CurrentThread.CurrentUICulture = wasCulture;
                 PointEars();

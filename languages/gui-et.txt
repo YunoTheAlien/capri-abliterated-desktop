@@ -204,11 +204,11 @@ Running on this PC	Käib sellel arvutil
 NORMAL	TAVALINE
 OFF	VÄLJAS
 Local server address	Kohaliku serveri aadress
-Remember panel position	Jäta paneeli asukoht meelde
 Custom colours	Kohandatud värvid
 Custom colours...	Kohandatud värvid...
 Choose	Vali
-Hers	Tema omad
+Reset selected colour	Lähtesta valitud värv
+Make a mod	Tee mod
 Quiet	Vaikne
 Quiet min	Vaikne min
 Quiet max	Vaikne max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Vaikne kuni {n}:{n}
 Quiet until turned off	Vaikne kuni väljalülitamiseni
 Export settings	Ekspordi seaded
 Import settings	Impordi seaded
+Save Mainframe position	Jäta paneeli asukoht meelde

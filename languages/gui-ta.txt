@@ -204,11 +204,11 @@ Running on this PC	இந்த PC-யில் இயங்குகிறத�
 NORMAL	சாதாரணம்
 OFF	முடக்கம்
 Local server address	உள்ளூர் சேவையக முகவரி
-Remember panel position	பேனல் இடத்தை நினைவில் வை
 Custom colours	தனிப்பயன் நிறங்கள்
 Custom colours...	தனிப்பயன் நிறங்கள்...
 Choose	தேர்வு
-Hers	அவளுடையது
+Reset selected colour	தேர்ந்த வண்ணத்தை மீட்டமை
+Make a mod	மோட் உருவாக்கு
 Quiet	அமைதி
 Quiet min	அமைதி min
 Quiet max	அமைதி max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	{n}:{n} வரை அமைதி
 Quiet until turned off	அணைக்கும் வரை அமைதி
 Export settings	அமைப்புகளை ஏற்றுமதி செய்
 Import settings	அமைப்புகளை இறக்குமதி செய்
+Save Mainframe position	பேனல் இடத்தை நினைவில் வை

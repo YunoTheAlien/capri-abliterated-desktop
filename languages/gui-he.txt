@@ -204,11 +204,11 @@ Running on this PC	רץ במחשב הזה
 NORMAL	רגיל
 OFF	כבוי
 Local server address	כתובת שרת מקומי
-Remember panel position	לזכור את מיקום החלונית
 Custom colours	צבעים מותאמים
 Custom colours...	צבעים מותאמים...
 Choose	בחירה
-Hers	שלה
+Reset selected colour	אפס את הצבע הנבחר
+Make a mod	צור מוד
 Quiet	שקט
 Quiet min	שקט min
 Quiet max	שקט max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	שקט עד {n}:{n}
 Quiet until turned off	שקט עד כיבוי
 Export settings	ייצוא הגדרות
 Import settings	ייבוא הגדרות
+Save Mainframe position	לזכור את מיקום החלונית

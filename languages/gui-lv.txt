@@ -204,11 +204,11 @@ Running on this PC	Darbojas šajā PC
 NORMAL	NORMĀLS
 OFF	IZSLĒGTS
 Local server address	Lokālā servera adrese
-Remember panel position	Atcerēties paneļa novietojumu
 Custom colours	Pielāgotas krāsas
 Custom colours...	Pielāgotas krāsas...
 Choose	Izvēlēties
-Hers	Viņas
+Reset selected colour	Atiestatīt izvēlēto krāsu
+Make a mod	Izveidot modu
 Quiet	Kluss
 Quiet min	Kluss min
 Quiet max	Kluss max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Kluss līdz {n}:{n}
 Quiet until turned off	Kluss līdz izslēgšanai
 Export settings	Eksportēt iestatījumus
 Import settings	Importēt iestatījumus
+Save Mainframe position	Atcerēties paneļa novietojumu

@@ -204,11 +204,11 @@ Running on this PC	Працуе на гэтым ПК
 NORMAL	ЗВЫЧАЙНЫ
 OFF	ВЫКЛ.
 Local server address	Лакальны адрас сервера
-Remember panel position	Запамінаць месца панэлі
 Custom colours	Свае колеры
 Custom colours...	Свае колеры...
 Choose	Выбраць
-Hers	Яе ўласны
+Reset selected colour	Скінуць абраны колер
+Make a mod	Зрабіць мод
 Quiet	Ціха
 Quiet min	Ціха min
 Quiet max	Ціха max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Ціха да {n}:{n}
 Quiet until turned off	Ціха да выключэння
 Export settings	Экспарт налад
 Import settings	Імпарт налад
+Save Mainframe position	Запамінаць месца панэлі

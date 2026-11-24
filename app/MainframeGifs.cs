@@ -70,7 +70,8 @@ namespace CapriDesktop
             private readonly Key addKey, saveKey, cancelKey;
             private readonly Entry naming;
             private readonly Label count, notice;
-            private readonly System.Windows.Forms.Panel list;
+            private readonly ScrollPanel list;
+            private readonly SlimBar bar = new SlimBar();
             private readonly System.Windows.Forms.Timer noticeTimer = new System.Windows.Forms.Timer(), armTimer = new System.Windows.Forms.Timer();
             private List<string> names = new List<string>();
             private string editing, armed;
@@ -96,8 +97,14 @@ namespace CapriDesktop
                 cancelKey.AccessibleName = "Cancel renaming";
                 cancelKey.Accent = Rose;
                 naming.Visible = saveKey.Visible = cancelKey.Visible = false;
-                list = new System.Windows.Forms.Panel { Bounds = Box(28, ListTop, 504, ListTall), AutoScroll = true, BackColor = Ground };
+                // Her own slim bar beside the list, not Windows' one.
+                list = new ScrollPanel { Bounds = Box(28, ListTop, 494, ListTall), BackColor = Ground };
+                list.Scrolled += delegate { bar.Invalidate(); };
                 Controls.Add(list);
+                bar.Bounds = new Rectangle(Z(526), Z(ListTop), Z(SlimBar.Thin), Z(ListTall));
+                bar.BackColor = Ground;
+                bar.Watch(list);
+                Controls.Add(bar);
                 notice = Words("", 28, 452, 504, 22, Small(), Cyan);
                 Words("Up to " + GifShelf.Most + " GIFs, each under 8 MB and " + GifShelf.MostFrames + " frames.", 28, 482, 504, 18, Small(), Faint);
                 noticeTimer.Interval = 8000;

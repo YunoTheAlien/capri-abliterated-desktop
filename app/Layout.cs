@@ -140,7 +140,7 @@ namespace CapriDesktop
 
         private static string Hex(Color colour)
         {
-            return colour.IsEmpty ? "" : "#" + colour.R.ToString("x2") + colour.G.ToString("x2") + colour.B.ToString("x2");
+            return colour.IsEmpty ? "" : "#" + (colour.A < 255 ? colour.A.ToString("x2") : "") + colour.R.ToString("x2") + colour.G.ToString("x2") + colour.B.ToString("x2");
         }
 
         internal static string Text
@@ -190,6 +190,11 @@ namespace CapriDesktop
                 made.AppendLine("## Tamagotchi");
                 made.AppendLine();
                 made.AppendLine(Line("points"));
+                made.AppendLine();
+                made.AppendLine("## Her file editor");
+                made.AppendLine();
+                foreach (string name in new[] { "editor frame", "editor sheet", "editor edge", "editor field", "editor text" })
+                    made.AppendLine(Line(name));
                 return made.ToString();
             }
         }

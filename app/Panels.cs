@@ -274,14 +274,15 @@ namespace CapriDesktop
         // Where a row starts inside its panel: a switch's or a slider's box sits 3 px into its row.
         private int RowAt(Control control) { return panelOf[control].Offsets[control] - 3; }
 
-        // The regroup: SETTINGS is GENERAL SETTINGS and takes HABITS' rows; Mini player over full screen and the two Explore
-        // rows go under Quiet in videos in CAPRI, with no gap between the Explore rows; SOUNDS goes under VOICE, KEYS under
-        // BRAIN, DOOMSCROLL under CAPRI.
+        // The regroup: SETTINGS is GENERAL SETTINGS and takes HABITS' rows; Mute her goes over the Quiet timer, with Mini
+        // player over full screen and the Explore rows under it; SOUNDS goes under VOICE, KEYS under BRAIN, DOOMSCROLL
+        // under CAPRI.
         private void Regroup()
         {
-            Panel habits = FindPanel("HABITS"), capri = FindPanel("CAPRI"), general = FindPanel("GENERAL SETTINGS");
+            Panel habits = FindPanel("HABITS"), capri = FindPanel("CAPRI"), general = FindPanel("GENERAL SETTINGS"), games = FindPanel("GAMES");
             if (habits == null || capri == null || general == null) return;
-            int under = RowAt(quietVideos) + Row;
+            if (games != null && panelOf.ContainsKey(gameMute)) Graft(games, RowAt(gameMute), RowAt(gameMute) + Row, capri, RowAt(quietSwitch));
+            int under = RowAt(focusKey) + Row;
             int away = RowAt(playerFullScreen);
             Graft(habits, away, RowAt(exploreAway) + Row, capri, under);
             Graft(habits, RowAt(exploreAfter), RowAt(exploreAfter) + Row, capri, under + Row * 2);
@@ -404,8 +405,126 @@ namespace CapriDesktop
             Restack();
         }
 
-        // A mod's panels go when it stops or is taken out, and the slots they held go back to the panels under them.
-        internal void RemoveModPanels(string mod) { RemoveModPanel(mod, null); }
+        // A mod's panels go when it stops or is taken out, and the slots they held go back to the panels under them. Its
+        // parts in a shared group go too, and the group closes up, or goes with its last part.
+        internal void RemoveModPanels(string mod)
+        {
+            foreach (KeyValuePair<string, List<GroupPart>> group in new List<KeyValuePair<string, List<GroupPart>>>(groups))
+            {
+                List<GroupPart> gone = group.Value.FindAll(part => part.Mod == mod);
+                if (gone.Count == 0) continue;
+                foreach (GroupPart part in gone) { group.Value.Remove(part); part.Made.Dispose(); }
+                BuildGroup(group.Key);
+            }
+            RemoveModPanel(mod, null);
+        }
+
+        // ---------- Panels mods share ----------
+
+        // One mod's part in a shared panel: its sub-heading, its control and whether Simple Settings shows it.
+        private sealed class GroupPart { internal string Mod, Title; internal Control Made; internal bool Simple; }
+        private readonly Dictionary<string, List<GroupPart>> groups = new Dictionary<string, List<GroupPart>>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int[]> groupPlace = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
+        internal const string GroupMod = "group";
+
+        // A mod's part in the panel every mod naming this group shares, under a sub-heading of its own. The first part
+        // sets where the panel sits; a part added again with the same title takes its old one's place.
+        internal void AddGroupPart(string mod, string group, string title, int column, int slot, Control made, bool simpleToo)
+        {
+            if (made == null || string.IsNullOrEmpty(mod) || string.IsNullOrWhiteSpace(group)) return;
+            group = group.Trim();
+            List<GroupPart> parts;
+            if (!groups.TryGetValue(group, out parts)) { groups[group] = parts = new List<GroupPart>(); groupPlace[group] = new[] { column == 0 ? 0 : 1, Math.Max(1, slot) }; }
+            int at = parts.FindIndex(part => part.Mod == mod && string.Equals(part.Title, title, StringComparison.OrdinalIgnoreCase));
+            GroupPart made2 = new GroupPart { Mod = mod, Title = string.IsNullOrWhiteSpace(title) ? mod : title.Trim(), Made = made, Simple = simpleToo };
+            if (at >= 0) { parts[at].Made.Dispose(); parts[at] = made2; }
+            else parts.Add(made2);
+            BuildGroup(group);
+        }
+
+        // The shared panel laid again from its parts: its heading band, then each part's sub-heading in big text with
+        // its control under it. Gone with its last part.
+        private void BuildGroup(string group)
+        {
+            string id = group.ToUpperInvariant();
+            // The parts' controls are kept; only the heading and sub-headings are made again.
+            List<GroupPart> parts;
+            groups.TryGetValue(group, out parts);
+            foreach (List<Panel> list in columns)
+                foreach (Panel old in list.FindAll(one => one.Mod == GroupMod && one.Id == id))
+                {
+                    list.Remove(old);
+                    foreach (Control control in new List<Control>(old.Offsets.Keys))
+                    {
+                        panelOf.Remove(control);
+                        built.Remove(control);
+                        pageLeft.RemoveAll(entry => entry.Key == control);
+                        scrolled.Remove(control);
+                        tops.Remove(control);
+                        layout.RemoveAll(item => item.Control == control || control.Contains(item.Control));
+                        Controls.Remove(control);
+                        if (parts == null || !parts.Exists(part => part.Made == control)) control.Dispose();
+                    }
+                }
+            if (parts == null || parts.Count == 0) { groups.Remove(group); groupPlace.Remove(group); Restack(); return; }
+            int column = groupPlace[group][0], slot = groupPlace[group][1], x = column * Column, laid = layout.Count;
+            Head head = Section(id + " >", x, 0);
+            Panel panel = new Panel { Id = id, Head = head, Built = column, Column = column, Mod = GroupMod, Slot = slot };
+            panel.Offsets[head] = 0;
+            List<Control> placed = new List<Control> { head };
+            int y = 26;
+            bool anySimple = false;
+            foreach (GroupPart part in parts)
+            {
+                int from = y;
+                Label sub = Caption(part.Title, 28 + x, y, Type(12f, true), White);
+                sub.AccessibleName = part.Title + ", in " + group;
+                panel.Offsets[sub] = y;
+                part.Made.Bounds = new System.Drawing.Rectangle(28 + x, y + 28, 328, Math.Max(22, part.Made.Height));
+                Controls.Add(part.Made);
+                panel.Offsets[part.Made] = y + 28;
+                placed.Add(sub);
+                placed.Add(part.Made);
+                y += 28 + part.Made.Height + 12;
+                if (!part.Simple) panel.Folds.Add(new[] { from, y });
+                anySimple |= part.Simple;
+            }
+            panel.Span = y - 12 + panelGap;
+            if (!anySimple) { panel.Folds.Clear(); panel.Folds.Add(new[] { 0, panel.Span }); }
+            WireDrag(head);
+            foreach (Control control in placed)
+            {
+                built[control] = 0;
+                pageLeft.Add(new KeyValuePair<Control, int>(control, control.Left));
+                panelOf[control] = panel;
+                Scrolls(control);
+                tops[control] = control.Top;
+                RememberLayout(control);
+            }
+            for (int i = laid; i < layout.Count; i++) layout[i].Apply(unit, layoutFallback);
+            List<Panel> list2 = columns[column];
+            int at = -1;
+            string saved = capri.PanelsSaved;
+            if (!string.IsNullOrEmpty(saved))
+            {
+                string[] halves = saved.Split('|');
+                List<string> keys = halves.Length == 2 ? new List<string>(halves[column].Split(';')) : new List<string>();
+                int mine = keys.IndexOf(panel.Key);
+                for (int before = mine - 1; mine >= 0 && before >= -1 && at < 0; before--)
+                {
+                    if (before < 0) { at = 0; break; }
+                    int found = list2.FindIndex(one => one.Key == keys[before]);
+                    if (found >= 0) at = found + 1;
+                }
+            }
+            if (at < 0)
+            {
+                at = Math.Min(panel.Slot - 1, list2.Count);
+                while (at < list2.Count && list2[at].Mod != null && list2[at].Slot == panel.Slot) at++;
+            }
+            list2.Insert(at, panel);
+            Restack();
+        }
 
         private void RemoveModPanel(string mod, string id)
         {
@@ -665,6 +784,50 @@ namespace CapriDesktop
                 capri.SavePanels(savedWas);
             }
             checks.Add("PASS a mod's panel (AddPanel) takes the slot it asks for and pushes the panels under it down; two asking for one slot take it in load order; it shows in Simple only when asked; the order is saved with it, a saved place beats the slot asked for, and a mod taken out gives its slot back");
+            CheckGroupPanels(checks);
+        }
+
+        // Two mods naming one group share a panel, each under its own sub-heading; Simple shows only the part that asked;
+        // a mod taken out takes its part, and the panel goes with the last one.
+        private void CheckGroupPanels(List<string> checks)
+        {
+            string savedWas = capri.PanelsSaved;
+            try
+            {
+                capri.SavePanels(null);
+                AddGroupPart("check-a", "Yuno Mods", "Door 1 settings", 1, 2, new Label { Text = "Door's row", Height = 40 }, false);
+                AddGroupPart("check-b", "Yuno Mods", "Screensavers", 1, 2, new Label { Text = "Saver's row", Height = 30 }, true);
+                Panel group = FindPanel("YUNO MODS");
+                List<string> subs = new List<string>();
+                Control door = null, saver = null;
+                if (group != null)
+                    foreach (Control one in group.Offsets.Keys)
+                    {
+                        if (one is Label && (one.Text == "Door 1 settings" || one.Text == "Screensavers")) subs.Add(one.Text);
+                        if (one.Text == "Door's row") door = one;
+                        if (one.Text == "Saver's row") saver = one;
+                    }
+                string order = PanelOrder;
+                bool one2 = group != null && order.IndexOf("YUNO MODS", StringComparison.Ordinal) == order.LastIndexOf("YUNO MODS", StringComparison.Ordinal) && order.EndsWith("| GENERAL SETTINGS YUNO MODS CAPRI DOOMSCROLL WATCH BRAIN KEYS", StringComparison.Ordinal);
+                bool both = subs.Count == 2 && door != null && saver != null && saver.Top > door.Bottom;
+                bool simple = door != null && saver != null && FoldedIn(door, true) && !FoldedIn(saver, true);
+                RemoveModPanels("check-a");
+                Panel left = FindPanel("YUNO MODS");
+                List<string> texts = new List<string>();
+                if (left != null) foreach (Control one in left.Offsets.Keys) texts.Add(one.Text);
+                bool closed = left != null && !texts.Contains("Door's row") && !texts.Contains("Door 1 settings") && texts.Contains("Screensavers");
+                RemoveModPanels("check-b");
+                bool gone = FindPanel("YUNO MODS") == null && PanelOrder == PanelsShipped;
+                if (!one2 || !both || !simple || !closed || !gone)
+                    throw new Exception("A shared panel went wrong: one panel in slot 2 " + one2 + " (" + order + "), both parts under sub-headings " + both + ", Simple shows only the part that asked " + simple + ", a mod's part goes with it " + closed + ", the panel goes with the last part " + gone);
+            }
+            finally
+            {
+                RemoveModPanels("check-a");
+                RemoveModPanels("check-b");
+                capri.SavePanels(savedWas);
+            }
+            checks.Add("PASS two mods naming one group (AddPanel with a group) share one panel in the slot the first asked for, each part under its own sub-heading in big text; Simple shows only the part that asked; a mod taken out takes its part and the panel closes up, and goes with its last part");
         }
 
         // Her title bar stays at the top while Settings scrolls under it, at every size; a row Tab reaches is shown under it.
@@ -723,13 +886,16 @@ namespace CapriDesktop
             if (PanelOrder != PanelsShipped) throw new Exception("Settings' panels aren't in the order it ships: " + PanelOrder);
             string sound = PanelsSound();
             if (sound != null) throw new Exception(sound);
-            if (panelOf[playerFullScreen] != panelOf[quietVideos] || StackTop(playerFullScreen, false) != StackTop(quietVideos, false) + Row
+            if (panelOf[playerFullScreen] != panelOf[quietSwitch] || StackTop(playerFullScreen, false) != StackTop(focusKey, false) + Row
                 || StackTop(exploreAway, false) != StackTop(playerFullScreen, false) + Row || StackTop(exploreAfter, false) != StackTop(exploreAway, false) + Row)
-                throw new Exception("Mini player over full screen and the Explore rows aren't the rows under Quiet in videos: " + StackTop(quietVideos, false) + ", " + StackTop(playerFullScreen, false) + ", " + StackTop(exploreAway, false) + ", " + StackTop(exploreAfter, false));
+                throw new Exception("Mini player over full screen and the Explore rows aren't the rows under " + FocusLabel + ": " + StackTop(focusKey, false) + ", " + StackTop(playerFullScreen, false) + ", " + StackTop(exploreAway, false) + ", " + StackTop(exploreAfter, false));
+            if (FindPanel("FOCUS") != null || panelOf[gameMute] != panelOf[quietSwitch] || panelOf[gameMute].Id != "CAPRI" || StackTop(quietSwitch, false) != StackTop(gameMute, false) + Row
+                || !panelOf.ContainsKey(focusKey) || panelOf[focusKey].Id != "CAPRI" || panelOf[focusSwitch].Id != "CAPRI" || StackTop(focusSwitch, false) != StackTop(quietSwitch, false) + Row || StackTop(focusKey, false) != StackTop(focusSwitch, false) + Row)
+                throw new Exception("CAPRI isn't Mute her, the Quiet timer, Focus mode, then " + FocusLabel + ", or FOCUS is still a panel: " + StackTop(gameMute, false) + ", " + StackTop(quietSwitch, false) + ", " + StackTop(focusSwitch, false) + ", " + StackTop(focusKey, false));
             foreach (Control row in new Control[] { memoriesKey, startup, discord, cursor, remembering, security, powerSaver, musicApp, perchFps, keepAwake, hideFullScreen })
                 if (!panelOf.ContainsKey(row) || panelOf[row].Id != "GENERAL SETTINGS") throw new Exception(Name(row) + " isn't under GENERAL SETTINGS");
             if (FindPanel("HABITS") != null || settingsHead.Text != "GENERAL SETTINGS >") throw new Exception("HABITS is still a panel, or SETTINGS isn't GENERAL SETTINGS: " + settingsHead.Text);
-            checks.Add("PASS Settings' panels stack " + PanelsShipped + " in Advanced and Simple, every row inside its own panel and column; Mini player over full screen, Explore while I'm away and Explore after are the rows under Quiet in videos with no gap; HABITS' other rows are under GENERAL SETTINGS");
+            checks.Add("PASS Settings' panels stack " + PanelsShipped + " in Advanced and Simple, every row inside its own panel and column; CAPRI has Mute her, the Quiet timer, Focus mode and " + FocusLabel + " in that order, with Mini player over full screen, Explore while I'm away and Explore after under them with no gap, and no FOCUS panel; HABITS' other rows are under GENERAL SETTINGS");
             CheckPanelOrders(checks);
         }
 

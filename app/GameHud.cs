@@ -1001,9 +1001,10 @@ namespace CapriDesktop
         // "on", "off", or which way to move her HUD: up, down, left, right or reset.
         internal string GamingMode(string action)
         {
-            if (action == "on") { WakeRest(true); WantGaming(true); return gaming.On(clock.Elapsed.TotalSeconds); }
+            if (action == "on") { Brain.Log("modes", -1, "Gaming Mode on."); WakeRest(true); WantGaming(true); return gaming.On(clock.Elapsed.TotalSeconds); }
             if (action == "off")
             {
+                Brain.Log("modes", -1, "Gaming Mode off.");
                 bool wanted = GamingWanted;
                 WantGaming(false);
                 string left = gaming.Off();

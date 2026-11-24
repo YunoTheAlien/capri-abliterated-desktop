@@ -204,11 +204,11 @@ Running on this PC	Kjører på denne PC-en
 NORMAL	NORMAL
 OFF	AV
 Local server address	Lokal serveradresse
-Remember panel position	Husk panelplasseringen
 Custom colours	Egne farger
 Custom colours...	Egne farger...
 Choose	Velg
-Hers	Hennes
+Reset selected colour	Tilbakestill valgt farge
+Make a mod	Lag en mod
 Quiet	Stille
 Quiet min	Stille min
 Quiet max	Stille max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Stille til {n}:{n}
 Quiet until turned off	Stille til slått av
 Export settings	Eksporter innstillinger
 Import settings	Importer innstillinger
+Save Mainframe position	Husk panelplasseringen

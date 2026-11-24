@@ -204,11 +204,11 @@ Running on this PC	Duke punuar në këtë PC
 NORMAL	NORMAL
 OFF	JASHTË
 Local server address	Adresa e serverit lokal
-Remember panel position	Mbaj mend pozicionin e panelit
 Custom colours	Ngjyra të personalizuara
 Custom colours...	Ngjyra të personalizuara...
 Choose	Zgjidh
-Hers	Të sajat
+Reset selected colour	Rivendos ngjyrën e zgjedhur
+Make a mod	Bëj një mod
 Quiet	Heshtje
 Quiet min	Heshtje min
 Quiet max	Heshtje max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Heshtje deri në {n}:{n}
 Quiet until turned off	Heshtje deri në fikje
 Export settings	Eksporto cilësimet
 Import settings	Importo cilësimet
+Save Mainframe position	Mbaj mend pozicionin e panelit

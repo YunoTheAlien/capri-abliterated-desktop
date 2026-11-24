@@ -344,9 +344,11 @@ namespace CapriDesktop
                 return null;
             }
 
+            // Without an alpha channel: taken with one, a pixel of #0d0b0c, the colour GDI+ marks untouched pixels
+            // with, came out clear and showed white in the picture.
             internal void Picture(string path)
             {
-                using (Bitmap shot = new Bitmap(Width, Height))
+                using (Bitmap shot = new Bitmap(Width, Height, PixelFormat.Format24bppRgb))
                 {
                     DrawToBitmap(shot, new Rectangle(Point.Empty, Size));
                     shot.Save(path, ImageFormat.Png);
@@ -538,7 +540,7 @@ namespace CapriDesktop
 
             internal ModsSheet(Mainframe owner, float zoom) : base(owner, zoom, "Mods directory", "MODS DIRECTORY >", Wide, Tall)
             {
-                Words("Every mod is checked for malware before it goes up. Code mods still ask before they run.", 28, 52, 688, 16, Small(), Faint);
+                Words("From the capri-mods directory. We check some, but can't promise each is safe or works after updates.", 28, 52, 688, 16, Small(), Faint);
                 search = new Entry();
                 search.Bounds = Box(28, 74, 270, 26);
                 search.Cue = "Search name, author or description";
@@ -716,6 +718,8 @@ namespace CapriDesktop
                     titles[i].AccessibleDescription = listing.About;
                     details.SetToolTip(previews[i], listing.Title + (listing.Author.Length > 0 ? "\nby " + listing.Author : "") + (listing.About.Length > 0 ? "\n" + listing.About : ""));
                     metas[i].Text = listing.Kind + " " + Math.Max(1, listing.Size / 1024) + " KB." + (update ? " Update available." : have ? " Installed." : "");
+                    // Lachy's are listed after ours and said to be his, since they may not work with this build.
+                    if (ModDirectory.Marked(listing)) { abouts[i].Text = "Lachy's. " + listing.About; abouts[i].Visible = true; titles[i].AccessibleDescription = ModDirectory.HisWarning + " " + listing.About; }
                     metas[i].ForeColor = update ? Cyan : Faint;
                     stars[i].Value = listing.Rating;
                     stars[i].CanRate = statsLive && have;
@@ -744,7 +748,7 @@ namespace CapriDesktop
                 bool update = waiting != null;
                 string ready = update && waiting.Fetched != null && File.Exists(waiting.Fetched) ? waiting.Fetched : null;
                 if (ready != null) waiting.Fetched = null;
-                Says((update ? "Updating " : "Downloading ") + listing.Title + "...", false);
+                Says((update ? "Updating " : "Downloading ") + listing.Title + "..." + (ModDirectory.Marked(listing) ? " " + ModDirectory.HisWarning : ""), false);
                 Fill();
                 string under = Path.Combine(Path.GetTempPath(), "capri-mod-downloads");
                 Run(delegate

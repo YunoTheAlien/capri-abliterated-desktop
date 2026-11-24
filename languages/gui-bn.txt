@@ -204,11 +204,11 @@ Running on this PC	এই PC-তে চলছে
 NORMAL	স্বাভাবিক
 OFF	বন্ধ
 Local server address	লোকাল সার্ভারের ঠিকানা
-Remember panel position	প্যানেলের অবস্থান মনে রাখো
 Custom colours	নিজস্ব রং
 Custom colours...	নিজস্ব রং...
 Choose	বেছে নাও
-Hers	ওর নিজের
+Reset selected colour	বাছাই করা রং রিসেট করো
+Make a mod	মড বানাও
 Quiet	চুপ
 Quiet min	চুপ min
 Quiet max	চুপ max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	{n}:{n} পর্যন্ত চুপ
 Quiet until turned off	বন্ধ না করা পর্যন্ত চুপ
 Export settings	সেটিংস রপ্তানি
 Import settings	সেটিংস আমদানি
+Save Mainframe position	প্যানেলের অবস্থান মনে রাখো

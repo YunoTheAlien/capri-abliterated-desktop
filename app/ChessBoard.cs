@@ -423,7 +423,7 @@ namespace CapriDesktop
                 {
                     if (!ChessPosition.On(square)) { square += 7; continue; }
                     RectangleF tile = Tile(square, game.You);
-                    using (Brush fill = new SolidBrush(((square + square / 16) & 1) == 0 ? CityLook.Well : Color.FromArgb(43, 38, 51))) paint.FillRectangle(fill, tile);
+                    using (Brush fill = new SolidBrush(((square + square / 16) & 1) == 0 ? CityLook.Well : Neon.Tone(43, 38, 51))) paint.FillRectangle(fill, tile);
                     if (game.LastMove.From == square || game.LastMove.To == square)
                         using (Brush last = new SolidBrush(Color.FromArgb(42, CityLook.Cyan))) paint.FillRectangle(last, tile);
                     if (checkedKing == square)

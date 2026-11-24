@@ -204,11 +204,11 @@ Running on this PC	Работи на овој PC
 NORMAL	НОРМАЛНО
 OFF	ИСКЛУЧЕНО
 Local server address	Адреса на локалниот сервер
-Remember panel position	Запомни ја положбата на панелот
 Custom colours	Сопствени бои
 Custom colours...	Сопствени бои...
 Choose	Избери
-Hers	Нејзини
+Reset selected colour	Врати ја избраната боја
+Make a mod	Направи мод
 Quiet	Тишина
 Quiet min	Тишина min
 Quiet max	Тишина max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Тишина до {n}:{n}
 Quiet until turned off	Тишина до исклучување
 Export settings	Извези поставки
 Import settings	Увези поставки
+Save Mainframe position	Запомни ја положбата на панелот

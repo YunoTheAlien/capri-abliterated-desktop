@@ -204,11 +204,11 @@ Running on this PC	Работи на този компютър
 NORMAL	НОРМАЛНО
 OFF	ИЗКЛ
 Local server address	Адрес на локалния сървър
-Remember panel position	Запомняне на позицията на панела
 Custom colours	Собствени цветове
 Custom colours...	Собствени цветове...
 Choose	Избор
-Hers	Нейният
+Reset selected colour	Нулирай избрания цвят
+Make a mod	Направи мод
 Quiet	Тихо
 Quiet min	Тихо min
 Quiet max	Тихо max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Тихо до {n}:{n}
 Quiet until turned off	Тихо до изключване
 Export settings	Експорт на настройките
 Import settings	Импорт на настройките
+Save Mainframe position	Запомняне на позицията на панела

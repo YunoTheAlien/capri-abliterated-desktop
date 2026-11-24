@@ -204,11 +204,11 @@ Running on this PC	Körs på den här datorn
 NORMAL	NORMAL
 OFF	AV
 Local server address	Lokal serveradress
-Remember panel position	Kom ihåg panelens position
 Custom colours	Egna färger
 Custom colours...	Egna färger...
 Choose	Välj
-Hers	Hennes
+Reset selected colour	Återställ vald färg
+Make a mod	Gör en mod
 Quiet	Tyst
 Quiet min	Tyst min
 Quiet max	Tyst max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Tyst till {n}:{n}
 Quiet until turned off	Tyst tills avstängt
 Export settings	Exportera inställningar
 Import settings	Importera inställningar
+Save Mainframe position	Kom ihåg panelens position

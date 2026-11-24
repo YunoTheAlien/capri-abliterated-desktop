@@ -204,11 +204,11 @@ Running on this PC	Работает на этом ПК
 NORMAL	ОБЫЧНЫЙ
 OFF	ВЫКЛ
 Local server address	Адрес локального сервера
-Remember panel position	Запоминать положение панели
 Custom colours	Свои цвета
 Custom colours...	Свои цвета...
 Choose	Выбрать
-Hers	Её
+Reset selected colour	Сбросить выбранный цвет
+Make a mod	Сделать мод
 Quiet	Тишина
 Quiet min	Тишина min
 Quiet max	Тишина max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Тишина до {n}:{n}
 Quiet until turned off	Тишина до выключения
 Export settings	Экспорт настроек
 Import settings	Импорт настроек
+Save Mainframe position	Запоминать положение панели

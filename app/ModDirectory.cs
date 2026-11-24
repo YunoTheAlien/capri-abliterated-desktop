@@ -19,6 +19,9 @@ namespace CapriDesktop
     internal sealed class ModListing
     {
         internal string Folder, FileName, Sha, PreviewSha;
+        // The directory it came from: ours, or Lachy's, whose mods may not work with this build.
+        internal ModSource Source;
+        internal bool Ours { get { return Source != null && Source.Ours; } }
         internal string Commit;
         // The README in its folder, as the tree spells it (readme.md and README.md are different files on GitHub), or null.
         internal string ReadmeName;
@@ -59,6 +62,27 @@ namespace CapriDesktop
         }
     }
 
+    // One mods directory on GitHub, in Lachy's layout: mods/<folder>/<file>, README.md and preview.png, with index.json and
+    // tree.json at the top. Each keeps its own last list.
+    internal sealed class ModSource
+    {
+        internal readonly string Owner, Repo, Name, Kept;
+        internal readonly bool Ours;
+        // Off until the repository is there, so nobody sees an error for a directory that doesn't exist yet.
+        internal bool Live;
+
+        internal ModSource(string owner, string repo, string name, bool ours, string kept)
+        {
+            Owner = owner; Repo = repo; Name = name; Ours = ours; Kept = kept;
+        }
+
+        internal string Page { get { return "https://github.com/" + Owner + "/" + Repo; } }
+        internal string Api { get { return "https://api.github.com/repos/" + Owner + "/" + Repo + "/git/"; } }
+        internal string RawRoot { get { return "https://raw.githubusercontent.com/" + Owner + "/" + Repo + "/"; } }
+        internal string Raw { get { return RawRoot + "HEAD/"; } }
+        internal string KeptFolder { get { return Kept == null ? ModDirectory.KeptFolder : Path.Combine(ModDirectory.KeptFolder, Kept); } }
+    }
+
     internal sealed class ModStats
     {
         internal int Downloads, Votes;
@@ -97,6 +121,17 @@ namespace CapriDesktop
         private static readonly Regex Listed = new Regex(@"^mods/([A-Za-z0-9][A-Za-z0-9._-]{0,63})/([A-Za-z0-9][A-Za-z0-9._-]{0,63}\.capri-(?:mod|code|skin|skill))$");
         private static readonly Regex Blob = new Regex(@"^[0-9a-f]{40}$");
         internal static Func<string, long, byte[]> Get = delegate(string url, long most) { return Fetch(url, most, 15000, 30000); };
+
+        // Ours first, then Lachy's. Ours waits for its repository; his keeps the cache he always had.
+        internal static readonly ModSource Yuno = new ModSource("YunoTheAlien", "capri-mods", "Yuno's", true, "yuno") { Live = false };
+        internal static readonly ModSource Lachy = new ModSource("lachydotmcg", "capri-mods", "Lachy's", false, null) { Live = true };
+        internal static Func<ModSource[]> Sources = delegate { return new[] { Yuno, Lachy }; };
+        internal const string HisWarning = "From Lachy's directory: it may not work with this build.";
+
+        // His mods are marked his only once ours is listed beside them.
+        internal static bool Mixed { get { int live = 0; foreach (ModSource one in Sources()) if (one.Live) live++; return live > 1; } }
+
+        internal static bool Marked(ModListing listing) { return listing != null && !listing.Ours && Mixed; }
         // View's README waits 4 seconds at most, so a slow connection gets the mod's description instead of a long wait.
         internal static Func<string, long, byte[]> GetSoon = delegate(string url, long most) { return Fetch(url, most, 4000, 4000); };
 
@@ -164,15 +199,49 @@ namespace CapriDesktop
             return found;
         }
 
-        // The list from the plain file, then the API, then the last one kept. trouble says why an old one is
-        // showing, with the real reason the fresh one failed, and is null when the list is current.
+        // Every live directory, ours first: a mod both list shows ours. trouble says why a list is old or missing, and
+        // only when every directory failed is nothing shown.
         internal static List<ModListing> Browse(out string trouble)
+        {
+            trouble = null;
+            List<ModListing> found = new List<ModListing>();
+            HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            List<string> troubles = new List<string>();
+            Exception last = null;
+            int read = 0;
+            ModSource[] sources = Sources();
+            int live = 0;
+            foreach (ModSource source in sources) if (source.Live) live++;
+            foreach (ModSource source in sources)
+            {
+                if (!source.Live) continue;
+                List<ModListing> listed;
+                string old;
+                try { listed = Browse(source, out old); }
+                catch (ModException error) { last = error; troubles.Add(live > 1 ? source.Name + " directory: " + error.Message : error.Message); continue; }
+                read++;
+                if (old != null) troubles.Add(live > 1 ? source.Name + " directory: " + old : old);
+                foreach (ModListing listing in listed)
+                {
+                    if (!seen.Add(listing.Folder)) continue;
+                    listing.Source = source;
+                    found.Add(listing);
+                }
+            }
+            if (read == 0 && last != null) throw new ModException(string.Join(" ", troubles.ToArray()));
+            if (troubles.Count > 0) trouble = string.Join(" ", troubles.ToArray());
+            found.Sort(delegate(ModListing a, ModListing b) { return Named(a, b); });
+            return found;
+        }
+
+        // One directory: the plain file, then the API, then the last one kept. old says why a kept one is showing.
+        private static List<ModListing> Browse(ModSource source, out string trouble)
         {
             trouble = null;
             byte[] tree = null;
             List<ModListing> found = null;
             Exception failed = null;
-            foreach (string page in new[] { TreePage, TreeApi })
+            foreach (string page in new[] { source.Raw + "tree.json", source.Api + "trees/HEAD?recursive=1" })
             {
                 try
                 {
@@ -189,14 +258,14 @@ namespace CapriDesktop
             byte[] index = null;
             if (found != null)
             {
-                try { index = Get(IndexPage, LargestIndex); }
+                try { index = Get(source.Raw + "index.json", LargestIndex); }
                 catch (Exception) { }
-                Keep(tree, index);
+                Keep(source.KeptFolder, tree, index);
             }
             else
             {
                 DateTime when;
-                if (!Kept(out tree, out index, out when)) throw new ModException(Trouble(failed));
+                if (!Kept(source.KeptFolder, out tree, out index, out when)) throw new ModException(Trouble(failed));
                 try { found = Parse(tree); }
                 catch (ModException) { throw new ModException(Trouble(failed)); }
                 trouble = Trouble(failed) + " Showing the list from " + Ago(when) + ".";
@@ -206,13 +275,13 @@ namespace CapriDesktop
             return found;
         }
 
-        private static void Keep(byte[] tree, byte[] index)
+        private static void Keep(string kept, byte[] tree, byte[] index)
         {
             try
             {
-                Directory.CreateDirectory(KeptFolder);
-                Save(Path.Combine(KeptFolder, "tree.json"), tree);
-                if (index != null && index.Length <= LargestIndex) Save(Path.Combine(KeptFolder, "index.json"), index);
+                Directory.CreateDirectory(kept);
+                Save(Path.Combine(kept, "tree.json"), tree);
+                if (index != null && index.Length <= LargestIndex) Save(Path.Combine(kept, "index.json"), index);
             }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
@@ -226,13 +295,13 @@ namespace CapriDesktop
             else File.Move(fresh, path);
         }
 
-        private static bool Kept(out byte[] tree, out byte[] index, out DateTime when)
+        private static bool Kept(string kept, out byte[] tree, out byte[] index, out DateTime when)
         {
             tree = index = null;
             when = DateTime.MinValue;
             try
             {
-                string treeFile = Path.Combine(KeptFolder, "tree.json"), indexFile = Path.Combine(KeptFolder, "index.json");
+                string treeFile = Path.Combine(kept, "tree.json"), indexFile = Path.Combine(kept, "index.json");
                 if (!File.Exists(treeFile) || new FileInfo(treeFile).Length > LargestList) return false;
                 tree = File.ReadAllBytes(treeFile);
                 when = File.GetLastWriteTime(treeFile);
@@ -682,7 +751,8 @@ namespace CapriDesktop
         // the one that was listed. The newest when the list says no commit.
         private static string RawAt(ModListing listing)
         {
-            return listing.Commit != null ? RawRoot + listing.Commit + "/" : Raw;
+            ModSource from = listing.Source ?? Lachy;
+            return listing.Commit != null ? from.RawRoot + listing.Commit + "/" : from.Raw;
         }
 
         // The size and git hash the list gave. A copy that differs is fetched again from the API, and refused
@@ -697,7 +767,7 @@ namespace CapriDesktop
             byte[] bytes = null;
             try { bytes = Get(RawAt(listing) + "mods/" + listing.Folder + "/" + listing.FileName, Largest); }
             catch (Exception) { }
-            if (!Matches(bytes, listing)) bytes = Get(Api + "blobs/" + listing.Sha, Largest);
+            if (!Matches(bytes, listing)) bytes = Get((listing.Source ?? Lachy).Api + "blobs/" + listing.Sha, Largest);
             if (!Matches(bytes, listing)) throw new ModException(listing.FileName + " didn't match what the directory listed, so it wasn't installed.");
             string folder = Path.Combine(under, Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(folder);
@@ -786,6 +856,69 @@ namespace CapriDesktop
         }
 #endif
 
+        // Two stand-in directories, ours and his: ours listed first and a folder both have shown as ours, his marked his,
+        // each fetched from its own address; one down still lists the other, saying which failed; both down shows
+        // nothing; and ours stays unasked while it isn't live.
+        internal static void SourcesCheck(List<string> checks, string folder)
+        {
+            Func<string, long, byte[]> getWas = Get;
+            Func<ModSource[]> sourcesWas = Sources;
+            string keptWas = KeptFolder;
+            ModSource ours = new ModSource("ours-test", "capri-mods", "Yuno's", true, "ours") { Live = true };
+            ModSource his = new ModSource("his-test", "capri-mods", "Lachy's", false, null) { Live = true };
+            Func<string[], string> tree = delegate(string[] folders)
+            {
+                List<string> rows = new List<string>();
+                foreach (string one in folders) rows.Add("{\"path\":\"mods/" + one + "/" + one + ".capri-mod\",\"type\":\"blob\",\"sha\":\"" + new string('a', 40) + "\",\"size\":10}");
+                return "{\"format\":1,\"tree\":[" + string.Join(",", rows.ToArray()) + "]}";
+            };
+            bool oursDown = false, hisDown = false;
+            List<string> asked = new List<string>();
+            try
+            {
+                KeptFolder = Path.Combine(folder, "kept-" + Guid.NewGuid().ToString("N").Substring(0, 6));
+                Sources = delegate { return new[] { ours, his }; };
+                Get = delegate(string url, long most)
+                {
+                    lock (asked) asked.Add(url);
+                    bool isOurs = url.StartsWith(ours.Raw, StringComparison.Ordinal) || url.StartsWith(ours.Api, StringComparison.Ordinal);
+                    if (isOurs ? oursDown : hisDown) throw new System.Net.WebException("stand-in");
+                    if (!url.EndsWith("tree.json", StringComparison.Ordinal)) throw new System.Net.WebException("stand-in");
+                    return Encoding.UTF8.GetBytes(isOurs ? tree(new[] { "shared", "ours-only" }) : tree(new[] { "shared", "his-only" }));
+                };
+                string trouble;
+                List<ModListing> both = Browse(out trouble);
+                ModListing shared = both.Find(one => one.Folder == "shared"), hisOnly = both.Find(one => one.Folder == "his-only"), oursOnly = both.Find(one => one.Folder == "ours-only");
+                bool merged = both.Count == 3 && trouble == null && shared != null && shared.Ours && oursOnly != null && oursOnly.Ours && hisOnly != null && !hisOnly.Ours
+                    && RawAt(shared).StartsWith(ours.RawRoot, StringComparison.Ordinal) && RawAt(hisOnly).StartsWith(his.RawRoot, StringComparison.Ordinal) && Marked(hisOnly) && !Marked(shared);
+                // His cache kept from the run above is wiped, so his being down now shows nothing of his.
+                try { Directory.Delete(KeptFolder, true); } catch (IOException) { }
+                hisDown = true;
+                List<ModListing> oursAlone = Browse(out trouble);
+                bool oneDown = oursAlone.Count == 2 && oursAlone.TrueForAll(one => one.Ours) && trouble != null && trouble.StartsWith("Lachy's directory:", StringComparison.Ordinal);
+                try { Directory.Delete(KeptFolder, true); } catch (IOException) { }
+                oursDown = true;
+                bool allDown = false;
+                try { Browse(out trouble); }
+                catch (ModException) { allDown = true; }
+                oursDown = hisDown = false;
+                ours.Live = false;
+                lock (asked) asked.Clear();
+                Browse(out trouble);
+                bool unasked;
+                lock (asked) unasked = !asked.Exists(url => url.StartsWith(ours.Raw, StringComparison.Ordinal) || url.StartsWith(ours.Api, StringComparison.Ordinal));
+                if (!merged || !oneDown || !allDown || !unasked)
+                    throw new Exception("The two mods directories went wrong: ours first with a shared folder shown as ours and each fetched from its own address " + merged + ", one down still lists the other and says which " + oneDown + ", both down shows nothing " + allDown + ", ours unasked while it isn't live " + unasked);
+                checks.Add("PASS Browse mods reads two directories, ours first: a folder both list shows ours, his are marked his and fetched from his address; one down still lists the other and says which failed, both down shows nothing, and ours isn't asked while it isn't live");
+            }
+            finally
+            {
+                Get = getWas;
+                Sources = sourcesWas;
+                KeptFolder = keptWas;
+            }
+        }
+
         internal static Dictionary<string, ModStats> Stats()
         {
             StatsBody body;
@@ -847,7 +980,8 @@ namespace CapriDesktop
                 + "2. In your copy, add a folder called mods/" + id + "/.\n\n"
                 + "3. Put in " + file + " and a short README.md that says what it does and who made it.\n\n"
                 + "4. Add a picture called preview.png, around 16:9. It's what people see in the mods window.\n\n"
-                + "5. Open a pull request to capri-mods. Every mod is checked for malware before it goes up."
+                + "5. Open a pull request to capri-mods. We check some mods ourselves, but can't promise any is safe or still works after "
+                + "others update it; Capri flags what she catches when it is installed or run."
                 + (mod.Code ? "\n\nThis is a code mod, so Capri will ask people before running it." : "");
         }
 

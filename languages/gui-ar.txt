@@ -204,11 +204,11 @@ Running on this PC	يعمل على هذا الحاسوب
 NORMAL	عادي
 OFF	إيقاف
 Local server address	عنوان الخادم المحلي
-Remember panel position	تذكّر موضع اللوحة
 Custom colours	ألوان مخصصة
 Custom colours...	ألوان مخصصة...
 Choose	اختر
-Hers	ألوانها
+Reset selected colour	إعادة ضبط اللون المحدد
+Make a mod	اصنع تعديلا
 Quiet	الصمت
 Quiet min	الصمت min
 Quiet max	الصمت max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	الصمت حتى {n}:{n}
 Quiet until turned off	الصمت حتى الإيقاف
 Export settings	تصدير الإعدادات
 Import settings	استيراد الإعدادات
+Save Mainframe position	تذكّر موضع اللوحة

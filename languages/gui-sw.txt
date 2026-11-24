@@ -204,11 +204,11 @@ Running on this PC	Inaendeshwa kwenye Kompyuta hii
 NORMAL	KAWAIDA
 OFF	IMEZIMWA
 Local server address	Anwani ya seva ya ndani
-Remember panel position	Kumbuka mahali pa paneli
 Custom colours	Rangi maalum
 Custom colours...	Rangi maalum...
 Choose	Chagua
-Hers	Zake
+Reset selected colour	Weka upya rangi iliyochaguliwa
+Make a mod	Tengeneza mod
 Quiet	Kimya
 Quiet min	Kimya min
 Quiet max	Kimya max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Kimya hadi {n}:{n}
 Quiet until turned off	Kimya hadi kizimwe
 Export settings	Hamisha mipangilio
 Import settings	Leta mipangilio
+Save Mainframe position	Kumbuka mahali pa paneli

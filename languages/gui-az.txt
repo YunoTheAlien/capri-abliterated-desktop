@@ -204,11 +204,11 @@ Running on this PC	Bu kompüterdə işləyir
 NORMAL	NORMAL
 OFF	SÖNÜK
 Local server address	Yerli server ünvanı
-Remember panel position	Panelin yerini yadda saxla
 Custom colours	Fərdi rənglər
 Custom colours...	Fərdi rənglər...
 Choose	Seç
-Hers	Özününkü
+Reset selected colour	Seçilmiş rəngi sıfırla
+Make a mod	Mod düzəlt
 Quiet	Səssiz
 Quiet min	Səssiz min
 Quiet max	Səssiz max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	{n}:{n}-dək səssiz
 Quiet until turned off	Söndürülənədək səssiz
 Export settings	Ayarları ixrac et
 Import settings	Ayarları idxal et
+Save Mainframe position	Panelin yerini yadda saxla

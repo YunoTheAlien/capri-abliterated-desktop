@@ -204,11 +204,11 @@ Running on this PC	در حال اجرا روی این رایانه
 NORMAL	عادی
 OFF	خاموش
 Local server address	آدرس سرور محلی
-Remember panel position	به خاطر سپردن جای پنل
 Custom colours	رنگ‌های سفارشی
 Custom colours...	رنگ‌های سفارشی...
 Choose	انتخاب
-Hers	مال خودش
+Reset selected colour	بازنشانی رنگ انتخاب‌شده
+Make a mod	ساخت ماد
 Quiet	سکوت
 Quiet min	سکوت min
 Quiet max	سکوت max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	سکوت تا {n}:{n}
 Quiet until turned off	سکوت تا خاموش شدن
 Export settings	خروجی تنظیمات
 Import settings	ورود تنظیمات
+Save Mainframe position	به خاطر سپردن جای پنل

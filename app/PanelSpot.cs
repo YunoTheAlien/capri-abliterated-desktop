@@ -6,7 +6,7 @@ using System.Windows.Forms;
 namespace CapriDesktop
 {
     // Where the Mainframe comes up when it is opened from her right-click menu: beside her on her own screen, or where they
-    // pinned it with Remember panel position.
+    // pinned it with Save Mainframe position.
     internal sealed partial class Companion
     {
         internal bool RememberPanel { get { return preferences.RememberPanel; } }
@@ -44,7 +44,7 @@ namespace CapriDesktop
             mainframe.Restore();
         }
 
-        // Its pinned spot while Remember panel position is on and that spot is still on a screen, kept wholly on it. Otherwise
+        // Its pinned spot while Save Mainframe position is on and that spot is still on a screen, kept wholly on it. Otherwise
         // beside her, on the screen she is on.
         internal Rectangle MainframeSpot()
         {
@@ -106,14 +106,15 @@ namespace CapriDesktop
                 Rectangle openedRight = mainframe.Bounds;
                 bool besideRight = work.Contains(openedRight) && openedRight.Right <= her.Left;
                 if (!besideLeft || !besideRight) throw new Exception("Opened from her menu, the Mainframe wasn't beside her on her screen: " + opened + " " + openedRight + " for her at " + her);
-                // Remember panel position: on keeps the spot it is at, and it opens there wherever she is.
-                Point pinned = new Point(work.Left + 30, work.Top + 20);
+                // Save Mainframe position: on keeps the spot it is at, and it opens there wherever she is.
+                // A spot it fits at whole: a screen barely taller than the Mainframe pulled a 20 px offset back to the top.
+                Point pinned = new Point(work.Left + Math.Min(30, Math.Max(0, work.Width - mainframe.Width)), work.Top + Math.Min(20, Math.Max(0, work.Height - mainframe.Height)));
                 mainframe.Location = pinned;
                 ToggleRememberPanel();
-                if (!preferences.RememberPanel || preferences.PanelX != pinned.X || preferences.PanelY != pinned.Y) throw new Exception("Remember panel position didn't keep the spot the Mainframe was at.");
+                if (!preferences.RememberPanel || preferences.PanelX != pinned.X || preferences.PanelY != pinned.Y) throw new Exception("Save Mainframe position didn't keep the spot the Mainframe was at.");
                 mainframe.Location = new Point(work.Left + 300, work.Top + 200);
                 OpenMainframeByHer();
-                if (mainframe.Location != pinned) throw new Exception("With Remember panel position on, the Mainframe didn't open at its spot: " + mainframe.Location);
+                if (mainframe.Location != pinned) throw new Exception("With Save Mainframe position on, the Mainframe didn't open at its spot: " + mainframe.Location);
                 // A pinned spot no screen shows any more opens beside her instead.
                 preferences.PanelX = -60000;
                 OpenMainframeByHer();
@@ -121,8 +122,8 @@ namespace CapriDesktop
                 preferences.PanelX = pinned.X;
                 ToggleRememberPanel();
                 OpenMainframeByHer();
-                if (!rescued || preferences.RememberPanel || mainframe.Location == pinned) throw new Exception("A pinned spot on no screen, or Remember panel position off, didn't open the Mainframe beside her.");
-                checks.Add("PASS opened from her menu the Mainframe comes up beside her on her screen; Remember panel position on keeps the spot it was at and opens it there, a spot on no screen falls back to beside her, and off opens beside her again");
+                if (!rescued || preferences.RememberPanel || mainframe.Location == pinned) throw new Exception("A pinned spot on no screen, or Save Mainframe position off, didn't open the Mainframe beside her.");
+                checks.Add("PASS opened from her menu the Mainframe comes up beside her on her screen; Save Mainframe position on keeps the spot it was at and opens it there, a spot on no screen falls back to beside her, and off opens beside her again");
             }
             finally
             {
@@ -136,15 +137,10 @@ namespace CapriDesktop
                 if (!visibleWas) mainframe.Hide();
                 mainframe.Sync();
             }
-            // The same setting from her right-click Toggles, ticked as it is, and the Mainframe's switch following it.
+            // The same setting among her switches in the Toggles window, ticked as it is, and the Mainframe's switch following it.
             ToolStripMenuItem panelItem = null;
-            foreach (ToolStripItem top in menu.Items)
-            {
-                ToolStripMenuItem toggles = top as ToolStripMenuItem;
-                if (toggles == null || toggles.Text != "Toggles") continue;
-                foreach (ToolStripItem one in toggles.DropDownItems) if (one.Text == "Remember panel position") panelItem = one as ToolStripMenuItem;
-            }
-            if (panelItem == null || panelItem.ToolTipText != Mainframe.PanelTip) throw new Exception("Her Toggles menu has no Remember panel position with the owner's tip.");
+            foreach (ToolStripItem one in togglesMenu.DropDownItems) if (one.Text == "Save Mainframe position") panelItem = one as ToolStripMenuItem;
+            if (panelItem == null || panelItem.ToolTipText != Mainframe.PanelTip) throw new Exception("Her Toggles window has no Save Mainframe position with the owner's tip.");
             bool panelWas = preferences.RememberPanel;
             int panelX = preferences.PanelX, panelY = preferences.PanelY;
             try
@@ -152,16 +148,16 @@ namespace CapriDesktop
                 panelItem.PerformClick();
                 bool flipped = preferences.RememberPanel != panelWas && mainframe.RememberPanelShown == preferences.RememberPanel;
                 panelItem.PerformClick();
-                if (!flipped || preferences.RememberPanel != panelWas || mainframe.RememberPanelShown != panelWas) throw new Exception("Remember panel position in her Toggles didn't switch the Mainframe's setting.");
+                if (!flipped || preferences.RememberPanel != panelWas || mainframe.RememberPanelShown != panelWas) throw new Exception("Save Mainframe position in her Toggles didn't switch the Mainframe's setting.");
             }
             finally { preferences.RememberPanel = panelWas; preferences.PanelX = panelX; preferences.PanelY = panelY; mainframe.Sync(); }
-            checks.Add("PASS Remember panel position is in her right-click Toggles with the owner's tip, and switches the same setting as the Mainframe's row");
+            checks.Add("PASS Save Mainframe position is in her Toggles window with the owner's tip, and switches the same setting as the Mainframe's row");
             string column = mainframe.SettingsColumnWrong();
             if (column != null) throw new Exception(column);
-            checks.Add("PASS Settings opens with SETTINGS at the top right (Remember panel position, Always on top, Mainframe size, Mainframe colours, Custom colours), then CAPRI with Hologram first, every row of the column under them, and Remember panel position's tip in the owner's words");
+            checks.Add("PASS Settings opens with SETTINGS at the top right (Save Mainframe position, Always on top, Mainframe size, Mainframe colours, Custom colours), then CAPRI with Hologram first, every row of the column under them, and Save Mainframe position's tip in the owner's words");
             string colours = mainframe.CustomColoursWrong();
             if (colours != null) throw new Exception(colours);
-            checks.Add("PASS Custom colours opens its window on Speech bubble with its first colour selected");
+            checks.Add("PASS Custom colours opens its window on her CAPRI fold with Hair selected");
             string missing = null;
             string languageWas = Brain.Language;
             try
@@ -173,13 +169,13 @@ namespace CapriDesktop
                     Gui.Forget();
                     // A language with no table of her menus at all is left to her brain, as every label is.
                     if (Gui.T("Settings") == "Settings") continue;
-                    foreach (string label in new[] { "Remember panel position", "Custom colours", "Custom colours...", "Hers" })
+                    foreach (string label in new[] { "Save Mainframe position", "Custom colours", "Custom colours...", "Reset selected colour", "Make a mod" })
                         if (Gui.T(label) == label) { missing = Brain.Languages[i, 1] + " has no " + label; break; }
                 }
             }
             finally { Brain.Language = languageWas; Gui.Forget(); }
             if (missing != null) throw new Exception("A new SETTINGS label isn't in every language her menus have: " + missing);
-            checks.Add("PASS Remember panel position, Custom colours, Custom colours... and Hers read in every language her menus have");
+            checks.Add("PASS Save Mainframe position, Custom colours, Custom colours..., Reset selected colour and Make a mod read in every language her menus have");
         }
     }
 
@@ -196,7 +192,7 @@ namespace CapriDesktop
         private Key customColours;
 
         // Null when the right column starts with SETTINGS and its rows, then CAPRI with Hologram first and the rest under it,
-        // and Remember panel position's tip is its one sentence.
+        // and Save Mainframe position's tip is its one sentence.
         internal string SettingsColumnWrong()
         {
             Control[] order = { settingsHead, rememberPanel, onTop, frameSize, frameColours, customColours, capriHead, hologram, sizeSlider };
@@ -215,11 +211,11 @@ namespace CapriDesktop
                 if (top >= settingsEnd && top < capriTop) return entry.Key.Text + " (" + entry.Key.GetType().Name + " at " + top + ") sits between SETTINGS and CAPRI.";
             }
             SettingHint tip;
-            if (!hints.TryGetValue(rememberPanel, out tip) || tip.Exact != PanelTip) return "Remember panel position's tip isn't the owner's words.";
+            if (!hints.TryGetValue(rememberPanel, out tip) || tip.Exact != PanelTip) return "Save Mainframe position's tip isn't the owner's words.";
             return null;
         }
 
-        // Null when Custom colours opens its window, on the Speech bubble zone with its first colour selected.
+        // Null when Custom colours opens its window, on her CAPRI fold with Hair selected.
         internal string CustomColoursWrong()
         {
             try
@@ -227,7 +223,7 @@ namespace CapriDesktop
                 customColours.PerformClick();
                 string shown = ColourSheetShown;
                 if (shown == null) return "Custom colours didn't open its window.";
-                if (shown.IndexOf("Bubble outline", StringComparison.Ordinal) < 0 || shown.IndexOf("(selected)", StringComparison.Ordinal) < 0) return "Custom colours opened without Speech bubble's colours: " + shown;
+                if (shown.IndexOf("Hair #", StringComparison.Ordinal) < 0 || shown.IndexOf("(selected)", StringComparison.Ordinal) < 0) return "Custom colours opened without her CAPRI colours: " + shown;
                 return null;
             }
             finally { CloseColours(); }

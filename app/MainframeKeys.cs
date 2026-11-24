@@ -634,7 +634,7 @@ namespace CapriDesktop
             }
             Rectangle around = control.Bounds;
             Toggle toggle = control as Toggle;
-            if (toggle != null) around = new Rectangle(control.Right - toggle.Switch, control.Top, toggle.Switch, control.Height);
+            if (toggle != null) around = new Rectangle(control.Right - toggle.Pair, control.Top, toggle.Pair, control.Height);
             if (around.Width < 12 || around.Height < 12 || !ClientRectangle.Contains(around)) throw new Exception("Her marked option is outside " + name + ".");
             string path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Brain.LogPath), name);
             using (Bitmap picture = new Bitmap(ClientSize.Width, ClientSize.Height))
@@ -849,7 +849,7 @@ namespace CapriDesktop
                 foreach (float s in new[] { 1f, 1.25f, 1.5f, 2f })
                 {
                     toggle.Size = new Size((int)(328 * s), (int)(28 * s));
-                    float line = Math.Max(1f, s), half = (toggle.Switch * s - 4 * s) / 2, left = toggle.Width - toggle.Switch * s;
+                    float line = Math.Max(1f, s), half = (toggle.Pair * s - 4 * s) / 2, left = toggle.Width - toggle.Pair * s;
                     RectangleF off = new RectangleF(left + line / 2, line / 2, half - line, toggle.Height - line);
                     RectangleF on = new RectangleF(left + half + 4 * s + line / 2, line / 2, half - line, toggle.Height - line);
                     RectangleF pair = RectangleF.FromLTRB(off.Left - line / 2, off.Top - line / 2, on.Right + line / 2, on.Bottom + line / 2);

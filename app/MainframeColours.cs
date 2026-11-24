@@ -21,9 +21,9 @@ namespace CapriDesktop
             internal Part(string shown, string colour) { Shown = shown; Colour = colour; }
         }
 
-        // The parts of her they colour, each named for what it is on screen; Tamagotchi's points have their own fold. A
-        // colour drawn in two zones is in both, and each says what else it colours.
-        internal static readonly string[] Zones = { "Speech bubble", "Mainframe", "Player", "Tamagotchi" };
+        // The parts of her they colour, each named for what it is on screen; menus, notes and the Type box have a zone
+        // and Tamagotchi's points a fold. A colour drawn in two zones is in both, and each says what else it colours.
+        internal static readonly string[] Zones = { "Speech bubble", "Mainframe", "Menus and notes", "Player", "Tamagotchi", "File editor" };
         internal static readonly Part[][] Parts =
         {
             new[]
@@ -40,8 +40,12 @@ namespace CapriDesktop
                 new Part("Button when lit, and corner strokes", "hot"), new Part("Main button", "deep"), new Part("Main button edge", "deep edge"),
                 new Part("Text on a lit button", "on ink"), new Part("Slider track", "dash"), new Part("Slider when moved", "lit"),
                 new Part("Window outline", "brim"), new Part("Text box and Type box background", "well"), new Part("Text box edge", "well edge"),
-                new Part("Warnings", "amber"), new Part("Menu background", "menu"), new Part("Notes background", "sheet"),
-                new Part("Notes text", "sheet text"), new Part("Notes faint text", "sheet faint")
+                new Part("Warnings", "amber")
+            },
+            new[]
+            {
+                new Part("Menu background", "menu"), new Part("Notes background", "sheet"), new Part("Notes text", "sheet text"),
+                new Part("Notes faint text", "sheet faint"), new Part("Type box background", "well")
             },
             new[]
             {
@@ -49,7 +53,12 @@ namespace CapriDesktop
                 new Part("Edge, left end, and buttons turned on", "player accent"), new Part("Close button", "player title"),
                 new Part("Progress track", "player rail"), new Part("Song title", "sheet text"), new Part("Time and buttons", "sheet faint")
             },
-            new[] { new Part("Points and costs", "points") }
+            new[] { new Part("Points and costs", "points") },
+            new[]
+            {
+                new Part("Frame, titles and buttons", "editor frame"), new Part("Sheet behind the words", "editor sheet"),
+                new Part("Sheet edge", "editor edge"), new Part("Text field", "editor field"), new Part("Text", "editor text")
+            }
         };
 
         // What else a part's colour is drawn in, in the other zones: "Also: Song title (Player)".
@@ -63,10 +72,26 @@ namespace CapriDesktop
             return others.Count == 0 ? null : "Also: " + string.Join(", ", others.ToArray());
         }
 
+        // Her own art's colours, Hair to Body, as "capri:<slot>": set on the skin she shows, its stock when cleared. The
+        // Mainframe hands in how to read and set them.
+        internal const string CapriMark = "capri:";
+        internal static Func<int, string> ArtNow = delegate { return null; };
+        internal static Func<int, string, string> ArtSet = delegate { return "Her art isn't ready."; };
+
+        internal static string CapriKey(int slot) { return CapriMark + slot; }
+
+        internal static bool Capri(string key, out int slot)
+        {
+            slot = -1;
+            return key != null && key.StartsWith(CapriMark, StringComparison.Ordinal) && int.TryParse(key.Substring(CapriMark.Length), out slot) && slot >= 0 && slot < ArtColors.Slots;
+        }
+
         // A part's own name, for the colour picked: the first part drawn in it, or an add-on colour's own name.
         internal static string NameOf(string colour)
         {
             string id, name;
+            int slot;
+            if (Capri(colour, out slot)) return ArtColors.Names[slot];
             if (Addon(colour, out id, out name)) return name;
             foreach (Part[] zone in Parts) foreach (Part part in zone) if (part.Colour == colour) return part.Shown;
             return colour;
@@ -98,34 +123,44 @@ namespace CapriDesktop
         internal static Color ShownOf(string key)
         {
             string id, name;
+            int slot;
+            if (Capri(key, out slot)) return ColorTranslator.FromHtml(ArtNow(slot) ?? ArtColors.Usual[slot]);
             return Addon(key, out id, out name) ? AddonColours.Shown(id, name) : Neon.Shown(key);
         }
 
         internal static Color? TheirsOf(string key)
         {
             string id, name;
+            int slot;
+            if (Capri(key, out slot)) { string now = ArtNow(slot); return now == null ? (Color?)null : ColorTranslator.FromHtml(now); }
             return Addon(key, out id, out name) ? AddonColours.TheirOwn(id, name) : Neon.TheirOwn(key);
         }
 
-        // Set or clear one: hers in layout.md, an add-on's in its own colours.md.
+        // Set or clear one: her art's on the skin she shows, hers in layout.md, an add-on's in its own colours.md.
         internal static bool SetOne(string key, Color? colour)
         {
             string id, name;
+            int slot;
+            if (Capri(key, out slot)) return ArtSet(slot, colour.HasValue ? "#" + colour.Value.R.ToString("X2") + colour.Value.G.ToString("X2") + colour.Value.B.ToString("X2") : null) == null;
             if (!Addon(key, out id, out name)) return CapriDesktop.Layout.Set(key, colour);
             Dictionary<string, Color?> one = new Dictionary<string, Color?>();
             one[name] = colour;
             return AddonColours.Set(id, one);
         }
 
-        internal static string Hex(Color colour) { return "#" + colour.R.ToString("x2") + colour.G.ToString("x2") + colour.B.ToString("x2"); }
+        // #rrggbb, or #aarrggbb for one that is see-through.
+        internal static string Hex(Color colour) { return "#" + (colour.A < 255 ? colour.A.ToString("x2") : "") + colour.R.ToString("x2") + colour.G.ToString("x2") + colour.B.ToString("x2"); }
 
         internal static Color? Parsed(string hex)
         {
             string bare = (hex ?? "").Trim().TrimStart('#');
-            int value;
-            if (bare.Length != 6 || !int.TryParse(bare, System.Globalization.NumberStyles.HexNumber, null, out value)) return null;
-            return Color.FromArgb(255, (value >> 16) & 255, (value >> 8) & 255, value & 255);
+            uint value;
+            if (bare.Length != 6 && bare.Length != 8 || !uint.TryParse(bare, System.Globalization.NumberStyles.HexNumber, null, out value)) return null;
+            return Color.FromArgb(bare.Length == 8 ? (int)(value >> 24) : 255, (int)(value >> 16) & 255, (int)(value >> 8) & 255, (int)value & 255);
         }
+
+        // How a part that can be see-through says so, under its name in Custom colours.
+        internal const string SeeThrough = "Type #aarrggbb to set how solid it is: aa from 00 to ff.";
 
         // The colours they have set now, hers by name and each installed add-on's by its id; one left as hers or the mod's
         // own isn't in it.
@@ -290,6 +325,7 @@ namespace CapriDesktop
         // Made fresh when the Mainframe's size changed, like her GIFs window.
         internal void OpenColours()
         {
+            WireArt();
             if (colourSheet != null && !colourSheet.IsDisposed && colourSheet.Zoom != zoom) colourSheet.Close();
             if (colourSheet == null || colourSheet.IsDisposed) colourSheet = new ColourSheet(this, zoom);
             if (!colourSheet.Visible) colourSheet.Show(this);
@@ -297,6 +333,33 @@ namespace CapriDesktop
         }
 
         internal void CloseColours() { if (colourSheet != null && !colourSheet.IsDisposed) colourSheet.Close(); }
+
+        // Her art's colours for the CAPRI fold, read from and set on My Colors.
+        private void WireArt()
+        {
+            ColourPresets.ArtNow = delegate(int slot) { return capri.ModList.ColoursNow[slot]; };
+            ColourPresets.ArtSet = SetArtColour;
+        }
+
+        // One of her art colours set, or put back to the shown skin's stock with null, saved as My Colors. Null when it
+        // saved, else why not.
+        private string SetArtColour(int slot, string colour)
+        {
+            try
+            {
+                string[] now = capri.ModList.ColoursNow;
+                now[slot] = colour;
+                // None left set is no My Colors at all, as Reset colors leaves it.
+                if (Array.TrueForAll(now, one => one == null)) capri.ModList.ResetColours();
+                else capri.ModList.SetColour(slot, colour);
+                FillMods();
+                string name = ArtColors.Names[slot].ToLowerInvariant();
+                ModSays(colour == null ? "Her " + name + " is back to its stock colour." : "Her " + name + " changed. Saved as My Colors, so you can share it.", false);
+                return null;
+            }
+            catch (System.IO.IOException error) { return "Couldn't save that colour: " + error.Message; }
+            catch (UnauthorizedAccessException error) { return "Couldn't save that colour: " + error.Message; }
+        }
 
         internal string ColourSheetShown { get { return colourSheet == null || colourSheet.IsDisposed || !colourSheet.Visible ? null : colourSheet.Snapshot; } }
 
@@ -313,6 +376,7 @@ namespace CapriDesktop
             string kept = CapriDesktop.Layout.Kept;
             string copy = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "capri-layout-" + Guid.NewGuid().ToString("N") + ".md");
             string presetsWas = capri.ColourPresetsSaved, pickedWas = capri.ColourPresetPicked, recentWas = capri.ColourRecentSaved;
+            string[] artWas = capri.ModList.ColoursNow;
             Func<string, string> folderWas = AddonColours.FolderOf;
             Func<List<KeyValuePair<string, string>>> installedWas = AddonColours.Installed;
             string addons = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "capri-addons-" + Guid.NewGuid().ToString("N"));
@@ -323,6 +387,8 @@ namespace CapriDesktop
                 AddonColours.Installed = delegate { return new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("tint-test", "Tint Test") }; };
                 AddonColours.Forget();
                 AddonColours.Declare("tint-test", "Glow", Color.FromArgb(200, 30, 60));
+                WireArt();
+                capri.ModList.ResetColours();
                 CapriDesktop.Layout.Kept = copy;
                 CapriDesktop.Layout.Forget();
                 CapriDesktop.Layout.Write(true);
@@ -353,6 +419,13 @@ namespace CapriDesktop
                 AddonColours.FolderOf = folderWas;
                 AddonColours.Installed = installedWas;
                 AddonColours.Forget();
+                try
+                {
+                    capri.ModList.ResetColours();
+                    for (int i = 0; i < artWas.Length; i++) if (artWas[i] != null) capri.ModList.SetColour(i, artWas[i]);
+                }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                FillMods();
                 try { System.IO.File.Delete(copy); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 try { if (System.IO.Directory.Exists(addons)) System.IO.Directory.Delete(addons, true); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
@@ -434,7 +507,227 @@ namespace CapriDesktop
             }
         }
 
-        private sealed class ColourSheet : ModSheet
+        // A window with her picker and the dropper, for whatever it colours: Custom colours' parts, or one of her art
+        // colours.
+        private abstract class PickerSheet : ModSheet
+        {
+            protected readonly Picker picker = new Picker();
+            protected readonly DropperKey dropper = new DropperKey();
+
+            protected PickerSheet(Mainframe owner, float zoom, string title, string heading, int wide, int tall) : base(owner, zoom, title, heading, wide, tall)
+            {
+                dropper.AccessibleName = "Dropper: pick a colour from anywhere on the screen. Esc cancels";
+                dropper.Click += delegate { if (!dropper.Picking) DropperStart(); };
+                picker.Picked = delegate(Color colour, bool toRecent) { Commit(colour, toRecent); };
+            }
+
+            // Null when there is something to colour, else what to do first.
+            protected abstract string Unaimed { get; }
+
+            protected abstract void Commit(Color colour, bool toRecent);
+
+            protected abstract void Says(string text, bool problem);
+
+            // The screen's colour at a point, swapped by the checks so no real screen is read there.
+            internal static Func<Point, Color> ReadPixel = ScreenPixel;
+
+            protected static Color ScreenPixel(Point at)
+            {
+                using (Bitmap one = new Bitmap(1, 1, System.Drawing.Imaging.PixelFormat.Format32bppArgb))
+                {
+                    using (Graphics grab = Graphics.FromImage(one)) grab.CopyFromScreen(at, Point.Empty, new Size(1, 1));
+                    return Color.FromArgb(255, one.GetPixel(0, 0));
+                }
+            }
+
+            protected Color dropperWas;
+            protected DropperVeil veil;
+            // What ended the last pick, for the checks.
+            protected string endedBy;
+
+            // Where the dropper's veil lies: every screen. Checks keep it to the screen they run on.
+            internal static Func<Rectangle> VeilArea = delegate { return SystemInformation.VirtualScreen; };
+
+            // The dropper: a veil over the screens takes the mouse until a click takes a colour; right click, Esc or
+            // another window in front cancels. Not mouse capture, which Windows drops over other programs' windows.
+            internal void DropperStart()
+            {
+                if (dropper.Picking) return;
+                string unaimed = Unaimed;
+                if (unaimed != null) { Says(unaimed, true); return; }
+                dropperWas = picker.Preview.Colour;
+                dropper.Picking = true;
+                Says("Click anywhere on the screen to take its colour. Esc cancels.", false);
+                veil = new DropperVeil(VeilArea());
+                veil.MouseMove += delegate { DropperAt(Cursor.Position); };
+                veil.MouseDown += delegate(object sender, MouseEventArgs e)
+                {
+                    if (!dropper.Picking || !dropper.Armed) return;
+                    if (e.Button == MouseButtons.Left) DropperTake(Cursor.Position); else { endedBy = "right click"; DropperCancel(); }
+                };
+                veil.KeyDown += delegate(object sender, KeyEventArgs e) { if (e.KeyCode == Keys.Escape) { e.Handled = true; endedBy = "Esc"; DropperCancel(); } };
+                // Another program coming to the front cancels it. One of hers rising above it, such as her own window,
+                // does not: the veil takes the front back.
+                veil.Deactivate += delegate
+                {
+                    if (!dropper.Picking) return;
+                    BeginInvoke((MethodInvoker)delegate
+                    {
+                        if (!dropper.Picking || veil == null || veil.IsDisposed) return;
+                        if (OursInFront()) { veil.Activate(); return; }
+                        endedBy = "another program came to the front";
+                        DropperCancel();
+                    });
+                };
+                endedBy = null;
+                veil.Show(this);
+                veil.Activate();
+                DropperAt(Cursor.Position);
+                dropper.Invalidate();
+            }
+
+            private static bool OursInFront()
+            {
+                IntPtr front = Native.GetForegroundWindow();
+                if (front == IntPtr.Zero) return true;
+                int id;
+                Native.GetWindowThreadProcessId(front, out id);
+                return id == System.Diagnostics.Process.GetCurrentProcess().Id;
+            }
+
+            internal bool DropperPicking { get { return dropper.Picking && veil != null && veil.Visible; } }
+
+            // How fast it follows the mouse, for the checks: the last timing, and the most a move may take on average.
+            internal static string DropperTiming;
+            internal const double DropperMost = 30;
+
+            internal void DropperAt(Point screen)
+            {
+                if (!dropper.Picking) return;
+                try { picker.Preview.Colour = ReadPixel(screen); }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            }
+
+            internal void DropperTake(Point screen)
+            {
+                if (!dropper.Picking) return;
+                Color colour;
+                // The veil is nearly clear, so it is put away first and the pixel read without it. Picking is off while
+                // it goes, so its going is not taken for a cancel.
+                dropper.Picking = false;
+                if (veil != null) { veil.Hide(); Update(); System.Threading.Thread.Sleep(60); }
+                try { colour = Color.FromArgb(255, ReadPixel(screen)); }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); dropper.Picking = true; DropperCancel(); return; }
+                DropperEnd();
+                picker.Show(colour);
+                Commit(colour, true);
+            }
+
+            internal void DropperCancel()
+            {
+                if (!dropper.Picking) return;
+                DropperEnd();
+                picker.Preview.Colour = dropperWas;
+                Says("", false);
+            }
+
+            private void DropperEnd()
+            {
+                dropper.Picking = false;
+                dropper.Invalidate();
+                DropperVeil was = veil;
+                veil = null;
+                if (was != null) { was.Close(); was.Dispose(); }
+            }
+
+            protected override void OnFormClosed(FormClosedEventArgs e) { DropperCancel(); base.OnFormClosed(e); }
+
+            // Over the screens while the dropper is on: one step off clear, so everything shows through and is read as
+            // it is, while a click anywhere, another program's window included, lands here and not on what is under it.
+            protected sealed class DropperVeil : Form
+            {
+                internal DropperVeil(Rectangle area)
+                {
+                    FormBorderStyle = FormBorderStyle.None;
+                    ShowInTaskbar = false;
+                    StartPosition = FormStartPosition.Manual;
+                    TopMost = true;
+                    KeyPreview = true;
+                    BackColor = Color.Black;
+                    Opacity = 1 / 255.0;
+                    Cursor = Cursors.Cross;
+                    Bounds = area;
+                }
+            }
+
+            protected override void OnKeyDown(KeyEventArgs e)
+            {
+                if (e.KeyCode == Keys.Escape && dropper.Picking) { DropperCancel(); e.Handled = true; e.SuppressKeyPress = true; return; }
+                base.OnKeyDown(e);
+            }
+
+            // The dropper key: one of her keys with an eyedropper, lit while picking.
+            protected sealed class DropperKey : Control
+            {
+                internal bool Picking;
+                private bool hot;
+                private long armedAt;
+
+                // A click that started picking isn't also the click that takes a colour.
+                internal bool Armed { get { return Environment.TickCount - armedAt > 150; } }
+
+                internal DropperKey()
+                {
+                    SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.Selectable, true);
+                    // Two quick clicks are two clicks, not a double click that starts nothing.
+                    SetStyle(ControlStyles.StandardDoubleClick, false);
+                    BackColor = Ground;
+                    Cursor = Cursors.Hand;
+                    TabStop = true;
+                    AccessibleRole = AccessibleRole.PushButton;
+                }
+
+                protected override void OnClick(EventArgs e) { armedAt = Environment.TickCount; base.OnClick(e); }
+
+                protected override void OnMouseEnter(EventArgs e) { hot = true; Invalidate(); base.OnMouseEnter(e); }
+
+                protected override void OnMouseLeave(EventArgs e) { hot = false; Invalidate(); base.OnMouseLeave(e); }
+
+                protected override void OnKeyDown(KeyEventArgs e)
+                {
+                    if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.Space) { e.SuppressKeyPress = true; OnClick(EventArgs.Empty); }
+                    base.OnKeyDown(e);
+                }
+
+                protected override void OnGotFocus(EventArgs e) { Invalidate(); base.OnGotFocus(e); }
+
+                protected override void OnLostFocus(EventArgs e) { Invalidate(); base.OnLostFocus(e); }
+
+                protected override void OnPaint(PaintEventArgs e)
+                {
+                    float s = ScaleOf(this);
+                    Graphics graphics = e.Graphics;
+                    Backdrop(graphics, this, s);
+                    graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    float line = Math.Max(1f, s);
+                    using (GraphicsPath plate = Cut(new RectangleF(line / 2, line / 2, Width - line, Height - line), 0, 0, 5 * s, 0))
+                    {
+                        using (Brush face = new SolidBrush(Picking ? Deep : hot ? Hover : Field)) graphics.FillPath(face, plate);
+                        using (Pen rim = new Pen(Picking ? Cyan : hot || (Focused && ShowFocusCues) ? Hot : Edge, line)) graphics.DrawPath(rim, plate);
+                    }
+                    // An eyedropper on a slant: the bulb up and right, the glass down to a tip at the lower left.
+                    float x = Width / 2f, y = Height / 2f;
+                    using (Pen ink = new Pen(Picking ? Cyan : hot ? White : Cyan, 1.6f * s) { StartCap = LineCap.Round, EndCap = LineCap.Round })
+                    {
+                        graphics.DrawLine(ink, x - 6 * s, y + 6 * s, x + 2 * s, y - 2 * s);
+                        graphics.DrawLine(ink, x - 1 * s, y - 5 * s, x + 5 * s, y + 1 * s);
+                    }
+                    using (Brush bulb = new SolidBrush(Picking ? Cyan : hot ? White : Cyan)) graphics.FillEllipse(bulb, x + 1 * s, y - 7 * s, 6 * s, 6 * s);
+                }
+            }
+        }
+
+        private sealed class ColourSheet : PickerSheet
         {
             private const int Wide = 800, Tall = 580, ListWide = 372, ListTall = 408, Right = 424;
             private readonly Key presetKey, plusKey, tuckKey, setHex, hersKey;
@@ -442,9 +735,7 @@ namespace CapriDesktop
             private readonly Label pickedName, alsoNote, notice;
             private readonly ScrollPanel zones;
             private readonly SlimBar zonesBar = new SlimBar();
-            private readonly Picker picker = new Picker();
             private readonly ContextMenuStrip presetMenu;
-            private readonly DropperKey dropper = new DropperKey();
             private readonly System.Windows.Forms.Timer noticeTimer = new System.Windows.Forms.Timer();
             private readonly HashSet<string> open = new HashSet<string>(StringComparer.Ordinal);
             private readonly Action repainted;
@@ -490,11 +781,9 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 picker.Preview.Bounds = Box(Right, 392, 214, 26);
                 // The dropper: any colour on the screen, hers and this window's included.
                 dropper.Bounds = Box(Right + 222, 392, 30, 26);
-                dropper.AccessibleName = "Dropper: pick a colour from anywhere on the screen. Esc cancels";
-                dropper.Click += delegate { if (!dropper.Picking) DropperStart(); };
                 Controls.Add(dropper);
                 Controls.Add(picker.Preview);
-                // A colour typed as #rrggbb, set on the part; Hers puts the part back to her own colour.
+                // A colour typed as #rrggbb, set on the part; Reset selected colour puts the part back to its stock.
                 hexBox.Bounds = Box(Right, 428, 120, 26);
                 hexBox.Box.Font = Type(9.5f * Zoom);
                 hexBox.Cue = "#rrggbb";
@@ -503,11 +792,10 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 Controls.Add(hexBox);
                 setHex = Make("Set", Right + 126, 428, 60, 26, delegate { SetHex(); });
                 setHex.AccessibleName = "Set the part to the colour typed";
-                hersKey = Make("Hers", Right + 192, 428, 60, 26, delegate { BackToHers(); });
-                hersKey.AccessibleName = "Put the part back to her own colour";
-                notice = Words("", Right, 464, 348, 40, Small(), Cyan);
+                hersKey = Make("Reset selected colour", Right, 464, 252, 26, delegate { BackToHers(); });
+                hersKey.AccessibleName = "Put the selected part back to its stock colour";
+                notice = Words("", Right, 498, 348, 40, Small(), Cyan);
                 Words("Click a part on the left, then pick its colour. A last used colour goes on it and stays in its place.", 28, 546, 744, 18, Small(), Faint);
-                picker.Picked = Commit;
                 noticeTimer.Interval = 8000;
                 noticeTimer.Tick += delegate { Says("", false); };
                 // A new look, or a colour changed anywhere, shows here at once too.
@@ -516,9 +804,9 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 FormClosed += delegate { noticeTimer.Stop(); };
                 Disposed += delegate { Neon.Repainted -= repainted; noticeTimer.Dispose(); presetMenu.Dispose(); };
                 LoadSaved();
-                open.Add(ColourPresets.Zones[0]);
+                open.Add(CapriZone);
                 FillZones();
-                Choose(ColourPresets.Parts[0][0].Colour);
+                Choose(ColourPresets.CapriKey(0));
                 ResumeLayout(false);
             }
 
@@ -541,7 +829,7 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
 
             private void Save() { Frame.capri.SaveColours(ColourPresets.Write(presets), picked, ColourPresets.WriteRecent(picker.Recent)); }
 
-            private void Says(string text, bool problem)
+            protected override void Says(string text, bool problem)
             {
                 noticeTimer.Stop();
                 notice.Text = text ?? "";
@@ -567,11 +855,31 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 // would leave a gap above the first fold-down. Scrolled back after.
                 zones.AutoScrollPosition = Point.Empty;
                 int y = 0;
+                // Her own art first: the colours of the skin she shows, each back to that skin's stock when reset.
+                bool capriShown = open.Contains(CapriZone);
+                FoldHead capriHead = new FoldHead { Text = CapriZone.ToUpperInvariant(), Font = Type(10f * Zoom, true), Bounds = new Rectangle(0, Z(y), Z(ListWide), Z(27)), Open = capriShown };
+                capriHead.AccessibleName = "Capri, her own colours, " + (capriShown ? "open" : "folded");
+                capriHead.Click += delegate { if (!open.Remove(CapriZone)) open.Add(CapriZone); FillZones(); };
+                zones.Controls.Add(capriHead);
+                y += 31;
+                if (capriShown)
+                {
+                    for (int slot = 0; slot < ArtColors.Slots; slot++)
+                    {
+                        string colour = ColourPresets.CapriKey(slot);
+                        Row row = new Row(ArtColors.Names[slot], colour, null) { Font = Type(9.5f * Zoom), Bounds = new Rectangle(Z(6), Z(y), Z(ListWide - 6), Z(26)), Chosen = colour == selected };
+                        row.Click += delegate { Choose(colour); };
+                        row.SwatchClicked += delegate { SwatchTaken(colour); };
+                        zones.Controls.Add(row);
+                        y += 28;
+                    }
+                    y += 6;
+                }
                 for (int z = 0; z < ColourPresets.Zones.Length; z++)
                 {
                     string zone = ColourPresets.Zones[z];
                     bool shown = open.Contains(zone);
-                    Fold head = new Fold { Text = zone.ToUpperInvariant(), Font = Type(10f * Zoom, true), Bounds = new Rectangle(0, Z(y), Z(ListWide), Z(27)), Open = shown };
+                    FoldHead head = new FoldHead { Text = zone.ToUpperInvariant(), Font = Type(10f * Zoom, true), Bounds = new Rectangle(0, Z(y), Z(ListWide), Z(27)), Open = shown };
                     head.AccessibleName = zone + (shown ? ", open" : ", folded");
                     head.Click += delegate { if (!open.Remove(zone)) open.Add(zone); FillZones(); };
                     zones.Controls.Add(head);
@@ -595,7 +903,7 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 if (addons.Count > 0)
                 {
                     bool all = open.Contains(AddonsZone);
-                    Fold heading = new Fold { Text = "ADD-ONS", Font = Type(10f * Zoom, true), Bounds = new Rectangle(0, Z(y), Z(ListWide), Z(27)), Open = all };
+                    FoldHead heading = new FoldHead { Text = "ADD-ONS", Font = Type(10f * Zoom, true), Bounds = new Rectangle(0, Z(y), Z(ListWide), Z(27)), Open = all };
                     heading.AccessibleName = "Add-ons, " + (all ? "open" : "folded");
                     heading.Click += delegate { if (!open.Remove(AddonsZone)) open.Add(AddonsZone); FillZones(); };
                     zones.Controls.Add(heading);
@@ -605,7 +913,7 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                         {
                             string zone = "addon:" + mod.Key, id = mod.Key;
                             bool shown = open.Contains(zone);
-                            Fold head = new Fold { Text = mod.Value.ToUpperInvariant(), Font = Type(9.5f * Zoom, true), Bounds = new Rectangle(Z(12), Z(y), Z(ListWide - 12), Z(25)), Open = shown };
+                            FoldHead head = new FoldHead { Text = mod.Value.ToUpperInvariant(), Font = Type(9.5f * Zoom, true), Bounds = new Rectangle(Z(12), Z(y), Z(ListWide - 12), Z(25)), Open = shown };
                             head.AccessibleName = mod.Value + ", add-on colours, " + (shown ? "open" : "folded");
                             head.Click += delegate { if (!open.Remove(zone)) open.Add(zone); FillZones(); };
                             zones.Controls.Add(head);
@@ -616,6 +924,7 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                                 string colour = ColourPresets.AddonKey(id, name);
                                 Row row = new Row(name, colour, null) { Font = Type(9.5f * Zoom), Bounds = new Rectangle(Z(18), Z(y), Z(ListWide - 18), Z(26)), Chosen = colour == selected };
                                 row.Click += delegate { Choose(colour); };
+                                row.SwatchClicked += delegate { SwatchTaken(colour); };
                                 zones.Controls.Add(row);
                                 y += 28;
                             }
@@ -654,7 +963,7 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 pickedName.Text = ColourPresets.NameOf(colour) + (ColourPresets.TheirsOf(colour).HasValue ? "" : addon ? " (the mod's own)" : " (hers)");
                 int zone = 0;
                 for (int z = 0; z < ColourPresets.Parts.Length; z++) if (Array.Exists(ColourPresets.Parts[z], part => part.Colour == colour)) { zone = z; break; }
-                alsoNote.Text = addon ? "" : ColourPresets.Also(zone, colour) ?? "";
+                alsoNote.Text = addon ? "" : ColourPresets.Also(zone, colour) ?? (colour.StartsWith("editor ", StringComparison.Ordinal) ? ColourPresets.SeeThrough : "");
                 picker.Show(ColourPresets.ShownOf(colour));
                 hexBox.Box.Text = ColourPresets.Hex(ColourPresets.ShownOf(colour));
                 Repaint();
@@ -667,25 +976,37 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 if (selected == null) { Says("Click a part on the left first.", true); return; }
                 if (!typed.HasValue) { Says("That isn't a colour. Type it as #rrggbb, like #ff2e88.", true); return; }
                 picker.Show(typed.Value);
-                Commit(typed.Value, true);
+                typing = true;
+                try { Commit(typed.Value, true); }
+                finally { typing = false; }
             }
 
-            // The part picked back to her own colour, or the mod's own.
+            // The one way back to stock: her art to the colours of the skin she shows, anything else to its own, which
+            // follows Mainframe colours.
             private void BackToHers()
             {
                 if (selected == null) { Says("Click a part on the left first.", true); return; }
                 if (!ColourPresets.SetOne(selected, null)) { Says("Couldn't put that back.", true); return; }
                 Frame.capri.RepaintColours();
                 Keep();
-                Says(ColourPresets.NameOf(selected) + " is hers again.", false);
+                Says(ColourPresets.NameOf(selected) + " is back to its stock colour.", false);
                 Choose(selected);
             }
 
+            internal const string CapriZone = "Capri";
+
             // Set on the part selected and kept in the preset picked, and every window of hers repainted from it. Through the
             // picker or the box it goes to the front of the last used; from the last used it stays where it is.
-            private void Commit(Color colour, bool toRecent)
+            protected override string Unaimed { get { return selected == null ? "Click a part on the left first, then the dropper." : null; } }
+
+            // Set while the hex box commits, the one way that sets how solid a part is; a pick keeps the part's own.
+            private bool typing;
+
+            protected override void Commit(Color colour, bool toRecent)
             {
                 if (selected == null) return;
+                Color was = ColourPresets.ShownOf(selected);
+                if (!typing && colour.A == 255 && was.A < 255) colour = Color.FromArgb(was.A, colour);
                 if (!ColourPresets.SetOne(selected, colour)) { Says("Couldn't save that colour.", true); return; }
                 Frame.capri.RepaintColours();
                 if (toRecent) ColourPresets.Push(picker.Recent, colour);
@@ -764,141 +1085,10 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
             private void SwatchTaken(string colour)
             {
                 Choose(colour);
-                ColourPresets.Push(picker.Recent, Neon.Shown(colour));
+                ColourPresets.Push(picker.Recent, ColourPresets.ShownOf(colour));
                 picker.ShowRecent();
                 Save();
                 Says(ColourPresets.NameOf(colour) + "'s colour is in last used.", false);
-            }
-
-            // The screen's colour at a point, swapped by the checks so no real screen is read there.
-            internal static Func<Point, Color> ReadPixel = ScreenPixel;
-
-            private static Color ScreenPixel(Point at)
-            {
-                using (Bitmap one = new Bitmap(1, 1, System.Drawing.Imaging.PixelFormat.Format32bppArgb))
-                {
-                    using (Graphics grab = Graphics.FromImage(one)) grab.CopyFromScreen(at, Point.Empty, new Size(1, 1));
-                    return Color.FromArgb(255, one.GetPixel(0, 0));
-                }
-            }
-
-            private Color dropperWas;
-            private DropperVeil veil;
-            // What ended the last pick, for the checks.
-            private string endedBy;
-
-            // Where the dropper's veil lies: every screen. Checks keep it to the screen they run on.
-            internal static Func<Rectangle> VeilArea = delegate { return SystemInformation.VirtualScreen; };
-
-            // The dropper: a veil over the screens takes the mouse until a click takes a colour; right click, Esc or
-            // another window in front cancels. Not mouse capture, which Windows drops over other programs' windows.
-            internal void DropperStart()
-            {
-                if (dropper.Picking) return;
-                if (selected == null) { Says("Click a part on the left first, then the dropper.", true); return; }
-                dropperWas = picker.Preview.Colour;
-                dropper.Picking = true;
-                Says("Click anywhere on the screen to take its colour. Esc cancels.", false);
-                veil = new DropperVeil(VeilArea());
-                veil.MouseMove += delegate { DropperAt(Cursor.Position); };
-                veil.MouseDown += delegate(object sender, MouseEventArgs e)
-                {
-                    if (!dropper.Picking || !dropper.Armed) return;
-                    if (e.Button == MouseButtons.Left) DropperTake(Cursor.Position); else { endedBy = "right click"; DropperCancel(); }
-                };
-                veil.KeyDown += delegate(object sender, KeyEventArgs e) { if (e.KeyCode == Keys.Escape) { e.Handled = true; endedBy = "Esc"; DropperCancel(); } };
-                // Another program coming to the front cancels it. One of hers rising above it, such as her own window, does not:
-                // the veil takes the front back.
-                veil.Deactivate += delegate
-                {
-                    if (!dropper.Picking) return;
-                    BeginInvoke((MethodInvoker)delegate
-                    {
-                        if (!dropper.Picking || veil == null || veil.IsDisposed) return;
-                        if (OursInFront()) { veil.Activate(); return; }
-                        endedBy = "another program came to the front";
-                        DropperCancel();
-                    });
-                };
-                endedBy = null;
-                veil.Show(this);
-                veil.Activate();
-                DropperAt(Cursor.Position);
-                dropper.Invalidate();
-            }
-
-            private static bool OursInFront()
-            {
-                IntPtr front = Native.GetForegroundWindow();
-                if (front == IntPtr.Zero) return true;
-                int id;
-                Native.GetWindowThreadProcessId(front, out id);
-                return id == System.Diagnostics.Process.GetCurrentProcess().Id;
-            }
-
-            internal bool DropperPicking { get { return dropper.Picking && veil != null && veil.Visible; } }
-
-            // How fast it follows the mouse, for the checks: the last timing, and the most a move may take on average.
-            internal static string DropperTiming;
-            internal const double DropperMost = 30;
-
-            internal void DropperAt(Point screen)
-            {
-                if (!dropper.Picking) return;
-                try { picker.Preview.Colour = ReadPixel(screen); }
-                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-            }
-
-            internal void DropperTake(Point screen)
-            {
-                if (!dropper.Picking) return;
-                Color colour;
-                // The veil is nearly clear, so it is put away first and the pixel read without it. Picking is off while it
-                // goes, so its going is not taken for a cancel.
-                dropper.Picking = false;
-                if (veil != null) { veil.Hide(); Update(); System.Threading.Thread.Sleep(60); }
-                try { colour = Color.FromArgb(255, ReadPixel(screen)); }
-                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); dropper.Picking = true; DropperCancel(); return; }
-                DropperEnd();
-                picker.Show(colour);
-                Commit(colour, true);
-            }
-
-            internal void DropperCancel()
-            {
-                if (!dropper.Picking) return;
-                DropperEnd();
-                picker.Preview.Colour = dropperWas;
-                Says("", false);
-            }
-
-            private void DropperEnd()
-            {
-                dropper.Picking = false;
-                dropper.Invalidate();
-                DropperVeil was = veil;
-                veil = null;
-                if (was != null) { was.Close(); was.Dispose(); }
-            }
-
-            protected override void OnFormClosed(FormClosedEventArgs e) { DropperCancel(); base.OnFormClosed(e); }
-
-            // Over the screens while the dropper is on: one step off clear, so everything shows through and is read as it
-            // is, while a click anywhere, another program's window included, lands here and not on what is under it.
-            private sealed class DropperVeil : Form
-            {
-                internal DropperVeil(Rectangle area)
-                {
-                    FormBorderStyle = FormBorderStyle.None;
-                    ShowInTaskbar = false;
-                    StartPosition = FormStartPosition.Manual;
-                    TopMost = true;
-                    KeyPreview = true;
-                    BackColor = Color.Black;
-                    Opacity = 1 / 255.0;
-                    Cursor = Cursors.Cross;
-                    Bounds = area;
-                }
             }
 
             protected override void OnKeyDown(KeyEventArgs e)
@@ -959,7 +1149,7 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
 
             private static string Off(string name, Color? wanted)
             {
-                Color? theirs = Neon.TheirOwn(name);
+                Color? theirs = ColourPresets.TheirsOf(name);
                 if (theirs.HasValue != wanted.HasValue || (wanted.HasValue && theirs.Value.ToArgb() != wanted.Value.ToArgb()))
                     return name + " is " + (theirs.HasValue ? ColourPresets.Hex(theirs.Value) : "hers") + ", not " + (wanted.HasValue ? ColourPresets.Hex(wanted.Value) : "hers");
                 return null;
@@ -1127,8 +1317,8 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 if (picture != null) Picture(picture);
                 if (presets.Count != 3 || presets[0].Key != "Preset 1" || !presets[0].Value.ContainsKey("amber") || presets[0].Value["amber"].ToArgb() != amber.ToArgb() || presets[1].Value.Count != 0 || presets[2].Value.Count != 0 || picked != "Preset 1")
                     return "Preset 1 didn't take the colours set, or Presets 2 and 3 weren't left as hers: " + ColourPresets.Write(presets);
-                if (selected != "bubble outline" || Snapshot.IndexOf("Bubble outline", StringComparison.Ordinal) < 0 || Snapshot.IndexOf("Panel background", StringComparison.Ordinal) >= 0)
-                    return "It didn't open on Speech bubble with its first part selected: " + Snapshot;
+                if (selected != ColourPresets.CapriKey(0) || Snapshot.IndexOf("Hair", StringComparison.Ordinal) < 0 || Snapshot.IndexOf("Bubble outline", StringComparison.Ordinal) >= 0 || !(zones.Controls[0] is FoldHead) || zones.Controls[0].Text != "CAPRI")
+                    return "It didn't open on the CAPRI fold at the top with Hair selected: " + Snapshot;
                 foreach (string zone in ColourPresets.Zones) open.Add(zone);
                 FillZones();
                 List<string> listed = new List<string>();
@@ -1138,7 +1328,7 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 foreach (Control control in zones.Controls)
                 {
                     Row row = control as Row;
-                    if (row != null && row.Colour == "sheet text" && (row.Also == null || row.Also.IndexOf("Song title (Player)", StringComparison.Ordinal) < 0 && row.Also.IndexOf("Notes text (Mainframe)", StringComparison.Ordinal) < 0))
+                    if (row != null && row.Colour == "sheet text" && (row.Also == null || row.Also.IndexOf("Song title (Player)", StringComparison.Ordinal) < 0 && row.Also.IndexOf("Notes text (Menus and notes)", StringComparison.Ordinal) < 0))
                         return "A shared colour doesn't say what else it colours: " + row.Text + " / " + row.Also;
                 }
                 Fitting("all open");
@@ -1166,7 +1356,8 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 foreach (Control control in zones.Controls) { Row row = control as Row; if (row != null && row.Colour == "bubble title") titleRow = row; }
                 if (titleRow == null) return "No row for Bubble title.";
                 picker.Recent.Clear();
-                // A colour typed in the box is set on the part, one that isn't a colour changes nothing, and Hers puts it back.
+                // A colour typed in the box is set on the part, one that isn't a colour changes nothing, and Reset selected
+                // colour puts it back.
                 Choose("bubble title");
                 hexBox.Box.Text = "#123456";
                 SetHex();
@@ -1177,7 +1368,36 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 string badWrong = Off("bubble title", typedColour);
                 BackToHers();
                 string hersWrong = Off("bubble title", null);
-                if (typedWrong != null || badWrong != null || hersWrong != null) return "The hex box or Hers went wrong: " + (typedWrong ?? badWrong ?? hersWrong);
+                if (typedWrong != null || badWrong != null || hersWrong != null) return "The hex box or Reset selected colour went wrong: " + (typedWrong ?? badWrong ?? hersWrong);
+                // Reset selected colour per kind of part: her art back to the shown skin's stock, leaving My Colors when it was
+                // the last one set; an add-on's colour back to its own.
+                for (int slot = 0; slot < ArtColors.Slots; slot++)
+                {
+                    string art = ColourPresets.CapriKey(slot);
+                    Choose(art);
+                    hexBox.Box.Text = "#20" + (40 + slot * 10) + "60";
+                    SetHex();
+                    string artSet = Off(art, ColourPresets.Parsed(hexBox.Box.Text));
+                    if (artSet != null) return "A colour typed for her " + ArtColors.Names[slot] + " didn't go on her art: " + artSet;
+                }
+                if (picture != null) Picture(picture.Replace(".png", "-capri.png"));
+                for (int slot = 0; slot < ArtColors.Slots; slot++)
+                {
+                    string art = ColourPresets.CapriKey(slot);
+                    Choose(art);
+                    BackToHers();
+                    string artBack = Off(art, null);
+                    if (artBack != null) return "Reset selected colour didn't put her " + ArtColors.Names[slot] + " back to its stock: " + artBack;
+                }
+                if (Array.Exists(Frame.capri.ModList.ColoursNow, one => one != null)) return "Her art colours were all reset, yet My Colors still holds some.";
+                string tint = ColourPresets.AddonKey("tint-test", "Glow");
+                Choose(tint);
+                hexBox.Box.Text = "#336699";
+                SetHex();
+                string tintSet = Off(tint, ColourPresets.Parsed("#336699"));
+                BackToHers();
+                string tintBack = Off(tint, null);
+                if (tintSet != null || tintBack != null) return "Reset selected colour on an add-on's colour went wrong: " + (tintSet ?? tintBack);
                 picker.Recent.Clear();
                 // Its minimise key puts it away as it is, and showing it again brings back the same window.
                 tuckKey.PerformClick();
@@ -1332,6 +1552,36 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 if (!glowSet.HasValue || glowSet.Value.ToArgb() != Color.FromArgb(0x12, 0x34, 0x56).ToArgb() || layoutText.IndexOf("#123456", StringComparison.Ordinal) >= 0 || !System.Text.RegularExpressions.Regex.IsMatch(addonText, @"(?m)^Glow:\s+#123456\s+# usual: #c81e3c"))
                     return "An add-on colour wasn't kept in its own colours.md apart from layout.md: " + addonText;
                 if (!presets[ColourPresets.Find(presets, picked)].Value.ContainsKey(glow)) return "The preset picked didn't keep the add-on's colour.";
+                // An add-on colour goes to last used as hers do: from the hex box, the dropper and a click on its swatch, each once.
+                Color glowHex = Color.FromArgb(255, 0x12, 0x34, 0x56), moss = Color.FromArgb(255, 40, 120, 60);
+                if (picker.Recent.Count == 0 || picker.Recent[0].ToArgb() != glowHex.ToArgb()) return "The hex box didn't put an add-on colour first in last used: " + ColourPresets.WriteRecent(picker.Recent);
+                Func<Point, Color> readBefore = ReadPixel;
+                Func<Rectangle> veilBefore = VeilArea;
+                try
+                {
+                    VeilArea = delegate { return Screen.FromControl(this).Bounds; };
+                    ReadPixel = delegate { return moss; };
+                    DropperStart();
+                    DropperTake(new Point(40, 40));
+                }
+                finally { ReadPixel = readBefore; VeilArea = veilBefore; }
+                glowSet = AddonColours.TheirOwn("tint-test", "Glow");
+                if (!glowSet.HasValue || glowSet.Value.ToArgb() != moss.ToArgb() || picker.Recent[0].ToArgb() != moss.ToArgb() || picker.Recent[1].ToArgb() != glowHex.ToArgb())
+                    return "The dropper didn't put an add-on colour on it and first in last used: " + ColourPresets.WriteRecent(picker.Recent);
+                Typed("#123456");
+                Row glowRow = null;
+                foreach (Control one in zones.Controls) { Row row = one as Row; if (row != null && row.Colour == glow) glowRow = row; }
+                if (glowRow == null) return "The add-on's colour has no row to click: " + Snapshot;
+                List<Color> recentBefore = new List<Color>(picker.Recent);
+                picker.Recent.Clear();
+                Choose("hot");
+                glowRow.TakeSwatch();
+                glowRow.TakeSwatch();
+                if (selected != glow || picker.Recent.Count != 1 || picker.Recent[0].ToArgb() != Color.FromArgb(255, ColourPresets.ShownOf(glow)).ToArgb() || picker.Recent[0].ToArgb() != glowHex.ToArgb())
+                    return "A click on an add-on's swatch didn't choose it and put its colour in last used once: " + selected + ", " + ColourPresets.WriteRecent(picker.Recent);
+                picker.Recent.Clear();
+                picker.Recent.AddRange(recentBefore);
+                picker.ShowRecent();
 
                 NewPreset();
                 if (picked != "Preset 4" || presets.Count != 4) return "+ didn't make Preset 4: " + ColourPresets.Write(presets);
@@ -1375,105 +1625,8 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 return unfit.Count == 0 ? null : string.Join(" / ", unfit.ToArray());
             }
 
-            // A zone's fold-down: her section band and title, with her dropdown mark filled while it is open.
-            private sealed class Fold : Control
-            {
-                internal bool Open;
-
-                internal Fold()
-                {
-                    SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.Selectable, true);
-                    BackColor = Ground;
-                    ForeColor = White;
-                    Cursor = Cursors.Hand;
-                    TabStop = true;
-                    AccessibleRole = AccessibleRole.PushButton;
-                }
-
-                protected override void OnKeyDown(KeyEventArgs e)
-                {
-                    if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.Space) { e.SuppressKeyPress = true; OnClick(EventArgs.Empty); }
-                    base.OnKeyDown(e);
-                }
-
-                protected override void OnGotFocus(EventArgs e) { Invalidate(); base.OnGotFocus(e); }
-
-                protected override void OnLostFocus(EventArgs e) { Invalidate(); base.OnLostFocus(e); }
-
-                protected override void OnPaint(PaintEventArgs e)
-                {
-                    float s = ScaleOf(this);
-                    Graphics graphics = e.Graphics;
-                    using (Brush back = new SolidBrush(Ground)) graphics.FillRectangle(back, ClientRectangle);
-                    graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                    DrawBand(graphics, new RectangleF(0, 0, Width, Height), s);
-                    TextRenderer.DrawText(graphics, Text, Font, new Rectangle((int)(14 * s), 0, Width - (int)(44 * s), Height), White, TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
-                    Drop(graphics, Width - 24 * s, Height / 2f, s, Cyan, Open);
-                    if (Focused && ShowFocusCues) FocusMark(graphics, new RectangleF(0, 0, Width, Height), s, 0, 0, 0);
-                }
-            }
-
             // One part of her on the left: its swatch, its name in setting-name red, its hex in cyan once set, and what
-            // else a shared one colours. The dropper key: one of her keys with an eyedropper, lit while picking.
-            private sealed class DropperKey : Control
-            {
-                internal bool Picking;
-                private bool hot;
-                private long armedAt;
-
-                // A click that started picking isn't also the click that takes a colour.
-                internal bool Armed { get { return Environment.TickCount - armedAt > 150; } }
-
-                internal DropperKey()
-                {
-                    SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.Selectable, true);
-                    // Two quick clicks are two clicks, not a double click that starts nothing.
-                    SetStyle(ControlStyles.StandardDoubleClick, false);
-                    BackColor = Ground;
-                    Cursor = Cursors.Hand;
-                    TabStop = true;
-                    AccessibleRole = AccessibleRole.PushButton;
-                }
-
-                protected override void OnClick(EventArgs e) { armedAt = Environment.TickCount; base.OnClick(e); }
-
-                protected override void OnMouseEnter(EventArgs e) { hot = true; Invalidate(); base.OnMouseEnter(e); }
-
-                protected override void OnMouseLeave(EventArgs e) { hot = false; Invalidate(); base.OnMouseLeave(e); }
-
-                protected override void OnKeyDown(KeyEventArgs e)
-                {
-                    if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.Space) { e.SuppressKeyPress = true; OnClick(EventArgs.Empty); }
-                    base.OnKeyDown(e);
-                }
-
-                protected override void OnGotFocus(EventArgs e) { Invalidate(); base.OnGotFocus(e); }
-
-                protected override void OnLostFocus(EventArgs e) { Invalidate(); base.OnLostFocus(e); }
-
-                protected override void OnPaint(PaintEventArgs e)
-                {
-                    float s = ScaleOf(this);
-                    Graphics graphics = e.Graphics;
-                    Backdrop(graphics, this, s);
-                    graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                    float line = Math.Max(1f, s);
-                    using (GraphicsPath plate = Cut(new RectangleF(line / 2, line / 2, Width - line, Height - line), 0, 0, 5 * s, 0))
-                    {
-                        using (Brush face = new SolidBrush(Picking ? Deep : hot ? Hover : Field)) graphics.FillPath(face, plate);
-                        using (Pen rim = new Pen(Picking ? Cyan : hot || (Focused && ShowFocusCues) ? Hot : Edge, line)) graphics.DrawPath(rim, plate);
-                    }
-                    // An eyedropper on a slant: the bulb up and right, the glass down to a tip at the lower left.
-                    float x = Width / 2f, y = Height / 2f;
-                    using (Pen ink = new Pen(Picking ? Cyan : hot ? White : Cyan, 1.6f * s) { StartCap = LineCap.Round, EndCap = LineCap.Round })
-                    {
-                        graphics.DrawLine(ink, x - 6 * s, y + 6 * s, x + 2 * s, y - 2 * s);
-                        graphics.DrawLine(ink, x - 1 * s, y - 5 * s, x + 5 * s, y + 1 * s);
-                    }
-                    using (Brush bulb = new SolidBrush(Picking ? Cyan : hot ? White : Cyan)) graphics.FillEllipse(bulb, x + 1 * s, y - 7 * s, 6 * s, 6 * s);
-                }
-            }
-
+            // else a shared one colours.
             private sealed class Row : Control
             {
                 internal readonly string Colour, Also;
@@ -1581,6 +1734,45 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
             }
         }
 
+        // A fold-down's head: her section band and title, with her dropdown mark filled while it is open. Custom
+        // colours' zones and the work apps window's kinds.
+        private sealed class FoldHead : Control
+        {
+            internal bool Open;
+
+            internal FoldHead()
+            {
+                SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.Selectable, true);
+                BackColor = Ground;
+                ForeColor = White;
+                Cursor = Cursors.Hand;
+                TabStop = true;
+                AccessibleRole = AccessibleRole.PushButton;
+            }
+
+            protected override void OnKeyDown(KeyEventArgs e)
+            {
+                if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.Space) { e.SuppressKeyPress = true; OnClick(EventArgs.Empty); }
+                base.OnKeyDown(e);
+            }
+
+            protected override void OnGotFocus(EventArgs e) { Invalidate(); base.OnGotFocus(e); }
+
+            protected override void OnLostFocus(EventArgs e) { Invalidate(); base.OnLostFocus(e); }
+
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                float s = ScaleOf(this);
+                Graphics graphics = e.Graphics;
+                using (Brush back = new SolidBrush(Ground)) graphics.FillRectangle(back, ClientRectangle);
+                graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                DrawBand(graphics, new RectangleF(0, 0, Width, Height), s);
+                TextRenderer.DrawText(graphics, Text, Font, new Rectangle((int)(14 * s), 0, Width - (int)(44 * s), Height), White, TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
+                Drop(graphics, Width - 24 * s, Height / 2f, s, Cyan, Open);
+                if (Focused && ShowFocusCues) FocusMark(graphics, new RectangleF(0, 0, Width, Height), s, 0, 0, 0);
+            }
+        }
+
         // A colour shown in a box with her clipped corner: the one picked, or a last used slot, empty until one is picked.
         private sealed class Swatch : Control
         {
@@ -1627,6 +1819,10 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
             internal float Hue, Across, Down;
             internal event Action Moved, Done;
             private bool grabbed;
+            // The square as its own picture, made again when the hue or size changes, each pixel exact. #0d0b0c is
+            // moved a step, since GDI+ keeps that colour for untouched pixels and draws it black.
+            private Bitmap plane, shown;
+            private float planeHue = -1;
 
             internal Shade(bool hueBar)
             {
@@ -1716,15 +1912,96 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 }
                 else
                 {
-                    using (Brush pure = new SolidBrush(ColourPresets.FromHsv(Hue, 1, 1))) graphics.FillRectangle(pure, all);
-                    using (LinearGradientBrush light = new LinearGradientBrush(all, Color.FromArgb(255, 255, 255), Color.FromArgb(0, 255, 255, 255), LinearGradientMode.Horizontal)) graphics.FillRectangle(light, all);
-                    using (LinearGradientBrush dark = new LinearGradientBrush(all, Color.FromArgb(0, 0, 0, 0), Color.FromArgb(0, 0, 0), LinearGradientMode.Vertical)) graphics.FillRectangle(dark, all);
-                    float x = Across * (Width - 1), y = Down * (Height - 1), r = 6 * s;
-                    graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                    using (Pen outer = new Pen(Ground, 2.5f * s)) graphics.DrawEllipse(outer, x - r, y - r, r * 2, r * 2);
-                    using (Pen ring = new Pen(White, 1.5f * s)) graphics.DrawEllipse(ring, x - r, y - r, r * 2, r * 2);
+                    // Put together off screen and copied pixel for pixel, so nothing is scaled on the way.
+                    if (shown == null || shown.Width != Width || shown.Height != Height)
+                    {
+                        if (shown != null) shown.Dispose();
+                        shown = new Bitmap(Width, Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                    }
+                    using (Graphics into = Graphics.FromImage(shown))
+                    {
+                        into.CompositingMode = CompositingMode.SourceCopy;
+                        into.DrawImageUnscaled(Plane(), 0, 0);
+                        into.CompositingMode = CompositingMode.SourceOver;
+                        float x = Across * (Width - 1), y = Down * (Height - 1), r = 6 * s;
+                        into.SmoothingMode = SmoothingMode.AntiAlias;
+                        using (Pen outer = new Pen(Ground, 2.5f * s)) into.DrawEllipse(outer, x - r, y - r, r * 2, r * 2);
+                        using (Pen ring = new Pen(White, 1.5f * s)) into.DrawEllipse(ring, x - r, y - r, r * 2, r * 2);
+                        into.SmoothingMode = SmoothingMode.None;
+                        Rim(into, s);
+                    }
+                    graphics.DrawImage(shown, all, all, GraphicsUnit.Pixel);
+                    return;
                 }
+                Rim(graphics, s);
+            }
+
+            private void Rim(Graphics graphics, float s)
+            {
                 using (Pen rim = new Pen(Focused && ShowFocusCues ? Cyan : WellEdge, Math.Max(1f, s))) graphics.DrawRectangle(rim, 0, 0, Width - 1, Height - 1);
+            }
+
+            private Bitmap Plane()
+            {
+                int wide = Width, tall = Height;
+                if (plane != null && plane.Width == wide && plane.Height == tall && planeHue == Hue) return plane;
+                if (plane != null) plane.Dispose();
+                plane = new Bitmap(wide, tall, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                planeHue = Hue;
+                Color pure = ColourPresets.FromHsv(Hue, 1, 1);
+                int[] row = new int[wide];
+                System.Drawing.Imaging.BitmapData data = plane.LockBits(new Rectangle(0, 0, wide, tall), System.Drawing.Imaging.ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                try
+                {
+                    for (int y = 0; y < tall; y++)
+                    {
+                        float value = 1 - y / (float)Math.Max(1, tall - 1);
+                        for (int x = 0; x < wide; x++)
+                        {
+                            float saturation = x / (float)Math.Max(1, wide - 1);
+                            int red = Level(value, saturation, pure.R), green = Level(value, saturation, pure.G), blue = Level(value, saturation, pure.B);
+                            if (red == 0x0d && green == 0x0b && blue == 0x0c) blue = 0x0d;
+                            row[x] = (255 << 24) | (red << 16) | (green << 8) | blue;
+                        }
+                        System.Runtime.InteropServices.Marshal.Copy(row, 0, new IntPtr(data.Scan0.ToInt64() + (long)y * data.Stride), wide);
+                    }
+                }
+                finally { plane.UnlockBits(data); }
+                return plane;
+            }
+
+            // One channel at a place in the square, as FromHsv works it out.
+            private static int Level(float value, float saturation, int pure)
+            {
+                return Math.Max(0, Math.Min(255, (int)Math.Round(value * (255 - saturation * (255 - pure)))));
+            }
+
+            // For the checks: the square as drawn is, in its bottom-left quarter, the colour each place stands for.
+            // Null when it is, else the first pixel that isn't. Taken without an alpha channel, as Picture takes it.
+            internal string Unclear()
+            {
+                using (Bitmap drawn = new Bitmap(Width, Height, System.Drawing.Imaging.PixelFormat.Format24bppRgb))
+                {
+                    DrawToBitmap(drawn, new Rectangle(Point.Empty, drawn.Size));
+                    // Inside its rim, which grows with the size.
+                    int rim = (int)Math.Ceiling(Math.Max(1f, ScaleOf(this)));
+                    for (int y = Height / 2; y < Height - rim; y++)
+                        for (int x = rim; x < Width / 2; x++)
+                        {
+                            Color got = drawn.GetPixel(x, y);
+                            Color want = ColourPresets.FromHsv(Hue, x / (float)(Width - 1), 1 - y / (float)(Height - 1));
+                            if (Math.Abs(got.R - want.R) > 3 || Math.Abs(got.G - want.G) > 3 || Math.Abs(got.B - want.B) > 3)
+                                return "pixel " + x + "," + y + " is " + ColourPresets.Hex(got) + ", not " + ColourPresets.Hex(want);
+                        }
+                }
+                return null;
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing && plane != null) { plane.Dispose(); plane = null; }
+                if (disposing && shown != null) { shown.Dispose(); shown = null; }
+                base.Dispose(disposing);
             }
         }
     }

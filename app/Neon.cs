@@ -41,17 +41,28 @@ namespace CapriDesktop
         // apart. The player's five (PaintedOnly) are exempt: it paints them fresh each frame and keeps none.
         private static readonly Color[][] Looks =
         {
-            new[] { Color.FromArgb(10, 10, 16), Color.FromArgb(54, 14, 26), Color.FromArgb(16, 12, 20), Color.FromArgb(44, 122, 134), Color.FromArgb(255, 93, 102), Color.FromArgb(236, 236, 241), Color.FromArgb(146, 130, 140), Color.FromArgb(17, 16, 28), Color.FromArgb(30, 20, 36), Color.FromArgb(46, 22, 38), Color.FromArgb(92, 24, 36), Color.FromArgb(232, 66, 70), Color.FromArgb(94, 240, 246), Color.FromArgb(9, 30, 33), Color.FromArgb(40, 120, 132), Color.FromArgb(6, 14, 18), Color.FromArgb(78, 28, 40), Color.FromArgb(245, 90, 86), Color.FromArgb(120, 30, 44), Color.FromArgb(12, 11, 20), Color.FromArgb(72, 28, 40), Color.FromArgb(244, 214, 70), Color.FromArgb(9, 11, 15), Color.FromArgb(232, 236, 240), Color.FromArgb(122, 128, 138), Color.FromArgb(16, 13, 22), Color.FromArgb(58, 214, 235), Color.FromArgb(232, 36, 64), Color.FromArgb(56, 176, 255), Color.FromArgb(255, 46, 136) , Color.FromArgb(9, 11, 16), Color.FromArgb(58, 214, 235), Color.FromArgb(255, 46, 136), Color.FromArgb(232, 36, 64), Color.FromArgb(58, 63, 74), Color.FromArgb(5, 6, 9), Color.FromArgb(242, 201, 76) },
-            new[] { Gray(0), Gray(24), Gray(8), Gray(110), Gray(255), Gray(238), Gray(150), Gray(16), Gray(34), Gray(52), Gray(84), Gray(245), Gray(205), Gray(22), Gray(120), Gray(1), Gray(70), Gray(250), Gray(96), Gray(6), Gray(76), Gray(230), Gray(4), Gray(232), Gray(140), Gray(14), Gray(210), Gray(248), Gray(228), Gray(236) , Gray(5), Gray(210), Gray(236), Gray(248), Color.FromArgb(58, 63, 74), Color.FromArgb(5, 6, 9), Gray(200) },
-            new[] { Gray(255), Gray(236), Gray(248), Gray(120), Gray(0), Gray(20), Gray(96), Gray(244), Gray(230), Gray(214), Gray(170), Gray(30), Gray(64), Gray(238), Gray(110), Gray(254), Gray(190), Gray(10), Gray(150), Gray(250), Gray(180), Gray(60), Gray(252), Gray(26), Gray(104), Gray(243), Gray(70), Gray(18), Gray(44), Gray(31) , Gray(251), Gray(70), Gray(31), Gray(18), Color.FromArgb(58, 63, 74), Color.FromArgb(5, 6, 9), Gray(80) },
-            new[] { Gray(92), Gray(108), Gray(84), Gray(170), Gray(255), Gray(250), Gray(222), Gray(78), Gray(104), Gray(118), Gray(140), Gray(246), Gray(236), Gray(72), Gray(190), Gray(30), Gray(130), Gray(252), Gray(160), Gray(40), Gray(150), Gray(244), Gray(88), Gray(248), Gray(216), Gray(80), Gray(226), Gray(251), Gray(238), Gray(245) , Gray(89), Gray(226), Gray(245), Gray(251), Color.FromArgb(58, 63, 74), Color.FromArgb(5, 6, 9), Gray(200) }
+            new[] { Color.FromArgb(10, 10, 16), Color.FromArgb(54, 14, 26), Color.FromArgb(16, 12, 20), Color.FromArgb(44, 122, 134), Color.FromArgb(255, 93, 102), Color.FromArgb(236, 236, 241), Color.FromArgb(146, 130, 140), Color.FromArgb(17, 16, 28), Color.FromArgb(30, 20, 36), Color.FromArgb(46, 22, 38), Color.FromArgb(92, 24, 36), Color.FromArgb(232, 66, 70), Color.FromArgb(94, 240, 246), Color.FromArgb(9, 30, 33), Color.FromArgb(40, 120, 132), Color.FromArgb(6, 14, 18), Color.FromArgb(78, 28, 40), Color.FromArgb(245, 90, 86), Color.FromArgb(120, 30, 44), Color.FromArgb(12, 11, 20), Color.FromArgb(72, 28, 40), Color.FromArgb(244, 214, 70), Color.FromArgb(9, 11, 15), Color.FromArgb(232, 236, 240), Color.FromArgb(122, 128, 138), Color.FromArgb(16, 13, 22), Color.FromArgb(58, 214, 235), Color.FromArgb(232, 36, 64), Color.FromArgb(56, 176, 255), Color.FromArgb(255, 46, 136) , Color.FromArgb(9, 11, 16), Color.FromArgb(58, 214, 235), Color.FromArgb(255, 46, 136), Color.FromArgb(232, 36, 64), Color.FromArgb(58, 63, 74), Color.FromArgb(5, 6, 9), Color.FromArgb(242, 201, 76), Color.FromArgb(235, 74, 66), Color.FromArgb(199, 52, 30, 36), Color.FromArgb(220, 235, 74, 66), Color.FromArgb(235, 74, 66), Color.FromArgb(245, 128, 120) },
+            new[] { Gray(0), Gray(24), Gray(8), Gray(110), Gray(255), Gray(238), Gray(150), Gray(16), Gray(34), Gray(52), Gray(84), Gray(245), Gray(205), Gray(22), Gray(120), Gray(1), Gray(70), Gray(250), Gray(96), Gray(6), Gray(76), Gray(230), Gray(4), Gray(232), Gray(140), Gray(14), Gray(210), Gray(248), Gray(228), Gray(236) , Gray(5), Gray(210), Gray(236), Gray(248), Color.FromArgb(58, 63, 74), Color.FromArgb(5, 6, 9), Gray(200), Gray(121), Color.FromArgb(199, Gray(37)), Color.FromArgb(220, Gray(121)), Gray(121), Gray(162) },
+            new[] { Gray(255), Gray(236), Gray(248), Gray(120), Gray(0), Gray(20), Gray(96), Gray(244), Gray(230), Gray(214), Gray(170), Gray(30), Gray(64), Gray(238), Gray(110), Gray(254), Gray(190), Gray(10), Gray(150), Gray(250), Gray(180), Gray(60), Gray(252), Gray(26), Gray(104), Gray(243), Gray(70), Gray(18), Gray(44), Gray(31) , Gray(251), Gray(70), Gray(31), Gray(18), Color.FromArgb(58, 63, 74), Color.FromArgb(5, 6, 9), Gray(80), Gray(153), Color.FromArgb(199, Gray(224)), Color.FromArgb(220, Gray(153)), Gray(153), Gray(118) },
+            new[] { Gray(92), Gray(108), Gray(84), Gray(170), Gray(255), Gray(250), Gray(222), Gray(78), Gray(104), Gray(118), Gray(140), Gray(246), Gray(236), Gray(72), Gray(190), Gray(30), Gray(130), Gray(252), Gray(160), Gray(40), Gray(150), Gray(244), Gray(88), Gray(248), Gray(216), Gray(80), Gray(226), Gray(251), Gray(238), Gray(245) , Gray(89), Gray(226), Gray(245), Gray(251), Color.FromArgb(58, 63, 74), Color.FromArgb(5, 6, 9), Gray(200), Gray(157), Color.FromArgb(199, Gray(96)), Color.FromArgb(220, Gray(157)), Gray(157), Gray(186) }
         };
         private static Color[] now = Looks[0];
         // Theirs, out of layout.md, over whichever look is picked. An entry nobody has set is null and the
         // look's own colour shows through, so a file naming one colour changes one colour.
-        private static readonly Color?[] theirs = new Color?[37];
+        private static readonly Color?[] theirs = new Color?[42];
 
-        private static Color At(int one) { Color? set = theirs[one]; return set.HasValue ? set.Value : now[one]; }
+        private static Color At(int one)
+        {
+            Color? set = theirs[one];
+            if (set.HasValue) return set.Value;
+            if (one < EditorFirst) return now[one];
+            // The file editor's parts start as Night City's and follow the look and the Mainframe's shift until they set one.
+            Color stock = Looks[0][one];
+            return Color.FromArgb(stock.A, Follow(stock.R, stock.G, stock.B, 0, MainframeEntries));
+        }
+
+        // Where the file editor's own entries start.
+        internal const int EditorFirst = 37;
 
         // What each entry is called in layout.md. The names are what people type, so they say what the thing
         // is rather than what the code calls it, and the order is the order the file lists them in.
@@ -61,14 +72,15 @@ namespace CapriDesktop
             "edge", "hot", "cyan", "deep", "deep edge", "on ink", "dash", "lit", "brim", "well",
             "well edge", "amber", "sheet", "sheet text", "sheet faint", "menu", "bubble outline",
             "bubble title", "bubble text", "bubble accent", "bubble background", "player edge",
-            "player accent", "player title", "player rail", "player ground", "points"
+            "player accent", "player title", "player rail", "player ground", "points",
+            "editor frame", "editor sheet", "editor edge", "editor field", "editor text"
         };
 
         internal static string[] Names { get { return (string[])Named.Clone(); } }
 
-        // The entries only ever painted, never kept by a control: her player's five. Every other one may be kept, and no
-        // two kept ones share a colour in a look.
-        internal static bool PaintedOnly(int one) { return one >= 31 && one <= 35; }
+        // The entries only ever painted, never kept by a control: her player's five and the file editor's. Every other one
+        // may be kept, and no two kept ones share a colour in a look.
+        internal static bool PaintedOnly(int one) { return one >= 31 && one <= 35 || one >= EditorFirst; }
 
         internal static Color Stock(string name)
         {
@@ -95,6 +107,7 @@ namespace CapriDesktop
             if (was.HasValue == colour.HasValue && (!colour.HasValue || was.Value.ToArgb() == colour.Value.ToArgb())) return false;
             Painting();
             theirs[one] = colour;
+            Look.Mirror();
             return true;
         }
 
@@ -118,6 +131,7 @@ namespace CapriDesktop
             for (int one = 0; one < theirs.Length; one++) if (theirs[one].HasValue) had = true;
             if (had) Painting();
             for (int one = 0; one < theirs.Length; one++) theirs[one] = null;
+            Look.Mirror();
             return had;
         }
 
@@ -141,6 +155,7 @@ namespace CapriDesktop
         {
             Color[] was = painted ?? Effective();
             now = Looks[shade];
+            Look.Mirror();
             Color[] to = Effective();
             System.Collections.Generic.HashSet<object> done = new System.Collections.Generic.HashSet<object>();
             foreach (Control window in Windows(also))
@@ -230,6 +245,12 @@ namespace CapriDesktop
         internal static Color PlayerGround { get { return At(35); } }
         // Her Tamagotchi points and what each thing costs, in gold.
         internal static Color Points { get { return At(36); } }
+        // The file editor's: its frame, the sheet behind the words, the sheet's edge, the text field and its words.
+        internal static Color EditorFrame { get { return At(37); } }
+        internal static Color EditorSheet { get { return At(38); } }
+        internal static Color EditorEdge { get { return At(39); } }
+        internal static Color EditorField { get { return At(40); } }
+        internal static Color EditorText { get { return At(41); } }
 
         private static Color Gray(int v) { return Color.FromArgb(v, v, v); }
 
@@ -239,13 +260,58 @@ namespace CapriDesktop
 
         internal static Color[] LookColours(int look) { return Looks[ClampLook(look)]; }
 
-        internal static void UseLook(int look) { shade = ClampLook(look); now = Looks[shade]; }
+        internal static void UseLook(int look) { shade = ClampLook(look); now = Looks[shade]; Look.Mirror(); }
 
-        internal static Color Tone(int r, int g, int b)
+        // A shade written as Night City's, in the picked look. Near a Mainframe colour they set in Custom colours it moves
+        // with it, keeping its offset; their colour itself when it is that entry's stock colour.
+        internal static Color Tone(int r, int g, int b) { return Follow(r, g, b, 0, MainframeEntries); }
+
+        // The same for her bubble and type box, which follow the Speech bubble zone's colours instead.
+        internal static Color BubbleTone(int r, int g, int b) { return Follow(r, g, b, 26, 31); }
+
+        private static Color Follow(int r, int g, int b, int from, int to)
+        {
+            Color looked = Looked(r, g, b);
+            int near = Nearest(r, g, b, from, to);
+            if (near < 0 || !theirs[near].HasValue) return looked;
+            Color set = theirs[near].Value, stock = Looks[0][near];
+            if (stock.R == r && stock.G == g && stock.B == b) return set;
+            Color entry = now[near];
+            return Color.FromArgb(set.A, Channel(set.R + looked.R - entry.R), Channel(set.G + looked.G - entry.G), Channel(set.B + looked.B - entry.B));
+        }
+
+        private static Color Looked(int r, int g, int b)
         {
             if (shade == 0) return Color.FromArgb(r, g, b);
             int light = (299 * r + 587 * g + 114 * b) / 1000;
             return Gray(shade == 1 ? light : shade == 2 ? 255 - light * 85 / 100 : 70 + light * 72 / 100);
+        }
+
+        private static int Channel(int v) { return v < 0 ? 0 : v > 255 ? 255 : v; }
+
+        // The Mainframe zone's entries, and how far from one a shade still counts as its shade.
+        internal const int MainframeEntries = 22, ShadeReach = 100;
+        private static readonly System.Collections.Generic.Dictionary<long, int> nearest = new System.Collections.Generic.Dictionary<long, int>();
+
+        // The entry from one up to before another whose Night City colour is nearest, or -1 when none is within reach.
+        internal static int Nearest(int r, int g, int b, int from, int to)
+        {
+            long key = ((long)from << 32) | ((long)to << 24) | (uint)((r << 16) | (g << 8) | b);
+            int found;
+            lock (nearest)
+            {
+                if (nearest.TryGetValue(key, out found)) return found;
+                found = -1;
+                int best = ShadeReach * ShadeReach + 1;
+                for (int one = from; one < to; one++)
+                {
+                    Color stock = Looks[0][one];
+                    int dr = stock.R - r, dg = stock.G - g, db = stock.B - b, far = dr * dr + dg * dg + db * db;
+                    if (far < best) { best = far; found = one; }
+                }
+                nearest[key] = found;
+            }
+            return found;
         }
 
 #if !CROSS
@@ -455,29 +521,30 @@ namespace CapriDesktop
     internal interface Tinted { void Recolour(Func<Color, Color> swap); }
 
 #if !CROSS
+    // Her game windows' colours: the look and Custom colours, like every other window of hers.
     internal static class CityLook
     {
-        internal static readonly Color Ground = Neon.LookColours(0)[0];
-        internal static readonly Color Glow = Neon.LookColours(0)[1];
-        internal static readonly Color Band = Neon.LookColours(0)[2];
-        internal static readonly Color Rule = Neon.LookColours(0)[3];
-        internal static readonly Color Rose = Neon.LookColours(0)[4];
-        internal static readonly Color White = Neon.LookColours(0)[5];
-        internal static readonly Color Faint = Neon.LookColours(0)[6];
-        internal static readonly Color Field = Neon.LookColours(0)[7];
-        internal static readonly Color Hover = Neon.LookColours(0)[8];
-        internal static readonly Color Pressed = Neon.LookColours(0)[9];
-        internal static readonly Color Edge = Neon.LookColours(0)[10];
-        internal static readonly Color Hot = Neon.LookColours(0)[11];
-        internal static readonly Color Cyan = Neon.LookColours(0)[12];
-        internal static readonly Color Deep = Neon.LookColours(0)[13];
-        internal static readonly Color DeepEdge = Neon.LookColours(0)[14];
-        internal static readonly Color OnInk = Neon.LookColours(0)[15];
-        internal static readonly Color Dash = Neon.LookColours(0)[16];
-        internal static readonly Color Lit = Neon.LookColours(0)[17];
-        internal static readonly Color Brim = Neon.LookColours(0)[18];
-        internal static readonly Color Well = Neon.LookColours(0)[19];
-        internal static readonly Color WellEdge = Neon.LookColours(0)[20];
+        internal static Color Ground { get { return Neon.Ground; } }
+        internal static Color Glow { get { return Neon.Glow; } }
+        internal static Color Band { get { return Neon.Band; } }
+        internal static Color Rule { get { return Neon.Rule; } }
+        internal static Color Rose { get { return Neon.Rose; } }
+        internal static Color White { get { return Neon.White; } }
+        internal static Color Faint { get { return Neon.Faint; } }
+        internal static Color Field { get { return Neon.Field; } }
+        internal static Color Hover { get { return Neon.Hover; } }
+        internal static Color Pressed { get { return Neon.Pressed; } }
+        internal static Color Edge { get { return Neon.Edge; } }
+        internal static Color Hot { get { return Neon.Hot; } }
+        internal static Color Cyan { get { return Neon.Cyan; } }
+        internal static Color Deep { get { return Neon.Deep; } }
+        internal static Color DeepEdge { get { return Neon.DeepEdge; } }
+        internal static Color OnInk { get { return Neon.OnInk; } }
+        internal static Color Dash { get { return Neon.Dash; } }
+        internal static Color Lit { get { return Neon.Lit; } }
+        internal static Color Brim { get { return Neon.Brim; } }
+        internal static Color Well { get { return Neon.Well; } }
+        internal static Color WellEdge { get { return Neon.WellEdge; } }
         internal static void Frame(Graphics graphics, Size size, float s, float big, float small, float along, float down) { Neon.Frame(graphics, size, s, big, small, along, down, Brim, Hot); }
         internal static void Backdrop(Graphics graphics, Size size, float reach) { Neon.Backdrop(graphics, size, reach, Ground, Glow); }
     }

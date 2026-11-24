@@ -79,28 +79,166 @@ namespace CapriDesktop
 
         private void MoveUntested(params string[] paths)
         {
-            SettingsFile.Moves = delegate(string name) { return string.Equals(name, SysLines.UntestedKey, StringComparison.OrdinalIgnoreCase); };
+            SettingsFile.Moves = delegate(string name)
+            {
+                return string.Equals(name, SysLines.UntestedKey, StringComparison.OrdinalIgnoreCase) || string.Equals(name, SysLines.SaverKey, StringComparison.OrdinalIgnoreCase) || string.Equals(name, SysLines.SaverStyleKey, StringComparison.OrdinalIgnoreCase) || string.Equals(name, SysLines.SaverAfterKey, StringComparison.OrdinalIgnoreCase) || Array.IndexOf(SysLines.QuietKeys, (name ?? "").ToLowerInvariant()) >= 0
+                    || string.Equals(name, QuietTimeKey, StringComparison.OrdinalIgnoreCase) || SaverColour(name);
+            };
             SettingsFile.Move = delegate(string file, string name, string value)
             {
                 string side = (Brain.SenpaiOn ? Personalities.SenpaiName : Personalities.PlainName) + "/" + SysLines.FileName;
                 if (!string.Equals(file, side, StringComparison.OrdinalIgnoreCase)) return;
+                if (SaverColour(name)) { PutSaverColour(name, value); return; }
                 string said = (value ?? "").Trim();
-                SetUntested(said.Equals("yes", StringComparison.OrdinalIgnoreCase) || said == "1" || said.Equals("true", StringComparison.OrdinalIgnoreCase));
+                if (string.Equals(name, SysLines.SaverKey, StringComparison.OrdinalIgnoreCase)) SetScreensaver(SysLines.On(said, false));
+                else if (string.Equals(name, SysLines.SaverStyleKey, StringComparison.OrdinalIgnoreCase)) SetSaverStyle(said);
+                else if (string.Equals(name, SysLines.SaverAfterKey, StringComparison.OrdinalIgnoreCase)) SetSaverAfter(Minutes(said));
+                else if (string.Equals(name, SysLines.UntestedKey, StringComparison.OrdinalIgnoreCase))
+                    SetUntested(said.Equals("yes", StringComparison.OrdinalIgnoreCase) || said == "1" || said.Equals("true", StringComparison.OrdinalIgnoreCase));
+                else PutQuiet(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { { name, said } });
             };
             foreach (string path in paths)
             {
                 bool? one = SysLines.TakeUntested(path);
                 if (untestedTaken == null) untestedTaken = one;
+                bool? saver = SysLines.TakeSaver(path);
+                if (saverTaken == null) saverTaken = saver;
+                string[] intros = SysLines.TakeIntros(path);
+                if (introsTaken == null) introsTaken = intros;
+                Dictionary<string, string> picks = SysLines.TakeSaverPicks(path);
+                if (saverPicksTaken == null) saverPicksTaken = picks;
+                Dictionary<string, string> quiet = SysLines.TakeQuiet(path);
+                if (quietTaken == null) quietTaken = quiet;
             }
+            if (preferences != null && quietTaken != null) { PutQuiet(quietTaken); quietTaken = null; }
             // Her sys.md files are tidied before her settings are read at the start; the answer waits for them.
             if (preferences == null) return;
             if (untestedTaken != null && untestedTaken.Value != preferences.LoadUntested) { preferences.LoadUntested = untestedTaken.Value; SavePreferences(); }
             untestedTaken = null;
+            if (saverTaken != null && saverTaken.Value != preferences.ScreensaverOn) { preferences.ScreensaverOn = saverTaken.Value; SavePreferences(); }
+            saverTaken = null;
+            if (introsTaken != null) { preferences.Intros = string.Join(",", introsTaken); SavePreferences(); }
+            introsTaken = null;
+            if (saverPicksTaken != null)
+            {
+                string said;
+                if (saverPicksTaken.TryGetValue(SysLines.SaverStyleKey, out said) && said.Length > 0) preferences.SaverStyle = said;
+                if (saverPicksTaken.TryGetValue(SysLines.SaverAfterKey, out said) && Minutes(said) > 0) preferences.SaverAfter = Minutes(said);
+                SavePreferences();
+            }
+            saverPicksTaken = null;
             Mods.Untested = preferences.LoadUntested;
             if (Mods.Untested) ModGuard.ForgetUnchecked();
         }
 
-        private bool? untestedTaken;
+        private bool? untestedTaken, saverTaken;
+        private string[] introsTaken;
+
+        // One intro on or off in Toggles > Intros; with more than one on she picks one at random.
+        internal bool IntroOn(string name) { return Array.IndexOf(SysLines.Intros(), name) >= 0; }
+
+        internal void SetIntro(string name, bool on)
+        {
+            List<string> picked = new List<string>(SysLines.Intros());
+            picked.Remove(name);
+            if (on) picked.Add(name);
+            preferences.Intros = string.Join(",", picked.ToArray());
+            SavePreferences();
+            if (mainframe != null) mainframe.Sync();
+        }
+        private Dictionary<string, string> saverPicksTaken;
+
+        private static double Minutes(string said)
+        {
+            double minutes;
+            return double.TryParse((said ?? "").Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out minutes) && minutes > 0 ? minutes : 0;
+        }
+
+        // The Screensaver group's style and wait, kept in her settings.
+        internal string SaverStyle { get { return string.IsNullOrEmpty(preferences.SaverStyle) ? SaverLook.Terminals : preferences.SaverStyle; } }
+
+        internal double SaverAfterMinutes { get { return SysLines.SaverAfter; } }
+
+        internal void SetSaverStyle(string style)
+        {
+            foreach (string one in SaverLook.Styles) if (string.Equals(one, (style ?? "").Trim(), StringComparison.OrdinalIgnoreCase)) { preferences.SaverStyle = one; SavePreferences(); return; }
+        }
+
+        internal void SetSaverAfter(double minutes)
+        {
+            if (minutes <= 0) return;
+            preferences.SaverAfter = minutes;
+            SavePreferences();
+        }
+
+        // The Screensaver switch in her Toggles: kept in her settings, and what SysLines.Saver reads.
+        internal bool ScreensaverOn { get { return preferences.ScreensaverOn; } }
+
+        internal void SetScreensaver(bool on)
+        {
+            if (preferences.ScreensaverOn == on) return;
+            preferences.ScreensaverOn = on;
+            SavePreferences();
+            Brain.Log("screensaver", -1, "Switched " + (on ? "on" : "off") + ", saved.");
+            if (!on && SaverShowing) SaverOff();
+            if (mainframe != null) mainframe.Sync();
+        }
+
+        // The screensaver's two colours left sys.md for its fold under ADD-ONS. At her start each sys.md still holding them,
+        // the one in use first, hands them over once; a settings.json from before routes them here too.
+        private void MoveSaverColours()
+        {
+            HashSet<string> put = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string path in SysLines.Copies())
+                foreach (KeyValuePair<string, string> one in SysLines.TakeSaverColours(path))
+                    if (put.Add(one.Key)) PutSaverColour(one.Key, one.Value);
+        }
+
+        private static bool SaverColour(string name)
+        {
+            return string.Equals(name, SysLines.SaverColourKey, StringComparison.OrdinalIgnoreCase) || string.Equals(name, SysLines.SaverGroundKey, StringComparison.OrdinalIgnoreCase);
+        }
+
+        // Its one colour was used by every style, so it goes to the hexagons too.
+        private static void PutSaverColour(string name, string value)
+        {
+            System.Drawing.Color? colour = SysLines.Mixed(value);
+            if (!colour.HasValue) return;
+            Dictionary<string, System.Drawing.Color?> set = new Dictionary<string, System.Drawing.Color?>();
+            if (string.Equals(name, SysLines.SaverGroundKey, StringComparison.OrdinalIgnoreCase)) set["Background"] = colour;
+            else { set["Colour"] = colour; set["Hexagons"] = colour; }
+            AddonColours.Set(AddonColours.Screensaver, set);
+        }
+
+        // Her quiet's lines from a sys.md from before, waiting for her settings to be read; and the name quiet time had
+        // before the quiet min and max hours, in minutes.
+        private Dictionary<string, string> quietTaken;
+        internal const string QuietTimeKey = "quiet time";
+
+        // Quiet lines from an older sys.md, by name, into her settings. An old quiet time in minutes becomes min with max an
+        // hour over it; the stock two hours leaves the stock 1 to 3. Max 0 is until turned off.
+        internal void PutQuiet(Dictionary<string, string> lines)
+        {
+            string said;
+            int min = QuietMinHours, max = QuietMaxHours;
+            if (lines.TryGetValue(QuietTimeKey, out said))
+            {
+                double minutes;
+                if (double.TryParse(said, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out minutes) && minutes > 0 && Math.Abs(minutes - 120) >= 0.5)
+                {
+                    min = Math.Max(1, Math.Min(QuietMostHours - 1, (int)Math.Round(minutes / 60)));
+                    max = min + 1;
+                }
+            }
+            if (lines.TryGetValue(SysLines.QuietMinKey, out said)) min = SysLines.WholeHours(said, min);
+            if (lines.TryGetValue(SysLines.QuietMaxKey, out said)) max = SysLines.WholeHours(said, max);
+            SetQuietHours(min, max);
+            if (lines.TryGetValue(SysLines.QuietCallsKey, out said)) preferences.NoQuietCalls = !SysLines.On(said, true);
+            if (lines.TryGetValue(SysLines.QuietVideoKey, out said)) preferences.NoQuietVideos = !SysLines.On(said, true);
+            if (lines.TryGetValue(SysLines.CallAppsKey, out said)) SetCallApps(said);
+            SavePreferences();
+            if (mainframe != null) mainframe.Sync();
+        }
 
         // The switch in Mods > MODS.
         internal bool UntestedMods { get { return preferences.LoadUntested; } }

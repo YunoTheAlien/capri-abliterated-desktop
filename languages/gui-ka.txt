@@ -204,11 +204,11 @@ Running on this PC	მუშაობს ამ კომპიუტერზ�
 NORMAL	ჩვეულებრივი
 OFF	გამორთული
 Local server address	ადგილობრივი სერვერის მისამართი
-Remember panel position	პანელის მდებარეობის დამახსოვრება
 Custom colours	მორგებული ფერები
 Custom colours...	მორგებული ფერები...
 Choose	არჩევა
-Hers	მისი
+Reset selected colour	არჩეული ფერის გადატვირთვა
+Make a mod	მოდის შექმნა
 Quiet	ჩუმი
 Quiet min	ჩუმი min
 Quiet max	ჩუმი max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	ჩუმი {n}:{n}-მდე
 Quiet until turned off	ჩუმი გამორთვამდე
 Export settings	პარამეტრების ექსპორტი
 Import settings	პარამეტრების იმპორტი
+Save Mainframe position	პანელის მდებარეობის დამახსოვრება

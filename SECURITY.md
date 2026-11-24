@@ -76,20 +76,18 @@ A local brain, her own ears and her local voices stay on your PC. A custom brain
 
 ## Windows or your antivirus warned me
 
-Her Windows builds on GitHub and the website aren't code signed, and each new release starts with no reputation, so you may see **Windows protected your PC**. Press **More info**, then **Run anyway**.
-
-The [Microsoft Store copy](https://apps.microsoft.com/detail/9P0KFRB76X0G) (CapriAI) is signed and checked by Microsoft, so it doesn't get this warning. It updates through the Store.
+This overhaul's builds on GitHub aren't code signed, and each new release starts with no reputation, so you may see **Windows protected your PC**. Press **More info**, then **Run anyway**.
 
 Antivirus apps can flag her too. Taking screenshots, moving the mouse, pressing keys, listening to the mic and starting apps are her job, and they look a lot like what malware does. That usually means a false alarm, but an alert alone can't tell you a file is safe, so check it:
 
-1. Only download her from the [official release page](https://github.com/lachydotmcg/capri-desktop/releases/latest), the [official website](https://capriai.app/) or the [Microsoft Store](https://apps.microsoft.com/detail/9P0KFRB76X0G).
+1. Only download this overhaul from [its release page](https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/latest).
 2. In PowerShell, from your download folder, run:
 
    ```powershell
-   Get-FileHash -LiteralPath .\Capri-Setup.exe -Algorithm SHA256
+   Get-FileHash -LiteralPath .\Capri-Setup-<version>.exe -Algorithm SHA256
    ```
 
-3. Compare the `Hash` with the `Capri-Setup.exe` line in `SHA256SUMS.txt` on the same release. A match means you have the file we published.
+3. Compare the `Hash` with the `Capri-Setup-<version>.exe` line in `SHA256SUMS.txt` on the same release. A match means you have the file we published.
 
 Keep your antivirus on. If it quarantined her and the hash matches, restore that one file.
 

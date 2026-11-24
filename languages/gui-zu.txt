@@ -204,11 +204,11 @@ Running on this PC	Isebenza kule PC
 NORMAL	OLUJWAYELEKILE
 OFF	VALIWE
 Local server address	Ikheli leseva yendawo
-Remember panel position	Khumbula indawo yephaneli
 Custom colours	Imibala yakho
 Custom colours...	Imibala yakho...
 Choose	Khetha
-Hers	Okwakhe
+Reset selected colour	Setha kabusha umbala okhethiwe
+Make a mod	Yenza i-mod
 Quiet	Thula
 Quiet min	Thula min
 Quiet max	Thula max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Thula kuze kube ngu-{n}:{n}
 Quiet until turned off	Thula kuze kucishwe
 Export settings	Thumela izilungiselelo
 Import settings	Ngenisa izilungiselelo
+Save Mainframe position	Khumbula indawo yephaneli

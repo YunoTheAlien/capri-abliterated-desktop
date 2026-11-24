@@ -52,6 +52,8 @@ $cameraFresh = -not ($cameraDlls | Where-Object { -not (Test-Path -LiteralPath $
 if ($cameraFresh -or (& (Join-Path $PSScriptRoot 'build-camera.ps1') -OutputDirectory $camera)) { foreach ($bits in @('64', '32')) { $resources += ('/resource:' + (Join-Path $camera ('CapriCamera' + $bits + '.dll')) + ',Capri.Camera' + $bits + '.dll') } }
 # Mods she carries and lays into her mods folder herself.
 $resources += Get-ChildItem -LiteralPath (Join-Path $root 'mods\door-intro') -Filter 'door-intro.capri-code'  | Sort-Object Name | ForEach-Object { '/resource:' + $_.FullName + ',Capri.Mod.' + $_.Name }
+# Her screensaver, carried and laid the same way.
+$resources += Get-ChildItem -LiteralPath (Join-Path $root 'mods') -Filter 'capri-screensaver.capri-code'  | Sort-Object Name | ForEach-Object { '/resource:' + $_.FullName + ',Capri.Mod.' + $_.Name }
 # And the door's sound and pop-up pictures, which live in the same folder as the door and are laid into its own
 # folder the first time the door is stocked.
 $resources += Get-ChildItem -LiteralPath (Join-Path $root 'mods\door-intro') -File | Where-Object { $_.Extension -ne '.capri-code' }  | Sort-Object Name | ForEach-Object { '/resource:' + $_.FullName + ',Capri.DoorArt.' + $_.Name }
@@ -59,6 +61,23 @@ $resources += Get-ChildItem -LiteralPath (Join-Path $root 'mods\door-intro') -Fi
 $resources += Get-ChildItem -LiteralPath (Join-Path $root 'mods') -File | Where-Object { $_.Name -eq 'startup-intros.capri-code' -or $_.Name -eq 'grammar.capri-code' }  | Sort-Object Name | ForEach-Object { '/resource:' + $_.FullName + ',Capri.Checked.' + $_.Name }
 $resources += Get-ChildItem -LiteralPath (Join-Path $root 'mods\Door2Intro') -Filter 'door2-intro.capri-code'  | Sort-Object Name | ForEach-Object { '/resource:' + $_.FullName + ',Capri.Mod.' + $_.Name }
 $resources += Get-ChildItem -LiteralPath (Join-Path $root 'mods\Door2Intro') -File | Where-Object { $_.Extension -ne '.capri-code' }  | Sort-Object Name | ForEach-Object { '/resource:' + $_.FullName + ',Capri.Door2Art.' + $_.Name }
+# Spout2's SpoutLibrary (BSD 2-Clause), for Transparent through OBS's Spout2 plugin; laid in her folder when used.
+$spout = Join-Path $root 'native\spout\SpoutLibrary.dll'
+if (Test-Path -LiteralPath $spout) { $resources += ('/resource:' + $spout + ',Capri.Spout.SpoutLibrary.dll') }
+# The modding guide, laid into her mods folder for Make a mod.
+$resources += ('/resource:' + (Join-Path $root 'mods\MODDING.md') + ',Capri.Modding.md')
+# Her stories, carried so a new install has them with nothing fetched. Only where the pack sits
+# beside the source; a build without it fetches them from its release instead.
+$lorePack = Join-Path (Split-Path -Parent $root) 'packs\lore.md'
+if (Test-Path -LiteralPath $lorePack) {
+    # Compressed: a third of the size, and her prose isn't left as plain strings in the exe.
+    $loreGz = Join-Path $out 'lore.md.gz'
+    $plain = [IO.File]::ReadAllBytes($lorePack)
+    $packed = [IO.File]::Create($loreGz)
+    $zip = New-Object IO.Compression.GZipStream($packed, [IO.Compression.CompressionLevel]::Optimal)
+    $zip.Write($plain, 0, $plain.Length); $zip.Dispose(); $packed.Dispose()
+    $resources += ('/resource:' + $loreGz + ',Capri.Lore.md.gz')
+}
 # Her menus and labels in other languages, plain files of English and translation, built in as the defaults.
 $resources += Get-ChildItem -LiteralPath (Join-Path $root 'languages') -Filter 'gui-*.txt' -File -ErrorAction SilentlyContinue  | Sort-Object Name | ForEach-Object { '/resource:' + $_.FullName + ',Capri.Gui.' + $_.Name.Substring(4) }
 # And her prank sounds, laid beside her in sounds\pranks.
@@ -68,12 +87,28 @@ if (-not $Store) { $resources += ('/resource:' + (Join-Path $root 'assets\vbcabl
 $resources += Get-ChildItem -LiteralPath (Join-Path $root 'assets\sprites') -Filter *.png  | Sort-Object Name | ForEach-Object { '/resource:' + $_.FullName + ',Capri.Sprite.' + $_.Name }
 $resources += Get-ChildItem -LiteralPath (Join-Path $root 'assets\emotes') -Filter *.zip  | Sort-Object Name | ForEach-Object { '/resource:' + $_.FullName + ',Capri.Emote.' + $_.Name }
 $resources += Get-ChildItem -LiteralPath (Join-Path $root 'assets\voice') -Filter *.wav  | Sort-Object Name | ForEach-Object { '/resource:' + $_.FullName + ',Capri.Voice.' + $_.Name }
-$sources = @('Capri', 'Asides', 'Bolts', 'Commentary', 'Lookout', 'Brain', 'Leaks', 'PlanBrain', 'Workspace', 'WorkspaceWindow', 'WorkspaceParts', 'WorkspaceLook', 'WorkspaceWords', 'Talk', 'Ribbons', 'Emotes', 'Mainframe', 'MainframeKeys', 'MainframeMods', 'MainframeModsWindow', 'MainframePlugins', 'MainframeMail', 'FullScreenChecks', 'MainframeSlide', 'MainframeSearch', 'MainframeMemory', 'MainframeGifs', 'Gifs', 'GifChecks', 'MainframeColours', 'ColourChecks', 'Mods', 'PluginJson', 'PluginFloor', 'PluginMods', 'Mcp', 'McpOnline', 'McpSignIn', 'PluginSettings', 'Plugins', 'StarterPlugins', 'MailBox', 'MailMime', 'MailSmtp', 'MailTools', 'MailChecks', 'Stamps', 'Tamagotchi', 'MenuPlacement', 'PatTrace', 'ModDirectory', 'ModApi', 'CodeMods', 'ModHooks', 'ModMusic', 'SoundsLike', 'SkinMods', 'SkillMods', 'ArtColors', 'MainframeTips', 'TipChecks', 'MediumChecks', 'FreeKeyChecks', 'FirstRun', 'FirstRunChecks', 'Neon', 'Fonts', 'Glyphs', 'Layout', 'SlimBar', 'LogSheet', 'Logs', 'LogChecks', 'Notice', 'Engine', 'Ledges', 'Voice', 'Ears', 'MicMix', 'CableSetup', 'Packaged', 'Dictation', 'HearingStatus', 'Agent', 'Hands', 'GameHud', 'Computer', 'TreeEyes', 'TreeEyesChecks', 'Arrange', 'Mixer', 'Usage', 'Network', 'Play', 'VoicePack', 'Startup', 'Presence', 'Player', 'Ocr', 'GameEars', 'GameNotes', 'GameKeys', 'Frames', 'Reminders', 'Weather', 'WeatherSettings', 'Doomscroll', 'DoomscrollSettings', 'ScrollForMe', 'GameSense', 'GameWatch', 'SelfKnow', 'Care', 'Clips', 'ClipSettings', 'ClipChecks', 'Chimes', 'ChimeSettings', 'Minis', 'Chess', 'ChessBoard', 'ChessTalk', 'Files', 'FileFinder', 'Websites', 'Ink', 'Clones', 'ChaosScreen', 'Screensaver', 'Icons', 'FollowUps', 'Conversation', 'AddonColours', 'WatchAlong', 'CallMode', 'Husk', 'CallEars', 'CallPanel', 'FileEditor', 'FileChecks', 'Reactions', 'ToolChecks', 'LeakChecks', 'ErrorChecks', 'Remote', 'RemoteCrypto', 'RemoteLink', 'RemoteQr', 'RemoteVectors', 'RemoteBrainKeys', 'RemoteBrains', 'RemoteChat', 'MainframeRemote', 'MainframeSystem', 'SystemUse', 'ResourceChecks', 'RemoteScreen', 'RemoteCall', 'RemoteLive', 'SmokeRun', 'Twitch', 'Chatters', 'Playlist', 'Commands', 'VirtualCamera', 'CapriCamera', 'StreamSafe', 'SysLines', 'Personalities', 'Hours', 'Away', 'Favourites', 'Probes', 'Working', 'Them', 'Dynamics', 'Tilt', 'Mood', 'Sayings', 'VoiceProfiles', 'Interests', 'LineFile', 'Moments', 'Angles', 'Lore', 'Touch', 'Notes', 'Lint', 'Grammar', 'Glow', 'Opening', 'PanelSpot', 'Panels', 'Bookmarks', 'Aloud', 'Proof', 'QuietRow', 'Renew', 'SettingsFile', 'SettingsTransfer', 'RoomHost', 'Room', 'SkinBands', 'Blends', 'Tucked', 'Slots', 'Zones', 'Legacy', 'Extended', 'Gui', 'Codex', 'CodexSum', 'LoreSum', 'Library', 'Setup', 'AssemblyInfo') | ForEach-Object { Join-Path $root ('app\' + $_ + '.cs') }
+$sources = @('Capri', 'SimTime', 'MainframeToggles', 'Streak', 'GameClicks', 'GameInput', 'LanguagePair', 'MainframeStreaming', 'MainframeModHelper', 'SpoutSender', 'ClearFrame', 'KeyChecks', 'LangCopies', 'FolderHold', 'Asides', 'Bolts', 'Commentary', 'Lookout', 'Brain', 'Leaks', 'PlanBrain', 'Workspace', 'WorkspaceWindow', 'WorkspaceParts', 'WorkspaceLook', 'WorkspaceWords', 'Talk', 'Ribbons', 'Emotes', 'Mainframe', 'MainframeKeys', 'MainframeMods', 'MainframeModsWindow', 'MainframePlugins', 'MainframeMail', 'FullScreenChecks', 'MainframeSlide', 'MainframeSearch', 'MainframeMemory', 'MainframeGifs', 'Gifs', 'GifChecks', 'MainframeColours', 'ColourChecks', 'ModGuide', 'WorkApps', 'NameLines', 'FileSlots', 'ModConflicts', 'ModActHooks', 'Mods', 'PluginJson', 'PluginFloor', 'PluginMods', 'Mcp', 'McpOnline', 'McpSignIn', 'PluginSettings', 'Plugins', 'StarterPlugins', 'MailBox', 'MailMime', 'MailSmtp', 'MailTools', 'MailChecks', 'Stamps', 'Tamagotchi', 'MenuPlacement', 'PatTrace', 'ModDirectory', 'ModApi', 'CodeMods', 'ModReadout', 'ModHooks', 'ModMusic', 'SoundsLike', 'SkinMods', 'SkillMods', 'ArtColors', 'MainframeTips', 'TipChecks', 'MediumChecks', 'FreeKeyChecks', 'FirstRun', 'FirstRunChecks', 'Onboarding', 'Neon', 'Fonts', 'Glyphs', 'Layout', 'SlimBar', 'LogSheet', 'Logs', 'LogChecks', 'Notice', 'Engine', 'Ledges', 'Voice', 'Ears', 'MicMix', 'MicMeter', 'ListenThrough', 'CableSetup', 'Packaged', 'Dictation', 'HearingStatus', 'Agent', 'Hands', 'GameHud', 'Computer', 'TreeEyes', 'TreeEyesChecks', 'Arrange', 'Mixer', 'Usage', 'Network', 'Play', 'VoicePack', 'Startup', 'Presence', 'Player', 'Ocr', 'GameEars', 'GameNotes', 'GameKeys', 'Frames', 'Reminders', 'Weather', 'WeatherSettings', 'Doomscroll', 'DoomscrollSettings', 'ScrollForMe', 'GameSense', 'GameWatch', 'SelfKnow', 'Care', 'Clips', 'ClipSettings', 'ClipChecks', 'Chimes', 'ChimeSettings', 'Minis', 'Chess', 'ChessBoard', 'ChessTalk', 'Files', 'FileFinder', 'Websites', 'Ink', 'Clones', 'ChaosScreen', 'Screensaver', 'Icons', 'FollowUps', 'Conversation', 'AddonColours', 'WatchAlong', 'CallMode', 'Husk', 'CallEars', 'CallPanel', 'FileEditor', 'FileChecks', 'Reactions', 'ToolChecks', 'EverydayJobs', 'LeakChecks', 'ErrorChecks', 'Remote', 'RemoteCrypto', 'RemoteLink', 'RemoteQr', 'RemoteVectors', 'RemoteBrainKeys', 'RemoteBrains', 'RemoteChat', 'MainframeRemote', 'MainframeSystem', 'SystemUse', 'ResourceChecks', 'RemoteScreen', 'RemoteCall', 'RemoteLive', 'SmokeRun', 'Twitch', 'Chatters', 'Playlist', 'Commands', 'VirtualCamera', 'CapriCamera', 'StreamSafe', 'SysLines', 'Personalities', 'Hours', 'Away', 'Favourites', 'Probes', 'Working', 'Them', 'Dynamics', 'Tilt', 'Mood', 'Acts', 'ActChecks', 'Sayings', 'VoiceProfiles', 'Interests', 'LineFile', 'Moments', 'Angles', 'Lore', 'Touch', 'Notes', 'Lint', 'Grammar', 'Glow', 'Opening', 'PanelSpot', 'Panels', 'Bookmarks', 'Aloud', 'Proof', 'QuietRow', 'Renew', 'SettingsFile', 'SettingsTransfer', 'RoomHost', 'Room', 'SkinBands', 'Blends', 'Tucked', 'Slots', 'Zones', 'Legacy', 'Extended', 'Gui', 'Codex', 'CodexSum', 'LoreSum', 'Library', 'Setup', 'AssemblyInfo') | ForEach-Object { Join-Path $root ('app\' + $_ + '.cs') }
 # Any *.local.cs in app\ is compiled in when present; none are named here. A build without them is the ordinary one.
 $local = @(Get-ChildItem -LiteralPath (Join-Path $root 'app') -Filter '*.local.cs' -File -ErrorAction SilentlyContinue | Sort-Object Name | ForEach-Object { $_.FullName })
 # Silent when there is nothing to compile in: an ordinary build says nothing about what it does not have.
 $stable = @()
 if ($deterministic) { $stable = @('/deterministic', '/langversion:5', ('/pathmap:' + $root + '=.')) }
+# A test build is the number after version.txt with TEST on the end, like 0.9.434TEST; at the 0.9.1 placeholder every
+# release looked newer. build-capri.ps1 stamps first, so only an unstamped build gets this, on a copy.
+$info = Join-Path $root 'app\AssemblyInfo.cs'
+$counter = Join-Path (Split-Path -Parent $root) 'version.txt'
+$infoText = [IO.File]::ReadAllText($info)
+if ($infoText -match 'AssemblyFileVersion\("0\.9\.1"\)' -and (Test-Path -LiteralPath $counter)) {
+    $last = [regex]::Match([IO.File]::ReadAllText($counter), '(\d+)\.(\d+)\.(\d+)')
+    if ($last.Success) {
+        $patch = [int]$last.Groups[3].Value + 1
+        $testVersion = $last.Groups[1].Value + '.' + $last.Groups[2].Value + '.' + $patch.ToString('000') + 'TEST'
+        $stampedInfo = Join-Path $out 'AssemblyInfo.test.cs'
+        [IO.File]::WriteAllText($stampedInfo, ($infoText -replace 'AssemblyFileVersion\("0\.9\.1"\)', ('AssemblyFileVersion("' + $testVersion + '")')), (New-Object Text.UTF8Encoding $false))
+        $sources = @($sources | ForEach-Object { if ($_ -eq $info) { $stampedInfo } else { $_ } })
+        Write-Output "Version  $testVersion"
+    }
+}
 # Handed over in a response file: the sources and resources alone come near Windows' 32,767 character limit for a
 # command line, and a build from a longer folder went past it.
 $arguments = @($shared + $stable + $references + $resources + @('/unsafe+', ('/out:' + $app)) + $sources + $local)

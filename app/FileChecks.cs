@@ -86,8 +86,8 @@ namespace CapriDesktop
 
                 // Opening: from her right-click menu, and with the real clock.
                 ToolStripMenuItem item = null;
-                foreach (ToolStripItem top in menu.Items) if (top.Text == "MD editor") item = top as ToolStripMenuItem;
-                if (item == null) throw new Exception("Her right-click menu has no File editor.");
+                foreach (ToolStripItem top in optionsItem.DropDownItems) if (top.Text == "MD editor") item = top as ToolStripMenuItem;
+                if (item == null) throw new Exception("Her right-click menu has no MD editor under Capri options.");
                 if (fileEditor != null && !fileEditor.Over) throw new Exception("A file editor was already open.");
                 Stopwatch timed = Stopwatch.StartNew();
                 item.PerformClick();
@@ -502,6 +502,38 @@ namespace CapriDesktop
                 panel.Open(0);
                 panel.Seek(59);
                 using (Bitmap picture = panel.Picture()) picture.Save(Path.Combine(output, "file-editor-150-laptop.png"), ImageFormat.Png);
+                // Its colours: Night City, the Black look, and a frame and text field of their own, both see-through.
+                List<string> looks = new List<string>();
+                Func<string, string> shoot = delegate(string name)
+                {
+                    using (Bitmap picture = panel.Picture())
+                    using (MemoryStream png = new MemoryStream())
+                    {
+                        picture.Save(Path.Combine(output, "file-editor-colours-" + name + ".png"), ImageFormat.Png);
+                        picture.Save(png, ImageFormat.Png);
+                        return Convert.ToBase64String(png.ToArray());
+                    }
+                };
+                try
+                {
+                    looks.Add(shoot("night-city"));
+                    Neon.Repaint(1);
+                    looks.Add(shoot("black"));
+                    Neon.Repaint(0);
+                    Neon.Theirs("editor frame", Color.FromArgb(200, 40, 160, 255));
+                    Neon.Theirs("editor field", Color.FromArgb(120, 20, 30, 60));
+                    Neon.Again();
+                    looks.Add(shoot("custom"));
+                }
+                finally
+                {
+                    Neon.Theirs("editor frame", null);
+                    Neon.Theirs("editor field", null);
+                    Neon.Repaint(0);
+                    Neon.Again();
+                }
+                if (looks[0] == looks[1] || looks[0] == looks[2] || looks[1] == looks[2]) throw new Exception("The file editor drew the same in Night City, the Black look and colours of their own.");
+                checks.Add("PASS the file editor follows the look and its own fold in Custom colours: Night City, Black and a see-through frame and text field each draw differently");
                 FinishPanel(panel);
                 panel = HeldPanel(1, 0);
                 int shot = 0;

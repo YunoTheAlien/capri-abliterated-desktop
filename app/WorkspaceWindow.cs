@@ -1869,7 +1869,7 @@ namespace CapriDesktop
                 {
                     if (Picture != null) e.Graphics.DrawImageUnscaled(Picture, 0, 0);
                     else e.Graphics.Clear(Neon.Ground);
-                    using (Brush dim = new SolidBrush(Color.FromArgb(170, 4, 2, 8))) e.Graphics.FillRectangle(dim, ClientRectangle);
+                    using (Brush dim = new SolidBrush(Color.FromArgb(170, Neon.Tone(4, 2, 8)))) e.Graphics.FillRectangle(dim, ClientRectangle);
                 }
 
                 protected override void Dispose(bool disposing)
@@ -2997,7 +2997,7 @@ namespace CapriDesktop
                 return lines.Count > 0;
             }
 
-            private static readonly Color Added = Color.FromArgb(30, 240, 138);
+            private static Color Added { get { return Neon.Tone(30, 240, 138); } }
             private static Color Removed { get { return Neon.Hot; } }
 
             private static string Text(Dictionary<string, object> map, string key)

@@ -1,10 +1,12 @@
 // capri-mod: 1
 // id: door-intro
 // name: Door Intro
-// version: 1.10.0
+// version: 1.12.0
 // author: Yuno
 // description: A door of hexagons builds from the middle out where she lands while alerts pop up on every screen, opens, and she wakes in it.
 // intro: yes
+// permissions: settings
+// requires: api 5
 
 using System;
 using System.Collections.Generic;
@@ -53,7 +55,7 @@ public class DoorIntro : ICapriMod, ICapriIntro, ICapriIntroNames, ICapriIntroSt
     }
 
     private ICapriHost capri;
-    // Switched on in sys.md, and the test menu's one-shot play.
+    // Switched on in Toggles > Intros, and the test menu's one-shot play.
     private bool on, once;
     private readonly List<Hex> door = new List<Hex>();
     private float doorReach;
@@ -78,9 +80,15 @@ public class DoorIntro : ICapriMod, ICapriIntro, ICapriIntroNames, ICapriIntroSt
     // Its colours, named for Custom colours and read back, as any mod's are.
     private void Tint() { Alert = capri.Ui.Colour("Hexagons", AlertUsual); }
 
-    // sys.md's start-up intro list, with no ">" in front of door.
+    // Toggles > Intros in her settings; an older Capri without it still has sys.md's start-up intro list.
     private bool Switched()
     {
+        try
+        {
+            bool? asked = capri.Settings.IsOn("intro_door");
+            if (asked != null) return asked.Value;
+        }
+        catch (Exception error) { capri.Log(error.Message); }
         try
         {
             string file = SysFile(Home());
@@ -123,7 +131,7 @@ public class DoorIntro : ICapriMod, ICapriIntro, ICapriIntroNames, ICapriIntroSt
         if (tag != null) { tag.Dispose(); tag = null; }
     }
 
-    // An option: it plays only when switched on in sys.md or asked for. Door 2 holds the first start.
+    // An option: it plays only when switched on in Toggles > Intros or asked for. Door 2 holds the first start.
     public double Seconds { get { return on || once ? Length : 0; } }
 
     public void Begin(Bitmap desktop, Rectangle screen, Rectangle her)

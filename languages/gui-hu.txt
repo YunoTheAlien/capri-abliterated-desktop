@@ -204,11 +204,11 @@ Running on this PC	Fut ezen a PC-n
 NORMAL	NORMÁL
 OFF	KI
 Local server address	Helyi szerver címe
-Remember panel position	Panel helyének megjegyzése
 Custom colours	Egyéni színek
 Custom colours...	Egyéni színek...
 Choose	Kiválasztás
-Hers	Az övéi
+Reset selected colour	Kijelölt szín alaphelyzetbe
+Make a mod	Mod készítése
 Quiet	Csend
 Quiet min	Csend min
 Quiet max	Csend max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Csend {n}:{n}-ig
 Quiet until turned off	Csend kikapcsolásig
 Export settings	Beállítások exportálása
 Import settings	Beállítások importálása
+Save Mainframe position	Panel helyének megjegyzése

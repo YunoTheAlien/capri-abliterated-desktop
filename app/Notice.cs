@@ -165,13 +165,14 @@ namespace CapriDesktop
         private readonly Plate close;
 
         // Asks and waits. Only Yes returns true. If her own window can't show, Windows' box asks instead, with No picked.
-        internal static bool Ask(IWin32Window owner, string message, string caption)
+        // Yes and No can carry words of their own, such as Clear memory and Cancel.
+        internal static bool Ask(IWin32Window owner, string message, string caption, string yesText = "Yes", string noText = "No")
         {
             DialogResult answer = DialogResult.None;
             try
             {
                 Control near = owner as Control;
-                using (Question question = new Question(message, caption, near != null && near.IsHandleCreated ? near.DeviceDpi / 96f : 0))
+                using (Question question = new Question(message, caption, near != null && near.IsHandleCreated ? near.DeviceDpi / 96f : 0, yesText, noText))
                 {
                     question.Place(owner);
                     SystemSounds.Exclamation.Play();
@@ -191,7 +192,7 @@ namespace CapriDesktop
         }
 
         // Scale 0 takes her own screen's; the checks pass 1.25 or 1.5 to see her at other sizes on this one.
-        internal Question(string message, string caption, float scale)
+        internal Question(string message, string caption, float scale, string yesText = "Yes", string noText = "No")
         {
             this.message = message;
             this.caption = caption;
@@ -223,8 +224,8 @@ namespace CapriDesktop
             Controls.Add(title);
             body = new Lines(message, words, s);
             Controls.Add(body);
-            yes = Key("Yes", Neon.Hot, DialogResult.Yes);
-            no = Key("No", Neon.Cyan, DialogResult.No);
+            yes = Key(yesText, Neon.Hot, DialogResult.Yes);
+            no = Key(noText, Neon.Cyan, DialogResult.No);
             close = new Plate();
             close.Glyph = 2;
             close.AccessibleName = "Close";
@@ -271,7 +272,7 @@ namespace CapriDesktop
             title.MaximumSize = new Size(Math.Max(1, close.Left - Px(10) - inset - mark), 0);
             title.Location = new Point(inset + mark, Px(18));
             int top = Math.Max(title.Bottom, close.Bottom) + Px(12);
-            int keyWide = Px(96), keyTall = Px(30);
+            int keyWide = Math.Max(Px(96), Math.Max(TextRenderer.MeasureText(yes.Text, keys).Width, TextRenderer.MeasureText(no.Text, keys).Width) + Px(28)), keyTall = Px(30);
             int room = Math.Max(words.Height * 3, area.Height - 2 * margin - top - Px(22) - keyTall - Px(22));
             int wrap = wide - 2 * inset;
             int tall = body.Measure(wrap);
@@ -390,7 +391,8 @@ namespace CapriDesktop
         private bool Answer(char key)
         {
             if ((ModifierKeys & Keys.Control) != 0) return false;
-            if (key == 'y' || key == 'Y') { yes.PerformClick(); return true; }
+            // Y answers only a plain Yes; a key with words of its own, like Clear memory, takes a click.
+            if ((key == 'y' || key == 'Y') && yes.Text == "Yes") { yes.PerformClick(); return true; }
             if (key == 'n' || key == 'N') { no.PerformClick(); return true; }
             if ((key == 'd' || key == 'D') && body.Folds) { Refold(); return true; }
             return false;

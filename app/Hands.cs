@@ -127,6 +127,13 @@ namespace CapriDesktop
         internal ToolArguments Copy() { return (ToolArguments)MemberwiseClone(); }
     }
 
+    // The Start menu's list failed or took too long, with the games her launchers list still found (Lachu).
+    internal sealed class PartialApps : Exception
+    {
+        internal readonly List<InstalledApp> Apps;
+        internal PartialApps(Exception missed, List<InstalledApp> apps) : base(missed.Message, missed) { Apps = apps; }
+    }
+
     internal sealed class InstalledApp
     {
         internal readonly string Name;
@@ -154,6 +161,10 @@ namespace CapriDesktop
     // Passwords and card numbers they type themselves; toggle 13 keeps personal details out of her memories.
     internal static class Security
     {
+        // Set while a held call runs on their yes, so a plug-in runs it even when the same call just ran (Lachu).
+        [ThreadStatic] private static bool resuming;
+        internal static bool Resuming { get { return resuming; } }
+
 #if CROSS
         internal const int Open = 0, Media = 1, Shortcuts = 2, Windows = 3, Power = 4, Mouse = 5, Sends = 6, Pays = 7, Unasked = 8, Secrets = 9, Wake = 10, Friends = 11, Personal = 12, ModTools = 13, Terminal = 14, Count = 15;
 #else
@@ -686,8 +697,10 @@ namespace CapriDesktop
                 {
                     lock (gate) cleared.Add(call.Asked);
                     string result;
+                    bool was = resuming;
+                    resuming = true;
                     try { result = run(call.Tool, call.Args); }
-                    finally { lock (gate) cleared.Remove(call.Asked); }
+                    finally { resuming = was; lock (gate) cleared.Remove(call.Asked); }
                     if (!string.IsNullOrEmpty(result)) done.Add(Said(result));
                 }
                 string finished = done.Count == 0 ? "Done." : string.Join(" ", done.ToArray());
@@ -1160,9 +1173,15 @@ namespace CapriDesktop
         // Chat when her brain said "act" but her hands found nothing to do: she just answers.
         internal static string ChatOnly { get { return KitFor().ChatOnly; } }
 
-        // Her chat brain's one-word answer that this message is a job, which works in every language. A small model can run on
-        // after it, like "act Wood? Don't know", so a lowercase act with a capital after it counts too.
-        internal static bool Handed(string reply) { return Regex.IsMatch(reply ?? "", @"^\W*act\W*($|\n)", RegexOptions.IgnoreCase) || Regex.IsMatch(reply ?? "", @"^\W*act\s+\p{Lu}"); }
+        // Her chat brain's one-word answer that a message is a job, in any language. A lowercase act counts with words
+        // after it from a small model, or alone after her last sentence; get your act together never ends a sentence
+        // with it alone.
+        internal static bool Handed(string reply)
+        {
+            string said = reply ?? "";
+            return Regex.IsMatch(said, @"^\W*act\W*($|\n)", RegexOptions.IgnoreCase) || Regex.IsMatch(said, @"^\W*act\s+\p{Lu}")
+                || Regex.IsMatch(said, @"(?:[.!?\u2026]|\n)\s*act\W*$", RegexOptions.IgnoreCase);
+        }
 
         // On a strong brain she works a job out herself (a tester). She has the tools, so she decides, one step at a
         // time, and sees what each step did before the next.
@@ -1260,7 +1279,7 @@ namespace CapriDesktop
         // Mainframe part. Keys, brains and SECURITY's switches are never here (Lachy).
         internal static readonly string[,] OwnSwitches =
         {
-            { "voice", "my voice", "Voice" }, { "quiet", "Quiet", "Capri" }, { "mic", "my voice chat mic", "Voice" }, { "check_ins", "Check in on me", "Capri" }, { "wander", "Wander", "Moves" },
+            { "voice", "my voice", "Voice" }, { "quiet", "Quiet timer", "Capri" }, { "mic", "my voice chat mic", "Voice" }, { "check_ins", "Check in on me", "Capri" }, { "wander", "Wander", "Moves" },
             { "clip_my_games", "Clip my games", "Clips" }, { "save_big_moments", "Save big moments", "Clips" }, { "live_reactions", "Live reactions", "Games" }, { "gaming_mode", "Gaming Mode", "Games" }, { "hologram", "Hologram mode", "Capri" },
             { "watch_my_screen", "Watch my screen", "Watch" }, { "game_comments", "Game comments", "Games" },
             { "dance_to_music", "Dance to music", "Moves" }, { "head_pats", "Head pats", "Capri" }, { "chaos_when_upset", "Chaos when upset", "Capri" }, { "legacy_stand", "Legacy stand", "Capri" }, { "sit_on_windows", "Sit on windows", "Moves" }, { "always_on_top", "Always on top", "Capri" },
@@ -1285,10 +1304,11 @@ namespace CapriDesktop
             { "care_meals", "Meals interval", "Capri" }, { "care_long_game", "Game break interval", "Capri" }, { "care_boredom", "Bored interval", "Capri" },
             { "voice_pitch", "my voice's pitch", "Voice" }, { "voice_robot", "Voice robot", "Voice" }, { "voice_glitch", "Voice glitch", "Voice" },
             { "layer_1_pitch", "Layer 1 pitch", "Voice" }, { "layer_1_delay", "Layer 1 delay", "Voice" }, { "layer_2_pitch", "Layer 2 pitch", "Voice" }, { "layer_2_delay", "Layer 2 delay", "Voice" },
-            { "sounds", "Sound effects", "Voice" }, { "mainframe_size", "Mainframe size", "Capri" }, { "perch_fps", "Perch frame rate", "Habits" }, { "language", "Language", "Brain" }, { "reply_limit", "Max reply", "Brain" },
+            { "sounds", "Sound effects", "Voice" }, { "mainframe_size", "Mainframe size", "Capri" }, { "perch_fps", "Perch frame rate", "Habits" }, { "language", "I speak", "Voice" }, { "reply_limit", "Max reply", "Brain" },
             { "game_comments", "Game comments pace", "Games" }, { "clip_length", "Default clip length", "Clips" }, { "clip_fps", "Clip frame rate", "Clips" }, { "clip_resolution", "Clip resolution", "Clips" }, { "clip_bitrate", "Clip bitrate", "Clips" },
             { "typing_sound", "Typing sound mode", "Voice" }, { "mainframe_colours", "Mainframe colours", "Capri" }, { "power_saver", "Power saver", "Habits" }, { "music_app", "Music app", "Habits" },
-            { "pat_stroke", "Pat stroke", "Capri" }, { "chime_volume", "Chime volume", "Sounds" }, { "chime_set", "Chime sound set", "Sounds" }
+            { "pat_stroke", "Pat stroke", "Capri" }, { "chime_volume", "Chime volume", "Sounds" }, { "chime_set", "Chime sound set", "Sounds" },
+            { "mic_sensitivity", "Mic sensitivity", "Voice" }, { "reply_language", "She answers in", "Voice" }
         };
         internal static readonly string[][] OwnSteps =
         {
@@ -1317,7 +1337,8 @@ namespace CapriDesktop
             new[] { "Off", "Events only", "Chatty" }, new[] { "15 s", "30 s", "45 s", "1 min", "1.5 min", "2 min" }, new[] { "Up to 15 fps", "Up to 24 fps", "Up to 30 fps", "Up to 60 fps" },
             new[] { "Auto", "Up to 480p", "Up to 720p", "Up to 1080p" }, new[] { "Auto", "2 Mbps", "4 Mbps", "8 Mbps", "12 Mbps", "20 Mbps" }, new[] { "Auto", "On", "Off" }, new[] { "Night City", "Black", "White", "Grey" },
             new[] { "Off", "In games", "Always" }, MusicSteps(), new[] { "Short", "Medium", "Long" },
-            new[] { "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, new[] { "Glass", "Shard", "Burst", "Crush", "Pulse", "Air" }
+            new[] { "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, new[] { "Glass", "Shard", "Burst", "Crush", "Pulse", "Air" },
+            new[] { "Auto", "-54 dB", "-48 dB", "-42 dB", "-36 dB", "-30 dB", "-24 dB", "-18 dB", "-12 dB", "-6 dB", "0 dB" }, AnswerSteps()
         };
         // What each step of a slider stands for, where its steps are times, rates or percents, so set takes 45 s or 720p as well.
         private static readonly Dictionary<string, int[]> OwnValues = new Dictionary<string, int[]>
@@ -1375,6 +1396,14 @@ namespace CapriDesktop
             for (int i = 0; i < steps.Length; i++) steps[i] = pitch ? VoiceFx.Layering.PitchName(LayerPitchAt(i)) : VoiceFx.Layering.DelayName(LayerDelayAt(i));
             return steps;
         }
+        // She answers in: the same as Language, Auto to match each message, then each of her languages (Lachu).
+        private static string[] AnswerSteps()
+        {
+            List<string> steps = new List<string> { LanguagePair.SameName, LanguagePair.Auto };
+            steps.AddRange(LanguageSteps());
+            return steps.ToArray();
+        }
+
         private static string[] LanguageSteps()
         {
             string[] steps = new string[Brain.Languages.GetLength(0)];
@@ -1511,6 +1540,7 @@ namespace CapriDesktop
             if (name.StartsWith("layer_", StringComparison.Ordinal)) return name.EndsWith("pitch", StringComparison.Ordinal) ? "-12 to +12 in 0.5 semitones; Same is 0" : "0 to 250 ms in 5 ms steps";
 #endif
             if (name == "language") return "a language's name in English, like Spanish or Japanese";
+            if (name == "reply_language") return "the language you answer in, like \"talk to me in Spanish\": " + LanguagePair.SameName + ", Auto for whatever language each message is in, or a language's name in English";
             return string.Join("|", steps);
         }
         private static string Quoted(List<string> names) { return string.Join(",", names.ConvertAll(delegate(string name) { return Voice.Quote(name); }).ToArray()); }
@@ -2239,6 +2269,7 @@ namespace CapriDesktop
 
         private static string DoTool(string tool, ToolArguments args)
         {
+            if (RunSeal.On) return RunSeal.Record("hands " + tool);
             if (args == null) args = new ToolArguments();
             if (!string.IsNullOrEmpty(args.Choose)) return AskWhich(args.Choose);
             if (args.Answers) choosing = null;
@@ -3468,6 +3499,32 @@ namespace CapriDesktop
             return Promise.IsMatch(plain) || Offered.IsMatch(plain);
         }
 
+        // "Hold on, I'm checking it" or "timer's set" with no tool called: a job she says is under way and isn't.
+        private const string Onto = @"(\s+(up|on|in|into|at|for|through|over|your|the|that|this|those|these|it|what|if|whether|a|an|my|how)\b|\s+\w+'s\b)";
+        private static readonly Regex Ongoing = new Regex(@"^\W*((ok|okay|sure|alright|bet|yeah|yep|got it|on it)[,.!\s\u2014\u2013-]+)*((choom|chooms)[,.!\s\u2014\u2013-]+)?(hold on|hang on|one sec(ond)?|just a sec(ond)?|gimme a sec|give me (a|one) (sec(ond)?|moment|min(ute)?))[,.!\s\u2014\u2013-]+((choom|chooms)[,.!\s\u2014\u2013-]+)?(i'?m|let me|lemme|i'?ll)\b" +
+            @"|\b(let me|lemme|let'?s|i'?ll|i will|i'?m (gonna|going to|about to))\s+(\w+\s+){0,2}?(check|take a look|have a look|look|find|dig|hunt|scan|grab|pull|set|start|lock|peek|poke|track down)" + Onto +
+            @"|\bi'?m\s+(now\s+)?(checking|taking a look|having a look|looking|pulling|digging|hunting|scanning|grabbing|setting|starting|locking|finding|searching|peeking|poking|tracking down)" + Onto +
+            @"|^\W*((ok|okay|sure|alright|bet|yeah|yep|got it|on it)[,.!\s\u2014\u2013-]+)*((choom|chooms)[,.!\s\u2014\u2013-]+)?(checking|digging|hunting|scanning|pulling|bringing|grabbing|setting|starting|locking|searching|tracking down)" + Onto +
+            @"|\b(timer|reminder|alarm)('s| is| are)\s+(set|ticking|running|going|on)\b|\b(minutes?|seconds?|hours?) on the clock\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        internal static bool Underway(string said) { return Ongoing.IsMatch((said ?? "").Replace('\u2019', '\'')); }
+
+        // A reply that only says their ask back ("pause the music"), or writes one of her tools out as text ("media: pause"),
+        // is a job her brain left undone.
+        internal static bool Echoed(string reply, string asked)
+        {
+            string said = Bare(Regex.Replace(reply ?? "", @"^\s*\[[^\]]{1,40}\]\s*", "")), wanted = Bare(asked);
+            if (said.Length == 0 || wanted.Length == 0) return false;
+            if (said.Split(' ').Length >= 2 && (said == wanted || wanted.Contains(said) && said.Length * 2 >= wanted.Length)) return true;
+            Match written = Regex.Match(reply ?? "", @"^\s*([a-z]+(?:_[a-z]+)*)\s*(\(|:|\{)");
+            if (!written.Success) return false;
+            for (int i = 0; i < Specs.GetLength(0); i++) if (Specs[i, 0] == written.Groups[1].Value) return true;
+            return false;
+        }
+
+        // Plain words for comparing a reply with the ask: no accents, no marks, lower case. Not Plain, which keeps every name it reduces.
+        private static string Bare(string text) { return NotLetters.Replace(Marks.Replace((text ?? "").Normalize(NormalizationForm.FormD).ToLowerInvariant(), ""), " ").Trim(); }
+
         // "Play some lofi for you" said in place of playing it: how a small brain claims a job with no tool behind it.
         private static readonly Regex Offered = new Regex(@"^\W*(play|put on|queue up|open|launch|pull up|bring up)\s+(some|the|a|an|your)\b[^.!?\n]{0,40}\bfor (you|ya|u)\b", RegexOptions.IgnoreCase);
 
@@ -4494,6 +4551,8 @@ namespace CapriDesktop
                 if (Regex.IsMatch(target, @"\s(and|then|&)\s|,\s*\S", RegexOptions.IgnoreCase)) return false;
                 if (Regex.IsMatch(target, @"^(your|ur|capri'?s|the capri)( own)? (web ?site|site|page|download page)$", RegexOptions.IgnoreCase)) { tool = "open_website"; args.Site = Home; return true; }
                 if (Installed(target)) { tool = "open_app"; args.Name = target; return true; }
+                string known = KnownAs(target);
+                if (known != null && Installed(known)) { tool = "open_app"; args.Name = known; return true; }
 #if CROSS
                 // "Open minecraft from my modrinth launcher": her hands can't reach inside it here, so the launcher opens (Mako).
                 Match launcher = Regex.Match(target, @"\s(?:from|in|on|with|through|using|via)\s+(?:(?:my|the)\s+)?(.+?)(?:\s+launcher)?$", RegexOptions.IgnoreCase);
@@ -5470,6 +5529,18 @@ namespace CapriDesktop
             return null;
         }
 
+        // Names Windows speech hears for a game, for opening it only (Lachu).
+        private static readonly string[,] SoundAlikes = { { "fortnight", "fortnite" }, { "fort night", "fortnite" }, { "fort nite", "fortnite" }, { "fn", "fortnite" } };
+
+        internal static string KnownAs(string wanted)
+        {
+            string nicknamed = Nickname(wanted);
+            if (nicknamed != null) return nicknamed;
+            string said = Regex.Replace(Plain(wanted), @"^the | (app|game)$", "");
+            for (int i = 0; i < SoundAlikes.GetLength(0); i++) if (said == SoundAlikes[i, 0]) return SoundAlikes[i, 1];
+            return null;
+        }
+
         // The installed game a job is in, like cs in "start matchmaking in cs", when it isn't open yet: a brain that
         // goes straight to use_computer gets it opened first. Null when the job names none, or it's open already.
         internal static string Unopened(string job)
@@ -5510,7 +5581,7 @@ namespace CapriDesktop
                 else if (string.Equals(kind, "browser", StringComparison.OrdinalIgnoreCase)) return OpenBrowserKind(current);
             }
             List<InstalledApp> found = Match(Apps(), wanted);
-            string nicknamed = found.Count == 0 ? Nickname(wanted) : null;
+            string nicknamed = found.Count == 0 ? KnownAs(wanted) : null;
             if (nicknamed != null) found = Match(Apps(), nicknamed);
             if (found.Count == 0) return "No app called " + wanted.Trim() + " is installed on this PC.";
             // When several match equally well, the one with the fewest extra words is closest to what they said.
@@ -5713,6 +5784,7 @@ namespace CapriDesktop
                 List<InstalledApp> apps;
                 Exception failed = null;
                 try { apps = new List<InstalledApp>(Catalog()); }
+                catch (PartialApps partial) { apps = new List<InstalledApp>(partial.Apps ?? new List<InstalledApp>()); failed = partial.InnerException ?? partial; }
                 catch (Exception error) { apps = new List<InstalledApp>(); failed = error; }
                 string folder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
                 string path = folder.Length == 0 ? "" : Path.Combine(folder, @"Spotify\Spotify.exe");
@@ -5737,7 +5809,23 @@ namespace CapriDesktop
             }
         }
 
-        private static List<InstalledApp> ReadCatalog()
+        // The Start menu's apps and her launchers' games, read apart: Epic's and Steam's games still open when the Start menu's
+        // list fails or takes too long (Lachu).
+        internal static Func<List<InstalledApp>> StartMenu = ReadStartMenu;
+        internal static Func<List<InstalledApp>> Launchers = ReadLaunchers;
+
+        internal static List<InstalledApp> ReadCatalog()
+        {
+            List<InstalledApp> listed;
+            Exception missed = null;
+            try { listed = StartMenu(); }
+            catch (Exception error) { listed = new List<InstalledApp>(); missed = error; }
+            listed = WithSteam(listed, Launchers());
+            if (missed != null) throw new PartialApps(missed, listed);
+            return listed;
+        }
+
+        private static List<InstalledApp> ReadStartMenu()
         {
             List<InstalledApp> apps = new List<InstalledApp>();
             Exception failed = null;
@@ -5763,7 +5851,12 @@ namespace CapriDesktop
             reader.Start();
             if (!reader.Join(30000)) throw new TimeoutException("The app list took too long.");
             if (failed != null) throw failed;
-            List<InstalledApp> listed = WithSteam(apps, SteamApps(SteamFolder()));
+            return apps;
+        }
+
+        private static List<InstalledApp> ReadLaunchers()
+        {
+            List<InstalledApp> listed = SteamApps(SteamFolder());
 #if !CROSS
             listed = WithSteam(listed, StoreApps());
 #endif
@@ -6263,7 +6356,7 @@ namespace CapriDesktop
                 bool known = Site(target);
                 if (known && (browser != null || web) && Installed(target)) Favourites.Tell(target, "web");
                 // App first only when no browser was named: saying "on brave" is saying you want a page.
-                bool app = browser == null && !web && Installed(target);
+                bool app = browser == null && !web && (Installed(target) || Installed(KnownAs(target)));
                 if (app && known)
                 {
                     string where = Favourites.Where(target);
@@ -7054,13 +7147,23 @@ namespace CapriDesktop
                 string opened = AppleMusic(kind == "song" ? song : asked, kind == "song" ? "song" : askedKind, look, songOnly, current);
                 if (opened != null) return opened;
                 string played = PlayMusic(asked, "auto", askedKind, current, songOnly);
+                if (played.StartsWith("Opened ", StringComparison.Ordinal) && played.IndexOf(" on YouTube", StringComparison.Ordinal) > 0) return "Apple Music isn't installed, so I opened " + played.Substring(7);
                 return played.StartsWith("Playing now", StringComparison.Ordinal) ? "Apple Music isn't installed, so playing now on " + (played.EndsWith(" on YouTube.", StringComparison.Ordinal) ? "YouTube." : "Spotify.") : played;
             }
-            if (app != "youtube" && Match(Apps(), "spotify").Count > 0)
+            // Spotify's web app, installed from a browser, is the only Spotify for some: a spotify: link would go nowhere, so its
+            // web player opens the song (Lachu).
+            List<InstalledApp> spotifies = app != "youtube" ? Match(Apps(), "spotify") : new List<InstalledApp>();
+            bool webPlayer = spotifies.Count > 0 && spotifies.TrueForAll(WebApp);
+            if (spotifies.Count > 0)
             {
                 if (liked) named = "their Liked Songs";
                 string spotted = liked || ownPlaylist ? null : known ?? SpotifyLink(Fetch("https://html.duckduckgo.com/html/?q=" + Uri.EscapeDataString("site:open.spotify.com/" + (kind == "song" ? "track" : kind) + " " + song)), kind, song);
                 if (current != null && !current()) return "That call errand has ended.";
+                if (webPlayer)
+                {
+                    Run(liked ? "https://open.spotify.com/collection/tracks" : spotted != null ? "https://open.spotify.com/" + (kind == "song" ? "track" : kind) + "/" + spotted : "https://open.spotify.com/search/" + Uri.EscapeDataString(song));
+                    return "Opened " + named + " in Spotify's web player, but couldn't press play there. Hit its Play button.";
+                }
 #if CROSS
                 if (kind == "song" && spotted != null)
                 {
@@ -7082,12 +7185,69 @@ namespace CapriDesktop
             }
             string where = Searches[0, 1] + Uri.EscapeDataString(look);
             System.Text.RegularExpressions.Match list = Regex.Match(kind == "song" ? "" : Fetch(where + "&sp=EgIQAw%253D%253D") ?? "", @"""watchEndpoint"":\{""videoId"":""([A-Za-z0-9_-]{11})"",""playlistId"":""([A-Za-z0-9_-]+)""");
-            string video = list.Success ? null : Find(Fetch(where), "\"videoId\":\"([A-Za-z0-9_-]{11})\"");
+            string page = list.Success ? null : Fetch(where) ?? "";
+            string video = list.Success ? null : Find(page, "\"videoId\":\"([A-Za-z0-9_-]{11})\"");
             if (current != null && !current()) return "That call errand has ended.";
-            if (!list.Success && video == null) { Run(where); return "Couldn't find " + named + " to play, so YouTube is open on a search for it."; }
-            Run(list.Success ? "https://www.youtube.com/watch?v=" + list.Groups[1].Value + "&list=" + list.Groups[2].Value : "https://www.youtube.com/watch?v=" + video);
+            if (!list.Success && video == null)
+            {
+                Run(where);
+                // An empty or consent page isn't a search that found nothing (Lachu).
+                return Unread(page) ? "Couldn't get YouTube's results, so it's open on a search for " + named + ". Pick one there." : "Couldn't find " + named + " to play, so YouTube is open on a search for it.";
+            }
+            string watch = list.Success ? "https://www.youtube.com/watch?v=" + list.Groups[1].Value + "&list=" + list.Groups[2].Value : "https://www.youtube.com/watch?v=" + video;
+#if CROSS
+            Run(watch);
             return app == "spotify" ? "Spotify isn't installed, so playing now on YouTube." : PlayingNow("YouTube", null);
+#else
+            return TubePlay(named, watch, app == "spotify", current);
+#endif
         }
+
+        private static bool Unread(string page)
+        {
+            return string.IsNullOrWhiteSpace(page) || page.IndexOf("ytInitialData", StringComparison.Ordinal) < 0 && page.IndexOf("videoRenderer", StringComparison.Ordinal) < 0;
+        }
+
+#if !CROSS
+        // YouTube is said as playing only once Windows shows its video playing; a paused one gets one press of play, and one
+        // that never starts within 15 seconds, or that Windows can't see, is said as opened (Lachu).
+        private static string TubePlay(string named, string address, bool instead, Func<bool> current)
+        {
+            List<Tune> before = Sessions();
+            HashSet<string> seen = new HashSet<string>(), playing = new HashSet<string>();
+            if (before != null)
+                foreach (Tune tune in before)
+                {
+                    seen.Add(tune.Key);
+                    if (tune.Playing) playing.Add(tune.Key);
+                }
+            Run(address);
+            string opened = (instead ? "Spotify isn't installed, so I opened " : "Opened ") + named + " on YouTube";
+            if (before == null) return opened + ".";
+            long began = MusicNow();
+            bool pressed = false;
+            while (true)
+            {
+                if (current != null && !current()) return "That call errand has ended.";
+                List<Tune> now = Sessions();
+                if (now != null)
+                    foreach (Tune tune in now)
+                    {
+                        if (tune.Spotify || tune.Title.Length == 0) continue;
+                        if (tune.Playing && !playing.Contains(tune.Key)) return instead ? "Spotify isn't installed, so playing now on YouTube." : PlayingNow("YouTube", null);
+                        if (!tune.Playing && !pressed && tune.CanPlay && !seen.Contains(tune.Key))
+                        {
+                            pressed = true;
+                            SessionPress(tune, "play");
+                        }
+                    }
+                long left = began + 15000 - MusicNow();
+                if (left <= 0) break;
+                MusicWait((int)Math.Min(250, left));
+            }
+            return opened + ", but couldn't get it playing. Press play on the video.";
+        }
+#endif
 
         // What she says once something she was asked to play starts: never its name, since the music itself says that.
         // The app is named only when it wasn't already open and playing, so if it goes wrong they know which one she tried.
@@ -7955,10 +8115,13 @@ namespace CapriDesktop
             int nudge = Nudge(asked);
             if (nudge == 2 || nudge == -2) return nudge > 0 ? steps.Length - 1 : 0;
             if (nudge != 0) return Math.Max(0, Math.Min(steps.Length - 1, now + nudge));
-            if (name == "language")
+            if (name == "language" || name == "reply_language")
             {
+                int first = name == "reply_language" ? 2 : 0;
+                if (first > 0 && Regex.IsMatch(plain, @"^(?:same|sameaslanguage|default|mylanguage|normal)$")) return 0;
+                if (first > 0 && Regex.IsMatch(plain, @"^(?:auto|match|matchme|whateveriuse|automatic)$")) return 1;
                 for (int i = 0; i < Brain.Languages.GetLength(0); i++)
-                    if (string.Equals(said.Trim(), Brain.Languages[i, 0], StringComparison.OrdinalIgnoreCase) || string.Equals(said.Trim(), Brain.Languages[i, 2], StringComparison.OrdinalIgnoreCase)) return i;
+                    if (string.Equals(said.Trim(), Brain.Languages[i, 0], StringComparison.OrdinalIgnoreCase) || string.Equals(said.Trim(), Brain.Languages[i, 2], StringComparison.OrdinalIgnoreCase)) return first + i;
                 return -1;
             }
             if (name == "volume" && Regex.IsMatch(plain, @"^(?:off|muted|0%?)$")) return 0;

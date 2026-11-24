@@ -204,11 +204,11 @@ Running on this PC	Bu PC'da ishlamoqda
 NORMAL	ODDIY
 OFF	O'CHIQ
 Local server address	Mahalliy server manzili
-Remember panel position	Panel joyini eslab qolish
 Custom colours	Maxsus ranglar
 Custom colours...	Maxsus ranglar...
 Choose	Tanlash
-Hers	Uniki
+Reset selected colour	Tanlangan rangni tiklash
+Make a mod	Mod yaratish
 Quiet	Jim
 Quiet min	Jim min
 Quiet max	Jim max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	{n}:{n} gacha jim
 Quiet until turned off	O'chirilguncha jim
 Export settings	Sozlamalarni eksport qilish
 Import settings	Sozlamalarni import qilish
+Save Mainframe position	Panel joyini eslab qolish

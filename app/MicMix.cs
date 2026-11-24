@@ -272,7 +272,8 @@ namespace CapriDesktop
             return cable != null && IsSteam(cable.Name) ? SteamEnd : CableEnd;
         }
 
-        // Settings' note for an end, short enough for its column.
+        // Settings' note for an end, short enough for its column with Steam's long name. That their own mic goes
+        // through it all the time is in the switch's tip.
         internal static string PickLine(string end) { return "Calls only. Pick " + end + "."; }
 
         // The cable from Windows' active devices with its far end: the one picked in Settings' Output, else VB-CABLE

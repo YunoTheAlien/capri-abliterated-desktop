@@ -88,6 +88,8 @@ namespace CapriDesktop
 
         // How she likes being handled. Was a dropdown on the setup card, which asked before anyone had met her.
         internal const string HandlingKey = "how she likes it";
+        // Her flirty lines that make sense with nothing said first, the only ones she opens with.
+        internal const string OpenerPool = "flirting opener";
         internal static readonly string[] Handlings = { "Gentle", "Rough", "Both" };
         internal static string Kept;
 
@@ -320,25 +322,73 @@ namespace CapriDesktop
             catch (Exception) { return null; }
         }
 
-        internal static string Packed(bool liked)
+        internal static string Packed(bool liked) { return Packed(liked, Item()); }
+
+        private static string Packed(bool liked, string named)
         {
-            if (!Brain.SenpaiOn) return null;
-            string named = Hers() ?? Named(For("what she is into"));
-            if (string.IsNullOrEmpty(named)) return null;
+            if (!Brain.SenpaiOn || string.IsNullOrEmpty(named)) return null;
             return For(Head + " " + named, liked ? "liked" : "cross");
         }
 
-        internal static string Woven(bool liked)
+        internal static string Woven(bool liked) { return Woven(liked, Item()); }
+
+        private static string Woven(bool liked, string what)
         {
             if (!Brain.SenpaiOn) return null;
             // Matched to how she feels about what just happened. An older file with the single combined section
             // still works, it simply does not know the difference.
             string how = For(liked ? "how she brings it up, pleased" : "how she brings it up, cross")
                 ?? For("how she brings it up");
-            string what = Hers() ?? Named(For("what she is into"));
             if (string.IsNullOrEmpty(how) || string.IsNullOrEmpty(what)) return null;
             string said = how.Replace("%it%", what).Replace("%IT%", what);
             return said == how ? null : said;
+        }
+
+        private static string Item() { return Hers() ?? Named(For("what she is into")); }
+
+        // Her senpai tail on a line: her pack's own, else a frame filled with one thing off her list. Each thing goes round
+        // before one comes back, and words she said lately are built again; both kept in her lines' memory across restarts.
+        internal static string Tail(bool liked)
+        {
+            return Tail(delegate
+            {
+                string item = Item();
+                return new KeyValuePair<string, string>(Packed(liked, item) ?? Woven(liked, item), item);
+            });
+        }
+
+        // The tail and the thing it names, from make: a thing not named lately with words not said lately, else the thing
+        // named longest ago, then the words said longest ago.
+        internal static string Tail(Func<KeyValuePair<string, string>> make)
+        {
+            string best = null, bestItem = null;
+            DateTime bestItemAt = DateTime.MaxValue, bestWordsAt = DateTime.MaxValue;
+            // A fresh one ends it at once; only with every one recent does it look long, so the oldest isn't missed.
+            for (int tries = 0; tries < 100; tries++)
+            {
+                KeyValuePair<string, string> built = make();
+                if (string.IsNullOrEmpty(built.Key)) break;
+                DateTime itemAt = Last(built.Value == null ? null : ItemKey(built.Value)), wordsAt = Last(built.Key);
+                if (itemAt == DateTime.MinValue && wordsAt == DateTime.MinValue) { best = built.Key; bestItem = built.Value; break; }
+                if (itemAt < bestItemAt || itemAt == bestItemAt && wordsAt < bestWordsAt)
+                {
+                    best = built.Key; bestItem = built.Value; bestItemAt = itemAt; bestWordsAt = wordsAt;
+                }
+            }
+            if (best == null) return null;
+            Sayings.Remember(best);
+            if (bestItem != null) Sayings.Remember(ItemKey(bestItem));
+            return best;
+        }
+
+        // The thing a tail names, kept by its own key beside her lines.
+        private static string ItemKey(string item) { return "sys:tail names " + item; }
+
+        // When she last said it within her recent window, or MinValue when not lately.
+        private static DateTime Last(string said)
+        {
+            DateTime when;
+            return said != null && Sayings.SaidLately(said) && Sayings.LastSaid(said, out when) ? when : DateTime.MinValue;
         }
 
         // Everything under a heading, comma joined, for her brain rather than for a line. For picks one at random,
@@ -475,6 +525,8 @@ namespace CapriDesktop
                         if (one.Length > 0) found.Add(one);
                     }
                 }
+                // A line naming a part of the day only in that part, as everywhere else she talks.
+                found.RemoveAll(one => !Sayings.FitsHour(one));
                 if (found.Count == 0) return null;
                 // One shared Random, not a new one each call: Random is seeded from the clock, which only ticks
                 // every 15ms or so, so two calls in the same breath picked the same line every time.
@@ -531,6 +583,47 @@ namespace CapriDesktop
                 if (BodyFor != null) { try { made.Append(Legacy.Modern(BodyFor())); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
                 return made.ToString();
             }
+        }
+    }
+}
+
+namespace CapriDesktop
+{
+    internal sealed partial class Companion
+    {
+        // A senpai tail from four things and three frames, twenty in a row: no words again within the last eight, never
+        // the same thing twice running, and the first four name all four across a restart. Stand-in words only.
+        private void SmokeTailRepeats(List<string> checks)
+        {
+            string token = Guid.NewGuid().ToString("N").Substring(0, 8);
+            string[] frames = { "first frame " + token + " %it%", "second frame " + token + " %it%", "third frame " + token + " %it%" };
+            string[] items = { "apple" + token, "brick" + token, "cloud" + token, "drum" + token };
+            Random pick = new Random(7);
+            List<string> said = new List<string>(), named = new List<string>();
+            for (int i = 0; i < 20; i++)
+            {
+                string tail = Interests.Tail(delegate
+                {
+                    string item = items[pick.Next(items.Length)];
+                    return new KeyValuePair<string, string>(frames[pick.Next(frames.Length)].Replace("%it%", item), item);
+                });
+                said.Add(tail);
+                named.Add(Array.Find(items, one => tail != null && tail.EndsWith(one, StringComparison.Ordinal)));
+                // Her memory dates each line, so twenty in one instant would all be as old as each other.
+                System.Threading.Thread.Sleep(20);
+                // Half way round the four, she is started again: her memory is saved and read back from the file.
+                if (i == 1) Sayings.Restarted();
+            }
+            List<string> wrong = new List<string>();
+            for (int i = 0; i < said.Count; i++)
+            {
+                if (said[i] == null) { wrong.Add("tail " + (i + 1) + " was none"); continue; }
+                for (int back = 1; back <= 8 && back <= i; back++) if (said[i - back] == said[i]) wrong.Add("tail " + (i + 1) + " repeats tail " + (i + 1 - back));
+                if (i > 0 && named[i] == named[i - 1]) wrong.Add("tail " + (i + 1) + " names the same thing as the one before");
+            }
+            if (new HashSet<string>(named.GetRange(0, 4)).Count != 4) wrong.Add("the first four named " + string.Join(", ", named.GetRange(0, 4).ToArray()) + ", not all four");
+            if (wrong.Count > 0) throw new Exception("Her senpai tails repeated: " + string.Join("; ", wrong.ToArray()));
+            checks.Add("PASS her senpai tails: from four things and three frames, the first four name all four across a restart, and twenty in a row never repeat words within the last eight or name the same thing twice running, kept in her lines' own memory");
         }
     }
 }

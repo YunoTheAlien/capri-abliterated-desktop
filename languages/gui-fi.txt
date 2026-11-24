@@ -204,11 +204,11 @@ Running on this PC	Käynnissä tällä PC:llä
 NORMAL	NORMAALI
 OFF	POIS
 Local server address	Paikallisen palvelimen osoite
-Remember panel position	Muista paneelin sijainti
 Custom colours	Omat värit
 Custom colours...	Omat värit...
 Choose	Valitse
-Hers	Hänen omansa
+Reset selected colour	Nollaa valittu väri
+Make a mod	Tee modi
 Quiet	Hiljainen
 Quiet min	Hiljainen min
 Quiet max	Hiljainen max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Hiljainen klo {n}:{n} asti
 Quiet until turned off	Hiljainen kunnes kytketään pois
 Export settings	Vie asetukset
 Import settings	Tuo asetukset
+Save Mainframe position	Muista paneelin sijainti

@@ -204,11 +204,11 @@ Running on this PC	ทำงานบนพีซีนี้
 NORMAL	ปกติ
 OFF	ปิด
 Local server address	ที่อยู่เซิร์ฟเวอร์ในเครื่อง
-Remember panel position	จำตำแหน่งแผง
 Custom colours	สีที่กำหนดเอง
 Custom colours...	สีที่กำหนดเอง...
 Choose	เลือก
-Hers	ของเธอ
+Reset selected colour	รีเซ็ตสีที่เลือก
+Make a mod	สร้างม็อด
 Quiet	เงียบ
 Quiet min	เงียบ min
 Quiet max	เงียบ max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	เงียบถึง {n}:{n}
 Quiet until turned off	เงียบจนกว่าจะปิด
 Export settings	ส่งออกการตั้งค่า
 Import settings	นำเข้าการตั้งค่า
+Save Mainframe position	จำตำแหน่งแผง

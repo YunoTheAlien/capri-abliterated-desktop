@@ -106,7 +106,7 @@ namespace CapriDesktop
             try
             {
                 if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return found.ToArray();
-                foreach (string raw in File.ReadAllText(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+                foreach (string raw in FileSlots.ReadText(Kept).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
                 {
                     string one = raw.Trim();
                     if (!one.StartsWith("##", StringComparison.Ordinal)) continue;
@@ -127,6 +127,9 @@ namespace CapriDesktop
             string[] mine = Lines(section);
             string[] pool = mine != null && mine.Length > 0 ? mine : stock;
             if (pool == null || pool.Length == 0) return null;
+            // Named for her log, so a touch or moment line says where it came from rather than "?".
+            string named = string.IsNullOrEmpty(Kept) ? "code" : Path.GetFileName(Kept);
+            Sayings.Named(pool, (mine != null && mine.Length > 0 ? named : "code") + ": " + section.Replace(SenpaiMark, ""));
             string said = Sayings.OneOf(pool);
             return said == null ? null : Them.Fill(said);
         }
@@ -138,9 +141,9 @@ namespace CapriDesktop
             {
                 FileInfo about = new FileInfo(Kept);
                 if (!about.Exists) return;
-                long stamp = about.LastWriteTimeUtc.Ticks + about.Length;
+                long stamp = (about.LastWriteTimeUtc.Ticks + about.Length) ^ ((long)FileSlots.Generation << 56);
                 lock (gate) if (stamp == wasLong && read != DateTime.MinValue) return;
-                Dictionary<string, string[]> found = Read(File.ReadAllText(Kept));
+                Dictionary<string, string[]> found = Read(FileSlots.ReadText(Kept));
                 lock (gate)
                 {
                     loaded.Clear();

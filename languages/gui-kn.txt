@@ -204,11 +204,11 @@ Running on this PC	ಈ PC ಯಲ್ಲಿ ಚಲಿಸುತ್ತಿದೆ
 NORMAL	ಸಾಮಾನ್ಯ
 OFF	ಆಫ್
 Local server address	ಸ್ಥಳೀಯ ಸರ್ವರ್ ವಿಳಾಸ
-Remember panel position	ಪ್ಯಾನೆಲ್ ಸ್ಥಾನವನ್ನು ನೆನಪಿಡಿ
 Custom colours	ಸ್ವಂತ ಬಣ್ಣಗಳು
 Custom colours...	ಸ್ವಂತ ಬಣ್ಣಗಳು...
 Choose	ಆರಿಸಿ
-Hers	ಅವಳದು
+Reset selected colour	ಆರಿಸಿದ ಬಣ್ಣವನ್ನು ಮರುಹೊಂದಿಸಿ
+Make a mod	ಮಾಡ್ ಮಾಡಿ
 Quiet	ಶಾಂತ
 Quiet min	ಶಾಂತ min
 Quiet max	ಶಾಂತ max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	{n}:{n} ರವರೆಗೆ ಶಾಂತ
 Quiet until turned off	ಆಫ್ ಮಾಡುವವರೆಗೆ ಶಾಂತ
 Export settings	ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ರಫ್ತು ಮಾಡಿ
 Import settings	ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ಆಮದು ಮಾಡಿ
+Save Mainframe position	ಪ್ಯಾನೆಲ್ ಸ್ಥಾನವನ್ನು ನೆನಪಿಡಿ

@@ -204,11 +204,11 @@ Running on this PC	Աշխատում է այս PC-ում
 NORMAL	ՆՈՐՄԱԼ
 OFF	ԱՆՋԱՏՎԱԾ Է
 Local server address	Տեղական սերվերի հասցե
-Remember panel position	Հիշել վահանակի դիրքը
 Custom colours	Անհատական գույներ
 Custom colours...	Անհատական գույներ...
 Choose	Ընտրել
-Hers	Իրենը
+Reset selected colour	Վերականգնել ընտրված գույնը
+Make a mod	Ստեղծել մոդ
 Quiet	Լուռ
 Quiet min	Լուռ min
 Quiet max	Լուռ max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Լուռ մինչև {n}:{n}
 Quiet until turned off	Լուռ մինչև անջատելը
 Export settings	Արտահանել կարգավորումները
 Import settings	Ներմուծել կարգավորումները
+Save Mainframe position	Հիշել վահանակի դիրքը

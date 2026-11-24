@@ -177,7 +177,8 @@ namespace CapriDesktop
             private readonly Entry adding;
             private readonly Key addKey, cancelKey, undoKey, wipeKey;
             private readonly Label notice;
-            private readonly System.Windows.Forms.Panel list;
+            private readonly ScrollPanel list;
+            private readonly SlimBar bar = new SlimBar();
             private readonly List<List<MemoryLines.Change>> undone = new List<List<MemoryLines.Change>>();
             private MemoryLines.Line editing;
             private bool wipeArmed;
@@ -199,8 +200,14 @@ namespace CapriDesktop
                 cancelKey.Visible = false;
                 Key text = Make("Edit as text", 608, 78, 124, 26, delegate { Frame.EditNotes(true); });
                 text.AccessibleName = "Edit her memories as text";
-                list = new System.Windows.Forms.Panel { Bounds = Box(28, ListTop, 704, ListTall), AutoScroll = true, BackColor = Ground };
+                // Her own slim bar beside the list, not Windows' one.
+                list = new ScrollPanel { Bounds = Box(28, ListTop, 694, ListTall), BackColor = Ground };
+                list.Scrolled += delegate { bar.Invalidate(); };
                 Controls.Add(list);
+                bar.Bounds = new Rectangle(Z(726), Z(ListTop), Z(SlimBar.Thin), Z(ListTall));
+                bar.BackColor = Ground;
+                bar.Watch(list);
+                Controls.Add(bar);
                 notice = Words("", 28, 606, 580, 22, Small(), Faint);
                 undoKey = Make("Undo", 626, 606, 106, 22, delegate { UndoLast(); });
                 undoKey.AccessibleName = "Undo the last change to her memory";

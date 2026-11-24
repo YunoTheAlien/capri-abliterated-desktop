@@ -204,11 +204,11 @@ Running on this PC	កំពុងដំណើរការនៅលើកុំ�
 NORMAL	ធម្មតា
 OFF	បិទ
 Local server address	អាសយដ្ឋានម៉ាស៊ីនមេក្នុងតំបន់
-Remember panel position	ចងចាំទីតាំងផ្ទាំង
 Custom colours	ពណ៌ផ្ទាល់ខ្លួន
 Custom colours...	ពណ៌ផ្ទាល់ខ្លួន...
 Choose	ជ្រើសរើស
-Hers	របស់នាង
+Reset selected colour	កំណត់ពណ៌ដែលបានជ្រើសឡើងវិញ
+Make a mod	បង្កើត mod
 Quiet	ស្ងាត់
 Quiet min	ស្ងាត់ min
 Quiet max	ស្ងាត់ max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	ស្ងាត់រហូតដល់ {n}:{n}
 Quiet until turned off	ស្ងាត់រហូតដល់បិទ
 Export settings	នាំចេញការកំណត់
 Import settings	នាំចូលការកំណត់
+Save Mainframe position	ចងចាំទីតាំងផ្ទាំង

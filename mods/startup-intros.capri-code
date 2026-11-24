@@ -1,10 +1,12 @@
 // capri-mod: 1
 // id: startup-intros
 // name: Startup Intros
-// version: 2.1.0
+// version: 2.4.0
 // author: Avery
 // description: Three start-up animations: Hijack, Shatter and Wake.
 // intro: yes
+// permissions: settings
+// requires: api 5
 
 using System;
 using System.Collections.Generic;
@@ -14,7 +16,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using CapriDesktop;
 
-public class StartupIntros : ICapriMod, ICapriIntro
+public class StartupIntros : ICapriMod, ICapriIntro, ICapriIntroNames
 {
     private static readonly string[] Names = { "Hijack", "Shatter", "Wake" };
     private static readonly double[] Lengths = { 4.7, 3.85, 4.5 };
@@ -36,8 +38,13 @@ public class StartupIntros : ICapriMod, ICapriIntro
     private static readonly float[] TeethShape = { 22, 11, 6, 13, 1, 22, -5, 13, -13, 26, -16, 19, -20, 26, -29, 21, -20, 33, -16, 27, -13, 35, -5, 20, 1, 30, 6, 18, 11, 23 };
     private static readonly PointF BigEye = new PointF(16, -7), SmallEye = new PointF(-25.5f, 2);
 
+    // Her three, by name, so her test menu lists each one to try.
+    public string[] Intros { get { return Names; } }
+
     private ICapriHost capri;
     private string choiceFile;
+    // One play asked for now: from her test menu, or "hijack intro", whatever Toggles has on.
+    private bool once;
     private int current;
     private bool shuffle = true;
     private int fired;
@@ -84,8 +91,8 @@ public class StartupIntros : ICapriMod, ICapriIntro
         host.Ui.ColoursChanged += Tint;
         choiceFile = Path.Combine(host.Folder, "choice.txt");
         Load();
-        // sys.md decides: intros without ">" are on, and one is picked at random each start; none on means no intro, as
-        // it ships. Saying "shatter", "hijack" or "wake" still pins one for the next start.
+        // Toggles > Intros decides: one of those on is picked at random each start; none on means no intro, as it ships.
+        // Saying "shatter", "hijack" or "wake" still pins one for the next start.
         int[] allowed = Allowed();
         if (allowed.Length > 0)
         {
@@ -103,10 +110,24 @@ public class StartupIntros : ICapriMod, ICapriIntro
 
     private bool offByFile;
 
-    // Her sys.md sits two folders up from a mod's own folder: mods\<this mod>\ is inside her data folder.
+    // Each intro asked of her settings; an older Capri without them still has the list in sys.md.
     private int[] Allowed()
     {
         List<int> on = new List<int>();
+        bool asked = false;
+        try
+        {
+            for (int i = 0; i < Names.Length; i++)
+            {
+                bool? one = capri.Settings.IsOn("intro_" + Names[i].ToLowerInvariant());
+                if (one == null) continue;
+                asked = true;
+                if (one.Value) on.Add(i);
+            }
+        }
+        catch (Exception) { asked = false; on.Clear(); }
+        if (asked) return on.ToArray();
+        // Her sys.md sits two folders up from a mod's own folder: mods\<this mod>\ is inside her data folder.
         try
         {
             string folder = capri.Folder;
@@ -155,6 +176,9 @@ public class StartupIntros : ICapriMod, ICapriIntro
         int picked = said.Contains("hijack") ? 0 : said.Contains("shatter") ? 1 : said.Contains("wake") ? 2 : -1;
         if (picked < 0) return false;
         current = picked;
+        once = true;
+        // Tried from her test menu: played now and never kept as the pick.
+        if (said.StartsWith("test ")) { capri.PlayIntro(); return true; }
         shuffle = false;
         Save();
         capri.Say("Locked in: " + Names[picked] + ".");
@@ -162,10 +186,11 @@ public class StartupIntros : ICapriMod, ICapriIntro
         return true;
     }
 
-    public double Seconds { get { return offByFile ? 0 : Lengths[current]; } }
+    public double Seconds { get { return offByFile && !once ? 0 : Lengths[current]; } }
 
     public void Begin(Bitmap desktop, Rectangle screen, Rectangle her)
     {
+        once = false;
         fired = 0;
         screenNow = screen;
         if (desktopCopy != null) desktopCopy.Dispose();

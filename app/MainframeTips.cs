@@ -144,7 +144,9 @@ namespace CapriDesktop
             Explain(voiceNote, "Mic: default", "Mainframe.cs", null, "Voice status");
             foreach (Key fix in hearingFixes) Explain(fix, "Hearing status", "Mainframe.cs", null, "Hearing fix");
             Explain(hearingChoice, "Hearing engine", "Mainframe.cs", null, "Hearing");
+            Explain(answers, "She answers in", "Mainframe.cs", null, "She answers in");
             Explain(micLoudness, "Her voice in your mic: loudness", "Mainframe.cs", micLoudnessName, "Her voice in your mic: loudness");
+            Explain(micMeter, "Mic sensitivity", "Mainframe.cs", micMeterName, "Mic sensitivity");
             Explain(showHide, "Hide Capri", "Mainframe.cs", null, "Hide / Show Capri");
             Explain(perch, "Ride cursor", "Mainframe.cs", null, "Ride cursor / Hop off");
             Explain(notesKey, "MD editor");
@@ -154,7 +156,7 @@ namespace CapriDesktop
             Explain(popTimes, "Pop-ins", "Mainframe.cs", null, "Pop-in times");
             Explain(gameNotes, "game_notes", "Hands.cs", null, "Game controls");
             Explain(miniGames, "mini_game", "Hands.cs", null, "Mini-games");
-            Explain(languages, "Language", "Mainframe.cs", FindHintLabel("Language"), "Language");
+            Explain(languages, "I speak", "Mainframe.cs", FindHintLabel("I speak"), "I speak");
             Explain(nickname, "What should she call you?", "Mainframe.cs", FindHintLabel("What should she call you?"), "What should she call you?");
             Explain(layersKey, "Voice layers", "Mainframe.cs", null, "Layers");
             layersKey.StateValue = true;
@@ -190,7 +192,7 @@ namespace CapriDesktop
             // Lachy's line is the whole tip here. What the setting does is in SelfKnow, for when they ask her.
             hints[legacyStand].Exact = Mods.LegacyTip;
             hints[legacyStand].Title = "";
-            // One sentence is the whole tip for Remember panel position; what it does is in SelfKnow.
+            // One sentence is the whole tip for Save Mainframe position; what it does is in SelfKnow.
             hints[rememberPanel].Exact = PanelTip;
             hints[rememberPanel].Title = "";
             Explain(customColours, "Custom colours");

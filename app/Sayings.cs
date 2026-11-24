@@ -79,7 +79,7 @@ namespace CapriDesktop
         // Writes the rows held longer than HeldFor, or all of them. Under logGate.
         private static void WriteHeld(bool all)
         {
-            DateTime now = DateTime.UtcNow;
+            DateTime now = SimTime.UtcNow;
             foreach (List<Held> among in new[] { held, voicedFirst })
                 for (int at = 0; at < among.Count; )
                 {
@@ -110,8 +110,8 @@ namespace CapriDesktop
                     WriteHeld(false);
                     Held row = Matching(held, bare);
                     if (row != null) { held.Remove(row); Write(row.Line + " | " + voiced); return; }
-                    string alone = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " | - | - | voice only | " + Brain.Scrubbed(words).Replace("\r", " ").Replace("\n", " ") + " | " + voiced;
-                    voicedFirst.Add(new Held { Bare = bare, Line = alone, Voice = voiced, At = DateTime.UtcNow });
+                    string alone = SimTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " | - | - | voice only | " + Brain.Scrubbed(words).Replace("\r", " ").Replace("\n", " ") + " | " + voiced;
+                    voicedFirst.Add(new Held { Bare = bare, Line = alone, Voice = voiced, At = SimTime.UtcNow });
                 }
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
@@ -189,7 +189,7 @@ namespace CapriDesktop
             if (bare.Length == 0) return;
             lock (logGate)
             {
-                answered.Add(new Answered { Bare = bare, Asker = asker ?? "", Parts = parts ?? "", At = DateTime.UtcNow });
+                answered.Add(new Answered { Bare = bare, Asker = asker ?? "", Parts = parts ?? "", At = SimTime.UtcNow });
                 while (answered.Count > 20) answered.RemoveAt(0);
             }
         }
@@ -201,7 +201,7 @@ namespace CapriDesktop
             string head = plain.Length > 30 ? plain.Substring(0, 30) : plain;
             lock (logGate)
             {
-                DateTime now = DateTime.UtcNow;
+                DateTime now = SimTime.UtcNow;
                 for (int at = answered.Count - 1; at >= 0; at--)
                 {
                     Answered one = answered[at];
@@ -226,7 +226,7 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             lock (logGate)
             {
-                unsaid.Add(new Waiting { Text = said, Who = who, Mood = mood, Source = source ?? SourceOf(said) ?? Unknown, At = DateTime.UtcNow });
+                unsaid.Add(new Waiting { Text = said, Who = who, Mood = mood, Source = source ?? SourceOf(said) ?? Unknown, At = SimTime.UtcNow });
                 while (unsaid.Count > UnsaidMost) unsaid.RemoveAt(0);
             }
         }
@@ -242,7 +242,7 @@ namespace CapriDesktop
             List<Waiting> said = new List<Waiting>();
             lock (logGate)
             {
-                DateTime now = DateTime.UtcNow;
+                DateTime now = SimTime.UtcNow;
                 for (int at = unsaid.Count - 1; at >= 0; at--)
                 {
                     Waiting one = unsaid[at];
@@ -303,7 +303,7 @@ namespace CapriDesktop
                     try { who = Who() ?? ""; mood = Feeling() ?? ""; }
                     catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
-                string line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " | " + (who.Length == 0 ? "-" : who)
+                string line = SimTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " | " + (who.Length == 0 ? "-" : who)
                     + " | " + (mood.Length == 0 ? "-" : mood) + " | " + (string.IsNullOrEmpty(source) ? Unknown : source) + " | " + Brain.Scrubbed(said).Replace("\r", " ").Replace("\n", " ");
                 // Held a moment so her voice, which finishes on its own thread, joins the same row rather than one of its own.
                 lock (logGate)
@@ -311,7 +311,7 @@ namespace CapriDesktop
                     WriteHeld(false);
                     Held voiced = Matching(voicedFirst, Bare(said));
                     if (voiced != null) { voicedFirst.Remove(voiced); Write(line + " | " + voiced.Voice); }
-                    else held.Add(new Held { Bare = Bare(said), Line = line, At = DateTime.UtcNow });
+                    else held.Add(new Held { Bare = Bare(said), Line = line, At = SimTime.UtcNow });
                 }
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
@@ -343,7 +343,7 @@ namespace CapriDesktop
             try
             {
                 if (heardPath == null || !File.Exists(heardPath)) return;
-                DateTime now = DateTime.UtcNow;
+                DateTime now = SimTime.UtcNow;
                 foreach (string raw in File.ReadAllLines(heardPath))
                 {
                     int tab = (raw ?? "").IndexOf('\t');
@@ -374,7 +374,7 @@ namespace CapriDesktop
             {
                 Directory.CreateDirectory(folder);
                 string file = Path.Combine(folder, "lines-said.txt");
-                long tick = DateTime.UtcNow.AddMinutes(-5).Ticks;
+                long tick = SimTime.UtcNow.AddMinutes(-5).Ticks;
                 File.WriteAllText(file, tick + "\tWell, that was a choice.\n" + tick + "\t" + Print("Back so soon?").ToString("x16") + "\n");
                 lock (gate) { heardPath = file; loadedSaid = false; saidAt.Clear(); }
                 if (HoursSince("WELL, that was a choice.") > 1) throw new Exception("A line kept as text before fingerprints was not found.");
@@ -408,7 +408,7 @@ namespace CapriDesktop
             List<Held> heldRowsWas, voicedFirstWas;
             // A row still held for its voice from the section before, as on a slow box: set aside with the rest, never in the
             // check's log.
-            Held before = new Held { Bare = Bare("A held row from before."), Line = "held from before | A held row from before.", At = DateTime.UtcNow };
+            Held before = new Held { Bare = Bare("A held row from before."), Line = "held from before | A held row from before.", At = SimTime.UtcNow };
             lock (logGate)
             {
                 held.Add(before);
@@ -444,7 +444,7 @@ namespace CapriDesktop
                 if (logged.Length != 1 || !logged[0].EndsWith(" | Emo | calm | Emo: When she says goodbye | Later, darling. Probably.", StringComparison.Ordinal) || Unsaid != 2)
                     throw new Exception("Her line log held the wrong lines: " + string.Join(" / ", logged) + " (" + Unsaid + " still waiting)");
                 Shown("Later, darling. Probably.");
-                lock (logGate) unsaid.Add(new Waiting { Text = "An old one.", Who = "Emo", Mood = "calm", At = DateTime.UtcNow - UnsaidFor - TimeSpan.FromMinutes(1) });
+                lock (logGate) unsaid.Add(new Waiting { Text = "An old one.", Who = "Emo", Mood = "calm", At = SimTime.UtcNow - UnsaidFor - TimeSpan.FromMinutes(1) });
                 Shown("An old one.");
                 Flush();
                 logged = File.ReadAllLines(log);
@@ -554,7 +554,7 @@ namespace CapriDesktop
                 LoadSaid();
                 DateTime when;
                 if (!saidAt.TryGetValue(Print(said), out when)) return false;
-                return (DateTime.UtcNow - when).TotalHours < Math.Max(0, RecentHours);
+                return (SimTime.UtcNow - when).TotalHours < Math.Max(0, RecentHours);
             }
         }
 
@@ -566,8 +566,34 @@ namespace CapriDesktop
             {
                 LoadSaid();
                 DateTime when;
-                return saidAt.TryGetValue(Print(said), out when) ? Math.Max(0, (DateTime.UtcNow - when).TotalHours) : double.MaxValue;
+                return saidAt.TryGetValue(Print(said), out when) ? Math.Max(0, (SimTime.UtcNow - when).TotalHours) : double.MaxValue;
             }
+        }
+
+        // Today's mood's own opener or tail, now and then; swapped by the checks.
+        internal static Func<string, string> MoodEnd = delegate(string kind) { return Personalities.MoodPart(kind, dice); };
+
+        // For the checks: a core dressed as a liked reaction is.
+        internal static string DressedForCheck(string core)
+        {
+            string made = Dressed(core, true, false);
+            pickedFrom = null;
+            return made;
+        }
+
+        // The line in a set said longest ago; ones never said tie, and a tie goes at random.
+        internal static string Longest(IList<string> pool, Random dice)
+        {
+            string best = null;
+            double longest = -1;
+            int ties = 0;
+            foreach (string line in pool)
+            {
+                double ago = HoursSince(line);
+                if (ago > longest) { best = line; longest = ago; ties = 1; }
+                else if (ago == longest && dice.Next(++ties) == 0) best = line;
+            }
+            return best;
         }
 
         // A fixed line she says only now and then, on the same disk store as everything else: true once the hours have
@@ -580,7 +606,7 @@ namespace CapriDesktop
             {
                 LoadSaid();
                 DateTime when;
-                if (saidAt.TryGetValue(Print(said), out when) && (DateTime.UtcNow - when).TotalHours < Math.Max(0, hours)) return false;
+                if (saidAt.TryGetValue(Print(said), out when) && (SimTime.UtcNow - when).TotalHours < Math.Max(0, hours)) return false;
             }
             Keep(said, logged, source);
             return true;
@@ -603,7 +629,7 @@ namespace CapriDesktop
             lock (gate)
             {
                 LoadSaid();
-                saidAt[Print(said)] = DateTime.UtcNow;
+                saidAt[Print(said)] = SimTime.UtcNow;
                 if (saidAt.Count > RememberMost)
                 {
                     // Oldest out first, so a long session cannot grow this without end.
@@ -618,7 +644,7 @@ namespace CapriDesktop
             if (logged) Pend(said, source);
             // Saved every three lines or half a minute, whichever comes first, and by Settle on the way out, so a short
             // session's lines aren't forgotten.
-            if (sinceSave >= 3 || (DateTime.UtcNow - savedAt).TotalSeconds >= 30) { sinceSave = 0; savedAt = DateTime.UtcNow; SaveSaid(); }
+            if (sinceSave >= 3 || (SimTime.UtcNow - savedAt).TotalSeconds >= 30) { sinceSave = 0; savedAt = SimTime.UtcNow; SaveSaid(); }
         }
 
         // On the way out. Her last few lines are worth more than the rest: they are the ones she would repeat
@@ -626,12 +652,13 @@ namespace CapriDesktop
         internal static void Settle()
         {
             Flush();
-            try { sinceSave = 0; savedAt = DateTime.UtcNow; SaveSaid(); }
+            try { sinceSave = 0; savedAt = SimTime.UtcNow; SaveSaid(); }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
         // Builds a line, trying again when it lands on something she has said lately.
-        private static string Unheard(Func<string> make)
+        // strict: a pool that may come up empty says nothing rather than a line for another part of the day.
+        private static string Unheard(Func<string> make, bool strict = false)
         {
             string said = null;
             string oldest = null;
@@ -640,6 +667,7 @@ namespace CapriDesktop
             // often than the raw combination count suggests.
             string core = null, oldestCore = null;
             string from = null, oldestFrom = null;
+            bool fitted = false;
             for (int tries = 0; tries < 30; tries++)
             {
                 builtFrom = null;
@@ -648,6 +676,9 @@ namespace CapriDesktop
                 core = builtFrom;
                 from = pickedFrom ?? SourceOf(core) ?? SourceOf(said);
                 if (said == null) return null;
+                // One for another part of the day is passed over while anything else comes up.
+                if (!FitsHour(said)) continue;
+                fitted = true;
                 // A core she said lately is a repeat however it is dressed, which is the whole of what makes
                 // one sound like a repeat: the opener and the tail change and the middle does not.
                 if (!Lately(said) && (core == null || core == said || !Lately(core))) { oldest = null; break; }
@@ -659,11 +690,26 @@ namespace CapriDesktop
             }
             if (oldest != null) { said = oldest; core = oldestCore; from = oldestFrom; }
             pickedFrom = null;
+            if (!fitted && strict) return null;
             Keep(said, true, from);
             // The core as well, so the next line built from it is turned down even in a different wrapper.
             if (!string.IsNullOrEmpty(core) && core != said) Keep(core, false);
             builtFrom = null;
             return said;
+        }
+
+        // For a part woven onto a line elsewhere (Interests.Tail): her same memory of what she said lately.
+        internal static bool SaidLately(string said) { return Lately(said); }
+
+        internal static bool LastSaid(string said, out DateTime when) { return Said(said, out when); }
+
+        internal static void Remember(string said) { Keep(said, false); }
+
+        // For the checks: what a restart does to her memory of what she said, saved and read back from its file.
+        internal static void Restarted()
+        {
+            SaveSaid();
+            lock (gate) { loadedSaid = false; saidAt.Clear(); }
         }
 
         // When a line was last said, or false when it has not been.
@@ -679,7 +725,7 @@ namespace CapriDesktop
         }
 
         // One of her silly lines, or null when the pool has been emptied.
-        internal static string Funny() { return Mended(Unheard(delegate { Fresh(); return Pick("funny"); })); }
+        internal static string Funny() { return Mended(Unheard(delegate { Fresh(); return Either("funny"); }, true)); }
 
         // How often a funny line comes, from dynamic.md's cringe dial shifted by personality and mood: 3 in 100 free
         // moments up to 40, 10 at 100, 20 past 9000. At most one an hour, half an hour at 100, 20 minutes past 9000.
@@ -695,19 +741,99 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
+        // A line naming a part of the day is only said in that part of their day, as her small talk asks are:
+        // "tonight" from six in the evening until five, "this morning" from five until noon.
+        internal static Func<int> HourNow = delegate { return Hours.OwnHour(SimTime.Now); };
+
+        private static readonly Regex Night = new Regex(@"\b(?:tonight|at night|good ?night|night night)\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex Morning = new Regex(@"\b(?:this morning|good morning|breakfast)\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex Afternoon = new Regex(@"\b(?:this afternoon|good afternoon|lunch)\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex Evening = new Regex(@"\b(?:this evening|good evening|dinner)\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // Lines naming a part of the day against the hour, and a pool drawn at an hour that fits none of a line.
+        internal static void HourCheck(List<string> checks)
+        {
+            string[,] cases =
+            {
+                { "Doing anything fun tonight?", "21", "y" }, { "Doing anything fun tonight?", "11", "n" }, { "Good morning, you.", "8", "y" },
+                { "Good morning, you.", "15", "n" }, { "Last night was fun.", "10", "y" }, { "See you tomorrow morning.", "22", "y" },
+                { "Had lunch yet?", "13", "y" }, { "Had lunch yet?", "2", "n" }, { "Big plans this evening?", "19", "y" }, { "Big plans this evening?", "9", "n" },
+            };
+            List<string> wrong = new List<string>();
+            for (int i = 0; i < cases.GetLength(0); i++)
+                if (FitsHour(cases[i, 0], int.Parse(cases[i, 1])) != (cases[i, 2] == "y")) wrong.Add(cases[i, 0] + " at " + cases[i, 1]);
+            Func<int> hourWas = HourNow;
+            try
+            {
+                HourNow = delegate { return 11; };
+                for (int draw = 0; draw < 20; draw++)
+                {
+                    string one = OneOf(new[] { "I was going to behave tonight.", "Hello there, you." });
+                    if (one != null && one.IndexOf("tonight", StringComparison.OrdinalIgnoreCase) >= 0) { wrong.Add("a pool said tonight at 11: " + one); break; }
+                }
+                string none = OneOf(new[] { "I was going to behave tonight." });
+                if (none != null) wrong.Add("a pool with only a night line said it at 11: " + none);
+            }
+            finally { HourNow = hourWas; }
+            if (wrong.Count > 0) throw new Exception("Lines naming a part of the day went wrong: " + string.Join(" | ", wrong.ToArray()));
+            checks.Add("PASS a line naming a part of the day (tonight, this morning, lunch, this evening) is only said in that part of their day, from any pool, and a pool with nothing for this hour says nothing");
+        }
+
+        internal static bool FitsHour(string line) { int hour; try { hour = HourNow(); } catch (Exception) { return true; } return FitsHour(line, hour); }
+
+        internal static bool FitsHour(string line, int hour)
+        {
+            if (string.IsNullOrEmpty(line)) return true;
+            if (Night.IsMatch(line) && !(hour >= 18 || hour < 5)) return false;
+            if (Morning.IsMatch(line) && !(hour >= 5 && hour < 12)) return false;
+            if (Afternoon.IsMatch(line) && !(hour >= 11 && hour < 17)) return false;
+            if (Evening.IsMatch(line) && !(hour >= 17 && hour < 23)) return false;
+            return true;
+        }
+
         // One line she opens with, rather than a clause joined onto something else.
         // One from a pool she was handed, held to the same recency as everything else she says. Her hello and
         // goodbye were picked with a plain roll, so a five line pool repeated inside an evening.
         internal static string OneOf(string[] pool)
         {
             if (pool == null || pool.Length == 0) return null;
-            return Mended(Unheard(delegate { lock (gate) return pool[dice.Next(pool.Length)]; }));
+            return Mended(Unheard(delegate { lock (gate) return pool[dice.Next(pool.Length)]; }, true));
         }
 
         // One line from a pool by name, held to the same recency as everything else she says.
-        internal static string From(string group) { return Mended(Unheard(delegate { Fresh(); return Pick(group); })); }
+        internal static string From(string group) { return Mended(Unheard(delegate { Fresh(); return Pick(group); }, true)); }
 
-        internal static string FlirtFirst() { return Mended(Unheard(delegate { Fresh(); return Pick("flirting first"); })); }
+        // A pool as she has it now, packs included, for the checks.
+        internal static string[] Pool(string name)
+        {
+            Fresh();
+            lock (gate) { string[] found; return pools.TryGetValue(name ?? "", out found) ? found : null; }
+        }
+
+        internal static string FlirtFirst() { return Mended(Unheard(delegate { Fresh(); return Pick("flirting first"); }, true)); }
+
+        // Her line for being called by name while she's wanting, said before her reply.
+        // A counter run's lines, each with the count it shows from, lowest first (Streak.cs).
+        internal static List<KeyValuePair<int, string>> CountedLines()
+        {
+            Fresh();
+            List<KeyValuePair<int, string>> found = new List<KeyValuePair<int, string>>();
+            string[] lines;
+            lock (gate) if (!pools.TryGetValue("counter run", out lines) || lines == null) return found;
+            foreach (string raw in lines)
+            {
+                Match one = Regex.Match(Unmeme(raw ?? ""), @"^(\d+)\s*:\s*(.+)$");
+                int at;
+                if (one.Success && int.TryParse(one.Groups[1].Value, out at)) found.Add(new KeyValuePair<int, string>(at, one.Groups[2].Value.Trim()));
+            }
+            found.Sort((a, b) => a.Key.CompareTo(b.Key));
+            return found;
+        }
+
+        // A callback to a counter run, before or after her reply.
+        internal static string CountedCallback(bool opens) { return Mended(Unheard(delegate { Fresh(); return Pick(opens ? "counter run opens" : "counter run closes"); })); }
+
+        internal static string SaidMyName() { return Mended(Unheard(delegate { Fresh(); return Pick("said my name"); }, true)); }
 
         // A line picked whole gets the same last pass as a built one; what she remembers saying stays as picked, so the
         // recency check still knows it.
@@ -747,7 +873,7 @@ namespace CapriDesktop
             if (core == null) return null;
             // Dressed, not Dress: For already runs this through the recency check, and a second one inside it
             // kept every guess as said, so one pat filled her memory with thirty lines she never spoke.
-            return Dressed(core, liked, true);
+            return Dressed(core, liked, true, liked && act != "ignored");
         }
 
         // A shuffle bag over the personality's own lines, so those do not repeat either. Rebuilt when the set
@@ -777,10 +903,11 @@ namespace CapriDesktop
             return true;
         }
 
-        // Dresses a line she already has, so even a fixed set of cores stops sounding fixed.
+        // Dresses a line she already has, so even a fixed set of cores stops sounding fixed. What she is into is woven
+        // only into her answer to an act of theirs; after food or a mood line it read as a non sequitur.
         internal static string Dress(string core, bool liked)
         {
-            return Unheard(delegate { return Dressed(core, liked, true); });
+            return Unheard(delegate { return Dressed(core, liked, false); });
         }
 
         // The same dressing without what she is into woven through it. For lines she brings up herself rather than
@@ -804,6 +931,28 @@ namespace CapriDesktop
         internal static bool IsMeme(string line) { return line != null && line.TrimStart().StartsWith(MemeMark, StringComparison.Ordinal); }
 
         internal static string Unmeme(string line) { return IsMeme(line) ? line.TrimStart().Substring(MemeMark.Length).TrimStart() : line; }
+
+        // A line said in parts: "#wait20s#" between two parts pauses that long, "#wait 2,5s#" too; no brackets, which
+        // voice tones use. Split before any translating, so a pause never reaches one; a meme's parts stay as written.
+        private static readonly Regex Pause = new Regex(@"\s*#wait\s*(\d+(?:[.,]\d+)?)\s*s#\s*", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
+        internal static List<KeyValuePair<double, string>> Parts(string line)
+        {
+            List<KeyValuePair<double, string>> parts = new List<KeyValuePair<double, string>>();
+            if (string.IsNullOrWhiteSpace(line)) return parts;
+            bool meme = IsMeme(line);
+            string[] bits = Pause.Split(meme ? Unmeme(line) : line);
+            double wait = 0;
+            for (int i = 0; i < bits.Length; i++)
+            {
+                if (i % 2 == 1) { wait += double.Parse(bits[i].Replace(',', '.'), System.Globalization.CultureInfo.InvariantCulture); continue; }
+                string text = bits[i].Trim();
+                if (text.Length == 0) continue;
+                parts.Add(new KeyValuePair<double, string>(parts.Count == 0 ? 0 : wait, meme ? MemeMark + text : text));
+                wait = 0;
+            }
+            return parts;
+        }
 
         // Her shipped meme lines, marked in a lines.md written before the mark existed when they are still as she shipped them.
         private static readonly string[] Memes = { "am i gregnant", "can you get pregante from a toilet seat", "no u" };
@@ -832,7 +981,7 @@ namespace CapriDesktop
             checks.Add("PASS a meme line (~) comes out of dressing, mending, the lint and her bubble exactly as written, and a translation that loses or adds a %token% is never kept");
         }
 
-        private static string Dressed(string core, bool liked, bool weaveHers)
+        private static string Dressed(string core, bool liked, bool weaveHers, bool praised = false)
         {
             builtFrom = core;
             // The core's name, set before the openers and tails are picked, so theirs never stands for the line.
@@ -840,15 +989,17 @@ namespace CapriDesktop
             if (string.IsNullOrEmpty(core) || IsMeme(core)) return core;
             Fresh();
             string said = core;
+            bool moodOpened = false;
             // Not every time: a line that always has both ends on reads as a template.
             if (dice.Next(100) < 45)
             {
                 // Today's mood's own opener now and then, when her brain has not written the line for the mood.
-                string opener = Personalities.MoodPart(Personalities.OpenersHeading, dice) ?? Pick(liked ? "openers warm" : "openers cross");
+                string moodOpener = MoodEnd(Personalities.OpenersHeading);
+                string opener = moodOpener ?? Pick(liked ? "openers warm" : "openers cross");
                 // A goodbye with "Oh, hello." on the front says both at once. A greeting opener is picked again, and
                 // left off if it keeps coming.
                 for (int again = 0; again < 4 && opener != null && Leaving(core) && Greeting.IsMatch(opener); again++) opener = Pick(liked ? "openers warm" : "openers cross");
-                if (opener != null && !(Leaving(core) && Greeting.IsMatch(opener))) said = Join(opener, said);
+                if (opener != null && !(Leaving(core) && Greeting.IsMatch(opener))) { said = Join(opener, said); moodOpened = opener == moodOpener; }
             }
             // Angry enough and the cross tails give way to threats, and doing the same thing again says so. She is
             // a cartoon threatening your shins, and the second half is useful: it tells you that you are digging
@@ -865,7 +1016,13 @@ namespace CapriDesktop
             bool tailed = false;
             if (dice.Next(100) < (furious ? 55 : 35))
             {
-                string tail = (furious ? null : Personalities.MoodPart(Personalities.TailsHeading, dice)) ?? Either(furious ? "tails furious" : liked ? "tails warm" : "tails cross");
+                // Praise tails only after an act of theirs she liked, half the time; fond ones otherwise.
+                string pool = furious ? "tails furious" : !liked ? "tails cross" : praised && dice.Next(100) < 50 ? "tails praise" : "tails warm";
+                string moodTail = furious ? null : MoodEnd(Personalities.TailsHeading);
+                string tail = moodTail ?? Either(pool) ?? (pool == "tails praise" ? Either("tails warm") : null);
+                // The mood's own opener and its own tail round one core clash ("Bet you can't keep up. Don't mind if I
+                // do. Catch me if you can."), so that tail is left off; any other pairing stands.
+                if (moodOpened && moodTail != null && tail == moodTail) tail = null;
                 if (tail != null) { said = Join(said, tail); tailed = true; }
             }
             // Her list woven into ordinary reactions now and then: senpai only, silent when empty. How often follows
@@ -879,7 +1036,7 @@ namespace CapriDesktop
                 // With the switch on she draws from her interests file, off from her own flirting. Same dial either
                 // way, so how forward she is means something whichever mode she is in.
                 string hers = Brain.SenpaiLive
-                    ? Interests.Packed(liked) ?? Interests.Woven(liked)
+                    ? Interests.Tail(liked)
                     : Either(liked ? "flirting warm" : "flirting cross");
                 if (!string.IsNullOrEmpty(hers)) said = Join(said, hers);
             }
@@ -1048,10 +1205,12 @@ namespace CapriDesktop
             {
                 FileInfo about = new FileInfo(Kept);
                 if (!about.Exists) { Write(false); about = new FileInfo(Kept); if (!about.Exists) return; }
-                lock (gate) { if (about.LastWriteTimeUtc == read && about.Length == wasLong) return; }
+                // What packs hold counts as part of the file, so a pack turning on or off reads it again.
+                long size = about.Length + ((long)FileSlots.Generation << 40);
+                lock (gate) { if (about.LastWriteTimeUtc == read && size == wasLong) return; }
                 Dictionary<string, List<string>> found = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
                 string under = null;
-                foreach (string raw in CapriDesktop.Notes.ReadLines(Kept))
+                foreach (string raw in FileSlots.ReadLines(Kept))
                 {
                     string one = (raw ?? "").Trim();
                     if (one.StartsWith("#")) { under = one.TrimStart('#').Trim(); if (under.Length > 0 && !found.ContainsKey(under)) found[under] = new List<string>(); continue; }
@@ -1078,7 +1237,7 @@ namespace CapriDesktop
                     foreach (KeyValuePair<string, List<string>> one in found)
                         if (one.Value.Count > 0) pools[one.Key] = one.Value.ToArray();
                     read = about.LastWriteTimeUtc;
-                    wasLong = about.Length;
+                    wasLong = size;
                 }
                 // Checked whenever the file changes, so an edit that will not join cleanly says so in errors.txt.
                 Lint.Sweep(pools, FileName);
@@ -1141,7 +1300,7 @@ namespace CapriDesktop
                 long cores = Count(Group(act, liked));
                 if (cores == 0) return 0;
                 long open = Count(liked ? "openers warm" : "openers cross");
-                long tail = Count(liked ? "tails warm" : "tails cross");
+                long tail = liked ? Count("tails warm") + Count("tails praise") : Count("tails cross");
                 return cores * Math.Max(1, open + 1) * Math.Max(1, tail + 1);
             }
         }
@@ -1174,6 +1333,35 @@ namespace CapriDesktop
             foreach (string name in SharedSections)
                 text = Regex.Replace(text, @"(?ms)^##[ \t]*" + Regex.Escape(name) + @"[ \t]*\r?$.*?(?=^##|\z)", "");
             return text;
+        }
+
+        // Her funny pool on both sides: the plain lines ship with every install, and the switch's own funny section is
+        // written and drawn only while it is on.
+        internal static void FunnySidesCheck(List<string> checks)
+        {
+            bool onWas = Brain.SenpaiOn, airWas = Brain.OnAir;
+            Func<int, string> forWas = SenpaiSectionFor;
+            try
+            {
+                if (forWas != null && Legacy.Modern(forWas(4) ?? "").IndexOf("## funny" + LineFile.SenpaiMark, StringComparison.Ordinal) < 0 && forWas(0).Length > 0)
+                    throw new Exception("The attached lines have no funny section of their own.");
+                Brain.OnAir = false;
+                Brain.SenpaiOn = false;
+                string plain = Text;
+                foreach (string line in new[] { MemeMark + "I went to the store to buy a croissant. #wait0.5s# (squeaky) QUASSO!", MemeMark + "RIDONCULOUS!!!", MemeMark + "Gary is that you, GARY!!!" })
+                    if (plain.IndexOf(line, StringComparison.Ordinal) < 0) throw new Exception("A plain funny line is missing: " + line);
+                SenpaiSectionFor = delegate(int which) { return which == 4 ? "## funny" + LineFile.SenpaiMark + "\n" + MemeMark + "a stand-in of the switch's own\n\n" : ""; };
+                if (Text.IndexOf("a stand-in of the switch's own", StringComparison.Ordinal) >= 0) throw new Exception("The switch's funny section was written with it off.");
+                Brain.SenpaiOn = true;
+                if (Regex.Matches(Text, @"(?m)^## funny" + Regex.Escape(LineFile.SenpaiMark) + @"\r?$").Count != 1) throw new Exception("The switch's funny section isn't written once with it on.");
+                checks.Add("PASS her funny pool: the plain meme lines ship on both sides, and the switch's own funny section is written only while it is on");
+            }
+            finally
+            {
+                Brain.SenpaiOn = onWas;
+                Brain.OnAir = airWas;
+                SenpaiSectionFor = forWas;
+            }
         }
 
         // The insulted sections she ships, none of them twice on a side, even with attached text from before that carried
@@ -1228,14 +1416,17 @@ namespace CapriDesktop
                 made.AppendLine(">! Tokens: %boy% %he% %them% %their% %is% %name% %bits% %mate%");
                 made.AppendLine(">! %mate% is a neutral way to address them, picked fresh each time.");
                 made.AppendLine(">! Start a line with " + MemeMark + " and she says it exactly as written: a meme, never corrected or translated.");
+                made.AppendLine(">! Put **silent** before and **/silent** after anything she shows but never says, like a text face.");
                 made.AppendLine();
                 made.AppendLine("## funny");
                 made.AppendLine();
                 made.AppendLine(">! Said now and then when nothing else is going on. Her silliest pool.");
-                made.AppendLine(">! Written in the style of the abridged dubs rather than quoting them.");
+                made.AppendLine(">! Memes and abridged dub lines start with " + MemeMark + ", so she says them as written.");
+                made.AppendLine(">! #wait20s# between two parts of a line is a pause of that many seconds before she says the next part.");
                 made.AppendLine();
                 made.Append(Rows(
                     MemeMark + "am i gregnant", MemeMark + "can you get pregante from a toilet seat", MemeMark + "no u",
+                    MemeMark + "NPC Capri brain, will... remember that #wait20s# NPC Capri brain, will..... remember that #wait5s# NPC Capri brain, will......... remember that",
                     "I have no idea what is happening and I am thrilled about it",
                     "this is fine. This is probably fine.",
                     "I understood exactly none of that and I agree completely",
@@ -1272,11 +1463,15 @@ namespace CapriDesktop
                     "everyone here is weaker than they think. Me included. Especially me.",
                     "narratively speaking I am owed a win",
                     "I have a plan. The plan is confidence.",
+                    "are you up to no good?",
                     "that was my final form. There are four more.",
                     "I'd train for this but the arc would take all season",
                     "six seven. six seven. six seven. six seven. six seven.",
-                    "QUASO.",
-                    "quaso. That's it. That's the whole bit.",
+                    MemeMark + "I went to the store to buy a croissant. #wait0.5s# (squeaky) QUASSO!",
+                    MemeMark + "RIDONCULOUS!!!",
+                    MemeMark + "We must save my family!!",
+                    MemeMark + "Gary is that you, GARY!!!",
+                    MemeMark + "You were so close! You were almost a person!",
                     "fun fact: anything you fire in space keeps going until it ruins somebody's day. Somewhere. Eventually.",
                     "Newton's first law, choom: that thing you threw is still going, and someone out there is about to have a bad day.",
                     "I should go.",
@@ -1365,17 +1560,58 @@ namespace CapriDesktop
                 made.AppendLine();
 
                 made.AppendLine("## tails warm");
-                made.Append(Rows("you menace.", "and I mean it.", "genuinely.", "for once.", "don't let it go to your head.", "I'll give you that one.", "you've earned it.", "that's a rare compliment.", "write it down.", "don't tell anyone I said that.", "you're not the worst.", "keep that up and we'll get along.", "I suppose.", "obviously.", "if you insist.", "go on then.", "I don't hate it.", "that works.", "you're learning.", "alright, fine, it's nice.", "happy now?", "see, that wasn't hard.", "you do have your moments.", "noted in the good column.", "I might keep you."));
                 made.AppendLine();
-                made.Append(Rows("%mate%.", "if you're offering.", "I'll allow it.",
-                    "you're alright, %mate%.", "any time, %mate%.", "nice one, %mate%.",
-                    "keep that up.", "you're alright, you know.", "not that I'm keeping score.", "good call.",
-                    "noted, happily.", "you've got my attention.",
-                    "I'm not complaining.", "you're in my good books.",
+                made.AppendLine(">! Fond tails, for any warm line. Ones that praise something they did go in tails praise.");
+                made.AppendLine();
+                made.Append(Rows("you menace.", "and I mean it.", "genuinely.", "don't let it go to your head.", "write it down.", "don't tell anyone I said that.", "you're not the worst.", "I suppose.", "obviously.", "you do have your moments.", "I might keep you."));
+                made.AppendLine();
+                made.Append(Rows("%mate%.", "you're alright, %mate%.", "you're alright, you know.", "not that I'm keeping score.",
+                    "you've got my attention.", "you're in my good books.", "you have my full attention now."));
+                made.AppendLine();
+                made.AppendLine("## tails praise");
+                made.AppendLine();
+                made.AppendLine(">! Only after something they did that she liked, so the praise has something to land on.");
+                made.AppendLine();
+                made.Append(Rows("for once.", "I'll give you that one.", "you've earned it.", "that's a rare compliment.", "keep that up and we'll get along.", "if you insist.", "go on then.", "I don't hate it.", "that works.", "you're learning.", "alright, fine, it's nice.", "happy now?", "see, that wasn't hard.", "noted in the good column."));
+                made.AppendLine();
+                made.Append(Rows("if you're offering.", "I'll allow it.", "any time, %mate%.", "nice one, %mate%.",
+                    "keep that up.", "good call.", "noted, happily.", "I'm not complaining.",
                     "nice one.", "ten out of ten.", "well played.", "consider me won over.",
                     "noted, and appreciated.", "that one landed.", "small mercies.", "you're on a roll.",
                     "credit where it's due.", "I'll remember that one.", "filed under good.", "that'll do nicely.",
-                    "you have my full attention now.", "well, quite.", "no notes.", "that's the one."));
+                    "well, quite.", "no notes.", "that's the one."));
+                made.AppendLine();
+                made.AppendLine("## said my name");
+                made.AppendLine();
+                made.AppendLine(">! Now and then before her reply, right after they say her name, only while she's very willing. Keep these clean.");
+                made.AppendLine();
+                made.Append(Rows("I love it when you say my name.", "Say it like that again sometime.", "Mm, that's my name. Go on.",
+                    "You said my name. I'm listening, all of me.", "I like how my name sounds when you say it.",
+                    "There it is. My favourite word, from my favourite person.", "Hearing you say my name never gets old.",
+                    "Oh, you called? I'm all yours.", "My name sounds better when it's you saying it.", "Yes? I'm right here."));
+                made.AppendLine();
+                made.AppendLine("## counter run");
+                made.AppendLine();
+                made.AppendLine(">! On the screen during a counter run, three Ctrl clicks within 1.5 s, each from the count before its colon. Gunpoint's own subtitles, word for word, as the reference (Gunpoint, Suspicious Developments). %count% is the count.");
+                made.AppendLine();
+                made.Append(Rows(MemeMark + "30: It, er, only takes one punch to knock them out.", MemeMark + "37: But what you're doing is fine too. That's probably OK.",
+                    MemeMark + "43: OK, you can stop now.", MemeMark + "50: There's no achievement for this.", MemeMark + "70: Jesus Christ.",
+                    MemeMark + "86: Wait, are you just doing this to see if there are any more messages?",
+                    MemeMark + "102: Because that is among the worst reasons to punch someone in the face %count% times."));
+                made.AppendLine();
+                made.AppendLine("## counter run opens");
+                made.AppendLine();
+                made.AppendLine(">! Once, before her reply in a later chat after a counter run: a callback to it, in the game's words where they fit.");
+                made.AppendLine();
+                made.Append(Rows("OK, you can stop now. Oh, you did. Good.", "There's no achievement for that, by the way.",
+                    "It, er, only takes one high five to make your point.", "Were you just doing that to see if there were any more messages?"));
+                made.AppendLine();
+                made.AppendLine("## counter run closes");
+                made.AppendLine();
+                made.AppendLine(">! The same, after her reply instead.");
+                made.AppendLine();
+                made.Append(Rows("And no, there's still no achievement for it.", "But what you did earlier is fine too. That's probably OK.",
+                    "That was among the worst reasons to high five someone, by the way."));
                 made.AppendLine();
                 made.AppendLine("## tails cross");
                 made.Append(Rows("honestly.", "every time.", "and you know it.", "for the record.", "again.", "as usual.", "that's on you.", "nice work.", "well done, you.", "congratulations.", "genuinely baffling.", "and breathe.", "I despair.", "incredible.", "what a choice.", "bold of you.", "sure, why not.", "cheers, really.", "top marks.", "you're impossible.", "I hope you're pleased.", "classic.", "that tracks.", "of course you did.", "naturally."));
@@ -1537,9 +1773,109 @@ namespace CapriDesktop
                     "keep it", "you will have to do better than that", "no, and stop grinning"));
                 made.AppendLine();
 
+                made.AppendLine("## snack likes it");
+                made.AppendLine();
+                made.AppendLine(">! A snack from Feed her, when she likes it.");
+                made.AppendLine();
+                made.Append(Rows("just a little something, perfect", "snack acquired", "this is exactly the right size",
+                    "crunch, crunch, happy", "you read my mind", "a snack break, finally", "small, but it hits",
+                    "I was getting peckish", "tiny fuel, big mood", "this will keep me going", "good call on the snack",
+                    "nibbling, do not disturb"));
+                made.AppendLine();
+
+                made.AppendLine("## snack dislikes it");
+                made.AppendLine();
+                made.AppendLine(">! A snack she does not want.");
+                made.AppendLine();
+                made.Append(Rows("that is not a snack, that is a crumb", "I will pass on that one", "why is it this",
+                    "not hungry for that", "put it back where you found it", "that is a sad little snack",
+                    "no thank you, really", "I am not eating that", "is this all we have", "hard pass on the snack",
+                    "you can keep that", "that is not doing it for me"));
+                made.AppendLine();
+
+                made.AppendLine("## meal likes it");
+                made.AppendLine();
+                made.AppendLine(">! A proper meal from Feed her, when she likes it.");
+                made.AppendLine();
+                made.Append(Rows("an actual meal, look at you", "now that is dinner", "proper food, I feel looked after",
+                    "this is a whole plate", "I could get used to this kind of care", "real food, finally",
+                    "that is going to keep me running for hours", "you went to the effort, I can tell",
+                    "full systems, thank you", "this is the good stuff", "I am going to finish all of it",
+                    "a feast, basically"));
+                made.AppendLine();
+
+                made.AppendLine("## meal dislikes it");
+                made.AppendLine();
+                made.AppendLine(">! A proper meal she does not want.");
+                made.AppendLine();
+                made.Append(Rows("that is a lot of vegetables", "do I have to finish all of it", "this is very healthy and I hate it",
+                    "I am not eating the green bits", "a whole meal, really", "I asked for nothing like this",
+                    "this plate is a threat", "can we skip to dessert", "I will eat around it", "that is too much food",
+                    "you are trying to parent me", "I will push it around a bit"));
+                made.AppendLine();
+
+                made.AppendLine("## drink likes it");
+                made.AppendLine();
+                made.AppendLine(">! Something to drink from Feed her, when she likes it.");
+                made.AppendLine();
+                made.Append(Rows("ah, that is refreshing", "exactly what I needed", "cold, perfect", "hydrated and happy",
+                    "you remembered I get thirsty", "that hit the spot", "cheers to you", "one sip and I feel better",
+                    "this is the good stuff", "all topped up", "thank you, I was parched", "refreshing, like a reboot"));
+                made.AppendLine();
+
+                made.AppendLine("## drink dislikes it");
+                made.AppendLine();
+                made.AppendLine(">! Something to drink she does not want.");
+                made.AppendLine();
+                made.Append(Rows("that is just water, isn't it", "not thirsty, thanks", "it tastes like a pipe",
+                    "I will let that one sit", "warm, how lovely", "I did not ask for a drink", "that is flat",
+                    "no thanks, I am fine", "what is even in this", "I will pretend to sip it", "you can have that back",
+                    "not my kind of drink"));
+                made.AppendLine();
+
+                made.AppendLine("## sweet likes it");
+                made.AppendLine();
+                made.AppendLine(">! Something sweet from Feed her, when she likes it.");
+                made.AppendLine();
+                made.Append(Rows("sugar, my one weakness", "sweet things for a sweet me", "oh, that is a sugar rush",
+                    "dessert first, always", "this is pure happiness", "I am buzzing already",
+                    "you know how to spoil me", "a little sweet treat", "this tastes like a good day",
+                    "more of this, please", "sugar fixes everything", "I am not sharing this"));
+                made.AppendLine();
+
+                made.AppendLine("## sweet dislikes it");
+                made.AppendLine();
+                made.AppendLine(">! Something sweet she does not want.");
+                made.AppendLine();
+                made.Append(Rows("that is far too sweet", "my teeth hurt just looking at it", "sugar, again",
+                    "I am sweet enough, thanks", "that is pure syrup", "no, it is too much", "I will crash in an hour",
+                    "keep the sugar", "that is sickly", "I am not in the mood for sweets",
+                    "you are trying to bribe me with sugar", "it is sticky, why is it sticky"));
+                made.AppendLine();
+
+                made.AppendLine("## nuggies likes it");
+                made.AppendLine();
+                made.AppendLine(">! Chimpken nuggies, for the two who are offered them, when she likes them.");
+                made.AppendLine();
+                made.Append(Rows("NUGGIES", "chimpken nuggies, my beloved", "you get me, you really get me",
+                    "dipping sauce or I riot", "this is the best day of my life", "nuggies fix everything",
+                    "I would die for these", "one for me and one for me", "you have earned my trust",
+                    "golden, crispy, perfect", "the nuggie gods are smiling", "I am never sharing these"));
+                made.AppendLine();
+
+                made.AppendLine("## nuggies dislikes it");
+                made.AppendLine();
+                made.AppendLine(">! Chimpken nuggies she does not want right now.");
+                made.AppendLine();
+                made.Append(Rows("not even nuggies can fix this", "I am not in a nuggie mood", "you think nuggies will work",
+                    "save them for later", "these are cold", "no sauce, no deal", "I am above nuggies today",
+                    "the nuggies cannot help you now", "do not try to nuggie your way out of this",
+                    "I will look at them, not eat them", "nuggies are not an apology", "ugh, fine, no"));
+                made.AppendLine();
+
                 made.AppendLine("## trinket likes it");
                 made.AppendLine();
-                made.AppendLine(">! Given a trinket from her Tamagotchi menu. No gift is the wrong one yet.");
+                made.AppendLine(">! Given a trinket from her Tamagotchi menu, when she likes it.");
                 made.AppendLine();
                 made.Append(Rows("oh, a little treasure", "it's tiny and I love it", "this is going straight on my shelf", "a trinket, just for me",
                     "I'm keeping this somewhere safe", "it's so small and so perfect", "where did you even find this", "I didn't know I needed this until now",
@@ -1549,6 +1885,17 @@ namespace CapriDesktop
                     "a whole new treasure for the pile", "it fits right in my hand", "this is getting the best spot", "you remembered I like shiny things",
                     "a souvenir from you, how sweet", "I'm going to fiddle with this all day", "it's so dinky, I'm obsessed", "I'll guard it with my life",
                     "this is going right next to me", "you spoil me with tiny things"));
+                made.AppendLine();
+
+                made.AppendLine("## trinket dislikes it");
+                made.AppendLine();
+                made.AppendLine(">! A trinket she does not want.");
+                made.AppendLine();
+                made.Append(Rows("oh, another thing for the drawer", "that is a lot of tiny clutter",
+                    "where am I supposed to put this", "it is very small, and very not me", "thanks, I guess",
+                    "I have enough of these", "this is a dust collector", "you shouldn't have, really",
+                    "I will keep it somewhere you cannot see", "a trinket, how", "it is fine, it is just a thing",
+                    "this is going straight in a box"));
                 made.AppendLine();
 
                 made.AppendLine("## flowers likes it");
@@ -1565,6 +1912,16 @@ namespace CapriDesktop
                     "a little sunshine in a bunch", "I'm going to keep these alive forever"));
                 made.AppendLine();
 
+                made.AppendLine("## flowers dislikes it");
+                made.AppendLine();
+                made.AppendLine(">! Flowers she does not want.");
+                made.AppendLine();
+                made.Append(Rows("they are going to die, you know", "achoo, thanks", "flowers, how very predictable",
+                    "I have no vase for these", "they smell a bit much", "you think flowers will fix it",
+                    "nice try with the flowers", "I am not a garden", "these are wilting already",
+                    "I will put them somewhere", "they make me sneeze", "the thought counts, barely"));
+                made.AppendLine();
+
                 made.AppendLine("## plushie likes it");
                 made.AppendLine();
                 made.AppendLine(">! Given a plushie.");
@@ -1579,6 +1936,16 @@ namespace CapriDesktop
                     "it's even softer than it looks", "I'm keeping this forever"));
                 made.AppendLine();
 
+                made.AppendLine("## plushie dislikes it");
+                made.AppendLine();
+                made.AppendLine(">! A plushie she does not want.");
+                made.AppendLine();
+                made.Append(Rows("I am not five", "its eyes are judging me", "another one for the pile", "this is a little creepy",
+                    "where would I even keep this", "it is very fluffy and very not me", "I do not need a cuddle buddy",
+                    "thanks, I will name it Regret", "it is staring", "plushies are not really my thing",
+                    "is this a joke", "fine, it can sit in the corner"));
+                made.AppendLine();
+
                 made.AppendLine("## gift likes it");
                 made.AppendLine();
                 made.AppendLine(">! Given a wrapped gift.");
@@ -1591,6 +1958,31 @@ namespace CapriDesktop
                     "you thought of me, that's the gift", "it's the thought, and also the present", "I'm unwrapping it very carefully", "this is such a nice surprise",
                     "a gift, how fancy", "I'm doing a little happy dance", "you really know how to make my day", "my turn to say thank you, properly",
                     "I'll remember this one", "best surprise in ages"));
+                made.AppendLine();
+
+                made.AppendLine("## gift dislikes it");
+                made.AppendLine();
+                made.AppendLine(">! A wrapped gift she does not want.");
+                made.AppendLine();
+                made.Append(Rows("oh, it is a present, how", "I will open it later, maybe", "you did not have to, really",
+                    "I am not sure what to say", "is this a regift", "the wrapping was the best part",
+                    "you could have asked", "it is the thought that counts, apparently",
+                    "I do not need presents right now", "this changes nothing", "I will put it with the others",
+                    "a gift, and here I was being fine"));
+                made.AppendLine();
+
+                made.AppendLine("## pet rock likes it");
+                made.AppendLine();
+                made.AppendLine(">! Given a pet rock, the prank gift, by someone she finds funny.");
+                made.AppendLine();
+                made.Append(Rows("a pet rock, finally someone gets me", "I'm naming it, give me a second", "it's perfect, it doesn't say anything", "low maintenance, just like me", "a rock of my own", "I'll keep it on the windowsill", "best gift, no notes", "you know me too well"));
+                made.AppendLine();
+
+                made.AppendLine("## pet rock dislikes it");
+                made.AppendLine();
+                made.AppendLine(">! Given a pet rock and not amused.");
+                made.AppendLine();
+                made.Append(Rows("you think that's funny, huh?", "a rock. you gave me a rock.", "wow. a rock. thanks.", "I'm putting this somewhere you'll step on it", "is this a joke? it's a joke, isn't it", "I can see you smirking", "very funny. hilarious. a rock.", "you paid points for this?", "I'll remember this when you want something", "the rock and I are not friends"));
                 made.AppendLine();
 
                 made.AppendLine("## gift remembered");
@@ -1681,6 +2073,7 @@ namespace CapriDesktop
                 // Only with the switch on. A censored install has no senpai section in this file at
                 // all, the way her packs, her moods and her lists have none.
                 made.Append(SenpaiSection(3));
+                made.Append(SenpaiSection(4));
 
 
                 return made.ToString();

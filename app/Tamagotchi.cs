@@ -5,8 +5,8 @@ using System.Windows.Forms;
 
 namespace CapriDesktop
 {
-    // A little pet game: points she earns while running buy food and gifts under Right-click > Tamagotchi. Toggles >
-    // Tamagotchi turns it or each part off, leaving Feed her free. She is never harmed, only snippier when hungry.
+    // A little pet game and her own mod item, off until turned on in Toggles or Mods: points she earns buy food and gifts
+    // under Right-click > Tamagotchi. Off, Feed her is free. She is never harmed, only snippier when hungry.
     internal sealed partial class Companion
     {
         // A point a minute while she runs, hidden or locked included. A working day of six to eight hours open earns about
@@ -21,15 +21,8 @@ namespace CapriDesktop
         private double pointTickAt = -1;
         private int pointsUnsaved, feedsSinceNudge;
 
-        // What she can be given, top to bottom, with what each costs: a few a day on a working day's
-        // points. None is the wrong gift; each personality just has one it likes best.
-        private static readonly string[,] Gifts =
-        {
-            { "trinket", "Trinket", "60", "trinket" },
-            { "flowers", "Flowers", "100", "bunch of flowers" },
-            { "plushie", "Plushie", "140", "plushie" },
-            { "gift", "Gift", "180", "present" }
-        };
+        // What she can be given, top to bottom, from the act list.
+        private static readonly Acts.Act[] Gifts = Acts.Of("gift");
 
         // The food only Emo and Bratty are offered, in their own lower case.
         internal const string Nuggies = "chimpken nuggies";
@@ -37,26 +30,27 @@ namespace CapriDesktop
         // The cost of each food, scaled so a working day's points keep her fed with plenty over.
         private static int FoodCost(string named)
         {
-            switch (named)
-            {
-                case "A proper meal": return 25;
-                case "A treat": return 20;
-                case "Something sweet": return 20;
-                case Nuggies: return 15;
-                default: return 10;
-            }
+            foreach (Acts.Act food in Acts.Of("food"))
+                foreach (Acts.Offer offer in food.Offers) if (offer.Label == named) return offer.Cost;
+            return 10;
+        }
+
+        private static Acts.Offer GiftOffer(string act)
+        {
+            foreach (Acts.Act gift in Gifts) if (gift.Name == act) return gift.Offers[0];
+            return null;
         }
 
         private static int GiftCost(string act)
         {
-            for (int i = 0; i < Gifts.GetLength(0); i++) if (Gifts[i, 0] == act) return int.Parse(Gifts[i, 2], System.Globalization.CultureInfo.InvariantCulture);
-            return 0;
+            Acts.Offer offer = GiftOffer(act);
+            return offer == null ? 0 : offer.Cost;
         }
 
         private static string GiftName(string act)
         {
-            for (int i = 0; i < Gifts.GetLength(0); i++) if (Gifts[i, 0] == act) return Gifts[i, 3];
-            return act;
+            Acts.Offer offer = GiftOffer(act);
+            return offer == null ? act : offer.Said;
         }
 
         internal bool GiftsOn { get { return TamagotchiOn && !preferences.NoGifts; } }
@@ -72,7 +66,18 @@ namespace CapriDesktop
         // Nuggies are on the menu only while she is Emo or Bratty underneath.
         private static bool NuggiesFor(string under) { return under == "Emo" || under == "Bratty"; }
 
-        internal bool TamagotchiOn { get { return !preferences.NoTamagotchi; } }
+        internal bool TamagotchiOn { get { return preferences.TamagotchiPlugin; } }
+
+        // The one switch, from Toggles and from her row in Mods. Her points stay whichever way it goes.
+        internal void SetTamagotchi(bool on)
+        {
+            if (preferences.TamagotchiPlugin == on) return;
+            preferences.TamagotchiPlugin = on;
+            pointTickAt = -1;
+            SavePreferences();
+            if (mainframe != null) mainframe.Sync();
+        }
+
         // Each part under it counts only while the whole is on.
         internal bool FeedingOn { get { return !TamagotchiOn || !preferences.NoFeeding; } }
         internal bool PointsOn { get { return TamagotchiOn && !preferences.NoPoints; } }
@@ -126,10 +131,10 @@ namespace CapriDesktop
             tamagotchiItem.DropDownItems.Add(pointsLine);
             tamagotchiItem.DropDownItems.Add(pointsRule);
             giftItem = new ToolStripMenuItem("Give gift") { ToolTipText = "Something that isn't food. She remembers what you give her" };
-            for (int i = 0; i < Gifts.GetLength(0); i++)
+            foreach (Acts.Act gift in Gifts)
             {
-                string act = Gifts[i, 0];
-                giftItem.DropDownItems.Add(new ToolStripMenuItem(Gifts[i, 1], null, delegate { Give(act); }) { Tag = act });
+                string act = gift.Name;
+                giftItem.DropDownItems.Add(new ToolStripMenuItem(gift.Offers[0].Label, null, delegate { Give(act); }) { Tag = act });
             }
             tamagotchiItem.DropDownItems.Add(giftItem);
             nuggiesItem = new ToolStripMenuItem(Nuggies, null, delegate { FeedPaid("nuggies", Nuggies); }) { Tag = Nuggies };
@@ -193,27 +198,28 @@ namespace CapriDesktop
                 ToolStripMenuItem gift = one as ToolStripMenuItem;
                 string act = gift == null ? null : gift.Tag as string;
                 if (act == null) continue;
-                int cost = GiftCost(act), at = 0;
-                for (int i = 0; i < Gifts.GetLength(0); i++) if (Gifts[i, 0] == act) at = i;
-                Costed(gift, Gifts[at, 1], cost, PointsOn);
+                int cost = GiftCost(act);
+                Costed(gift, GiftOffer(act).Label, cost, PointsOn);
                 gift.Enabled = !PointsOn || Points >= cost;
             }
         }
 
         // ---------- Gifts ----------
 
-        // Given something: paid for, counted, scored by her personality (always well, since no gift is wrong yet),
-        // her forwardness nudged up a step when it is set to drift, and her line for it.
+        // Given something: paid for, counted, scored by her personality and mood (one she dislikes counts against you),
+        // her forwardness nudged up a step for one she likes when it is set to drift, and her line for it.
         private void Give(string act)
         {
             try
             {
                 if (!GiftsOn || !Spend(GiftCost(act))) return;
                 Counted(act, GiftCount(act) + 1);
+                Sayings.Rested(GiftGivenKey, 0);
                 SavePreferences();
-                Did(act, Math.Max(1, Worth(act)));
-                ForwardSteps(1);
-                string line = GiftLine(act);
+                Did(act);
+                bool liked = Worth(act) > 0;
+                if (liked) ForwardSteps(1);
+                string line = GiftLine(act, liked);
                 heard = "a gift";
                 bool bubbleOnly = InChat || Hushed || FullScreen();
                 Brain.Log("gift", -1, act + " | " + (string.IsNullOrEmpty(line) ? "no line" : "\"" + line + "\"") + " | given " + GiftCount(act));
@@ -222,11 +228,12 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
-        // Her line for a gift: her personality's own for it and the shared pool in lines.md, always as one she likes.
-        private string GiftLine(string act)
+        // Her line for a gift: one she likes from her personality's own and the "likes it" pool in lines.md, one she
+        // doesn't from the "dislikes it" pool, since her own lines for a gift are glad ones.
+        private string GiftLine(string act, bool liked)
         {
-            string[] hers = Personalities.Lines(act, new string[0]);
-            return Sayings.For(act, true, hers) ?? Lines.Pick(hers);
+            string[] hers = liked ? Personalities.Lines(act, new string[0]) : new string[0];
+            return Sayings.For(act, liked, hers) ?? Lines.Pick(hers);
         }
 
         // Her forwardness, while it is set to drift, goes up by steps: a step a gift, and a step every third feed.
@@ -256,37 +263,43 @@ namespace CapriDesktop
         private void Counted(string act, int much)
         {
             List<string> kept = new List<string>();
-            for (int i = 0; i < Gifts.GetLength(0); i++)
+            foreach (Acts.Act gift in Gifts)
             {
-                string one = Gifts[i, 0];
+                string one = gift.Name;
                 int have = one == act ? much : GiftCount(one);
                 if (have > 0) kept.Add(one + ":" + have);
             }
             preferences.Gifts = string.Join(";", kept.ToArray());
         }
 
-        // Her favourite of what she has been given: the one her personality likes most, then the one given most.
+        // Her favourite of what she has been given: the one she likes most, then the one given most; never one she
+        // doesn't like.
         internal string Favourite()
         {
             string best = null;
             int bestWorth = int.MinValue, bestCount = 0;
-            for (int i = 0; i < Gifts.GetLength(0); i++)
+            foreach (Acts.Act gift in Gifts)
             {
-                string act = Gifts[i, 0];
+                string act = gift.Name;
                 int count = GiftCount(act);
                 if (count == 0) continue;
                 int worth = Worth(act);
+                if (worth <= 0) continue;
                 if (worth > bestWorth || worth == bestWorth && count > bestCount) { best = act; bestWorth = worth; bestCount = count; }
             }
             return best;
         }
 
-        // Now and then, at most once a day, she mentions her favourite thing they gave her.
+        // Kept when a gift is given, so a memory of one never comes straight after it.
+        internal const string GiftGivenKey = "sys:gift given";
+        internal const double GiftSettleHours = 6;
+
+        // Now and then, at most once a day and not within six hours of a gift, she mentions her favourite thing they gave her.
         private string GiftMemoryLine()
         {
             if (!GiftsOn) return null;
             string favourite = Favourite();
-            if (favourite == null || random.Next(100) >= 4 || !Sayings.Rested("sys:gift memory", 24)) return null;
+            if (favourite == null || Sayings.HoursSince(GiftGivenKey) < GiftSettleHours || random.Next(100) >= 4 || !Sayings.Rested("sys:gift memory", 24)) return null;
             string line = Sayings.From("gift remembered");
             return string.IsNullOrEmpty(line) ? null : line.Replace("%gift%", GiftName(favourite));
         }
@@ -298,7 +311,7 @@ namespace CapriDesktop
         private ToolStripMenuItem MakeTamagotchiToggles()
         {
             ToolStripMenuItem holder = new ToolStripMenuItem("Tamagotchi") { ToolTipText = "Points, feeding and gifts as a little pet game. Off, Feed her is free and on her menu as before" };
-            tamagotchiToggle = new ToolStripMenuItem("Tamagotchi", null, delegate { preferences.NoTamagotchi = !preferences.NoTamagotchi; SavePreferences(); });
+            tamagotchiToggle = new ToolStripMenuItem("Tamagotchi", null, delegate { SetTamagotchi(!TamagotchiOn); });
             feedingToggle = new ToolStripMenuItem("Feeding", null, delegate { preferences.NoFeeding = !preferences.NoFeeding; SavePreferences(); });
             feedingToggle.ToolTipText = "Off, there's nothing to feed her and she never says she's hungry";
             pointsToggle = new ToolStripMenuItem("Points", null, delegate { preferences.NoPoints = !preferences.NoPoints; pointTickAt = -1; SavePreferences(); });
@@ -323,17 +336,17 @@ namespace CapriDesktop
         }
 
         // A food from her menu: paid for first when points are on.
-        private void FeedPaid(string kind, string named)
+        private void FeedPaid(string act, string named)
         {
             if (TamagotchiOn && !Spend(FoodCost(named))) return;
-            Feed(kind);
+            Feed(act);
             if (TamagotchiOn) FedForward();
         }
 
         // ---------- Checks ----------
 
         // Gifts in order under Feed her with their costs: giving one pays, counts and says a line, nudging forwardness
-        // only while it drifts; the favourite comes back at most daily; nuggies only for Emo and Bratty; Gift giving
+        // only while it drifts; the favourite comes back at most daily, never within six hours of a gift; nuggies only for Emo and Bratty; Gift giving
         // off hides it all.
         private void SmokeTamagotchiGifts(List<string> checks)
         {
@@ -343,14 +356,15 @@ namespace CapriDesktop
             try
             {
                 preferences.Gifts = null;
-                preferences.NoGifts = preferences.NoTamagotchi = preferences.NoFeeding = preferences.NoPoints = false;
+                preferences.NoGifts = preferences.NoFeeding = preferences.NoPoints = false;
+                preferences.TamagotchiPlugin = true;
                 preferences.Points = 500;
                 ShowTamagotchi();
                 List<string> order = new List<string>();
                 foreach (ToolStripItem one in giftItem.DropDownItems) order.Add(one.Text + "   " + ((one as ToolStripMenuItem) == null ? "" : ((ToolStripMenuItem)one).ShortcutKeyDisplayString));
                 int feedAt = tamagotchiItem.DropDownItems.IndexOf(feedItem), giftAt = tamagotchiItem.DropDownItems.IndexOf(giftItem);
-                if (string.Join(" | ", order.ToArray()) != "Trinket   60 | Flowers   100 | Plushie   140 | Gift   180" || feedAt < 0 || giftAt != feedAt + 1)
-                    throw new Exception("Give gift wasn't Trinket, Flowers, Plushie, Gift with their costs under Feed her: " + string.Join(" | ", order.ToArray()));
+                if (string.Join(" | ", order.ToArray()) != "Trinket   60 | Flowers   100 | Plushie   140 | Gift   180 | Pet rock   30" || feedAt < 0 || giftAt != feedAt + 1)
+                    throw new Exception("Give gift wasn't Trinket, Flowers, Plushie, Gift, Pet rock with their costs under Feed her: " + string.Join(" | ", order.ToArray()));
                 preferences.Points = 120;
                 ShowTamagotchi();
                 bool greyed = !((ToolStripMenuItem)giftItem.DropDownItems[2]).Enabled && ((ToolStripMenuItem)giftItem.DropDownItems[1]).Enabled;
@@ -368,12 +382,19 @@ namespace CapriDesktop
                 if (Points != 500 - 100 - 60 || GiftCount("flowers") != 1 || GiftCount("trinket") != 1 || preferences.FedAt != fedWas || !greyed || !nudged || !heldStill || LoadPreferences().Gifts != preferences.Gifts)
                     throw new Exception("Giving went wrong: points " + Points + ", counted " + preferences.Gifts + ", food reset " + (preferences.FedAt != fedWas) + ", greyed " + greyed + ", forwardness " + before + " to " + after + " (nudged " + nudged + ", held " + heldStill + ")");
                 string favourite = Favourite();
-                string memory = null;
-                for (int tries = 0; tries < 400 && memory == null; tries++) memory = GiftMemoryLine();
-                string again = null;
-                for (int tries = 0; tries < 400 && again == null; tries++) again = GiftMemoryLine();
-                if (favourite == null || memory == null || memory.IndexOf(GiftName(favourite), StringComparison.Ordinal) < 0 || memory.Contains("%gift%") || again != null)
-                    throw new Exception("Her favourite gift wasn't remembered once a day: " + favourite + " / " + memory + " / " + again);
+                string soon = null;
+                for (int tries = 0; tries < 400 && soon == null; tries++) soon = GiftMemoryLine();
+                string memory = null, again = null;
+                TimeSpan offsetWas = SimTime.Offset;
+                SimTime.Advance(TimeSpan.FromHours(GiftSettleHours + 1));
+                try
+                {
+                    for (int tries = 0; tries < 400 && memory == null; tries++) memory = GiftMemoryLine();
+                    for (int tries = 0; tries < 400 && again == null; tries++) again = GiftMemoryLine();
+                }
+                finally { SimTime.Reset(); SimTime.Advance(offsetWas); }
+                if (soon != null || favourite == null || memory == null || memory.IndexOf(GiftName(favourite), StringComparison.Ordinal) < 0 || memory.Contains("%gift%") || again != null)
+                    throw new Exception("Her favourite gift wasn't remembered once a day, and never within hours of a gift: right after " + (soon ?? "none") + " / " + favourite + " / " + memory + " / " + again);
                 checks.Add("PASS Give gift: Trinket 60, Flowers 100, Plushie 140, Gift 180 under Feed her, greyed when short; giving takes its cost, is counted in settings.json, never feeds her, says her line and nudges her forwardness a step only while it drifts; her favourite gift comes back at most once a day");
 
                 Personalities.Chosen = "Emo";
@@ -419,6 +440,28 @@ namespace CapriDesktop
             }
         }
 
+        // Her own mod item: off on a new install and on settings from before it was one, points kept; her row in Mods and
+        // Toggles are one switch.
+        private void SmokeTamagotchiItem(List<string> checks)
+        {
+            byte[] older = System.Text.Encoding.UTF8.GetBytes("{\"NoTamagotchi\":false,\"Points\":321}");
+            Preferences carried = (Preferences)new System.Runtime.Serialization.Json.DataContractJsonSerializer(typeof(Preferences)).ReadObject(new System.IO.MemoryStream(older));
+            bool startsOff = !new Preferences().TamagotchiPlugin && !carried.TamagotchiPlugin && carried.Points == 321;
+            preferences.TamagotchiPlugin = false;
+            preferences.Points = 321;
+            ShowTamagotchi();
+            bool offMenu = feedItem.Owner == menu && menu.Items.IndexOf(tamagotchiItem) < 0;
+            string about = mainframe.ModRowAbout(Mainframe.TamagotchiItem) ?? "";
+            bool row = about.StartsWith("HER OWN", StringComparison.Ordinal) && mainframe.SwitchModRow(Mainframe.TamagotchiItem) && TamagotchiOn && LoadPreferences().TamagotchiPlugin;
+            ShowTamagotchi();
+            bool onMenu = feedItem.Owner == tamagotchiItem.DropDown && menu.Items.IndexOf(tamagotchiItem) >= 0;
+            tamagotchiToggle.PerformClick();
+            bool toggled = !TamagotchiOn && !LoadPreferences().TamagotchiPlugin && Points == 321;
+            if (!startsOff || !offMenu || !row || !onMenu || !toggled)
+                throw new Exception("Tamagotchi as her own mod item went wrong: starts off with points kept " + startsOff + ", Feed her on her menu while off " + offMenu + ", her row in Mods turns it on " + row + " (" + about + "), its menu back " + onMenu + ", Toggles is the same switch " + toggled);
+            checks.Add("PASS Tamagotchi is her own mod item: off on a new install and on settings from before, points kept; her row in Mods and Toggles are one saved switch, and Feed her moves with it");
+        }
+
         // Hungry as Emo and as Bratty, her nag comes from her own lines and some ask for nuggies; as Caregiver it is the
         // shared lines, none about nuggies. Null when right.
         private string HungerAsks()
@@ -435,7 +478,7 @@ namespace CapriDesktop
                     if (own && (pool == shared || !nuggies)) return named + " " + (hungry ? "hungry" : "peckish") + " lines aren't her own nuggies asks: " + string.Join(" / ", pool);
                     if (!own && nuggies) return named + " asked for nuggies: " + string.Join(" / ", pool);
                 }
-                preferences.FedAt = DateTime.UtcNow.AddHours(-8).Ticks;
+                preferences.FedAt = SimTime.UtcNow.AddHours(-8).Ticks;
                 hungerSaidAt = -1;
                 string said = HungerLine(clock.Elapsed.TotalSeconds, false);
                 if (said == null) return named + " said nothing when hungry";
@@ -458,11 +501,12 @@ namespace CapriDesktop
         private void SmokeTamagotchi(List<string> checks)
         {
             int pointsWas = preferences.Points;
-            bool tamaWas = preferences.NoTamagotchi, feedWas = preferences.NoFeeding, freeWas = preferences.NoPoints;
+            bool tamaWas = preferences.TamagotchiPlugin, feedWas = preferences.NoFeeding, freeWas = preferences.NoPoints;
             long fedWas = preferences.FedAt, treatedWas = preferences.TreatedAt;
             try
             {
-                preferences.NoTamagotchi = preferences.NoFeeding = preferences.NoPoints = false;
+                preferences.NoFeeding = preferences.NoPoints = false;
+                preferences.TamagotchiPlugin = true;
                 preferences.Points = 0;
                 pointTickAt = -1;
                 EarnPoints(1000);
@@ -489,22 +533,22 @@ namespace CapriDesktop
                 if (feedItem.Owner != tamagotchiItem.DropDown || !tamagotchiItem.Available || pointsLine.Text != "Points: 15" || snack == null || meal == null
                     || snack.Text != "A snack" || snack.ShortcutKeyDisplayString != "10" || !snack.Enabled || meal.Text != "A proper meal" || meal.ShortcutKeyDisplayString != "25" || meal.Enabled || pointsLine.ForeColor != PointsColour)
                     throw new Exception("Tamagotchi's menu was wrong: " + pointsLine.Text + ", " + (snack == null ? "no snack" : snack.Text + " " + snack.ShortcutKeyDisplayString + " " + snack.Enabled) + ", " + (meal == null ? "no meal" : meal.Text + " " + meal.ShortcutKeyDisplayString + " " + meal.Enabled));
-                FeedPaid("fed", "A snack");
+                FeedPaid("snack", "A snack");
                 if (Points != 5) throw new Exception("A snack didn't cost its 10 points: " + Points);
                 checks.Add("PASS Tamagotchi points: one a minute while she runs, capped at " + MostPoints + " and saved; Feed her sits under Tamagotchi under the points line, each food with its cost, greyed when it can't be afforded, and a snack takes its 10");
 
                 preferences.NoPoints = true;
                 ShowTamagotchi();
-                FeedPaid("fed", "A proper meal");
+                FeedPaid("meal", "A proper meal");
                 bool freeFood = Points == 5 && snack.Text == "A snack" && meal.Enabled && !pointsLine.Available;
                 preferences.NoPoints = false;
                 preferences.NoFeeding = true;
                 ShowTamagotchi();
-                preferences.FedAt = DateTime.UtcNow.AddHours(-8).Ticks;
+                preferences.FedAt = SimTime.UtcNow.AddHours(-8).Ticks;
                 hungerSaidAt = -1;
                 bool noFeeding = !feedItem.Available && HungerLine(clock.Elapsed.TotalSeconds, false) == null;
                 preferences.NoFeeding = false;
-                preferences.NoTamagotchi = true;
+                preferences.TamagotchiPlugin = false;
                 ShowTamagotchi();
                 bool backAsItWas = feedItem.Owner == menu && menu.Items.IndexOf(tamagotchiItem) < 0 && snack.Text == "A snack" && meal.Enabled;
                 hungerSaidAt = -1;
@@ -515,21 +559,22 @@ namespace CapriDesktop
 
                 // Peckish and switching between work and anything else: one ask, not one per switch. A feed starts over.
                 double at = clock.Elapsed.TotalSeconds;
-                preferences.FedAt = DateTime.UtcNow.AddHours(-4).Ticks;
+                preferences.FedAt = SimTime.UtcNow.AddHours(-4).Ticks;
                 hungerSaidAt = -1;
                 bool first = HungerLine(at, false) != null;
                 int again = 0;
                 for (int flip = 1; flip <= 12; flip++) if (HungerLine(at + flip * 15, flip % 2 == 1) != null) again++;
-                preferences.FedAt = DateTime.UtcNow.AddHours(-4).AddSeconds(1).Ticks;
+                preferences.FedAt = SimTime.UtcNow.AddHours(-4).AddSeconds(1).Ticks;
                 bool afterFeed = HungerLine(at + 200, false) != null;
                 if (!first || again != 0 || !afterFeed)
                     throw new Exception("Her hunger ask didn't hold across work switches: first " + first + ", asked again " + again + " times in 12 switches, after a feed " + afterFeed);
                 checks.Add("PASS peckish while switching between work and anything else, she asks once, not once per switch; only a feed lets her ask again before three hours");
                 SmokeTamagotchiGifts(checks);
+                SmokeTamagotchiItem(checks);
             }
             finally
             {
-                preferences.NoTamagotchi = tamaWas;
+                preferences.TamagotchiPlugin = tamaWas;
                 preferences.NoFeeding = feedWas;
                 preferences.NoPoints = freeWas;
                 preferences.Points = pointsWas;
@@ -539,6 +584,12 @@ namespace CapriDesktop
                 hungerSaidAt = -1;
                 ShowTamagotchi();
                 SavePreferences();
+                // Nothing left in flight: a gift line queued behind her voice landed in the next section's checks.
+                ownLines.Clear();
+                for (int i = 0; i < 100 && LineBusy; i++) { Application.DoEvents(); System.Threading.Thread.Sleep(20); }
+                ownLines.Clear();
+                if (talkState != TalkState.Off) CloseTalk();
+                heard = "";
             }
         }
     }

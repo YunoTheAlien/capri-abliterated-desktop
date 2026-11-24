@@ -204,11 +204,11 @@ Running on this PC	Bu PC'de çalışıyor
 NORMAL	NORMAL
 OFF	KAPALI
 Local server address	Yerel sunucu adresi
-Remember panel position	Panel konumunu hatırla
 Custom colours	Özel renkler
 Custom colours...	Özel renkler...
 Choose	Seç
-Hers	Onunkiler
+Reset selected colour	Seçili rengi sıfırla
+Make a mod	Mod yap
 Quiet	Sessiz
 Quiet min	Sessiz min
 Quiet max	Sessiz max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	{n}:{n}'e kadar sessiz
 Quiet until turned off	Kapatılana kadar sessiz
 Export settings	Ayarları dışa aktar
 Import settings	Ayarları içe aktar
+Save Mainframe position	Panel konumunu hatırla

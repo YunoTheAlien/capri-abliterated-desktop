@@ -204,11 +204,11 @@ Running on this PC	Энэ компьютер дээр ажиллаж байна
 NORMAL	ХЭВИЙН
 OFF	УНТРААСАН
 Local server address	Локал серверийн хаяг
-Remember panel position	Самбарын байрлалыг санах
 Custom colours	Өөрийн өнгө
 Custom colours...	Өөрийн өнгө...
 Choose	Сонгох
-Hers	Түүнийх
+Reset selected colour	Сонгосон өнгийг шинэчлэх
+Make a mod	Мод хийх
 Quiet	Чимээгүй
 Quiet min	Чимээгүй min
 Quiet max	Чимээгүй max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	{n}:{n} хүртэл чимээгүй
 Quiet until turned off	Унтраах хүртэл чимээгүй
 Export settings	Тохиргоог экспортлох
 Import settings	Тохиргоог импортлох
+Save Mainframe position	Самбарын байрлалыг санах

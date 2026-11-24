@@ -46,7 +46,7 @@ namespace CapriDesktop
             bool senpai = Brain.SenpaiLive;
             bool again;
             lock (gate) { again = !everAsked || senpai != wasSenpai; wasSenpai = senpai; everAsked = true; }
-            if (again) Ask();
+            if (again) { Ask(); FileSlots.Write(); }
             lock (gate) { if (!more) return; more = false; }
             Write();
         }
@@ -88,6 +88,13 @@ namespace CapriDesktop
             }
             foreach (KeyValuePair<string, Func<string[]>> one in asking)
                 try { Offer(one.Key, one.Value()); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+        }
+
+        // The mod holding a zone, or null while it is hers.
+        internal static string Holder(string zone)
+        {
+            if (string.IsNullOrEmpty(zone)) return null;
+            lock (gate) { string by; return holder.TryGetValue(zone, out by) ? by : null; }
         }
 
         // The lines a mod has put in this zone, or null for her own.

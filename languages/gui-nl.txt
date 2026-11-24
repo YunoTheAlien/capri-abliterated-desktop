@@ -204,11 +204,11 @@ Running on this PC	Draait op deze pc
 NORMAL	NORMAAL
 OFF	UIT
 Local server address	Lokaal serveradres
-Remember panel position	Paneelpositie onthouden
 Custom colours	Eigen kleuren
 Custom colours...	Eigen kleuren...
 Choose	Kiezen
-Hers	De hare
+Reset selected colour	Gekozen kleur resetten
+Make a mod	Mod maken
 Quiet	Stil
 Quiet min	Stil min
 Quiet max	Stil max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Stil tot {n}:{n}
 Quiet until turned off	Stil tot uitgezet
 Export settings	Instellingen exporteren
 Import settings	Instellingen importeren
+Save Mainframe position	Paneelpositie onthouden

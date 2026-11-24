@@ -301,12 +301,6 @@ namespace CapriDesktop
                             row = Find(rows, settings, section.Key.Substring(0, section.Key.Length - CapriDesktop.LineFile.SenpaiMark.Length).Trim(), one.Key);
                         // A setting whose section was renamed or moved: the one place in the file that has that name.
                         if (row < 0) row = Only(rows, settings, one.Key);
-                        if (row < 0 && string.Equals(one.Key, "quiet time", StringComparison.OrdinalIgnoreCase))
-                        {
-                            set += QuietHours(rows, settings, section.Key, one.Value);
-                            changed = true;
-                            continue;
-                        }
                         if (row < 0 && Moves(one.Key)) { moved.Add(new[] { file.Key, one.Key, one.Value }); continue; }
                         if (row < 0) { missing.Add(file.Key + " > " + (section.Key.Length == 0 ? "" : section.Key + " > ") + one.Key); continue; }
                         int colon = rows[row].IndexOf(':');
@@ -341,25 +335,6 @@ namespace CapriDesktop
             }
             Changed();
             return missing;
-        }
-
-        // An old "quiet time" in minutes onto quiet min and max hours: a changed time becomes min with max an hour over it,
-        // and the stock two hours leaves the new stock 1 to 3 as it is. How many lines it set.
-        private static int QuietHours(string[] rows, HashSet<int> settings, string section, string minutes)
-        {
-            double was;
-            if (!double.TryParse((minutes ?? "").Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out was) || was <= 0 || Math.Abs(was - 120) < 0.5) return 0;
-            int min = Math.Max(1, Math.Min(SysLines.QuietMostHours - 1, (int)Math.Round(was / 60))), set = 0;
-            foreach (KeyValuePair<string, int> one in new[] { new KeyValuePair<string, int>(SysLines.QuietMinKey, min), new KeyValuePair<string, int>(SysLines.QuietMaxKey, min + 1) })
-            {
-                int row = Find(rows, settings, section, one.Key);
-                if (row < 0) continue;
-                int colon = rows[row].IndexOf(':');
-                string gap = Regex.Match(rows[row].Substring(colon + 1), @"^[ \t]*").Value;
-                rows[row] = rows[row].Substring(0, colon + 1) + (gap.Length == 0 ? " " : gap) + one.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                set++;
-            }
-            return set;
         }
 
         // The row of a setting by name anywhere in the file, when exactly one row has it; -1 otherwise.
@@ -495,14 +470,22 @@ namespace CapriDesktop
                 old.Files["personalities/" + Plain + "/Caregiver"] = new Dictionary<string, Dictionary<string, string>> { { "How she reacts" + CapriDesktop.LineFile.SenpaiMark, new Dictionary<string, string> { { "flirt", "4" } } }, { "Old heading", new Dictionary<string, string> { { "cringe", "33" } } } };
                 File.WriteAllText(pack, packStock);
                 int setOld;
-                List<string> missingOld = Import(old, settings, out setOld);
+                // An old quiet time is a setting that left its file: it goes to her settings, not into a line.
+                Func<string, bool> movesWas = Moves;
+                Action<string, string, string> moveWas = Move;
+                string carried = null;
+                Moves = delegate(string name) { return name == "quiet time"; };
+                Move = delegate(string file, string name, string value) { carried = file + " > " + name + " = " + value; };
+                List<string> missingOld;
+                try { missingOld = Import(old, settings, out setOld); }
+                finally { Moves = movesWas; Move = moveWas; }
                 string twitchBack = File.ReadAllText(twitch), sysOld = File.ReadAllText(sys), packOld = File.ReadAllText(pack);
                 if (!packOld.Contains("flirt: 4") || !packOld.Contains("cringe: 33")) throw new Exception("A setting whose section lost its mark or was renamed didn't come back: " + packOld);
-                if (!twitchBack.Contains("channel: sam_streams") || !sysOld.Contains("quiet min hours:      5") || !sysOld.Contains("quiet max hours:      6") || missingOld.Count != 0)
-                    throw new Exception("Importing into stock files went wrong: an empty setting filled " + twitchBack.Contains("channel: sam_streams") + ", an old quiet time on min and max " + (sysOld.Contains("quiet min hours:      5") && sysOld.Contains("quiet max hours:      6")) + ", missing " + string.Join(", ", missingOld.ToArray()));
+                if (!twitchBack.Contains("channel: sam_streams") || carried != Plain + "/sys.md > quiet time = 300" || sysOld != sysStock || missingOld.Count != 0)
+                    throw new Exception("Importing into stock files went wrong: an empty setting filled " + twitchBack.Contains("channel: sam_streams") + ", an old quiet time handed to her settings " + carried + ", missing " + string.Join(", ", missingOld.ToArray()));
                 File.WriteAllText(path, "{}");
                 if (Gather(settings, "0.9.429") != null) throw new Exception("Settings were gathered over a settings.json that was already there.");
-                checks.Add("PASS settings.json holds every setting of hers and her Mainframe's, never a line she says or a key; it is written by itself two minutes after the last change and never while a slider moves; importing it after an update writes each value and the answer to the terms back into the new files, keeps their text, and lists a setting the new file no longer has instead of adding it; an update from a version that had no settings.json gathers one from the files before writing them new, and Yes brings every value back, into a setting the new file ships empty too, with an old quiet time on quiet min and max hours, and a setting whose section lost its switch-on mark or was renamed found where it is now");
+                checks.Add("PASS settings.json holds every setting of hers and her Mainframe's, never a line she says or a key; it is written by itself two minutes after the last change and never while a slider moves; importing it after an update writes each value and the answer to the terms back into the new files, keeps their text, and lists a setting the new file no longer has instead of adding it; an update from a version that had no settings.json gathers one from the files before writing them new, and Yes brings every value back, into a setting the new file ships empty too, with an old quiet time handed to her settings, and a setting whose section lost its switch-on mark or was renamed found where it is now");
             }
             finally
             {

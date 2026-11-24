@@ -18,12 +18,21 @@ namespace CapriDesktop
         internal Func<string, List<PluginTool>> PluginToolsListed;
 
         // Her installed mods, then her plug-ins, one row each.
+        // Her screensaver's id as a mod item, the same as its colours' folder name under ADD-ONS.
+        internal const string ScreensaverItem = AddonColours.Screensaver;
+        internal const string TamagotchiItem = "her-tamagotchi";
+
         private List<Mod> Installed()
         {
             Func<List<Mod>> listed = ModsListed;
             List<Mod> rows = new List<Mod>(listed != null ? listed() : capri.ModList.All);
             foreach (PluginInfo plugin in PluginsNow())
                 rows.Add(new Mod { File = new ModFile { Id = plugin.Id, Name = plugin.Name ?? plugin.Id, Version = plugin.Version, Author = plugin.Author, Description = plugin.Description }, Path = plugin.Root, Plugin = plugin, On = !plugin.Off, Changed = plugin.Changed });
+            // Tamagotchi is her own mod item, last, switched in Toggles as well. Her screensaver is a mod of its own now.
+            if (listed == null)
+            {
+                rows.Add(new Mod { File = new ModFile { Id = TamagotchiItem, Name = "Tamagotchi", Author = "Capri", Description = "Her own pet game" }, On = capri.TamagotchiOn, Hers = true, Path = "" });
+            }
             return rows;
         }
 

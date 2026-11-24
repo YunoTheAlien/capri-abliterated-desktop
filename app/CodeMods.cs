@@ -571,6 +571,35 @@ namespace CapriDesktop
             return running.TryGetValue(id ?? "", out mod) ? mod as ICapriIntro : null;
         }
 
+        // Every code mod running now, for her log: its id, its class and whether it is an intro, with the names it gives.
+        internal string RunningNow()
+        {
+            List<string> said = new List<string>();
+            foreach (KeyValuePair<string, ICapriMod> entry in running)
+            {
+                string names = "";
+                ICapriIntroNames listed = entry.Value as ICapriIntroNames;
+                try { if (listed != null && listed.Intros != null) names = " " + string.Join("/", listed.Intros); }
+                catch (Exception caughtOne) { Brain.Caught(caughtOne); }
+                said.Add(entry.Key + " " + entry.Value.GetType().Name + (entry.Value is ICapriIntro ? " intro" + names : ""));
+            }
+            return said.Count == 0 ? "none" : string.Join(", ", said.ToArray());
+        }
+
+        // The screensaver mod running now (capri-screensaver, or another that draws one), or null.
+        internal ICapriScreensaver Screensaver
+        {
+            get
+            {
+                foreach (KeyValuePair<string, ICapriMod> entry in running)
+                {
+                    ICapriScreensaver saver = entry.Value as ICapriScreensaver;
+                    if (saver != null) return saver;
+                }
+                return null;
+            }
+        }
+
         // Every running intro mod by its name, for her test menu.
         internal List<KeyValuePair<string, ICapriMod>> IntroMods
         {
@@ -643,6 +672,7 @@ namespace CapriDesktop
             bool packed;
             string hidden = Unreadable(text, out packed);
             read.Unreadable = hidden;
+            read.Source = hidden != null ? text : null;
             // Laid back out when it is only a layout problem, so it can be read before the second question.
             read.Tidy = hidden != null && !packed ? Tidied(text) : null;
             // A second question when it cannot be read and either nothing can open it up or it could run what
@@ -966,6 +996,10 @@ namespace CapriDesktop
             catch (Exception) { return "this Capri"; }
         }
 
+        // Startup Intros is carried to be checked against, and laid in too, so every install has all its intros without
+        // fetching it from the directory.
+        private static bool LaidToo(string name) { return name == CheckedPrefix + "startup-intros" + CodeExtension; }
+
         // This build's own copy of a mod it carries, or null for a mod it does not carry.
         internal static byte[] CarriedBytes(string id)
         {
@@ -993,7 +1027,7 @@ namespace CapriDesktop
                 Assembly own = typeof(Mods).Assembly;
                 foreach (string name in own.GetManifestResourceNames())
                 {
-                    if (!name.StartsWith(CarriedPrefix, StringComparison.Ordinal)) continue;
+                    if (!name.StartsWith(CarriedPrefix, StringComparison.Ordinal) && !LaidToo(name)) continue;
                     byte[] bytes;
                     using (Stream from = own.GetManifestResourceStream(name))
                     using (MemoryStream copy = new MemoryStream())
@@ -1296,6 +1330,7 @@ namespace CapriDesktop
             }
             running[id] = made;
             hosts[id] = host;
+            Brain.Log("mods", -1, "Started " + id + " (" + made.GetType().Name + (made is ICapriIntro ? ", an intro" : "") + ").");
         }
 
         private void StopOne(string id)
@@ -1333,6 +1368,27 @@ namespace CapriDesktop
             StartSome(wanted, onWindow);
         }
 
+        // Still in her list as the same approved file, on, and not stopped at this SECURITY level.
+        private bool StillWanted(Mod starting)
+        {
+            Mod now = All.Find(one => one.File.Id == starting.File.Id);
+            return now != null && now.Code && now.On && now.Hash == starting.Hash && !StoppedHere(starting.File.Id);
+        }
+
+        // For checks: a mod removed while it compiled to start, its start then let through. True if it ran anyway.
+        internal bool RunsAfterRemove(Mod mod)
+        {
+            StopOne(mod.File.Id);
+            List<Action> later = new List<Action>();
+            StartSome(new List<Mod> { mod }, delegate(Action work) { lock (later) later.Add(work); });
+            for (int waited = 0; waited < 600; waited++) { lock (later) if (later.Count >= 2) break; Thread.Sleep(50); }
+            Remove(mod);
+            Action[] run;
+            lock (later) run = later.ToArray();
+            foreach (Action one in run) one();
+            return running.ContainsKey(mod.File.Id);
+        }
+
         private void StartSome(List<Mod> wanted, Action<Action> onWindow)
         {
             ThreadPool.QueueUserWorkItem(delegate
@@ -1364,8 +1420,17 @@ namespace CapriDesktop
                         }
                         onWindow(delegate
                         {
-                            try { StartOne(starting.File.Id, made); }
-                            catch (ModException error) { StartFailed(starting, error); }
+                            // Removed, switched off or changed while it compiled: it doesn't start.
+                            if (!StillWanted(starting))
+                            {
+                                Unload(made);
+                                Brain.Log("mods", -1, starting.File.Id + " was removed or switched off while it was starting, so it wasn't started.");
+                            }
+                            else
+                            {
+                                try { StartOne(starting.File.Id, made); }
+                                catch (ModException error) { StartFailed(starting, error); }
+                            }
                             ModGuard.Started(starting.File.Id);
                         });
                     }
@@ -2205,8 +2270,19 @@ namespace CapriDesktop
                 string body = "public class M : ICapriMod { ICapriHost c; public void Start(ICapriHost h) { c = h; File.AppendAllText(Path.Combine(h.Folder, \"started\"), \"x\"); } public bool Heard(string w) { if (w != \"mod check\") return false; c.Say(\"Code mod online.\"); return true; } public void Stop() { File.WriteAllText(Path.Combine(c.Folder, \"stopped\"), \"x\"); } }";
                 string file = sample("hello" + Mods.CodeExtension, code("hello", body));
                 string started = Path.Combine(mods.Folder, "hello-data", "started"), stopped = Path.Combine(mods.Folder, "hello-data", "stopped");
-                if (mainframe.ImportMod(file) || asked != 1 || mods.All.Count != 0 || mods.Running != 0 || File.Exists(started)) throw new Exception("A code mod ran without being approved.");
+                bool imported = mainframe.ImportMod(file);
+                if (imported || asked != 1 || mods.All.Count != 0 || mods.Running != 0 || File.Exists(started))
+                    throw new Exception("A code mod ran without being approved: imported " + imported + ", asked " + asked + ", installed " + string.Join(", ", mods.All.ConvertAll(one => one.File.Id).ToArray()) + ", running " + mods.Running + ", started " + File.Exists(started));
                 checks.Add("PASS code mods: saying no leaves nothing installed and runs nothing");
+                // A mod removed while it compiles to start never runs: a carried mod starting at her start, then every
+                // mod removed, left one running with nothing behind it.
+                answer = true;
+                if (!mainframe.ImportMod(sample("race" + Mods.CodeExtension, code("race", body)))) throw new Exception("A code mod for the start race was refused: " + mainframe.ModStatusText);
+                Mod racing = mods.All.Find(one => one.File.Id == "race");
+                if (racing == null || mods.RunsAfterRemove(racing) || mods.Running != 0 || mods.All.Count != 0)
+                    throw new Exception("A mod removed while it was starting ran anyway: running " + mods.Running + ", installed " + string.Join(", ", mods.All.ConvertAll(one => one.File.Id).ToArray()));
+                checks.Add("PASS code mods: one removed while it compiles to start doesn't start when its start comes round");
+                answer = false;
                 answer = true;
                 if (!mainframe.ImportMod(file)) throw new Exception("An approved code mod was refused: " + mainframe.ModStatusText);
                 if (mods.Running != 1 || !File.Exists(started) || !mods.All[0].Code || !mods.All[0].On) throw new Exception("An approved code mod did not start.");
@@ -2776,11 +2852,11 @@ namespace CapriDesktop
 
                 // Stage 1: rows grouped by how serious, counted on the question's face, behind a handle that is open when anything is High.
                 string[,] table = { { "chat", "H" }, { "transcripts", "H" }, { "screen", "H" }, { "voice", "H" }, { "tools", "H" }, { "hotkeys", "H" }, { "memory", "M" }, { "brain", "M" }, { "personality", "M" },
-                    { "settings", "M" }, { "system", "M" }, { "skins", "L" }, { "music", "L" }, { "starts programs", "H" }, { "reads the keyboard", "H" }, { "calls Windows directly", "H" }, { "unlocks saved secrets", "H" }, { "reads plug-in sign-ins", "H" }, { Mods.ChangesSecurity, "H" },
+                    { "settings", "M" }, { "system", "M" }, { "mood", "M" }, { "slots", "M" }, { "skins", "L" }, { "music", "L" }, { "starts programs", "H" }, { "reads the keyboard", "H" }, { "calls Windows directly", "H" }, { "unlocks saved secrets", "H" }, { "reads plug-in sign-ins", "H" }, { Mods.ChangesSecurity, "H" },
                     { "calls code by its name", "M" }, { Mods.WritesFiles, "M" }, { "reaches outside her folder", "M" }, { "uses the network", "M" }, { Mods.Pieces, "M" }, { "changes what her brain is told", "L" } };
                 for (int i = 0; i < table.GetLength(0); i++)
                     if (Mods.GroupOf(table[i, 0]) != table[i, 1][0]) throw new Exception("\"" + table[i, 0] + "\" is in group " + Mods.GroupOf(table[i, 0]) + ", not " + table[i, 1]);
-                if (Mods.PermissionWords.GetLength(0) != 13) throw new Exception("A permission was added or taken away without a group in this check.");
+                if (Mods.PermissionWords.GetLength(0) != 15) throw new Exception("A permission was added or taken away without a group in this check.");
                 Func<ModFile, string> counted = delegate(ModFile mod)
                 {
                     string made = Mods.Grouped(mod);
@@ -2818,6 +2894,102 @@ namespace CapriDesktop
                 ModGuard.NoneThisRun = noneWas;
                 try { File.Delete(guard); File.Delete(why); } catch (IOException) { }
             }
+        }
+
+        // The directory's mods as a copy beside her repo has them, each imported and turned on in a test folder of its own.
+        // One that goes online is never run here; one that starts programs or reaches outside her folder runs on the test box only.
+        private void SmokeDirectoryMods(List<string> checks, string output)
+        {
+            string found = null;
+            for (DirectoryInfo up = new DirectoryInfo(Application.StartupPath); up != null && found == null; up = up.Parent)
+            {
+                string survey = Path.Combine(up.FullName, "agents", "mods-survey");
+                if (!Directory.Exists(survey)) continue;
+                foreach (string copy in Directory.GetDirectories(survey))
+                    if (Directory.Exists(Path.Combine(copy, "mods"))) found = Path.Combine(copy, "mods");
+            }
+            if (found == null) { checks.Add("SKIP directory mods: no copy of the mods directory in agents/mods-survey on this PC"); return; }
+            string[] online = { "uses the network", "contacts " }, machine = { "starts programs", "reaches outside her folder", "makes itself start with Windows", "unlocks saved secrets" };
+            Mods was = ModList;
+            Func<string, bool> heardWas = Hands.AlsoHeard;
+            Func<string> calledWas = Hands.AlsoCalled;
+            string keptWas = ModDirectory.KeptFolder;
+            StringBuilder rows = new StringBuilder("mod\tkind\tresult\treason\n");
+            int works = 0, breaks = 0, held = 0;
+            string table = Path.Combine(output, "directory-mods.tsv");
+            if (!File.Exists(table)) File.WriteAllText(table, rows.ToString(), new UTF8Encoding(false));
+            // Each mod is a section of its own, so its time is its own and one that hangs is passed over when the run picks up.
+            foreach (string folder in Directory.GetDirectories(found))
+                foreach (string file in Directory.GetFiles(folder))
+                {
+                    string kind = Path.GetExtension(file).ToLowerInvariant();
+                    if (kind != Mods.CodeExtension && kind != Mods.SkinExtension && kind != Mods.SkillExtension && kind != Mods.Extension) continue;
+                    string name = Path.GetFileName(folder);
+                    Section(checks, "DirectoryMod-" + name, delegate
+                    {
+                        string result = "works", reason = "", logged = "";
+                        Mods own = new Mods(Path.Combine(output, "directory-mods", name));
+                        own.HostFor = was.HostFor; own.HeardSpeech = was.HeardSpeech; own.SkinChanged = was.SkinChanged; own.PluginsChanged = was.PluginsChanged;
+                        long logAt = File.Exists(Brain.LogPath) ? new FileInfo(Brain.LogPath).Length : 0;
+                        ModList = own;
+                        try
+                        {
+                            string limit = null;
+                            Mod made = own.Import(file, delegate(ModFile read, string hash)
+                            {
+                                string reaches = string.Join("; ", read.Reaches ?? new string[0]);
+                                foreach (string one in online) if (reaches.IndexOf(one, StringComparison.Ordinal) >= 0) limit = "goes online, so it never runs in a check";
+                                if (limit == null && !Mainframe.RealInputOn)
+                                    foreach (string one in machine) if (reaches.IndexOf(one, StringComparison.Ordinal) >= 0) limit = one + ", so it runs on the test box only (" + Mainframe.RealInputVariable + "=1)";
+                                return limit == null;
+                            });
+                            System.Diagnostics.Stopwatch settle = System.Diagnostics.Stopwatch.StartNew();
+                            while (settle.ElapsedMilliseconds < 1000) { Application.DoEvents(); Thread.Sleep(15); }
+                            logged = LogSince(logAt, name);
+                            if (limit != null) { result = "limit"; reason = limit; }
+                            else if (made == null || !made.On) { result = "breaks"; reason = "imported but not on"; }
+                            else if (logged.Length > 0 && Regex.IsMatch(logged, @"couldn't|could not|failed|exception|error|not found|missing|null", RegexOptions.IgnoreCase)) { result = "breaks"; reason = "its log: " + logged; }
+                            else reason = logged.Length > 0 ? "on; its log: " + logged : "on, nothing in the log";
+                        }
+                        catch (ModException error) { result = "breaks"; reason = error.Message; }
+                        finally
+                        {
+                            foreach (Mod left in new List<Mod>(own.All))
+                                try { own.Remove(left); } catch (ModException error) { reason += " (removing it: " + error.Message + ")"; }
+                            ModList = was;
+                            Hands.AlsoHeard = heardWas;
+                            Hands.AlsoCalled = calledWas;
+                            ModDirectory.KeptFolder = keptWas;
+                        }
+                        if (result == "works") works++;
+                        else if (result == "limit") held++;
+                        else breaks++;
+                        if (result == "breaks") checks.Add("FAIL directory mod " + name + ": " + reason);
+                        File.AppendAllText(table, name + "\t" + kind.Substring(7) + "\t" + result + "\t" + reason.Replace('\t', ' ').Replace('\n', ' ') + "\n", new UTF8Encoding(false));
+                    });
+                }
+            was.Load();
+            if (breaks == 0) checks.Add("PASS directory mods: " + works + " imported and turned on each in its own test folder with nothing wrong in the log (directory-mods.tsv)");
+            if (held > 0) checks.Add("LIMIT directory mods: " + held + " not run here, one going online never and one reaching past her folder on the test box only (directory-mods.tsv)");
+        }
+
+        // What her log gained since a point, for one mod: its own lines, joined.
+        private static string LogSince(long from, string id)
+        {
+            try
+            {
+                if (!File.Exists(Brain.LogPath)) return "";
+                using (FileStream read = new FileStream(Brain.LogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                {
+                    read.Seek(Math.Min(from, read.Length), SeekOrigin.Begin);
+                    List<string> lines = new List<string>();
+                    using (StreamReader text = new StreamReader(read))
+                        for (string line = text.ReadLine(); line != null; line = text.ReadLine())
+                            if (line.IndexOf("mod " + id, StringComparison.OrdinalIgnoreCase) >= 0 || line.IndexOf("mods", StringComparison.Ordinal) >= 0) lines.Add(line.Trim());
+                    return string.Join(" | ", lines.ToArray());
+                }
+            }
+            catch (IOException) { return ""; }
         }
     }
 #endif

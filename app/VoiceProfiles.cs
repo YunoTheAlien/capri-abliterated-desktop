@@ -214,7 +214,8 @@ namespace CapriDesktop
             { "groaning", -1, 90, 98 }, { "snoring", -2, 78, 92 }, { "sniffling", 1, 94, 94 },
             { "scoffing", -1, 100, 102 }, { "snorting", 0, 104, 103 }, { "pouting", 1, 96, 97 },
             { "humming", 0, 96, 90 }, { "singing", 1, 100, 104 }, { "cheerful", 2, 106, 103 },
-            { "dramatic", 1, 96, 108 }, { "shy", 1, 94, 88 }, { "evil", -2, 94, 98 }
+            { "dramatic", 1, 96, 108 }, { "shy", 1, 94, 88 }, { "evil", -2, 94, 98 },
+            { "squeaky", 3, 108, 104 }, { "high pitch voice", 3, 106, 104 }
         };
 
         // "extremely excited" and "a bit sad" are the same cue, further on or less far. Anything after the feeling

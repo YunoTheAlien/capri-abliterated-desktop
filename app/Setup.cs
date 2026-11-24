@@ -738,31 +738,114 @@ namespace CapriSetup
             catch (Exception error) { if (silent) Console.Error.WriteLine(error.Message); else Notice.Tell(null, error.Message, "Capri could not be removed", true); return 1; }
         }
 
-        // Capri and anything running from her folder, like her brain's engine, hold its files, so they're closed first.
-        // Nothing outside the folder is touched. It says whether one was started as administrator, which this copy can't close.
-        internal static bool CloseEverything(string folder)
+        // Everything running from her folder is closed first: asked as her tray Quit asks, given 10 s to save and go,
+        // then stopped, clearing her markers. Nothing outside the folder is touched. True when one ran as administrator.
+        internal static bool CloseEverything(string folder) { return CloseEverything(folder, AskWait); }
+
+        internal const int AskWait = 10000;
+
+        internal static bool CloseEverything(string folder, int wait)
         {
             int self;
-            bool locked = false;
+            bool locked = false, stopped = false;
             using (Process me = Process.GetCurrentProcess()) self = me.Id;
+            List<Process> inside = new List<Process>();
             foreach (Process process in Process.GetProcesses())
             {
-                using (process)
+                bool keep = false;
+                try
+                {
+                    bool held;
+                    if (process.Id != self && Inside(SetupFiles.FileOf(process, out held), folder)) { if (held) locked = true; else keep = true; }
+                }
+                catch (System.ComponentModel.Win32Exception) { }
+                catch (InvalidOperationException) { }
+                catch (NotSupportedException) { }
+                if (keep) inside.Add(process);
+                else process.Dispose();
+            }
+            try
+            {
+                foreach (Process process in inside)
+                    try { if (!process.HasExited) CloseWindows(process.Id); }
+                    catch (InvalidOperationException) { }
+                    catch (System.ComponentModel.Win32Exception) { }
+                Stopwatch waited = Stopwatch.StartNew();
+                foreach (Process process in inside) Gone(process, (int)Math.Max(0, wait - waited.ElapsedMilliseconds));
+                foreach (Process process in inside)
                 {
                     try
                     {
-                        bool held;
-                        if (process.Id == self || !Inside(SetupFiles.FileOf(process, out held), folder)) continue;
-                        if (held) { locked = true; continue; }
+                        if (process.HasExited) continue;
                         process.Kill();
                         process.WaitForExit(5000);
+                        stopped = true;
                     }
                     catch (System.ComponentModel.Win32Exception) { }
                     catch (InvalidOperationException) { }
                     catch (NotSupportedException) { }
                 }
             }
+            finally { foreach (Process process in inside) process.Dispose(); }
+            if (stopped) Unmark(folder);
             return locked;
+        }
+
+        // --close, the installer and uninstall ask before they stop: a stand-in that closes when asked goes on its own and
+        // takes its markers with it; one that won't is stopped and its markers cleared; a marker nobody closed, a real
+        // crash, is left for her crash guard.
+        internal static void CloseCheck(List<string> checks, string folder)
+        {
+            Directory.CreateDirectory(folder);
+            string exe = Path.Combine(folder, "Capri.exe"), marker = Path.Combine(folder, CapriDesktop.RunMark.Marker), start = Path.Combine(folder, CapriDesktop.Program.StartMarker);
+            File.Copy(Application.ExecutablePath, exe, true);
+            Func<string, Process> stand = delegate(string kind)
+            {
+                File.WriteAllText(marker, "1");
+                File.WriteAllText(start, "1");
+                string ready = Path.Combine(folder, kind + ".up");
+                if (File.Exists(ready)) File.Delete(ready);
+                Process made = Process.Start(new ProcessStartInfo(exe, "--smoke-child " + kind + " \"" + marker + "\" \"" + ready + "\"") { UseShellExecute = false });
+                Stopwatch up = Stopwatch.StartNew();
+                while (!File.Exists(ready) && up.ElapsedMilliseconds < 20000) Thread.Sleep(50);
+                return made;
+            };
+            Process closes = null, stays = null;
+            try
+            {
+                closes = stand("closes");
+                Stopwatch took = Stopwatch.StartNew();
+                CloseEverything(folder, AskWait);
+                bool asked = closes.HasExited && took.ElapsedMilliseconds < AskWait - 1000 && !File.Exists(marker) && !File.Exists(start);
+                stays = stand("stays");
+                CloseEverything(folder, 1500);
+                bool stopped = stays.HasExited && !File.Exists(marker) && !File.Exists(start);
+                string why = "exited " + stays.HasExited + ", marker " + File.Exists(marker) + ", start " + File.Exists(start) + ", up " + File.Exists(Path.Combine(folder, "stays.up"));
+                File.WriteAllText(marker, "1");
+                CloseEverything(folder, 500);
+                bool crash = File.Exists(marker);
+                if (!asked || !stopped || !crash)
+                    throw new Exception("Closing her from outside went wrong: asked and closed on its own with no marker left " + asked + ", one that wouldn't close stopped with its markers cleared " + stopped + " (" + why + "), a real crash's marker kept " + crash);
+                checks.Add("PASS --close, the installer and uninstall ask her to close and wait up to " + AskWait / 1000 + " s: a stand-in that closes when asked goes on its own with no marker left, one that won't is stopped and its running and starting markers cleared, so neither counts as a crash; a marker nobody closed still does");
+            }
+            finally
+            {
+                foreach (Process one in new[] { closes, stays })
+                    if (one != null) { try { if (!one.HasExited) one.Kill(); } catch (Exception) { } one.Dispose(); }
+                try { Directory.Delete(folder, true); } catch (Exception) { }
+            }
+        }
+
+        // A stop that was ours, not a crash: her running and starting markers go, so her next start doesn't count it
+        // toward switching her mods off or putting her settings aside.
+        private static void Unmark(string folder)
+        {
+            foreach (string name in new[] { CapriDesktop.RunMark.Marker, CapriDesktop.Program.StartMarker })
+            {
+                try { File.Delete(Path.Combine(folder, name)); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+            }
         }
 
         internal const string AdminCopy = "Capri is running as administrator, so setup can't close her. Quit her from her tray menu, then try again.";

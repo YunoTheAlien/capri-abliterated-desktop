@@ -204,11 +204,11 @@ Running on this PC	Berjalan di PC ini
 NORMAL	NORMAL
 OFF	KELUAR
 Local server address	Alamat pelayan tempatan
-Remember panel position	Ingat kedudukan panel
 Custom colours	Warna tersuai
 Custom colours...	Warna tersuai...
 Choose	Pilih
-Hers	Miliknya
+Reset selected colour	Tetapkan semula warna dipilih
+Make a mod	Buat mod
 Quiet	Senyap
 Quiet min	Senyap min
 Quiet max	Senyap max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Senyap hingga {n}:{n}
 Quiet until turned off	Senyap hingga dimatikan
 Export settings	Eksport tetapan
 Import settings	Import tetapan
+Save Mainframe position	Ingat kedudukan panel

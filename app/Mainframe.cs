@@ -328,11 +328,13 @@ namespace CapriDesktop
         // Settings opens simple: rarely needed rows hidden and gaps closed, until Advanced Settings brings them back.
         // Stretches of each column as built, by Top.
         private const int KeysNoteRow = 22;
-        private static readonly int[][] FoldedLeft = { new[] { 232, 338 }, new[] { 366, 394 }, new[] { 616, 1086 + KeysNoteRow }, new[] { 1225 + KeysNoteRow, 1277 + KeysNoteRow }, new[] { 1277 + KeysNoteRow, 1305 + KeysNoteRow } };
+        private static readonly int[][] FoldedLeft = { new[] { 232 - Row, 338 - Row }, new[] { 366 + AnswerRow, 394 + AnswerRow }, new[] { 616 + MeterRows + AnswerRow, 1086 + KeysNoteRow + MeterRows + AnswerRow }, new[] { 1225 + KeysNoteRow + MeterRows + AnswerRow, 1277 + KeysNoteRow + MeterRows + AnswerRow }, new[] { 1277 + KeysNoteRow + MeterRows + AnswerRow, 1305 + KeysNoteRow + MeterRows + AnswerRow } };
         // The rows that stay in Simple Settings, and the offsets every row added above the band moves it by
         // (SettingsDrop, Hologram's row, QuietRows).
-        private const int QuietRows = 5;
-        private static readonly int[][] FoldedRight = { new[] { 138 + Row, 166 + Row }, new[] { 138 + SettingsDrop + Row + Row * QuietRows, 362 + SettingsDrop + Row + Row * QuietRows }, new[] { 876 + SettingsDrop - Row * 3 + Row * QuietRows, 1370 + Row * 5 + SettingsDrop - Row * 3 + Row * QuietRows }, new[] { 1622 + Row * 5 + SettingsDrop - Row * 3 + Row * QuietRows, 1810 + Row * 5 + SettingsDrop - Row * 3 + Row * QuietRows } };
+        private const int QuietRows = 3;
+        // The key in CAPRI and the title of the window it opens; her help and settings search use it too.
+        internal const string FocusLabel = "Focus / Quiet settings";
+        private static readonly int[][] FoldedRight = { new[] { 138 + Row, 166 + Row }, new[] { 138 + SettingsDrop + Row * 2 + Row * QuietRows, 362 + SettingsDrop + Row * 2 + Row * QuietRows }, new[] { 876 + SettingsDrop - Row * 2 + Row * QuietRows, 1370 + Row * 6 + SettingsDrop - Row * 3 + Row * QuietRows }, new[] { 1622 + Row * 6 + SettingsDrop - Row * 3 + Row * QuietRows, 1810 + Row * 6 + SettingsDrop - Row * 3 + Row * QuietRows } };
         private readonly Dictionary<Control, int> built = new Dictionary<Control, int>();
         private bool simple;
         private Key advancedKey;
@@ -359,16 +361,21 @@ namespace CapriDesktop
         private readonly Rim topRim = new Rim();
         // Her title bar stays at the top while Settings scrolls under it: this band, in her own ground and edge, sits over
         // the page and under the title's keys. TitleTall is its height in design px.
-        private readonly Rim titleBand = new Rim();
+        private readonly Rim titleBand = new Rim { Still = true };
         private const int TitleTall = 48;
         private readonly List<Control> titleRow = new List<Control>();
         private readonly Rim bottomRim = new Rim();
         // Smoke tests pretend the screen's working area is this many px tall, before scaling; 0 uses the real one.
         internal int ShortScreen;
         private readonly Key languages;
+        private readonly Key togglesKey;
         private readonly ContextMenuStrip languageMenu;
         private ToolStripMenuItem languageCurrent;
         private Font languageFont;
+        // She answers in, under Hearing in VOICE (Lachu).
+        private readonly Key answers;
+        private readonly ContextMenuStrip answerMenu;
+        private Font answerFont;
         private readonly Slider volume;
         private readonly Readout volumeName;
         private readonly Slider pitchSlider;
@@ -399,13 +406,21 @@ namespace CapriDesktop
         // which opens its setup steps.
         private readonly Key mixInput, mixOutput, mixHow;
         private readonly Slider micLoudness;
+        // Mic sensitivity: what her mic hears, live, with the line where talk starts.
+        private readonly MicMeter micMeter;
+        private readonly Key micAuto;
+        private readonly Label micMeterName;
         private readonly Label micLoudnessName;
         private readonly ContextMenuStrip mixInputMenu, mixOutputMenu;
         private MixSheet mixSheet;
         private readonly Toggle callMode;
         // The call app menu moved to her call panel (Lachy), so her voice in your mic sits right under Call mode.
-        private const int MixAt = 422;
-        private const int MixRows = 212;
+        // She answers in's row under Hearing; every row after it was built one row lower for it.
+        private const int AnswerRow = 28;
+        private const int MixAt = 422 + AnswerRow;
+        // The mic meter's two rows under her voice in your mic, which move everything below VOICE down.
+        private const int MeterRows = 54;
+        private const int MixRows = 212 + MeterRows;
         private readonly Toggle miniPlayer;
         private readonly Readout sleepName;
         private readonly Readout soundsName;
@@ -756,14 +771,9 @@ namespace CapriDesktop
             personalityKey.AccessibleName = "Her personality: edit personality.md, or put her default back";
             // Her own font fits all three on this row. Windows' fallback font is wider, so there they end in dots rather than spill.
             personalityKey.Ellipsis = notesKey.Ellipsis = filesKey.Ellipsis = true;
-            Named("Language", 0, 82);
-            languageMenu = Dropdown();
-            languageMenu.AccessibleName = "Her language";
-            languageMenu.Opened += delegate { KeepLanguageMenu(languageMenu); };
-            languages = Make("English", ValueAt, 85, ValueWide, 22, delegate { ShowLanguages(); });
-            languages.Chevron = true;
-            languages.AccessibleName = "Her language";
-            FillLanguages(Screen.FromRectangle(Bounds).WorkingArea);
+            // YOU's rows and VOICE down to Hearing were built a row lower; they move up once Hearing is built, now that the
+            // language row is VOICE's I speak.
+            int youFrom = Controls.Count;
             // A label of its own, so the question still shows once a name is saved in the box.
             Named("What should she call you?", 0, 110);
             Make("Get to know me", 236, 113, 120, 22, delegate { capri.GetToKnow(); }).AccessibleName = "Get to know me: she asks what to call you, your pronouns and what you're into, and keeps them in me.md";
@@ -818,8 +828,9 @@ namespace CapriDesktop
             listenCapri = Switch("Listen for Capri", 0, 288, delegate { if (!syncing) capri.ToggleListenCapri(); });
             listenCapri.Hint = "Say her name anywhere";
             listenCapri.HintFont = small;
-            // How long a chat keeps going without her name, from 5 seconds to a minute.
-            listenWindow = Setting("Listen window", ListenWindowNames, 0, 313, "Listen window: how long she keeps hearing you without her name once a chat is going");
+            // How long a chat keeps going without her name, from 5 seconds to a minute. A pixel clear of Hearing's key, so
+            // rounding at 175% never lays its slider over it.
+            listenWindow = Setting("Listen window", ListenWindowNames, 0, 312, "Listen window: how long she keeps hearing you without her name once a chat is going");
             listenWindowName = new Readout(listenWindow);
             listenWindow.Changed += delegate { if (syncing) return; listenWindowName.Text = ListenWindowNames[listenWindow.Value]; capri.SetListenWindow(Companion.ListenWindows[listenWindow.Value]); };
             listenCapri.AccessibleName = "Listen for Capri. Keep the mic open; say her name anywhere in your sentence, then just talk until you go quiet. Stop and push to talk still work";
@@ -835,15 +846,33 @@ namespace CapriDesktop
                 hearingMenu.Items.Add(Choice(HearingStatus.Choices[i], false, delegate { capri.ChooseHearing(choice); }));
                 hearingMenu.Items[i].AccessibleName = HearingStatus.Choices[i];
             }
+            for (int moved = youFrom; moved < Controls.Count; moved++) Controls[moved].Top -= Row;
+            // The language they speak, his I speak: her ears listen for it, her menus show in it, and she answers in it
+            // unless She answers in says otherwise (Lachu).
+            Named("I speak", 0, 335);
+            languageMenu = Dropdown();
+            languageMenu.AccessibleName = "The language you speak";
+            languageMenu.Opened += delegate { KeepLanguageMenu(languageMenu); };
+            languages = Make("English", ValueAt, 338, ValueWide, 22, delegate { ShowLanguages(); });
+            languages.Chevron = true;
+            languages.AccessibleName = "I speak: the language you speak, which her ears, menus and replies follow";
+            FillLanguages(Screen.FromRectangle(Bounds).WorkingArea);
+            // The language of her replies, apart from I speak, which stays what they speak (Lachu).
+            Named("She answers in", 0, 363);
+            answerMenu = Dropdown();
+            answerMenu.AccessibleName = "The language she answers in";
+            answers = Make(LanguagePair.SameName, ValueAt, 366, ValueWide, 22, delegate { ShowAnswers(); });
+            answers.Chevron = true;
+            answers.Ellipsis = true;
+            answers.AccessibleName = "She answers in: the language of her replies. Same as I speak, Auto to match each message, or one of her languages";
             // The row under Listen for Capri, shown only while her HD voice is on (Lachy). Off out of the box.
-            hdGames = Switch("Free voice in games", 0, 366, delegate { if (!syncing) capri.ToggleHdGameRest(); });
+            hdGames = Switch("Free voice in games", 0, 366 + AnswerRow, delegate { if (!syncing) capri.ToggleHdGameRest(); });
             hdGames.AccessibleName = "Free voice in games: while a game or video is full screen, her free voice talks instead of her HD voice, so the game gets the graphics card";
             hdGames.Visible = false;
-            callMode = Switch("Call mode (beta)", 0, 394, delegate { if (!syncing) capri.PressCallMode(); });
+            callMode = Switch("Call mode (beta)", 0, 394 + AnswerRow, delegate { if (!syncing) capri.PressCallMode(); });
             callMode.AccessibleName = "Call mode. Only your mic or typing can confirm requests. Pick what she hears from the call app's name on her call panel";
             voiceInMic = Switch("Her voice in your mic", 0, MixAt, delegate { if (!syncing) capri.ToggleVoiceInMic(); });
-            voiceInMic.Switch = 68;
-            voiceInMic.AccessibleName = "Her voice plays into your mic only in call mode. Pick CABLE Output or Steam Streaming Microphone in your call app.";
+            voiceInMic.AccessibleName = "Her voice plays into your mic only in call mode; your own mic goes through it all the time. Pick CABLE Output or Steam Streaming Microphone in your call app.";
             voiceInMicNote = Caption(MicMix.PickLine(MicMix.CableEnd), 28, MixAt + 26, small, Faint);
             voiceInMicNote.AutoSize = false;
             voiceInMicNote.AutoEllipsis = true;
@@ -881,6 +910,16 @@ namespace CapriDesktop
             micLoudness.AccessibleName = "Her voice in your mic: loudness";
             Controls.Add(micLoudness);
             micLoudness.Changed += delegate { if (!syncing) capri.SetMicLoudness(50 + micLoudness.Value * 10); };
+            micMeterName = Caption(MicMeterName(0), 28, MixAt + 188, Type(9.5f), Rose);
+            micMeter = new MicMeter { Bounds = new Rectangle(28, MixAt + 212, 266, 26), Read = capri.MicHeard };
+            micMeter.AccessibleName = "Mic sensitivity: drag the line to where your talking starts, above the mountain for the background noise; Auto beside it";
+            micMeter.Picked += delegate(int spot) { if (syncing) return; capri.SetMicGate(spot); micMeterName.Text = MicMeterName(spot); ShowMicAuto(); };
+            // The bar listens while it shows, voice chat on or off, the way a call app's settings page does.
+            micMeter.VisibleChanged += delegate { capri.MeterEars(micMeter.Visible); };
+            Controls.Add(micMeter);
+            // Auto in one click, lit while it's on.
+            micAuto = Make("Auto", 300, MixAt + 214, 56, 22, delegate { if (!syncing) PressMicAuto(); }, "Mic sensitivity");
+            micAuto.AccessibleName = "Mic sensitivity: Auto, the line follows the background noise";
             int afterVoice = Controls.Count;
             Section("MOVES >", 0, 442);
             popTimes = Make("Pop-in times", 236, 439, 120, 20, delegate { using (PopWindow dialog = new PopWindow(capri)) dialog.ShowDialog(this); });
@@ -939,7 +978,7 @@ namespace CapriDesktop
             ((Note)keysNote).Hovers = true;
             for (int i = afterVoice; i < Controls.Count; i++)
             {
-                Controls[i].Top += Row * 2 + 22 + MixRows - Row * 4;
+                Controls[i].Top += Row * 2 + 22 + MixRows - Row * 4 + AnswerRow;
                 underVoice.Add(new KeyValuePair<Control, int>(Controls[i], Controls[i].Top));
             }
             foreach (Control mixRow in MixControls) underVoice.Add(new KeyValuePair<Control, int>(mixRow, mixRow.Top));
@@ -948,9 +987,7 @@ namespace CapriDesktop
             // CAPRI and everything under it moved down below it once the column is built (SettingsDrop).
             settingsHead = Section("GENERAL SETTINGS >", c, 58);
             int settingsRows = Controls.Count;
-            rememberPanel = Switch("Remember panel position", c, 82, delegate { if (!syncing) capri.ToggleRememberPanel(); });
-            // A narrower switch, as the jealousy rows have, so the long name fits in Windows' fallback font too.
-            rememberPanel.Switch = 68;
+            rememberPanel = Switch("Save Mainframe position", c, 82, delegate { if (!syncing) capri.ToggleRememberPanel(); });
             onTop = Switch("Always on top", c, 110, delegate { if (!syncing) capri.ToggleOnTop(); });
             // Under Virtual Super Resolution her Mainframe came out tiny (Zenni). Auto grows it by how much bigger
             // the desktop is than the panel showing it; 100% to 200% sizes it by hand.
@@ -972,8 +1009,11 @@ namespace CapriDesktop
             // clicks pass through her body (Lachy).
             hologram = Switch("Hologram", c, 82, delegate { if (!syncing) capri.ToggleHologram(); });
             hologram.AccessibleName = "Hologram. Clicks pass through her body, talk pill and bubble. Turn this off to give her clicks back";
-            // Her quiet under it: the switch, its min and max hours, and quiet on calls and in videos.
-            BuildQuiet(c, 82 + Row);
+            // Every switch of hers in one window, a row under Hologram; her right-click menu's Toggles opens it too.
+            togglesKey = Make("Toggles...", 28 + c, 82 + Row + 3, 328, 22, delegate { OpenToggles(); });
+            togglesKey.AccessibleName = "Toggles: every switch of hers in one window, a fold per group";
+            // The Quiet timer, Focus mode and Focus / Quiet settings under it; Mute her joins over the Quiet timer.
+            BuildQuiet(c, 82 + Row * 2);
             int afterHologram = Controls.Count;
             sizeSlider = Setting("Size", SizeNames, c, 82, "Her size");
             sizeName = new Readout(sizeSlider);
@@ -993,7 +1033,7 @@ namespace CapriDesktop
                 CareKind careKind = (CareKind)careRow;
                 Toggle careToggle = Switch(Care.Names[careRow], c, 138 + careRow * Row, delegate { if (!syncing) capri.ToggleCare(careKind); });
                 careToggle.Width = 224;
-                careToggle.Switch = 68;
+                careToggle.Switch = Toggle.Narrow;
                 careToggle.AccessibleName = "Check in on me: " + Care.Names[careRow] + " check-in" + (careKind == CareKind.Eyes ? ", look away for 20 seconds" : careKind == CareKind.Meal ? ", mealtimes from noon, if you've been here since before lunch" : "");
                 careToggles[careRow] = careToggle;
                 Key careTime = Make("", 260 + c, 141 + careRow * Row, 96, 22, delegate { ChooseCareTime(careKind); });
@@ -1019,7 +1059,6 @@ namespace CapriDesktop
             jealousNote.Size = new Size(328, 20);
             closeAIs = Switch("Close other AIs for me", c, 306, delegate { if (!syncing) capri.ToggleCloseAIs(); });
             closeAIs.AccessibleName = "Close other AIs for me. Asks before closing only the apps you choose";
-            jealousAIs.Switch = closeAIs.Switch = 68;
             closeAIsNote = Caption("Asks before closing only the apps you choose.", 28 + c, 334, small, Faint);
             closeAIsNote.AutoSize = false;
             closeAIsNote.Size = new Size(328, 20);
@@ -1164,14 +1203,16 @@ namespace CapriDesktop
             cursor = Switch("Use her cursor", c, 736, delegate { if (!syncing) capri.ToggleCursor(); });
             remembering = Switch("Remember our chats", c, 764, delegate { if (!syncing) capri.ToggleRemembering(); });
             remembering.AccessibleName = "Remember our chats. She keeps daily transcripts and memories.md on this PC, never uploaded";
-            // SECURITY took Blackwall mode's place (Lachy): its button opens her SECURITY window, and the line under it
-            // says what the preset does. Blackwall mode is its Blackwall preset now.
+            // SECURITY took Blackwall mode's place (Lachy): its button opens her SECURITY window. Blackwall mode is its
+            // Blackwall preset now.
             security = Make("Security: " + Security.PresetName, 28 + c, 795, 328, 22, delegate { OpenSecurity(); });
             security.AccessibleName = "Security: what she does on your PC without asking first";
             blackwallNote = Caption(Security.Short, 28 + c, 819, small, Faint);
             blackwallNote.AutoSize = false;
             blackwallNote.TextAlign = ContentAlignment.MiddleRight;
             blackwallNote.Bounds = new Rectangle(28 + c, 819, 328, 18);
+            // The line under the button isn't shown; its words stay for her help and the checks.
+            blackwallNote.Visible = false;
             // Power saver: Off, In games or Always. Simple Settings keeps it; the rows from Perch down fold under it.
             powerSaver = Setting("Power saver", SaverNames, c, 840, "Power saver: how lightly she runs in games, or always");
             powerSaverName = new Readout(powerSaver);
@@ -1192,7 +1233,6 @@ namespace CapriDesktop
             hideFullScreen = Switch("Hide in full screen", c, 916, delegate { if (!syncing) capri.ToggleHideFullScreen(); });
             playerFullScreen = Switch("Mini player over full screen", c, 944, delegate { if (!syncing) capri.TogglePlayerFullScreen(); });
             exploreAway = Switch("Explore while I'm away", c, 972, delegate { if (!syncing) capri.ToggleExploreAway(); });
-            keepAwake.Switch = hideFullScreen.Switch = playerFullScreen.Switch = exploreAway.Switch = 68;
             keepAwake.AccessibleName = "Keep PC awake for jobs. Keeps the PC and screen awake while a job runs, waits for your answer or watches for something";
             hideFullScreen.AccessibleName = "Hide in full screen. Gaming Mode takes priority; a manual hide stays hidden";
             playerFullScreen.AccessibleName = "Mini player over full screen. Works over borderless windows; exclusive full screen cannot show overlays";
@@ -1227,9 +1267,9 @@ namespace CapriDesktop
             Caption("\"Hey Capri, activate gaming mode\" turns it on.", 28, 1064, small, Faint);
             Caption("Works best on MAX INTELLIGENCE.", 28, 1080, small, Faint);
             fastHands = Switch("Fast hands in games", 0, 1102, delegate { if (!syncing) capri.ToggleFastHands(); });
-            hdGames.Switch = intro.Switch = caughtUp.Switch = fastHands.Switch = 68;
-            gameMute = Switch("Mute her", 0, 1130, delegate { if (!syncing) capri.SetQuiet(gameMute.Checked); });
-            gameMute.AccessibleName = "Mute her. She stops talking on her own and only answers when you talk to her, the same as her Quiet key";
+            // Mute her is built here and goes to CAPRI, above the Quiet timer, when the page is regrouped.
+            gameMute = Switch("Mute her", 0, 1130, delegate { if (!syncing) capri.SetMute(gameMute.Checked); });
+            gameMute.AccessibleName = "Mute her. She stops talking on her own until you turn this off, and still answers when you talk to her";
             fastHands.AccessibleName = "Fast hands in games. On a Claude key she plays games on Claude Haiku, which moves about three times faster and costs far less. When she's stuck she asks the brain you picked, or Claude Sonnet if that's Haiku, and chat stays on the brain you picked";
             clipHead = Section("CLIPS >", 0, 1186);
             clipGames = Switch("Clip my games", 0, 1210, delegate { if (!syncing) capri.ToggleClips(); });
@@ -1271,7 +1311,7 @@ namespace CapriDesktop
             for (int belowCare = afterCare; belowCare < Controls.Count; belowCare++)
                 if (Controls[belowCare].Left >= c) Controls[belowCare].Top += Row * 8;
             for (int belowHologram = afterHologram; belowHologram < Controls.Count; belowHologram++)
-                if (Controls[belowHologram].Left >= c) Controls[belowHologram].Top += Row * (1 + QuietRows);
+                if (Controls[belowHologram].Left >= c) Controls[belowHologram].Top += Row * (2 + QuietRows);
             for (int belowSettings = capriAt; belowSettings < Controls.Count; belowSettings++)
                 if (Controls[belowSettings].Left >= c) Controls[belowSettings].Top += SettingsDrop;
             // GAMES is measured off the last key row, a section header 42 under the row above it like every other band,
@@ -1411,7 +1451,7 @@ namespace CapriDesktop
                 picker.ShowNewFolderButton = true;
                 if (picker.ShowDialog(this) != DialogResult.OK) return;
                 string problem = capri.SetClipFolder(picker.SelectedPath);
-                if (problem != null) MessageBox.Show(this, problem, "Clips", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (problem != null) Notice.Tell(this, problem, "Clips", false);
             }
         }
 
@@ -1755,6 +1795,84 @@ namespace CapriDesktop
             return languageMenu;
         }
 
+        // She answers in's menu: Same as I speak and Auto first, then her languages in groups, as I speak's menu has them.
+        internal ContextMenuStrip ShowAnswers() { return ShowAnswers(Screen.FromControl(this).WorkingArea); }
+
+        internal ContextMenuStrip ShowAnswers(Rectangle area)
+        {
+            DismissHint();
+            answerMenu.Close();
+            List<ToolStripDropDown> groups = new List<ToolStripDropDown>();
+            foreach (ToolStripMenuItem item in LanguageItems(answerMenu.Items)) if (item.HasDropDownItems) groups.Add(item.DropDown);
+            while (answerMenu.Items.Count > 0) answerMenu.Items[0].Dispose();
+            foreach (ToolStripDropDown group in groups) group.Dispose();
+            answerMenu.Font = Font;
+            if (answerFont != null) { answerFont.Dispose(); answerFont = null; }
+            answerMenu.Items.Add(AnswerItem(LanguagePair.SameName, null));
+            answerMenu.Items.Add(AnswerItem(LanguagePair.AutoName, LanguagePair.Auto));
+            answerMenu.Items.Add(new ToolStripSeparator());
+            List<int> rows = new List<int>();
+            for (int i = 0; i < Brain.Languages.GetLength(0); i++) rows.Add(i);
+            rows.Sort(delegate(int a, int b) { return StringComparer.OrdinalIgnoreCase.Compare(Brain.Languages[a, 1], Brain.Languages[b, 1]); });
+            AnswerRows(answerMenu, rows, area, true);
+            SyncAnswers();
+            for (;;)
+            {
+                Size size = answerMenu.GetPreferredSize(Size.Empty);
+                foreach (ToolStripMenuItem item in LanguageItems(answerMenu.Items))
+                    if (item.HasDropDownItems) { Size child = item.DropDown.GetPreferredSize(Size.Empty); size = new Size(Math.Max(size.Width, child.Width), Math.Max(size.Height, child.Height)); }
+                if (size.Width <= area.Width - 4 && size.Height <= area.Height - 4 || Points(answerMenu.Font) <= 1f) break;
+                float ratio = Math.Min((area.Width - 4f) / size.Width, (area.Height - 4f) / size.Height);
+                Font font = new Font(Font.FontFamily, Math.Max(1f, Points(answerMenu.Font) * ratio * 0.9f), Font.Style, GraphicsUnit.Point);
+                answerMenu.Font = font;
+                foreach (ToolStripMenuItem item in LanguageItems(answerMenu.Items)) if (item.HasDropDownItems) item.DropDown.Font = font;
+                if (answerFont != null) answerFont.Dispose();
+                answerFont = font;
+            }
+            Point at = LanguageAt(answers.PointToScreen(new Point(0, answers.Height)), answerMenu.GetPreferredSize(Size.Empty), area);
+            answerMenu.Show(answers, answers.PointToClient(at));
+            return answerMenu;
+        }
+
+        private ToolStripMenuItem AnswerItem(string text, string picked)
+        {
+            ToolStripMenuItem item = Choice(text, false, delegate { capri.SetAnswerLanguage(picked); capri.ShowFreeVoices(); Sync(); });
+            item.Tag = picked ?? LanguagePair.Same;
+            return item;
+        }
+
+        private void AnswerRows(ToolStripDropDown menu, List<int> rows, Rectangle area, bool root)
+        {
+            if (!root)
+            {
+                foreach (int row in rows) menu.Items.Add(AnswerItem(Brain.Languages[row, 1], Brain.Languages[row, 1]));
+                if (menu.GetPreferredSize(Size.Empty).Height <= area.Height - 4 || rows.Count == 1) return;
+                while (menu.Items.Count > 0) menu.Items[0].Dispose();
+            }
+            int count = (rows.Count + 3) / 4;
+            for (int start = 0; start < rows.Count; start += count)
+            {
+                List<int> part = rows.GetRange(start, Math.Min(count, rows.Count - start));
+                if (part.Count == 1) { menu.Items.Add(AnswerItem(Brain.Languages[part[0], 1], Brain.Languages[part[0], 1])); continue; }
+                ToolStripMenuItem group = Choice(Brain.Languages[part[0], 1] + " - " + Brain.Languages[part[part.Count - 1], 1], false, null);
+                ContextMenuStrip drop = Dropdown();
+                group.DropDown = drop;
+                menu.Items.Add(group);
+                AnswerRows(drop, part, area, false);
+            }
+        }
+
+        internal string AnswerShown { get { return answers.Text; } }
+
+        private void SyncAnswers()
+        {
+            string answering = capri.AnswerLanguage;
+            answers.Text = LanguagePair.Shown(answering);
+            string tag = answering ?? LanguagePair.Same;
+            foreach (ToolStripMenuItem item in LanguageItems(answerMenu.Items)) item.Checked = (string)item.Tag == tag;
+            answers.Invalidate();
+        }
+
         private void SyncLanguages()
         {
             string language = capri.Language;
@@ -1870,6 +1988,8 @@ namespace CapriDesktop
             voiceInMic.Checked = on;
             voiceInMic.Enabled = cable || on;
             micLoudness.Value = (capri.MicLoudness - 50) / 10;
+            micMeterName.Text = MicMeterName(capri.MicGate);
+            ShowMicAuto();
             syncing = was;
             voiceInMicNote.Text = cable ? MicMix.PickLine(capri.CableEnd) : CableSetup.Credit;
             voiceInMicNote.Cursor = cable ? Cursors.Default : Cursors.Hand;
@@ -1901,7 +2021,32 @@ namespace CapriDesktop
             control.Invalidate();
         }
 
-        private Control[] MixControls { get { return new Control[] { voiceInMic, voiceInMicNote, voiceInMicState, cableKey, mixInput, mixOutput, mixHow, micLoudnessName, micLoudness }; } }
+        private Control[] MixControls { get { return new Control[] { voiceInMic, voiceInMicNote, voiceInMicState, cableKey, mixInput, mixOutput, mixHow, micLoudnessName, micLoudness, micMeterName, micMeter, micAuto }; } }
+
+        // The meter's name says whether the line follows the room or sits where they put it.
+        private void ShowMicAuto() { micAuto.Picked = capri.MicGate <= 0; micAuto.Invalidate(); }
+
+        // The Auto key as a check sees it: lit, and whether a press puts the line back to Auto.
+        internal bool MicAutoLit { get { return micAuto.Picked; } }
+        internal void PressMicAuto() { capri.SetMicGate(0); micMeterName.Text = MicMeterName(0); ShowMicAuto(); micMeter.Take(); }
+
+        private static string MicMeterName(int spot)
+        {
+            return spot <= 0 ? "Mic sensitivity: Auto, follows background noise" : "Mic sensitivity: talk starts at " + (int)Math.Round(MicMeter.Decibels(MicMeter.SpotLevel(spot))) + " dB";
+        }
+
+        internal string MicMeterShown { get { return micMeterName.Text + " | " + micMeter.Said; } }
+
+        // The meter as drawn now, for the checks' picture.
+        internal Bitmap MicMeterPicture()
+        {
+            micMeterName.Text = MicMeterName(capri.MicGate);
+            ShowMicAuto();
+            micMeter.Take();
+            Bitmap picture = new Bitmap(Math.Max(1, micMeter.Width), Math.Max(1, micMeter.Height));
+            micMeter.DrawToBitmap(picture, new Rectangle(Point.Empty, picture.Size));
+            return picture;
+        }
 
         internal string MicLoudnessShown { get { return micLoudness.Shown; } }
 
@@ -2054,7 +2199,11 @@ namespace CapriDesktop
                 if (entry.Key.Visible && entry.Key.Left < Scaled(Column) && !Folded(entry.Key) && entry.Key.Top > voiceInMic.Top && Array.IndexOf(MixControls, entry.Key) < 0) below = Math.Min(below, entry.Key.Top);
             if (micLoudnessName.Top < Math.Max(mixOutput.Bottom, mixHow.Bottom) || micLoudness.Top < micLoudnessName.Bottom) return "loudness overlaps a row";
             if (TextRenderer.MeasureText(micLoudnessName.Text, micLoudnessName.Font).Width > Scaled(328)) return "the loudness name doesn't fit";
-            int last = micLoudness.Bottom;
+            if (micMeterName.Top < micLoudness.Bottom || micMeter.Top < micMeterName.Bottom) return "the mic meter overlaps a row";
+            if (micAuto.Left < micMeter.Right + Scaled(4) || micAuto.Top < micMeterName.Bottom || micAuto.Right > Scaled(28 + 328) + 1) return "the Auto key covers the meter or leaves its column";
+            foreach (string named in new[] { MicMeterName(0), MicMeterName(1), MicMeterName(100) })
+                if (TextRenderer.MeasureText(named, micMeterName.Font).Width > Scaled(328)) return "the mic meter's name doesn't fit";
+            int last = micMeter.Bottom;
             return below - Scaled(5) < last ? "the next section starts on top of it" : null;
         }
 
@@ -3169,7 +3318,7 @@ namespace CapriDesktop
 
         // What's behind a control: her ground, the wine glow at the top of its window and any section band it crosses, all
         // measured from the window, so every control reads as cut out of one panel.
-        private static void Backdrop(Graphics graphics, Control control, float s)
+        private static void Backdrop(Graphics graphics, Control control, float s, bool bands = true)
         {
             graphics.Clear(Ground);
             Form window = control as Form ?? control.FindForm();
@@ -3185,7 +3334,7 @@ namespace CapriDesktop
                     wine.Blend = Fade;
                     graphics.FillRectangle(wine, x, y, control.Width, Math.Min(control.Height, glow - y));
                 }
-            foreach (Control child in window.Controls)
+            foreach (Control child in bands ? (System.Collections.IEnumerable)window.Controls : new Control[0])
             {
                 Head head = child as Head;
                 if (head == null || head.Span <= 0 || !head.Visible || head.Left >= window.ClientSize.Width) continue;
@@ -3526,7 +3675,7 @@ namespace CapriDesktop
             clipPath.Text = recording.Folder;
             clipPath.AccessibleName = "Clips saved in " + recording.Folder;
             fastHands.Checked = capri.FastHandsOn;
-            gameMute.Checked = capri.QuietOn;
+            gameMute.Checked = capri.MuteOn;
             frameSize.Value = Math.Max(0, Array.IndexOf(FrameSizes, capri.MainframeSize));
             ShowFrameSize();
             frameColours.Value = capri.MainframeColours;
@@ -3536,6 +3685,7 @@ namespace CapriDesktop
             gapName.Text = GapNames[gap.Value];
             if (!nickname.Box.Focused) nickname.Box.Text = capri.Nickname;
             SyncLanguages();
+            SyncAnswers();
             int loud = 0;
             for (int i = 0; i < Volumes.Length; i++) if (Math.Abs(Volumes[i] - capri.Volume) < Math.Abs(Volumes[loud] - capri.Volume)) loud = i;
             volume.Value = loud;
@@ -3831,6 +3981,9 @@ namespace CapriDesktop
             }
         }
 
+        // A control as an overlap names it: its text, or its kind and place when it has none.
+        private static string Named(Control control) { return (control.Text.Length > 0 ? control.Text : control.GetType().Name) + " (" + control.AccessibleName + ") " + control.Bounds; }
+
         internal string Overlap()
         {
             for (int i = 0; i < Controls.Count; i++)
@@ -3841,7 +3994,7 @@ namespace CapriDesktop
                     if (!a.Visible || !b.Visible || (a is Label && a.Text.Length == 0) || (b is Label && b.Text.Length == 0)) continue;
                     // A page row scrolled under her title bar is covered by its band, not overlapping its keys.
                     if (titleRow.Contains(a) != titleRow.Contains(b) && (scrolled.Contains(a) || scrolled.Contains(b)) && Math.Min(a.Top, b.Top) < titleBand.Bottom && titleBand.Visible) continue;
-                    if (a.Bounds.IntersectsWith(b.Bounds)) return a.Text + " / " + b.Text;
+                    if (a.Bounds.IntersectsWith(b.Bounds)) return Named(a) + " / " + Named(b);
                 }
             return null;
         }
@@ -3870,7 +4023,8 @@ namespace CapriDesktop
         private static string CheckText(Graphics graphics, Control control, Point origin, List<KeyValuePair<string, Rectangle>> text, bool shown)
         {
             Point at = new Point(origin.X + control.Left, origin.Y + control.Top);
-            string name = control.GetType().Name + " at " + at.X + "," + at.Y;
+            string said = control.Text.Replace("\n", " ");
+            string name = control.GetType().Name + (said.Length == 0 ? "" : " \"" + (said.Length > 40 ? said.Substring(0, 40) + "..." : said) + "\"") + " at " + at.X + "," + at.Y;
             List<KeyValuePair<string, Rectangle>> visible = shown ? text : null;
             TextFormatFlags flags = TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding;
             Rectangle area = control.ClientRectangle;
@@ -3903,7 +4057,7 @@ namespace CapriDesktop
             else if (toggle != null)
             {
                 problem = FitsText(graphics, toggle.Text, toggle.Font, new Rectangle(0, 0, toggle.NameRoom, toggle.Height), flags, at, name + " name", visible);
-                float line = Math.Max(1f, scale), wide = toggle.Switch * scale, gap = 4 * scale, half = (wide - gap) / 2, start = toggle.Width - wide;
+                float line = Math.Max(1f, scale), wide = toggle.Pair * scale, gap = 4 * scale, half = (wide - gap) / 2, start = toggle.Width - wide;
                 using (Font small = toggle.SmallFont())
                 {
                     if (problem == null) problem = FitsText(graphics, "OFF", small, Rectangle.Round(new RectangleF(start + line / 2, line / 2, half - line, toggle.Height - line)), flags | TextFormatFlags.HorizontalCenter, at, name + " off", visible);
@@ -6111,14 +6265,54 @@ namespace CapriDesktop
                 Visible = false;
             }
 
-            protected override void OnPaintBackground(PaintEventArgs e) { Backdrop(e.Graphics, this, ((Mainframe)Parent).Unit()); }
+            // Her title bar's band is drawn once and kept: settings scrolling under it never show through or redraw it,
+            // only a new size, scale or colours do.
+            internal bool Still;
+            private Bitmap still;
+            private string stillFor;
+
+            protected override void OnPaintBackground(PaintEventArgs e)
+            {
+                if (Still) { DrawStill(e.Graphics); return; }
+                Backdrop(e.Graphics, this, ((Mainframe)Parent).Unit());
+            }
 
             protected override void OnPaint(PaintEventArgs e)
             {
+                if (Still) return;
                 Mainframe owner = (Mainframe)Parent;
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
                 e.Graphics.TranslateTransform(-Left, -Top);
                 Edging(e.Graphics, owner, owner.Unit());
+            }
+
+            private void DrawStill(Graphics graphics)
+            {
+                Mainframe owner = (Mainframe)Parent;
+                if (Width <= 0 || Height <= 0) return;
+                float s = owner.Unit();
+                string drawnFor = Bounds + "|" + owner.Size + "|" + s + "|" + Neon.PaletteStamp + "|" + picturing;
+                if (still == null || stillFor != drawnFor)
+                {
+                    Bitmap made = new Bitmap(Width, Height);
+                    using (Graphics paint = Graphics.FromImage(made))
+                    {
+                        Backdrop(paint, this, s, false);
+                        paint.SmoothingMode = SmoothingMode.AntiAlias;
+                        paint.TranslateTransform(-Left, -Top);
+                        Edging(paint, owner, s);
+                    }
+                    if (still != null) still.Dispose();
+                    still = made;
+                    stillFor = drawnFor;
+                }
+                graphics.DrawImageUnscaled(still, 0, 0);
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing && still != null) { still.Dispose(); still = null; }
+                base.Dispose(disposing);
             }
 
             protected override void WndProc(ref Message message)
@@ -9764,8 +9958,21 @@ namespace CapriDesktop
             private Font small;
             internal string Hint;
             internal Font HintFont;
-            // The OFF and ON pair's width, in design px.
-            internal int Switch = 172;
+            // The OFF and ON pair's width, in design px: the full width unless something sits beside it on its row, like a
+            // dropdown, slider or key, which sets it narrower.
+            internal int Switch = Full;
+            internal const int Full = 172, Narrow = 68;
+
+            // The width it's drawn at. Every switch on its own is the full width; only a name too long to fit beside it in
+            // the font this PC has, like Windows' fallback font, takes the narrow one.
+            internal int Pair
+            {
+                get
+                {
+                    if (Switch < Full) return Switch;
+                    return TextRenderer.MeasureText(Text ?? "", Font).Width <= Width - (int)Math.Ceiling((Full + 10) * ScaleOf(this)) ? Full : Narrow;
+                }
+            }
 
             internal bool Marked { get { return Focused && ShowFocusCues; } }
 
@@ -9779,19 +9986,19 @@ namespace CapriDesktop
 
             internal GraphicsPath MarkPath(float s)
             {
-                float wide = Switch * s;
+                float wide = Pair * s;
                 return FocusPath(new RectangleF(Width - wide, 0, wide, Height), s, 0, 5 * s, 5 * s);
             }
 
             // The width its name has before the pair, in px.
-            internal int NameRoom { get { return Width - (int)Math.Ceiling((Switch + 10) * ScaleOf(this)); } }
+            internal int NameRoom { get { return Width - (int)Math.Ceiling((Pair + 10) * ScaleOf(this)); } }
 
             internal Font SmallFont() { return Font.Unit == GraphicsUnit.Pixel ? new Font(Font.FontFamily, Font.Size * 8.75f / 9.5f, Font.Style, GraphicsUnit.Pixel) : Type(Points(Font) - 0.75f, true); }
 
             private int Part(int x)
             {
-                float s = ScaleOf(this), start = Width - Switch * s;
-                return x < start ? -1 : x < start + Switch * s / 2 ? 0 : 1;
+                float s = ScaleOf(this), start = Width - Pair * s;
+                return x < start ? -1 : x < start + Pair * s / 2 ? 0 : 1;
             }
 
             protected override void OnFontChanged(EventArgs e)
@@ -9831,7 +10038,7 @@ namespace CapriDesktop
                 Backdrop(graphics, this, s);
                 graphics.SmoothingMode = SmoothingMode.AntiAlias;
                 if (small == null) small = SmallFont();
-                float line = Math.Max(1f, s), wide = Switch * s, gap = 4 * s, half = (wide - gap) / 2, start = Width - wide;
+                float line = Math.Max(1f, s), wide = Pair * s, gap = 4 * s, half = (wide - gap) / 2, start = Width - wide;
                 RectangleF off = new RectangleF(start + line / 2, line / 2, half - line, Height - line);
                 RectangleF on = new RectangleF(start + half + gap + line / 2, line / 2, half - line, Height - line);
                 Color offFill, offRim, offInk, onFill, onRim, onInk;

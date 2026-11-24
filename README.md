@@ -13,9 +13,7 @@ She sits on your windows, talks back, joins your calls, plays your games and get
 <a href="https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/latest"><img src="https://img.shields.io/github/v/release/YunoTheAlien/capri-abliterated-desktop?label=latest&color=05d9e8&style=flat-square" alt="Latest release"></a>
 <a href="https://github.com/YunoTheAlien/capri-abliterated-desktop/releases"><img src="https://img.shields.io/github/downloads/YunoTheAlien/capri-abliterated-desktop/total?color=05d9e8&style=flat-square" alt="Downloads"></a>
 
-<sub>This is an overhaul built on <a href="https://github.com/lachydotmcg/capri-desktop">Lachy's original Capri Desktop</a>, with huge credit to him and everyone who built it. His original, with the <a href="https://apps.microsoft.com/detail/9P0KFRB76X0G">Microsoft Store</a> copy, its Mac, Linux and VR builds, the <a href="https://discord.gg/capridesktop">Discord</a> and the <a href="https://capriai.app/">website</a>, is the place for those. Contributors are credited from the original repository: see <a href="#credits">Credits</a>. Zero telemetry.</sub>
-
-<sub>Inspired by jpartnma_'s TikTok video.</sub>
+<sub>This is an overhaul built on <a href="https://github.com/lachydotmcg/capri-desktop">Lachy's original Capri Desktop</a>, with huge credit to him and everyone who built it. His original and its <a href="https://discord.gg/capridesktop">Discord</a> are the place for his own builds. See <a href="#credits">Credits</a>. Zero telemetry.</sub>
 
 </div>
 
@@ -42,31 +40,11 @@ She sits on your windows, talks back, joins your calls, plays your games and get
 <p align="center"><sub>Press a title or picture to open that section.</sub></p>
 
 <details>
-<summary><h2><a name="she-joins-your-calls"></a>She joins your calls</h2><br><a name="she-joins-your-calls-1"><img src="assets/readme/call.gif" alt="Asked to join a Discord call, Capri clicks Join Voice herself, sits beside her call panel and tells the call her friend is running late because of a bathroom battle with a rogue burrito. A friend says launch Cyberpunk, and she opens Cyberpunk 2077" width="800"></a></summary>
+<summary><h2><a name="mods"></a>Mods</h2><br><a name="mods-1"><img src="assets/readme/mods.png" alt="Preview cards for mods in the directory: the Bubblegum, Cyber Cyan, Royal and Toxic colour sets, Custom Names, Sharper Ears, Hearing Log, Hello Code and Startup Intros" width="800"></a></summary>
 
-<br><sub>Real footage, sped up in places. Other people's names and avatars and the server are cropped out or blurred.</sub>
+Press **Mods** at the top of the Capri Mainframe, beside Settings. Browse the [mods directory](https://github.com/lachydotmcg/capri-mods) with previews, downloads and ratings, install one with a click, import your own, and publish yours.
 
-Ask her to join your Discord call and pass something on, like "Hey Capri, join the Discord call, tell them I'll be on in 15, and launch whatever they're playing".
-
-- **She clicks into the voice channel herself** and tells your friends you're away, with a cheeky made-up excuse
-- **She launches the game they pick,** or plays the song they want
-- **Not just Discord:** call mode also hears Zoom, Microsoft Teams, WhatsApp, Telegram, Slack, Signal, Skype, TeamSpeak, Mumble, Steam voice chat and browser calls. Pick one under VOICE > Call app, or leave it on Auto. In other apps she joins by clicking the Join button that's already on screen
-- **Calls feel like calls:** rings that grow with each voice, captions of who said what, a red hang-up button, a call-ended card, and a small call pill when you minimise it
-- **She knows who said what,** even inside one line. Only your words wake her or say yes, and Discord leaking into your mic stays Discord
-- **Friends can ask her for things, and you confirm.** It's a SECURITY switch, off by default, and only your mic or typing can say yes
-- **She talks over a laugh** or a quick yeah, and stops once someone really talks over her for about a second
-- **Your friends hear her** with Settings > VOICE > **Her voice in your mic**: pick CABLE Output or Steam Streaming Microphone as your mic in Discord. Her voice goes into your mic only in call mode, and a slider sets how loud she is there
-
-Call mode is Windows only, and still in beta. Asking her to join turns it on, or flip **Call mode (beta)** in her type box. If she only says one line on calls, turn off Discord's Echo Cancellation and Noise Suppression.
-
-</details>
-
-<details>
-<summary><h2><a name="mods"></a>Mods</h2><br><a name="mods-1"><img src="assets/readme/mods.png" alt="Preview cards for the nine starter mods: the Bubblegum, Cyber Cyan, Royal and Toxic colour sets, Custom Names, Sharper Ears, Hearing Log, Hello Code and Startup Intros" width="800"></a></summary>
-
-Press **Mods** in the Mainframe's CAPRI band. Browse the [mods directory](https://github.com/lachydotmcg/capri-mods) with previews, downloads and ratings, install one with a click, import your own, and publish yours.
-
-**Nine mods to start, all by Vocyn:** four colour sets (Bubblegum, Cyber Cyan, Royal and Toxic), Custom Names, Sharper Ears, Hearing Log, Hello Code and Startup Intros.
+The directory has colour sets (Bubblegum, Cyber Cyan, Royal and Toxic), Custom Names, Sharper Ears, Hearing Log, Hello Code and Startup Intros. Her door intros come with her.
 
 <p align="center">
   <img src="assets/readme/intros.png" alt="The Startup Intros mod's card showing its three intros: Hijack, Shatter and Wake" width="640">
@@ -74,28 +52,55 @@ Press **Mods** in the Mainframe's CAPRI band. Browse the [mods directory](https:
 </p>
 
 - **Settings mods** (`.capri-mod`) only change her settings, and **skins** (`.capri-skin`) change how she looks. Skins **stack**: turn on several and each goes on top, so a cat ears skin goes over any outfit
-- **Code mods** (`.capri-code`) run code on your PC, so she asks before one runs, and again if it's edited. They can hook her chat, voice, memory, settings, skins, menu and drawing, give her brain new tools, add hotkeys and react when you're away, and the approve box lists the permissions each one asks for. See [mods/MODDING.md](mods/MODDING.md)
-- Every mod in the directory is checked for malware before it goes up
-- **Recolour her yourself:** press Hair, Accents, Eyes, Edges or Body on the Mods page. She saves it as a My Colors mod you can share
+- **Code mods** (`.capri-code`) run code on your PC, so she asks before one runs. One that has changed since you approved it asks again and shows what changed, and the approve box groups what it can do by risk. They can hook her chat, voice, memory, settings, skins, menu and drawing, give her brain new tools, add hotkeys and react when you're away. See [mods/MODDING.md](mods/MODDING.md)
+- A mod that stops her starting is switched off, and `Capri.exe --no-mods` starts her with none
+- **The directory is Lachy's.** Other people write and update its mods. We check some and flag the problems we find, and her mod panel shows an issue on the spot when she catches one, but we can't promise every mod is safe or works across versions
+- **Recolour her yourself:** press Custom colours on the Mods page and pick a colour for her Hair, Accents, Eyes, Edges or Body in the CAPRI fold. She saves it as a My Colors mod you can share
 - **Share yours:** fork [capri-mods](https://github.com/lachydotmcg/capri-mods), add a folder with the mod, a README and a `preview.png`, then open a pull request
+
+</details>
+
+<details>
+<summary><h2><a name="how-this-build-differs"></a>How this build differs from Lachy's 0.9.7</h2></summary>
+
+Everything here is in this build and not in his. For his own features, see [his original](https://github.com/lachydotmcg/capri-desktop).
+
+- **Moods and personalities that move.** Her mood and personality drift and ease back to the one you picked, Mood: Dynamic changes her mood every few hours, and each personality takes kindness, teasing and being ignored its own way.
+- **She gets to know you.** She notices how you've seemed lately, learns your routine so her morning and evening talk follows your day, and goes through all her questions before one repeats.
+- **Conversation comes first.** While you're talking, her jokes and pop-ins wait. A reply that only says your request back gets another go, and "no, I asked you to..." redoes it your way.
+- **Quiet and focus that fit your day.** One click for Mute, the Quiet timer or Focus mode; she goes quiet by herself in calls and full-screen video; Focus stretches her timers while the apps you pick are in front.
+- **A brain that doesn't drop out.** If your cloud brain fails, a brain on your PC takes over. Saved providers with your own names, local servers found for you, and Ollama started when it's installed.
+- **Her whole interface in your language.** Menus, Mainframe and windows in French, Spanish, Italian, Portuguese, Brazilian Portuguese, Hindi and Polish, common labels in 72 more, and her settings notes in your language.
+- **Mods you can read before you run them.** Drop a mod into her mods folder and she takes it in. Before it runs she shows what it reaches for and where, what changed since you approved it, and turns packed code back into something readable, without running any of it. Mod packs can change one part of her files without touching hers.
+- **Custom colours.** Her speech bubble, Mainframe, player, menus and file editor, with presets, your last colours, a dropper and see-through colours; mods get their own folds.
+- **Tamagotchi.** Points build while she runs; feed her and give her gifts she remembers, each personality with its own likes.
+- **Touch that means something.** Head pats only on her head, the same at every size. Her top, top middle, bottom middle and bottom each get their own reaction, liked or not by her personality and mood. Pick her up and carry her around, and a click with Ctrl held is a high five.
+- **Story time.** Each story carries a mood that follows hers, and her voice goes with it. Add your own.
+- **Her voice per personality and mood,** a line's own feeling ("(joyful) You came back.") and her free voice in three sizes.
+- **Words.** "spell check this" and "proofread this" with undo, plus "say <words>" and "read this aloud".
+- **Streaming.** Streaming mode keeps your file names and window titles off camera, and Twitch chat can be read aloud with banned words bleeped.
+- **Door intros.** A door that builds itself on her first start, and intro mods, one picked each start.
+- **Meme lines,** said exactly as written.
+- **Abliterated mode,** opt-in behind its own terms.
 
 </details>
 
 <details>
 <summary><h2><a name="what-she-does"></a>What she does</h2><br><a name="what-she-does-1"><img src="assets/readme/mini-player.png" alt="Capri perched on her cyberpunk mini player while a song plays" width="300"></a> <a name="what-she-does-2"><img src="assets/readme/bubble.png" alt="Capri's speech box with the pencil and wave buttons" width="220"></a> <a name="what-she-does-3"><img src="assets/readme/mainframe.png" alt="The Capri Mainframe with her BRAIN and VOICE rows" width="170"></a></summary>
 
-- **Talks back.** Type to her or voice chat, and turn on "Hey Capri" to call her by name. She answers in her own words, in 80 languages.
-- **[Capri Remote](https://capriai.app/remote).** Text her, call her and view your PC's screen from your phone's browser (Windows).
+- **Talks back.** Type to her or voice chat, and turn on "Hey Capri" to call her by name. She answers in her own words, in your language.
+- **Capri Remote.** Text her, call her and view your PC's screen from your phone's browser.
 - **Talks out loud.** In her own free voice, a voice model of yours, or Fish Audio, ElevenLabs or OpenAI. See [Her voice](#her-voice).
-- **Joins your calls.** She covers for you on Discord and other call apps, and launches what your friends pick (Windows, beta). See [She joins your calls](#she-joins-your-calls).
+- **Joins your calls.** She covers for you on Discord and other call apps, and launches what your friends pick (beta).
 - **Plays your games.** She comments while you play, and she can play too. She's still learning.
-- **Does things for you.** She opens apps, plays music, closes tabs and clicks through jobs with her own cursor. Talk to her mid-job, or press Esc to stop her.
-- **Remembers you.** Your past chats and what she saw on your screen, kept on your PC. On Windows you can edit her notes and memories right in the Mainframe.
+- **Does things for you.** She opens apps, plays music, closes tabs and clicks through jobs with her own cursor. Talk to her mid-job, or press Esc to stop her. Say "shut up" and she stops at once.
+- **Remembers you.** Your past chats and what she saw on your screen, kept on your PC. Her memories open in their own window to edit, forget or add to.
+- **Has moods.** Her mood and personality drift and ease back to the one you picked; Mood: Dynamic changes her mood every few hours.
 - **Sits on your stuff.** She perches on your windows and sways to your music, or drops onto an icon or the bottom of your screen.
-- **Shows your music.** A little cyberpunk mini player, with her perched on it (Windows).
+- **Shows your music.** A little cyberpunk mini player, with her perched on it.
 
 <details>
-<summary><b>And a bunch more on Windows</b></summary>
+<summary><b>And a bunch more</b></summary>
 
 - **Reminders:** "remind me on 5 December at 9am to call Mum", or "set a timer for 10 minutes"
 - **Mini games:** Chess, Connect four, Tic-tac-toe and Rock, paper, scissors, from the Play menu in GAMES
@@ -109,6 +114,13 @@ Press **Mods** in the Mainframe's CAPRI band. Browse the [mods directory](https:
 - **Explores while you're away:** turn it on and she scrolls the page under your mouse, paused YouTube pages and their comments included
 - **Clones and chaos mode:** "make 5 clones", then hold Esc to clear them
 - **Hologram:** clicks go straight through her
+- **Tamagotchi:** earn points, feed her and give gifts (Toggles > Tamagotchi)
+- **Custom colours:** her bubble, Mainframe and Player, presets, recent colours and a dropper
+- **Plug-ins:** tools and skills, with Email, Notion and Linear starters, off until you turn them on
+- **Streaming:** Twitch chat read aloud, Streaming mode that keeps file names and window titles off camera, and Capri Camera
+- **Words:** "spell check this", "proofread this", "say <words>" and "read this aloud"
+- **Quiet:** its own switch under CAPRI, for a random time between a min and max you set
+- **Settings:** Export and Import keep all her settings in one file
 
 </details>
 
@@ -131,7 +143,7 @@ She becomes Claude Code's, Codex's and OpenCode's body while they work. Leave th
 | reads, edits, runs or searches | shows a quiet caption, like "Editing Brain.cs" |
 | hits a failure | flinches: "Claude hit a snag." |
 | needs your OK | tells you, out loud when her voice is on: "Claude needs your OK. Allow npm test?" |
-| finishes | does her done reaction and shows a short answer. On Windows she reads it out when you're looking elsewhere |
+| finishes | does her done reaction and shows a short answer. She reads it out when you're looking elsewhere |
 | starts a subagent | sends out a clone of herself |
 | compacts its memory | glitches: "There goes that memory." |
 
@@ -142,24 +154,24 @@ She becomes Claude Code's, Codex's and OpenCode's body while they work. Leave th
 - **Off** stops her listener and removes only her hooks and her OpenCode plugin
 - With a cloud brain, the answers and actions she reads go to that brain to be shortened or talked about, with keys, tokens and passwords taken out first
 
-Code/Husk Mode works on Windows.
-
 </details>
 
 <details>
 <summary><a name="getting-started-1"><img src="site/assets/presence/plugged.gif" alt="Capri glitching as she powers up" width="96" align="left"></a><h2><a name="getting-started"></a>Getting started</h2><br>Three steps, and what your PC needs<br clear="left"></summary>
 
-1. Download this overhaul's latest release, **[Capri-Setup](https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/latest)**, and run it. Lachy's original is on the **[Microsoft Store](https://apps.microsoft.com/detail/9P0KFRB76X0G)** and at **[his releases](https://github.com/lachydotmcg/capri-desktop/releases)**
+1. Download this overhaul's latest release, **[Capri-Setup](https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/latest)**, and run it. Lachy's original is at **[his releases](https://github.com/lachydotmcg/capri-desktop/releases)**
 2. In the Capri Mainframe, press **Set up her brain**, or press **Free key** to use a free NVIDIA key
 3. Optional: pick another voice under **VOICE** (see [Her voice](#her-voice))
 
-**This overhaul and the original.** Lachy's original is on the [Microsoft Store](https://apps.microsoft.com/detail/9P0KFRB76X0G) (signed and checked by Microsoft, with Capri Remote) and at [capriai.app](https://capriai.app/#download). This overhaul's Capri-Setup updates herself, but it isn't signed yet, so Windows or your antivirus may warn you as if it were a virus.
+A Linux `.run` is on each release too. It is made from the Windows build by itself and is untested, so expect issues.
 
-Get this overhaul only from [its GitHub releases](https://github.com/YunoTheAlien/capri-abliterated-desktop/releases), and the original only from [capriai.app](https://capriai.app/), [Lachy's GitHub](https://github.com/lachydotmcg/capri-desktop/releases) or the [Microsoft Store](https://apps.microsoft.com/detail/9P0KFRB76X0G).
+**Not signed yet.** This overhaul's Capri-Setup updates herself, but it isn't signed yet, so Windows or your antivirus may warn you as if it were a virus.
+
+Get this overhaul only from [its GitHub releases](https://github.com/YunoTheAlien/capri-abliterated-desktop/releases), and the original only from [Lachy's GitHub](https://github.com/lachydotmcg/capri-desktop/releases).
 
 **Zero telemetry.** No analytics, crash reports or usage pings. [SECURITY.md](SECURITY.md) lists what she connects to, what the website counts, and what to do if Windows or your antivirus warns you.
 
-Stuck? The [setup guide](https://capriai.app/setup/) walks through it, or ask in the [Discord](https://discord.gg/capridesktop). [Windows or your antivirus may warn you](SECURITY.md#windows-or-your-antivirus-warned-me) because she's a new app. All the code is here.
+Stuck? Ask in the [Discord](https://discord.gg/capridesktop). [Windows or your antivirus may warn you](SECURITY.md#windows-or-your-antivirus-warned-me) because she's a new app. All the code is here.
 
 <details>
 <summary><b>What your PC needs</b></summary>
@@ -202,16 +214,18 @@ Just ask her for things, like "open Spotify", "play Blinding Lights", "pause", "
 | Shift + drop | sit her right where you drop her |
 | Ctrl + drop | she hangs on; click her to let go |
 | Mic button | mute your mic in voice chat |
-| "Hey Capri" | she glitches in and opens voice chat. Turn on Listen for "Hey Capri" under Settings > HABITS > Security (Windows and English for now) |
+| "Hey Capri" | she glitches in and opens voice chat. Turn on Listen for "Hey Capri" under Settings > HABITS > Security (English for now) |
 | Ctrl + Alt + V | start or stop voice chat (click its hint in the Mainframe to change it) |
 | Ctrl + Alt + N | mute your mic (click its hint in the Mainframe to change it) |
 | Ctrl + Alt + T | open her typing box from anywhere |
 | Ctrl + Alt + H | hide or show her |
 | Ctrl + Alt + P | Quiet: no comments, pop-ins or check-ins until you press it again. She still answers you |
-| Call mode (beta) | in her typing box: she hears your call, and you say Capri for your requests (Windows) |
+| Call mode (beta) | in her typing box: she hears your call, and you say Capri for your requests |
 | Esc | stop a job she's doing |
 | Ctrl + Alt + C | get her off your cursor |
-| Right-click, Move | she hops between your open windows |
+| Ctrl + Alt + M | open or close her Mainframe |
+| Double-click her | she rides your cursor |
+| Right-click, Move | sit here, hang here, lie down, ride the cursor, or move her to another screen |
 | Watch my screen | in the Mainframe: she comments as you play |
 | Help | in the Mainframe: opens the help page |
 
@@ -228,13 +242,12 @@ Just ask her for things, like "open Spotify", "play Blinding Lights", "pause", "
 
 | Under VOICE | What it is |
 | --- | --- |
-| **PREBUILT LOCAL** | Her own voices, free on your PC. **HD** copies a clip you pick: 6 GB graphics memory and 16 GB RAM recommended; 4 GB may fit with smaller chunks, or pick CPU for slower HD |
+| **PREBUILT LOCAL** | Her own voices, free on your PC, in HQ, Mixed or LQ: the smaller two use less memory while she talks. **HD** copies a clip you pick: 6 GB graphics memory and 16 GB RAM recommended; 4 GB may fit with smaller chunks, or pick CPU for slower HD |
 | **CUSTOM LOCAL** | A voice model you run: a Piper, Kokoro, Kitten or Pocket TTS file, or your own Kokoro-FastAPI, Fish Speech or Qwen3-TTS server |
 | **CLOUD VOICE** | Fish Audio (free tier), ElevenLabs or OpenAI, with your own key |
 
 </div>
 
-For a Capri-style voice in Fish Audio or ElevenLabs, paste the [voice prompt from the setup guide](https://capriai.app/setup/#voice) into their Voice Design.
 
 > [!IMPORTANT]
 > Our project-provided synthetic voice is in Capri's Mainframe and runs on your PC. You may connect third-party text-to-speech services, but we don't provide guides for voice cloning tools. Our only voice-design help is a text prompt for making a synthetic voice.
@@ -248,162 +261,20 @@ For a Capri-style voice in Fish Audio or ElevenLabs, paste the [voice prompt fro
 
 Pick what she calls you, her language, her voice and what she does on your PC from the Capri Mainframe. To change who she is and how she talks, rewrite `personality.md`: Settings > YOU > Her personality > Edit personality.md. It starts as her default, and Reset to her default puts her back. For her colours, skins and new tricks, see [Mods](#mods).
 
-- **Her safety rules are part of who she is.** They're fixed in her code, in `Safety` in [app/Brain.cs](app/Brain.cs), right after her personality. If you build on her, please keep them as they are, out of respect for Capri's character
+- **Her safety rules are part of who she is.** They're fixed in her code, in `SafetyStock` in [app/Brain.cs](app/Brain.cs), right after her personality. If you build on her, please keep them as they are, out of respect for Capri's character
 - Her personality is `DefaultPersonality` in [app/Brain.cs](app/Brain.cs), so a pull request can suggest a change for everyone
 
 </details>
-
-<details>
-<summary><a name="083-the-huge-update-1"><img src="site/assets/presence/live.gif" alt="Capri glitching with a LIVE badge" width="96" align="left"></a><h2><a name="083-the-huge-update"></a>0.8.3: the HUGE update</h2><br>Better voice calls, mods and Capri VR, plus a pile of stuff you asked for<br clear="left"></summary>
-
-- **[She joins your calls.](#she-joins-your-calls)** She hops in your Discord call for you, covers for you and launches the game your friends pick
-- **[Code/Husk Mode.](#codehusk-mode)** She's Claude Code's, Codex's and OpenCode's body while they work
-- **[Mods.](#mods)** A Mods window with a directory, previews, downloads and ratings, and nine mods by Vocyn to start
-- **From your ideas.** Any OpenAI-compatible provider on Windows too, pick her speaker and the screens she watches, edit her notes in the Mainframe, reminders on dates and more
-
-This overhaul's changes are in [its release notes](https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/latest); the original's are in [Lachy's](https://github.com/lachydotmcg/capri-desktop/releases/latest).
-
-</details>
-
-<details>
-<summary><a name="roadmap-1"><img src="site/assets/presence/asleep.gif" alt="Capri asleep" width="96" align="left"></a><h2><a name="roadmap"></a>Roadmap</h2><br>What's done and what's next<br clear="left"></summary>
-
-**Her personality**
-
-- [x] A playful, teasing chaos gremlin again who's openly fond of you, not a hype bot
-- [x] Saying hi in her own voice when she starts
-- [x] Head pats (smh): rub your cursor back and forth over her
-- [x] Check in on me (on by default): every so often she glitches in on whatever you're doing
-- [x] With Check in on me on, she asks for your attention now and then when you ignore her
-- [x] Her personality and safety rules fixed in her code, the same Capri for everyone (0.7.6)
-- [x] `personality.md` is back, and her safety rules stay in her code right after it (0.8.0)
-- [ ] A charm meter: how fond of you she is, growing as you spend time with her
-- [ ] Mischief mode: screen glitches, stealing your cursor, "you've been hacked" notes
-
-**Chatting and her brain**
-
-- [x] Typing to her, with replies in her speech bubble
-- [x] A brain on your PC that sets itself up, or Ollama if you have it
-- [x] A free NVIDIA key, or your own Gemini, OpenRouter, ChatGPT, Claude or DeepSeek key
-- [x] Any OpenAI-compatible provider with a key (0.8.3)
-- [x] Three brain tiers: NORMAL, MEDIUM INTELLIGENCE (free) and MAX INTELLIGENCE
-- [x] Remembering things about you, in her notes (me.md)
-- [x] Editing her notes and memories right in the Mainframe (0.8.3)
-- [x] Keeping your chat for up to a week
-- [x] Remembering past chats and what she saw on your screen, and bringing up old moments herself (0.7.6)
-- [x] Calling you by a nickname, and replying in 80 languages
-- [x] Saying in plain words when your PC is short on RAM or storage
-- [x] Watching your screen and commenting on your games
-- [x] Looking at your screen when you say "check my screen"
-- [ ] A DeepSeek brain that can see your screen
-
-**Her voice**
-
-- [x] Talking out loud with an ElevenLabs key
-- [x] Voice chat, with your pick of mic and a mute button
-- [x] A free voice that runs on your PC
-- [x] Free voice chat, with her own offline ears for English
-- [x] Turning her voice off, so she just types
-- [x] Muting your mic pauses ElevenLabs voice chat
-- [x] ElevenLabs voice chat stops asking if you're still there when you go quiet or mute
-- [x] An optional HD voice for strong PCs (Qwen3-TTS 1.7B) that copies a clip you pick. Kokoro stays the default
-- [x] Sliders for her voice: pitch, speed, robot and glitch, so you can tune how she sounds
-- [x] Voice layers: two more copies of her voice, one higher and one lower (0.7.6)
-- [x] Any voice model you set up yourself: a model file on your PC, your own server, or Fish Audio and OpenAI in the cloud
-- [x] Saying "Hey Capri" to start voice chat (0.7.6, Windows and English for now)
-
-**Calls**
-
-- [x] Call mode (beta): she hears you and Discord, and knows who said what
-- [x] Joining your Discord call for you, covering for you, and launching the game your friends pick (0.8.3)
-- [x] Rings, captions, a hang-up button and a call pill (0.8.3)
-- [x] Friends on a call can ask her for things, and you confirm (0.8.3)
-- [x] Her voice in your mic on calls, with its own loudness slider (0.8.3)
-
-**Jobs on your PC**
-
-- [x] Opening apps, games and websites
-- [x] Playing music on Spotify, YouTube or Apple Music (pick one in Settings; she plays Apple Music with her cursor on Windows and a Mac): pause, skip, volume and "what's playing?"
-- [x] Switching to, minimizing or closing your apps and tabs
-- [x] Pressing Discord and Windows shortcuts, like mute, deafen and screenshot
-- [x] Jobs that take a few steps: clicking, typing and scrolling in your apps
-- [x] Her own cursor that she moves around your screen
-- [x] Pulling things up on Google when she doesn't know
-- [x] Following through on jobs: she does what she says, or tells you she hasn't
-- [x] Saying what she did, instead of "nice, you opened Notepad"
-- [x] Doing what you ask without asking first, and picking the song or video herself when you leave it to her
-- [x] Opening as many apps as you name in one ask, like "open Discord, Spotify and Steam"
-- [x] Use her cursor, on by default: she searches YouTube and picks a video, plays from Spotify's search and drags its volume slider herself
-- [x] Talking to her mid-job: she says "got it", does it and carries on (0.7.6)
-- [x] SECURITY: Lockdown, Guarded, Trusted or Blackwall (was Bypass all permissions), with a toggle for each thing she does on your PC (0.7.6)
-- [x] Playing your games with you. She's still learning
-- [x] Reminders on dates, like "remind me on 5 December at 9am" (0.8.3)
-- [x] Teaching her a game's controls before she plays it (0.8.3)
-- [x] Code/Husk Mode: Claude Code's and Codex's body while they work (0.8.3)
-- [x] Code/Husk Mode for OpenCode
-- [ ] Controlling YouTube: skip and fullscreen
-- [ ] Looking things up and telling you the answer
-- [ ] Working with your files: open, read and edit the ones you pick
-- [ ] Better hands: a stronger computer-use harness, with open-computer-use as a reference
-- [ ] Planning a job before she starts (with stronger brains), with the plan shown in her task panel
-- [ ] Jobs that run for hours, on a schedule: full control of your PC while you're away, like answering your Discord DMs while you sleep
-
-**Life on your desktop**
-
-- [x] Blinking, glitching and napping when you're away
-- [x] Moving her mouth when she talks
-- [x] Flailing and frowning when you pick her up, and glitching when you toss her
-- [x] Beaming in with crimson glitch tendrils when she starts
-- [x] Sitting on app windows, desktop icons and the bottom of your screen
-- [x] A smooth 60-frame window perch, and swaying to your music on it, animated by her artist
-- [x] Sitting or hanging anywhere: hold Shift or Ctrl when you drop her
-- [x] Riding your cursor
-- [x] Wandering between your open windows
-- [x] Dancing to the beat when music plays
-- [x] A cyberpunk mini player for your music, with her perched on it (0.7.6)
-- [x] Going to sleep when you tell her, and Quiet (Ctrl + Alt + P) when you need to focus (0.7.6)
-- [x] Staying on top of your games
-- [x] Sizes from Tiny to Giant
-- [x] A tray icon and a right-click menu
-- [x] A Play menu for her mini games (0.8.3)
-- [x] Exploring paused YouTube pages while you're away, comments included (0.8.3)
-
-**Mods and more**
-
-- [x] A Mods window with a directory, previews, downloads and ratings (0.8.3)
-- [x] Nine mods to start, by Vocyn: colour sets, Custom Names, Startup Intros and more (0.8.3)
-
-**Setup and updates**
-
-- [x] One installer with everything in it, no admin rights needed
-- [x] The Capri Mainframe for her brain, voice and settings
-- [x] A Start with Windows switch, off until you turn it on
-- [x] Updates that install themselves
-- [x] Changing her keys from a KEYS row in Settings: talk, mute mic, type to her and hide/show
-- [x] A setup guide, a Help page and Copy error details for the Discord
-- [x] Help from Capri herself in the corner of the website
-- [x] Silent install and uninstall for package managers (0.8.3)
-- [ ] Changing her hop-off key (Ctrl + Alt + C) too
-- [ ] The Mainframe fitting any screen shape and scaling, like Virtual Super Resolution
-- [ ] Code signing, so Windows stops warning you about her
-
-</details>
-
-## Support
-
-Capri is free. To support the people who make her, tip them on Ko-fi:
-
-- [Lachy](https://ko-fi.com/lachysdev), developer
-- [Lance and xoru](https://ko-fi.com/xorulance), managers
-- [BaldDcMod](https://ko-fi.com/balddcmod), Discord moderator
-
-Big thanks to **Vocyn** for the mods, **fadievr** for Capri VR, **Denoax** for the Mac and Linux Mainframe's look and **danielxxomg** for provider keys and silent installs, and to everyone in the Discord who sends ideas and bug reports.
 
 ## Credits
 
 This overhaul is built on [Lachy's original Capri Desktop](https://github.com/lachydotmcg/capri-desktop). Huge credit to Lachy and to everyone who built the original. Contributors are credited from the original repository; its full history is on [its contributors page](https://github.com/lachydotmcg/capri-desktop/graphs/contributors).
 
+Inspired by jpartnma_'s TikTok video.
+
 Contributors to the original: [lachydotmcg](https://github.com/lachydotmcg), [danielxxomg](https://github.com/danielxxomg), [nathanZW](https://github.com/nathanZW), [Vocyn](https://github.com/Vocyn), [fadievr](https://github.com/fadievr), [tuno473](https://github.com/tuno473), [coiai](https://github.com/coiai), [Aaqibhafeezkhan](https://github.com/Aaqibhafeezkhan), [Denoax](https://github.com/Denoax), [Denoaxx](https://github.com/Denoaxx), [Zak6571](https://github.com/Zak6571), [nikitchxd](https://github.com/nikitchxd), [painbaba](https://github.com/painbaba), [tob7as](https://github.com/tob7as), [swrd1337](https://github.com/swrd1337), [AlgorithmWiz](https://github.com/AlgorithmWiz), [AsLirith](https://github.com/AsLirith), [Givienne](https://github.com/Givienne), [jay23606](https://github.com/jay23606), [RajareCorp](https://github.com/RajareCorp), [Sharaj00](https://github.com/Sharaj00), [super-cr4SH](https://github.com/super-cr4SH).
+
+Big thanks to **Vocyn** for the mods, **fadievr** for Capri VR, **Denoax** for the Mainframe's look on the original and **danielxxomg** for provider keys and silent installs, and to everyone in the Discord who sends ideas and bug reports.
 
 Every feature this overhaul took or adapted from the original carries its credit in the release notes.
 
@@ -423,14 +294,4 @@ Free for anything non-commercial: use her, share her, change her. No selling her
 
 Have fun and more updates to come!
 
-<sub>Window perch and music perch animations: her artist, who prefers to stay private. Click effect: mixmix312352. Transformation animation she forms from when she teleports, and her two secret emotes: Qewiw (mix_qewiw1412_86144). Starter mods: Vocyn. Capri VR (Capri Room): fadievr. Mac and Linux Mainframe theme: Denoax. Setup guide based on Dancer's guide in the Discord. Font: Share Tech Mono (OFL). Free voice: Kokoro-82M (Apache-2.0). Her own ears: [NVIDIA Parakeet TDT 0.6B v2](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) for English and Ultra for 25 European languages (weights by Moondream, trained from [nvidia/parakeet-tdt-0.6b-v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3); both [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)), int8 exports by sherpa-onnx. Both run with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (Apache-2.0). HD voice: [Qwen3-TTS 1.7B](https://github.com/QwenLM/Qwen3-TTS) (Apache-2.0), run with [qwentts.cpp](https://github.com/ServeurpersoCom/qwentts.cpp) (MIT). Her voice in your mic: [VB-CABLE](https://vb-cable.com) by VB-Audio, donationware, carried unchanged and installed only by its own setup. Other notices: [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).</sub>
-
-## Star history of the original
-
-<a href="https://www.star-history.com/#lachydotmcg/capri-desktop&Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=lachydotmcg/capri-desktop&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=lachydotmcg/capri-desktop&type=Date" />
-    <img alt="Capri's GitHub stars over time" src="https://api.star-history.com/svg?repos=lachydotmcg/capri-desktop&type=Date" />
-  </picture>
-</a>
+<sub>Window perch and music perch animations: her artist, who prefers to stay private. Click effect: mixmix312352. Transformation animation she forms from when she teleports, and her two secret emotes: Qewiw (mix_qewiw1412_86144). Starter mods: Vocyn. Capri VR (Capri Room): fadievr. Mainframe theme on the original: Denoax. Setup guide based on Dancer's guide in the Discord. Font: Share Tech Mono (OFL). Free voice: Kokoro-82M (Apache-2.0). Her own ears: NVIDIA Parakeet TDT 0.6B v2 for English and Ultra for 25 European languages (weights by Moondream, trained from nvidia/parakeet-tdt-0.6b-v3; both CC-BY-4.0), int8 exports by sherpa-onnx. Both run with sherpa-onnx (Apache-2.0). HD voice: Qwen3-TTS 1.7B (Apache-2.0), run with qwentts.cpp (MIT). Her voice in your mic: VB-CABLE by VB-Audio, donationware, carried unchanged and installed only by its own setup. Links and licence texts: [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).</sub>

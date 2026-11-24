@@ -375,11 +375,11 @@ NORMAL	NORMAL
 OFF	DESACTIVADO
 Local server address	Dirección del servidor local
 None	Ninguno
-Remember panel position	Recordar posición del panel
 Custom colours	Colores personalizados
 Custom colours...	Colores personalizados...
 Choose	Elegir
-Hers	Los suyos
+Reset selected colour	Restablecer color elegido
+Make a mod	Crear un mod
 Quiet	Silencio
 Quiet min	Silencio min
 Quiet max	Silencio max
@@ -391,3 +391,6 @@ Quiet until turned off	Silencio hasta desactivarlo
 Export settings	Exportar ajustes
 Import settings	Importar ajustes
 GENERAL SETTINGS	CONFIGURACIÓN GENERAL
+I speak	Hablo
+She answers in	Ella responde en
+Save Mainframe position	Recordar posición del panel

@@ -688,6 +688,323 @@ namespace CapriDesktop
             checks.Add("PASS MAX models: an xAI key is Grok on MAX with xAI's own catalog (text models only, eyes as listed), kept out of her logs and named in her key check, and a plan lists the models its Codex or Claude Code really offers");
         }
 
+        // OpenAI's limits as it words them (Sage, Lachu): no credits, a spend cap, a request too big for the per-minute limit
+        // and a used-up day name their fix and never wait; a minute's limit waits the seconds it names, Gemini's too.
+        private static void SmokeOpenAiWalls(List<string> checks)
+        {
+            const string broke = "{\"error\":{\"message\":\"You have no credits remaining. Add credits to continue using the API at https://platform.openai.com/settings/organization/billing/.\",\"type\":\"insufficient_quota\",\"param\":null,\"code\":\"insufficient_quota\"}}";
+            const string tooLarge = "{\"error\":{\"message\":\"Request too large for gpt-5.4 in organization org-test on tokens per min (TPM): Limit 10000, Requested 13862. The input or output tokens must be reduced in order to run successfully. Add a payment method to your account to increase your rate limit.\",\"type\":\"tokens\"}}";
+            const string paidTooLarge = "{\"error\":{\"message\":\"Request too large for gpt-5.6-luna in organization org-test on tokens per min (TPM): Limit 200000, Requested 208334.\",\"type\":\"tokens\"}}";
+            const string day = "{\"error\":{\"message\":\"Rate limit reached for gpt-4o-mini in organization org-test on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s.\",\"type\":\"requests\"}}";
+            const string freeDay = "{\"error\":{\"message\":\"Rate limit reached for gpt-5.6-luna in organization org-test on requests per day (RPD): Limit 50, Used 50, Requested 1. Add a payment method to your account to increase your rate limit.\",\"type\":\"requests\"}}";
+            const string minute = "{\"message\":\"Rate limit reached for gpt-6.2-sol in organization org-test on tokens per min (TPM): Limit 1000000, Used 736214, Requested 401420. Please try again in 8.259s. Visit https://platform.openai.com/account/rate-limits to learn more.\"}";
+            const string requests = "{\"error\":{\"message\":\"Rate limit reached for gpt-5.4-pro in organization org-test on requests per min (RPM): Limit 3, Used 3, Requested 1. Please try again in 20s.\",\"type\":\"requests\"}}";
+            string freeTooLarge = Brain.TooLarge("gpt-5.4", true), paidLarge = Brain.TooLarge("gpt-5.6-luna", false), unpaidDay = Brain.DailyLimit("gpt-5.6-luna", true), paidDay = Brain.DailyLimit("gpt-4o-mini", false);
+            if (Brain.Meaning(429, broke, false, true) != Brain.OpenAiNoCredits || Brain.Meaning(429, broke) != Brain.NoCredits
+                || Brain.Meaning(429, tooLarge, false, true) != freeTooLarge || Brain.Meaning(429, paidTooLarge, false, true) != paidLarge
+                || Brain.Meaning(429, day, false, true) != paidDay || Brain.Meaning(429, freeDay, false, true) != unpaidDay
+                || Brain.Meaning(429, minute, false, true) != Brain.Busy || Brain.Meaning(429, requests, false, true) != Brain.Busy
+                || Brain.Meaning(413, "{\"error\":{\"message\":\"Rate limit: tokens per minute exceeded. See https://example.com/billing\"}}") != Brain.TooBig)
+                throw new Exception("An OpenAI limit read wrong: " + Brain.Meaning(429, tooLarge, false, true) + " / " + Brain.Meaning(429, freeDay, false, true) + " / " + Brain.Meaning(429, minute, false, true));
+            foreach (string capCode in new[] { "project_spend_limit_exceeded", "organization_spend_limit_exceeded", "api_key_spend_limit_exceeded", "organization_usage_limit_exceeded" })
+            {
+                string capped = "{\"error\":{\"message\":\"You exceeded your current quota, please check your plan and billing details.\",\"type\":\"insufficient_quota\",\"param\":null,\"code\":\"" + capCode + "\"}}";
+                if (Brain.Meaning(429, capped, false, true) != Brain.OpenAiCapped) throw new Exception("OpenAI's " + capCode + " read as " + Brain.Meaning(429, capped, false, true));
+            }
+            if (!freeTooLarge.Contains("ChatGPT Plus doesn't include API use") || paidLarge.Contains("ChatGPT Plus") || !unpaidDay.Contains("payment method") || paidDay.Contains("ChatGPT Plus"))
+                throw new Exception("An OpenAI limit line lost its fix or the ChatGPT Plus note: " + freeTooLarge + " / " + unpaidDay);
+            foreach (string line in new[] { Brain.OpenAiNoCredits, Brain.OpenAiCapped, freeTooLarge, paidLarge, unpaidDay, paidDay, Brain.TooBig })
+            {
+                string brief = Brain.Brief(line);
+                if (brief == null || brief.Length > 60) throw new Exception("An OpenAI limit's BRAIN line didn't fit: " + brief);
+            }
+            DateTime now = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            if (Brain.AskedWait(minute) != "8.259s" || Brain.AskedWait(requests) != "20s" || Brain.AskedWait("Please try again in 1m26.4s. Visit the page.") != "1m26.4s"
+                || Brain.AskedWait("Please retry in 36.354975399s.") != "36.354975399s" || Brain.AskedWait("Try again in 35 seconds.") != "35" || Brain.AskedWait(tooLarge) != null
+                || Brain.RetryTime("1m26.4s", now) != now.AddSeconds(86.4) || Brain.RetryTime("8.259s", now) != now.AddSeconds(8.259) || Brain.RetryTime("20", now) != now.AddSeconds(20))
+                throw new Exception("The wait a limit names was read wrong: " + Brain.AskedWait(minute) + " / " + Brain.RetryTime("1m26.4s", now));
+            checks.Add("PASS OpenAI's limits say what fixes them, with ChatGPT Plus named where no payment method is set: no credits, a spend cap, a request too big for the key's per-minute limit and a used-up day never wait; a minute's limit waits the seconds it names, OpenAI's and Gemini's (Sage, Lachu)");
+        }
+
+        // Windows refusing her brain's engine (Lachu): Smart App Control's and S mode's codes read as blocked, with the Free key
+        // fix in her reply and her BRAIN line; a crash or a missing file doesn't.
+        private static void SmokeEngineBarred(List<string> checks)
+        {
+            string brief = Brain.Brief(Engine.Refused);
+            if (brief == null || brief.Length > 60 || brief.IndexOf("Free key", StringComparison.Ordinal) < 0 || Engine.Refused.IndexOf(Brain.FreeKeyHow, StringComparison.Ordinal) < 0)
+                throw new Exception("A blocked engine's BRAIN note lost its fix: " + brief);
+            if (Engine.Barred(unchecked((int)0xC0000005)) || Engine.Barred(unchecked((int)0xC0000135)) || Engine.Barred(2) || Engine.Barred(225)
+                || !Engine.Barred(unchecked((int)0xC0000361)) || !Engine.Barred(unchecked((int)0xC0000428)) || !Engine.Barred(4551) || !Engine.Barred(1260))
+                throw new Exception("A crash or missing file read as blocked, or a block didn't.");
+            string guards = Engine.Guards();
+            if (guards == null || guards.Length > 0 && !guards.StartsWith(" (", StringComparison.Ordinal)) throw new Exception("Windows' app guards read wrong for her log: " + guards);
+            checks.Add("PASS a blocked engine: Smart App Control's and S mode's codes read as Windows refusing llama-server.exe, with the Free key fix in her reply and BRAIN, a crash or missing file doesn't, and her log names Windows' app guards" + (guards.Length > 0 ? guards : " (none here)"));
+        }
+
+        // Her launchers' games with a slow or failed Start menu list, and Fortnite as she mishears it (Lachu).
+        private static void SmokeLauncherGames(System.Collections.Generic.List<string> checks, string output)
+        {
+            string root = Path.Combine(output, "launcher-games");
+            Func<System.Collections.Generic.List<InstalledApp>> catalogWas = Hands.Catalog, startWas = Hands.StartMenu, launchersWas = Hands.Launchers;
+            Func<System.Collections.Generic.List<OpenWindow>> windowsWas = Hands.Windows;
+            Action<string> runWas = Hands.Run;
+            Func<string, string> openedWas = Hands.Opened;
+            try
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+                string manifests = Path.Combine(root, @"Epic\EpicGamesLauncher\Data\Manifests"), steam = Path.Combine(root, "Steam");
+                Directory.CreateDirectory(manifests);
+                Directory.CreateDirectory(Path.Combine(steam, "steamapps"));
+                File.WriteAllText(Path.Combine(manifests, "F1.item"), "{\n\t\"FormatVersion\": 0,\n\t\"bIsIncompleteInstall\": false,\n\t\"LaunchExecutable\": \"FortniteGame/Binaries/Win64/FortniteLauncher.exe\",\n\t\"DisplayName\": \"Fortnite\",\n\t\"CatalogNamespace\": \"fn\",\n\t\"CatalogItemId\": \"4fe75bbc5a674f4f9b356b5c90567da5\",\n\t\"AppName\": \"Fortnite\",\n\t\"MainGameAppName\": \"Fortnite\"\n}");
+                File.WriteAllText(Path.Combine(steam, @"steamapps\appmanifest_730.acf"), "\"AppState\"\n{\n\t\"appid\"\t\t\"730\"\n\t\"name\"\t\t\"Counter-Strike 2\"\n\t\"StateFlags\"\t\t\"4\"\n}\n");
+                string fortniteLink = "com.epicgames.launcher://apps/fn%3A4fe75bbc5a674f4f9b356b5c90567da5%3AFortnite?action=launch&silent=true";
+                System.Collections.Generic.List<string> ran = new System.Collections.Generic.List<string>();
+                int looks = 0;
+                Hands.StartMenu = delegate { looks++; throw new TimeoutException("The app list took too long."); };
+                Hands.Launchers = delegate { return Hands.WithSteam(Hands.SteamApps(steam), Hands.EpicApps(manifests)); };
+                Hands.Catalog = Hands.ReadCatalog;
+                Hands.Windows = delegate { return new System.Collections.Generic.List<OpenWindow>(); };
+                Hands.Run = delegate(string id) { ran.Add(id); };
+                Hands.Opened = delegate { return ""; };
+                Hands.Forget();
+                string opened = Hands.Do("open_app", new ToolArguments { Name = "Fortnite" });
+                if (opened != "Opened Fortnite." || ran.Count != 1 || ran[0] != fortniteLink || !Hands.Installed("fortnite") || looks == 0)
+                    throw new Exception("A slow Start menu list lost the games from her launchers: " + opened + " / " + string.Join(" | ", ran.ToArray()));
+                string tool;
+                ToolArguments heard;
+                foreach (string misheard in new[] { "open fortnight", "open Fort Night", "launch fort nite", "open fn" })
+                {
+                    if (!Hands.Direct(misheard, out tool, out heard) || tool != "open_app") throw new Exception("A misheard or short Fortnite didn't go straight to opening it: " + misheard + " / " + tool);
+                    int before = ran.Count;
+                    string said = Hands.Do(tool, heard);
+                    if (said != "Opened Fortnite." || ran.Count != before + 1 || ran[before] != fortniteLink) throw new Exception("A misheard Fortnite didn't open through Epic: " + misheard + " / " + said);
+                }
+                string typed = Hands.Do("open_app", new ToolArguments { Name = "Fortnight" });
+                if (typed != "Opened Fortnite." || ran[ran.Count - 1] != fortniteLink) throw new Exception("Her brain's open_app for Fortnight didn't find Fortnite: " + typed);
+                if (!Hands.Direct("open cs", out tool, out heard) || tool != "open_app") throw new Exception("\"open cs\" didn't go straight to Counter-Strike 2: " + tool);
+                string cs = Hands.Do(tool, heard);
+                if (cs != "Opened Counter-Strike 2." || ran[ran.Count - 1] != "steam://rungameid/730") throw new Exception("Steam's Counter-Strike 2 didn't open after a slow Start menu list: " + cs);
+                if (!Hands.Direct("play fortnight", out tool, out heard) || tool != "play_music") throw new Exception("\"play fortnight\" stopped being the song: " + tool);
+                checks.Add("PASS launcher games: when the Start menu's list fails or takes too long, Epic's and Steam's games still open through their launchers; \"open fortnight\", \"fort nite\" and \"open fn\" open Fortnite while \"play fortnight\" is still the song (Lachu)");
+            }
+            finally
+            {
+                Hands.Catalog = catalogWas;
+                Hands.StartMenu = startWas;
+                Hands.Launchers = launchersWas;
+                Hands.Windows = windowsWas;
+                Hands.Run = runWas;
+                Hands.Opened = openedWas;
+                Hands.Forget();
+                try { if (Directory.Exists(root)) Directory.Delete(root, true); } catch (IOException) { }
+            }
+        }
+
+        // Typing into an app never closes it: its own Close and the keys that close a window are refused unless the job asks (Lachu).
+        private static void SmokeKeepsAppsOpen(System.Collections.Generic.List<string> checks)
+        {
+            Func<Sight> lookWas = Computer.Look, glimpseWas = Computer.Glimpse;
+            Func<string, ToolArguments, Sight, string> actWas = Computer.Act;
+            Func<Rectangle?, Picture> shootWas = Computer.Shoot;
+            Func<IntPtr> frontWas = Computer.Front;
+            Func<Target> focusWas = Computer.Focus;
+            Func<Point, Target> underWas = Computer.Under;
+            Func<string, ToolArguments, Picture, string> useWas = Computer.Use;
+            Func<string> gameWas = Computer.GameOpen;
+            Picture shownWas = Computer.Shown;
+            bool streamWas = Computer.Streaming, sendsWas = Security.On(Security.Sends);
+            string logWas = Brain.LogPath, log = Path.Combine(Path.GetTempPath(), "capri-kept-open-" + Guid.NewGuid().ToString("N") + ".txt");
+            try
+            {
+                Computer.Streaming = false;
+                Security.Set(Security.Sends, true);
+                Rectangle bounds = new Rectangle(0, 0, 1280, 800);
+                Sight discord = new Sight { Window = new IntPtr(7), Title = "#general | Capri Fans - Discord", Program = "Discord", Bounds = bounds };
+                discord.Words.Add("Get 30% off Nitro this week");
+                discord.Targets.Add(new Target { Number = 1, Role = "button", Name = "Minimize", Box = new Rectangle(1148, 0, 44, 30) });
+                discord.Targets.Add(new Target { Number = 2, Role = "button", Name = "Maximize", Box = new Rectangle(1192, 0, 44, 30) });
+                discord.Targets.Add(new Target { Number = 3, Role = "button", Name = "Close", Box = new Rectangle(1236, 0, 44, 30) });
+                discord.Targets.Add(new Target { Number = 4, Role = "box", Name = "Message #general", Line = true, Box = new Rectangle(330, 740, 900, 44) });
+                discord.Targets.Add(new Target { Number = 5, Role = "box", Name = "#general | Capri Fans - Discord", Page = true, Box = bounds });
+                const string job = "Say hello to the Capri Fans server in Discord";
+                Target hint = Computer.PopupWayOut(discord, job);
+                string brief = Computer.Brief(job, new System.Collections.Generic.List<string>(), discord);
+                if (hint != null || brief.IndexOf("A popup is open", StringComparison.Ordinal) >= 0)
+                    throw new Exception("The popup hint pointed at Discord's own Close button: " + (hint == null ? brief : hint.Label));
+                Target nitroClose = new Target { Number = 6, Role = "button", Name = "Close", Box = new Rectangle(860, 180, 32, 32) };
+                discord.Targets.Add(nitroClose);
+                Target popupHint = Computer.PopupWayOut(discord, job);
+                discord.Targets.Remove(nitroClose);
+                if (popupHint != nitroClose || !Computer.WindowButton(discord, discord.Targets[2]) || !Computer.WindowButton(discord, discord.Targets[1]) || Computer.WindowButton(discord, nitroClose) || Computer.WindowButton(discord, discord.Targets[3])
+                    || !Computer.OwnClose(new Sight { Bounds = bounds }, new Target { Role = "button", Name = "Close", Box = new Rectangle(1236, 0, 44, 30) }) || Computer.OwnClose(new Sight { Bounds = bounds }, nitroClose))
+                    throw new Exception("A popup's own Close and the window's Close were mixed up: " + (popupHint == null ? "no hint" : popupHint.Label));
+                if (Computer.ClosingKey(job, "alt+F4", false) != "alt+f4" || Computer.ClosingKey(job, "shift+ctrl+w", false) == null || Computer.ClosingKey(job, "ctrl+a", false) != null || Computer.ClosingKey(job, "enter", false) != null
+                    || Computer.ClosingKey("close discord", "alt+f4", false) != null || Computer.ClosingKey("play minecraft", "ctrl+w", true) != null || Computer.ClosingKey("play minecraft", "alt+f4", true) != "alt+f4")
+                    throw new Exception("Keys that close a window were read wrong.");
+                Brain.LogPath = log;
+                System.Collections.Generic.List<string> acted = new System.Collections.Generic.List<string>();
+                Computer.Look = delegate { return discord; };
+                Computer.Front = delegate { return new IntPtr(7); };
+                Computer.Act = delegate(string name, ToolArguments a, Sight s) { lock (acted) acted.Add(name + " " + (a.Target ?? a.Keys ?? "")); return name == "type" ? "Typed it." : name == "press" ? "Pressed " + a.Keys + "." : "Clicked."; };
+                string[] script = { "click{\"target\": \"3\"}", "press{\"keys\": \"alt+f4\"}", "press{\"keys\": \"ctrl+w\"}", "type{\"target\": \"4\", \"text\": \"hi\"}", "done{\"text\": \"Typed hi in Discord.\"}" };
+                int line = 0;
+                Job typing = new Job(job);
+                typing.Think = delegate(string system, string user, System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<string, ToolArguments>> calls) { return script[Math.Min(line++, script.Length - 1)]; };
+                string typed = typing.Run();
+                int refused = typing.Steps.FindAll(step => step.IndexOf("Won't close Discord", StringComparison.Ordinal) >= 0).Count;
+                if (typed != "Typed hi in Discord." || typing.Outcome != "done" || refused != 3 || string.Join(" | ", acted.ToArray()) != "type 4")
+                    throw new Exception("Typing into Discord closed it or pressed its closing keys: " + typed + " / " + string.Join(" | ", acted.ToArray()) + " / " + string.Join(" | ", typing.Steps.ToArray()));
+                acted.Clear();
+                line = 0;
+                string[] closeScript = { "click{\"target\": \"3\"}", "done{\"text\": \"Closed Discord.\"}" };
+                Job closing = new Job("close discord");
+                closing.Think = delegate(string system, string user, System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<string, ToolArguments>> calls) { return closeScript[Math.Min(line++, closeScript.Length - 1)]; };
+                string closed = closing.Run();
+                if (closed != "Closed Discord." || string.Join(" | ", acted.ToArray()) != "click 3")
+                    throw new Exception("A job that asked to close Discord couldn't: " + closed + " / " + string.Join(" | ", acted.ToArray()));
+                System.Collections.Generic.List<string> used = new System.Collections.Generic.List<string>();
+                Sight front = new Sight { Window = new IntPtr(7), Title = discord.Title, Program = "Discord", Bounds = bounds };
+                Computer.Look = Computer.Glimpse = delegate { return front; };
+                Computer.Shoot = delegate { return new Picture { Jpeg = new byte[] { 1, 2, 3 }, Size = bounds.Size, Area = bounds }; };
+                Computer.Focus = delegate { return null; };
+                Computer.GameOpen = delegate { return null; };
+                Computer.Under = delegate(Point at) { return at.X >= 1236 && at.Y < 30 ? new Target { Role = "button", Name = "Close", Box = new Rectangle(1236, 0, 44, 30) } : null; };
+                Computer.Use = delegate(string name, ToolArguments a, Picture p) { lock (used) used.Add(name + " " + (a.Text ?? "")); return name == "type" ? "Typed." : "Done."; };
+                string[] seen = { "click{\"x\":99,\"y\":1}", "press{\"keys\":\"alt+f4\"}", "type{\"text\":\"hi\"}", "done{\"text\":\"Typed hi.\"}" };
+                int turn = 0;
+                Job looking = new Job(job);
+                looking.Seer = delegate(byte[] picture, string system, string user) { return seen[Math.Min(turn++, seen.Length - 1)]; };
+                string looked = looking.Run();
+                int seenRefused = looking.Steps.FindAll(step => step.IndexOf("Won't close Discord", StringComparison.Ordinal) >= 0).Count;
+                if (looked != "Typed hi." || seenRefused != 2 || string.Join(" | ", used.ToArray()) != "type hi")
+                    throw new Exception("A job working from screenshots closed Discord: " + looked + " / " + string.Join(" | ", used.ToArray()) + " / " + string.Join(" | ", looking.Steps.ToArray()));
+                string logged = File.Exists(log) ? File.ReadAllText(log) : "";
+                if (System.Text.RegularExpressions.Regex.Matches(logged, "Left Discord open").Count != 5) throw new Exception("Leaving Discord open wasn't written down: " + logged);
+                checks.Add("PASS apps stay open: typing into Discord never clicks its own Close or presses Alt+F4 or Ctrl+W, the popup hint skips a window's own buttons drawn inside its page, a real popup's Close still gets the hint, a job that asks to close Discord still can, and each refusal is logged (Lachu)");
+            }
+            finally
+            {
+                Computer.Look = lookWas;
+                Computer.Glimpse = glimpseWas;
+                Computer.Act = actWas;
+                Computer.Shoot = shootWas;
+                Computer.Front = frontWas;
+                Computer.Focus = focusWas;
+                Computer.Under = underWas;
+                Computer.Use = useWas;
+                Computer.GameOpen = gameWas;
+                Computer.Shown = shownWas;
+                Computer.Streaming = streamWas;
+                Security.Set(Security.Sends, sendsWas);
+                Brain.LogPath = logWas;
+                try { File.Delete(log); } catch (IOException) { }
+            }
+        }
+
+        // Music said only as it really is: YouTube playing once Windows shows it, Spotify's web player when it is the only Spotify (Lachu).
+        private static void SmokeHonestMusic(System.Collections.Generic.List<string> checks)
+        {
+            Func<System.Collections.Generic.List<InstalledApp>> catalogWas = Hands.Catalog;
+            Action<string> runWas = Hands.Run;
+            Func<string, string> fetchWas = Hands.Fetch;
+            Func<string, bool> existsWas = Hands.Exists;
+            Func<long> nowWas = Hands.MusicNow;
+            Action<int> waitWas = Hands.MusicWait;
+            Func<System.Collections.Generic.List<Tune>> sessionsWas = Hands.Sessions;
+            Func<Tune, string, bool> sendWas = Hands.SessionPress;
+            bool openWas = Security.On(Security.Open), mediaWas = Security.On(Security.Media);
+            System.Collections.Generic.List<string> ran = new System.Collections.Generic.List<string>(), sent = new System.Collections.Generic.List<string>();
+            System.Collections.Generic.List<Tune> sessions = new System.Collections.Generic.List<Tune>();
+            System.Collections.Generic.List<InstalledApp> installed = new System.Collections.Generic.List<InstalledApp>();
+            long now = 0;
+            bool unreadable = false;
+            string results = "var ytInitialData = {\"videoRenderer\":{\"videoId\":\"4NRXx6U8ABQ\"}};";
+            Tune appears = null;
+            try
+            {
+                Security.Set(Security.Open, true);
+                Security.Set(Security.Media, true);
+                Hands.Catalog = delegate { return new System.Collections.Generic.List<InstalledApp>(installed); };
+                Hands.Exists = delegate { return false; };
+                Hands.Fetch = delegate(string address)
+                {
+                    return address.IndexOf("duckduckgo", StringComparison.Ordinal) >= 0 ? "<a rel=\"nofollow\" class=\"result__a\" href=\"//duckduckgo.com/l/?uddg=https%3A%2F%2Fopen.spotify.com%2Ftrack%2F0VjIjW4GlUZAMYd2vXMi3b\">Blinding Lights - song and lyrics by The Weeknd | Spotify</a>" : results;
+                };
+                Hands.Run = delegate(string id)
+                {
+                    ran.Add(id);
+                    if (appears != null && id.StartsWith("https://www.youtube.com/watch", StringComparison.Ordinal)) sessions.Add(appears);
+                };
+                Hands.MusicNow = delegate { return now; };
+                Hands.MusicWait = delegate(int milliseconds) { now += milliseconds; };
+                Hands.Sessions = delegate { return unreadable ? null : new System.Collections.Generic.List<Tune>(sessions); };
+                Hands.SessionPress = delegate(Tune tune, string what) { sent.Add(what + " " + tune.Title); if (what == "play") tune.Playing = true; return true; };
+                Hands.Forget();
+                sessions.Add(new Tune { Title = "Old Song", Artist = "Someone", App = "Spotify.exe", Playing = false });
+                sessions.Add(new Tune { Title = "Some other video", App = "Chrome", Playing = true });
+                appears = new Tune { Title = "lofi hip hop radio", App = "Chrome", Playing = true };
+                string playing = Hands.Do("play_music", new ToolArguments { Song = "lofi beats", App = "youtube" });
+                if (playing != "Playing now on YouTube." || ran.Count != 1 || ran[0] != "https://www.youtube.com/watch?v=4NRXx6U8ABQ" || now >= 1000 || sent.Count != 0)
+                    throw new Exception("A YouTube video Windows shows playing wasn't said as playing: " + playing + " / " + now);
+                sessions.RemoveAt(sessions.Count - 1);
+                appears = null;
+                now = 0;
+                string stuck = Hands.Do("play_music", new ToolArguments { Song = "lofi beats", App = "youtube" });
+                if (stuck != "Opened lofi beats on YouTube, but couldn't get it playing. Press play on the video." || ran.Count != 2 || now < 15000 || now > 16000 || sent.Count != 0 || !Hands.Failed(stuck))
+                    throw new Exception("A YouTube video that never started was said as playing: " + stuck + " / " + now);
+                appears = new Tune { Title = "Blinding Lights (Official Video)", Artist = "TheWeekndVEVO", App = "Chrome", Playing = false };
+                now = 0;
+                string pressed = Hands.Do("play_music", new ToolArguments { Song = "Blinding Lights", App = "spotify" });
+                if (pressed != "Spotify isn't installed, so playing now on YouTube." || sent.Count != 1 || sent[0] != "play Blinding Lights (Official Video)" || now >= 1000)
+                    throw new Exception("A paused YouTube video didn't get one play press: " + pressed + " / " + string.Join(" | ", sent.ToArray()));
+                appears = null;
+                unreadable = true;
+                now = 0;
+                string blind = Hands.Do("play_music", new ToolArguments { Song = "lofi beats", App = "youtube" });
+                unreadable = false;
+                if (blind != "Opened lofi beats on YouTube." || now != 0) throw new Exception("With Windows' media list unreadable she claimed or waited: " + blind);
+                now = 0;
+                string fallback = Hands.Do("play_music", new ToolArguments { Song = "lofi beats", App = "applemusic" });
+                if (fallback != "Apple Music isn't installed, so I opened lofi beats on YouTube, but couldn't get it playing. Press play on the video.") throw new Exception("Apple Music's fallback hid that YouTube didn't start: " + fallback);
+                string search = "https://www.youtube.com/results?search_query=lofi%20beats";
+                foreach (string page in new[] { "", "<html><form action=\"https://consent.youtube.com/save\"><h1>Before you continue to YouTube</h1></form></html>" })
+                {
+                    results = page;
+                    int before = ran.Count;
+                    string unseen = Hands.Do("play_music", new ToolArguments { Song = "lofi beats", App = "youtube" });
+                    if (unseen != "Couldn't get YouTube's results, so it's open on a search for lofi beats. Pick one there." || ran.Count != before + 1 || ran[before] != search || !Hands.Failed(unseen))
+                        throw new Exception("An empty or consent page was said as nothing found: " + unseen);
+                }
+                results = "var ytInitialData = {\"contents\":{\"sectionListRenderer\":{}}};";
+                string none = Hands.Do("play_music", new ToolArguments { Song = "lofi beats", App = "youtube" });
+                if (none != "Couldn't find lofi beats to play, so YouTube is open on a search for it." || ran[ran.Count - 1] != search) throw new Exception("A results page with no videos changed its line: " + none);
+                installed.Add(new InstalledApp("Spotify", "open.spotify.com-A5F611C_7vh1tm7h3g5s0!App"));
+                Hands.Forget();
+                int webFrom = ran.Count;
+                string web = Hands.Do("play_music", new ToolArguments { Song = "Blinding Lights by The Weeknd", App = "spotify" });
+                string liked = Hands.Do("play_music", new ToolArguments { Song = "my liked songs", Kind = "playlist", App = "spotify" });
+                string webRan = string.Join(" | ", ran.GetRange(webFrom, ran.Count - webFrom).ToArray());
+                if (web != "Opened Blinding Lights by The Weeknd in Spotify's web player, but couldn't press play there. Hit its Play button." || liked != "Opened their Liked Songs in Spotify's web player, but couldn't press play there. Hit its Play button."
+                    || webRan != "https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b | https://open.spotify.com/collection/tracks" || !Hands.Failed(web))
+                    throw new Exception("Spotify's web app got a spotify link or a playing claim: " + web + " / " + liked + " / " + webRan);
+                checks.Add("PASS honest music: YouTube is only said as playing once Windows shows the video playing, a paused one gets one play press, one that never starts or that Windows can't see says so, an empty or cookie page says YouTube's results didn't come, and Spotify's web app opens the web player instead of a spotify link (Lachu)");
+            }
+            finally
+            {
+                Hands.Catalog = catalogWas;
+                Hands.Run = runWas;
+                Hands.Fetch = fetchWas;
+                Hands.Exists = existsWas;
+                Hands.MusicNow = nowWas;
+                Hands.MusicWait = waitWas;
+                Hands.Sessions = sessionsWas;
+                Hands.SessionPress = sendWas;
+                Security.Set(Security.Open, openWas);
+                Security.Set(Security.Media, mediaWas);
+                Hands.Forget();
+            }
+        }
+
         // A cloud voice out of credit says so with its fix, the way her brain reads OpenAI's 429, instead of "busy (HTTP 429)",
         // and the service's own words go to errors.txt. A plain 429 is still busy.
         private static void SmokeVoiceCredit(List<string> checks, string output)

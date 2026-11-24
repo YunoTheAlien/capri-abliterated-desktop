@@ -204,11 +204,11 @@ Running on this PC	Осы PC-де іске қосылған
 NORMAL	ҚАЛЫПТЫ
 OFF	ӨШІРУЛІ
 Local server address	Жергілікті сервер мекенжайы
-Remember panel position	Панель орнын есте сақтау
 Custom colours	Өз түстерің
 Custom colours...	Өз түстерің...
 Choose	Таңдау
-Hers	Өзінікі
+Reset selected colour	Таңдалған түсті қалпына келтіру
+Make a mod	Мод жасау
 Quiet	Үнсіз
 Quiet min	Үнсіз min
 Quiet max	Үнсіз max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	{n}:{n} дейін үнсіз
 Quiet until turned off	Өшірілгенше үнсіз
 Export settings	Баптауларды экспорттау
 Import settings	Баптауларды импорттау
+Save Mainframe position	Панель орнын есте сақтау

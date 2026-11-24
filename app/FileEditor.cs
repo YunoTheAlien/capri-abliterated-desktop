@@ -23,14 +23,35 @@ namespace CapriDesktop
         internal const string TitleFace = "Capri.Font.Title.ttf";   // Capri Mainframe Bold: the title, the labels and the buttons.
         internal const float BodySize = 17;                         // Share Tech Mono in px at 100%: Look.Mono in Page.Style.
         internal const float Zoom = 1.6f;                           // The panel's size against the art's frames, at 100%, on a big enough screen.
-        internal static readonly Color Red = Color.FromArgb(0xEB, 0x4A, 0x42);
+        // Its frame, titles and buttons, from the File editor fold in Custom colours.
+        internal static Color Red { get { return Neon.EditorFrame; } }
         internal static readonly Color Black = Color.FromArgb(0, 0, 0);
-        // What the page's controls are drawn on: her red on screen, and white or black for a moment while Matted works out how strong
-        // each pixel is.
-        internal static Color Paper = Red;
-        // The page's words, in the salmon of the reference's Arasaka panel, and the words on her red when a button is filled.
-        internal static readonly Color Salmon = Color.FromArgb(245, 128, 120);
-        internal static readonly Color Dark = Color.FromArgb(30, 12, 14);
+        // What the page's controls are drawn on: the text field, over the sheet by its alpha, and white or black for a moment
+        // while Matted works out how strong each pixel is.
+        internal static Color Paper { get { return matte ?? Laid(Neon.EditorField, Solid(Neon.EditorSheet)); } }
+        private static Color? matte;
+        // The page's words, salmon to start like the reference's Arasaka panel, and the words on the frame when a button is filled.
+        internal static Color Salmon { get { return Neon.EditorText; } }
+        internal static Color Dark { get { return Neon.Tone(30, 12, 14); } }
+
+        // A colour at a share of its own alpha.
+        internal static Color Faded(int alpha, Color colour) { return Color.FromArgb(alpha * colour.A / 255, colour); }
+
+        // The colour itself with no see-through, for a control's own colours, which can't be see-through.
+        internal static Color Solid(Color colour) { return Color.FromArgb(255, colour); }
+
+        // A colour moved by a fixed step, for a shade drawn a little off the frame's own.
+        internal static Color Shifted(Color colour, int r, int g, int b)
+        {
+            return Color.FromArgb(colour.A, Math.Max(0, Math.Min(255, colour.R + r)), Math.Max(0, Math.Min(255, colour.G + g)), Math.Max(0, Math.Min(255, colour.B + b)));
+        }
+
+        // One colour laid over another by its alpha.
+        internal static Color Laid(Color top, Color under)
+        {
+            int a = top.A;
+            return Color.FromArgb(255, (top.R * a + under.R * (255 - a)) / 255, (top.G * a + under.G * (255 - a)) / 255, (top.B * a + under.B * (255 - a)) / 255);
+        }
         // How the page's top and sides sit inside the sheet, in the art's pixels.
         private const float PageInset = 7;
 
@@ -102,6 +123,7 @@ namespace CapriDesktop
             AutoScaleMode = AutoScaleMode.None;
             BackColor = Black;
             Cursor = Cursors.SizeAll;
+            Neon.Repainted += Recoloured;
             docs = new[]
             {
                 // personality.md is in her personality editor, with her packs and moods, and only there.
@@ -120,7 +142,9 @@ namespace CapriDesktop
                 new Doc(CapriDesktop.Touch.FileName, delegate { return CapriDesktop.Touch.Open(); }),
                 // Her check-ins, which had no tab at all, which is why the button for them went to Notepad.
                 // Absent until her settings folder is known, since there is no file to offer before that.
-                new Doc("check-ins.md", delegate { return CareLines.Open.Note(); }, delegate { return CareLines.Open != null; })
+                new Doc("check-ins.md", delegate { return CareLines.Open.Note(); }, delegate { return CareLines.Open != null; }),
+                // The modding guide, from the mod helper's Guide: hers to read, laid again from the copy she carries.
+                new Doc(ModGuide.FileName, delegate { ModGuide.Lay(); return ModGuide.Open(); }, delegate { return ModGuide.Kept != null; })
             };
             // Only with the switch on; the tab is left out rather than disabled.
             if (!personalities && Interests.Shown)
@@ -484,7 +508,8 @@ namespace CapriDesktop
             {
                 if (doc.Note == null)
                 {
-                    doc.Note = doc.Open();
+                    // Her file's copy in their language when one is there (LangCopies).
+                    doc.Note = LangCopies.Shown(doc.Open());
                     doc.Revert();
                     string draft = doc.Note.Path + Unsaved;
                     if (File.Exists(draft))
@@ -631,6 +656,8 @@ namespace CapriDesktop
             string problem = doc.Note.Save(doc.ForFile());
             if (problem != null) return problem;
             if (Stocked != null) { try { Stocked(doc.Note.Path); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
+            // A copy in their language: its settings and lines go into her English file now.
+            try { LangCopies.Saved(doc.Note.Path); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             doc.Revert();
             ForgetDraft(doc);
             // Her personality key reads personality.md, so it is told whenever that file saves, in either editor.
@@ -765,7 +792,7 @@ namespace CapriDesktop
                     {
                         double speck = noise.NextDouble() + noise.NextDouble() - 1;
                         int alpha = (int)(Math.Abs(speck) * 34);
-                        using (Brush ink = new SolidBrush(Color.FromArgb(alpha, speck < 0 ? Black : Red))) pen.FillRectangle(ink, x * size, y * size, size, size);
+                        using (Brush ink = new SolidBrush(speck < 0 ? Color.FromArgb(alpha, Black) : Faded(alpha, Red))) pen.FillRectangle(ink, x * size, y * size, size, size);
                     }
             return tile;
         }
@@ -840,7 +867,7 @@ namespace CapriDesktop
                 pen.CompositingMode = CompositingMode.SourceOver;
                 LayGrain(pen, sheetShape);
                 // No page box under the words (Lachy): the sheet stays her artist's see-through right up to the text.
-                using (Pen edge = new Pen(Color.FromArgb(220, Red), 2.4f * a)) { edge.LineJoin = LineJoin.Miter; pen.DrawPolygon(edge, SheetShape(sheet, depth, 1.2f)); }
+                using (Pen edge = new Pen(Neon.EditorEdge, 2.4f * a)) { edge.LineJoin = LineJoin.Miter; pen.DrawPolygon(edge, SheetShape(sheet, depth, 1.2f)); }
             }
             using (Brush body = new SolidBrush(PanelArt.Spine)) pen.FillPolygon(body, spineShape);
             LayGrain(pen, spineShape);
@@ -1208,10 +1235,35 @@ namespace CapriDesktop
             if (stage == Stage.Open) DropSurface();
         }
 
+        // The colours its controls were given, so a change in Custom colours finds them and swaps them.
+        private Color paperWas = Paper, wordsWas = Solid(Salmon);
+
+        // Custom colours changed: its controls take the new ones, and the frame and its grain are drawn again.
+        private void Recoloured()
+        {
+            if (IsDisposed || InvokeRequired) return;
+            Color paper = Paper, words = Solid(Salmon);
+            Swap(page, paper, words);
+            paperWas = paper;
+            wordsWas = words;
+            if (grain != null) { grain.Dispose(); grain = Grain((int)Math.Max(1, Math.Round(a / Zoom))); }
+            DrawFrame();
+        }
+
+        private void Swap(Control control, Color paper, Color words)
+        {
+            if (control == null || control.IsDisposed) return;
+            foreach (Control child in control.Controls) Swap(child, paper, words);
+            if (control.BackColor.ToArgb() == paperWas.ToArgb()) control.BackColor = paper;
+            if (control.ForeColor.ToArgb() == wordsWas.ToArgb()) control.ForeColor = words;
+            control.Invalidate();
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
+                Neon.Repainted -= Recoloured;
                 pacer.Stop();
                 DropVeil();
                 DropFonts();
@@ -1405,11 +1457,11 @@ namespace CapriDesktop
                 StartPosition = FormStartPosition.Manual;
                 AutoScaleMode = AutoScaleMode.None;
                 ShowInTaskbar = true;
-                BackColor = Red;
-                ForeColor = Salmon;
+                BackColor = Paper;
+                ForeColor = Solid(Salmon);
                 using (Stream source = Assembly.GetExecutingAssembly().GetManifestResourceStream("Capri.Chip.ico")) if (source != null) Icon = new Icon(source);
                 SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.ResizeRedraw, true);
-                box = new WordBox { Multiline = true, AcceptsReturn = true, WordWrap = true, ScrollBars = ScrollBars.None, MaxLength = int.MaxValue, BorderStyle = BorderStyle.None, BackColor = Red, ForeColor = Salmon, HideSelection = false };
+                box = new WordBox { Multiline = true, AcceptsReturn = true, WordWrap = true, ScrollBars = ScrollBars.None, MaxLength = int.MaxValue, BorderStyle = BorderStyle.None, BackColor = Paper, ForeColor = Solid(Salmon), HideSelection = false };
                 bar = new Bar(box);
                 box.Moved += delegate { bar.Sync(); Check(); };
                 box.Stirred += Wake;
@@ -1429,7 +1481,7 @@ namespace CapriDesktop
                 // New file, which today means a skill.md. Not in the personalities editor, where a skill has no tab.
                 make = new Ink { Text = "New", AccessibleName = "Make a new file, like a skill.md that teaches Capri an app or game", Visible = !panel.ForPersonalities };
                 make.Click += delegate { panel.New(make); };
-                status = new Note { BackColor = Red, ForeColor = Salmon, AutoEllipsis = true, UseMnemonic = false, TextAlign = ContentAlignment.MiddleLeft };
+                status = new Note { BackColor = Paper, ForeColor = Solid(Salmon), AutoEllipsis = true, UseMnemonic = false, TextAlign = ContentAlignment.MiddleLeft };
                 cover = new Veil(panel, this) { Visible = false };
                 Controls.AddRange(new Control[] { cover, close, box, bar, status, keep, make, reload, save });
                 Controls.AddRange(tabs);
@@ -1707,14 +1759,14 @@ namespace CapriDesktop
                 if (panel.Guarding) return;
                 save.Enabled = doc.Note != null;
                 reload.Text = doc.Dirty ? "Discard + reload" : "Reload";
-                status.ForeColor = Salmon;
+                status.ForeColor = Solid(Salmon);
                 status.Text = doc.Dirty ? "Unsaved changes." : "";
                 PlaceFoot();
             }
 
             internal void Say(string words, bool wrong)
             {
-                status.ForeColor = Salmon;
+                status.ForeColor = Solid(Salmon);
                 status.Text = wrong ? "! " + words : words;
             }
 
@@ -1977,9 +2029,9 @@ namespace CapriDesktop
             // the page draws its background in Paper, so that one colour is all that changes, and nothing is left needing a repaint.
             private void Print(Native.Surface onto, Color paper)
             {
-                Paper = paper;
+                matte = paper;
                 try { Native.SendMessage(Handle, 0x0317, onto.Dc, (IntPtr)0x1E); }
-                finally { Paper = Red; }
+                finally { matte = null; }
             }
 
             internal void PaintCover(Graphics pen, bool clear)
@@ -1992,7 +2044,7 @@ namespace CapriDesktop
                 base.OnPaint(e);
                 // The name is on its own tab, lit up, so drawing it again here only cost room.
                 // Thin red rules under the title and over the buttons, like the lines between the reference panel's fields.
-                using (Brush rule = new SolidBrush(Color.FromArgb(200, Red)))
+                using (Brush rule = new SolidBrush(Faded(200, Red)))
                 {
                     int thick = Math.Max(1, Scaled(1.5f));
                     e.Graphics.FillRectangle(rule, Scaled(6), lineTop, Width - Scaled(6), thick);
@@ -2100,7 +2152,7 @@ namespace CapriDesktop
             {
                 this.box = box;
                 SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
-                BackColor = Red;
+                BackColor = Paper;
                 TabStop = false;
             }
 
@@ -2159,7 +2211,7 @@ namespace CapriDesktop
             {
                 e.Graphics.Clear(Paper);
                 if (lines <= seen) return;
-                using (Brush track = new SolidBrush(Color.FromArgb(90, Red))) e.Graphics.FillRectangle(track, (Width - Math.Max(1, Width / 4)) / 2, 0, Math.Max(1, Width / 4), Height);
+                using (Brush track = new SolidBrush(Faded(90, Red))) e.Graphics.FillRectangle(track, (Width - Math.Max(1, Width / 4)) / 2, 0, Math.Max(1, Width / 4), Height);
                 using (Brush ink = new SolidBrush(Red)) e.Graphics.FillRectangle(ink, Thumb);
             }
         }
@@ -2455,12 +2507,12 @@ namespace CapriDesktop
                 ShowInTaskbar = false;
                 StartPosition = FormStartPosition.CenterParent;
                 AutoScaleMode = AutoScaleMode.None;
-                BackColor = Red;
-                ForeColor = Salmon;
+                BackColor = Solid(Red);
+                ForeColor = Solid(Salmon);
                 Font = Look.Mono(15 * at, FontStyle.Regular, GraphicsUnit.Pixel);
                 int pad = (int)(18 * at), wide = (int)(440 * at), row = (int)(30 * at), gap = (int)(8 * at);
                 Label asking = new Label { Text = "Name it after the app or game it teaches her:", AutoSize = false, Bounds = new Rectangle(pad, pad, wide, row), TextAlign = ContentAlignment.MiddleLeft, UseMnemonic = false };
-                named = new TextBox { Bounds = new Rectangle(pad, pad + row, wide, row), BackColor = Dark, ForeColor = Salmon, BorderStyle = BorderStyle.FixedSingle, MaxLength = 40, AccessibleName = "The skill's name" };
+                named = new TextBox { Bounds = new Rectangle(pad, pad + row, wide, row), BackColor = Dark, ForeColor = Solid(Salmon), BorderStyle = BorderStyle.FixedSingle, MaxLength = 40, AccessibleName = "The skill's name" };
                 RadioButton app = new RadioButton { Text = "An app or website, like Discord", Checked = true, AutoSize = false, Bounds = new Rectangle(pad, pad + row * 2 + gap, wide, row), UseMnemonic = false };
                 game = new RadioButton { Text = "A game, like Minecraft", AutoSize = false, Bounds = new Rectangle(pad, pad + row * 3 + gap, wide, row), UseMnemonic = false };
                 int buttons = pad + row * 4 + gap * 3, third = (wide - gap * 2) / 3;
@@ -2487,8 +2539,8 @@ namespace CapriDesktop
 
             private static Button Pressable(string words, bool filled, Rectangle place)
             {
-                Button button = new Button { Text = words, Bounds = place, FlatStyle = FlatStyle.Flat, BackColor = filled ? Salmon : Red, ForeColor = filled ? Dark : Salmon, UseMnemonic = false, Cursor = Cursors.Hand };
-                button.FlatAppearance.BorderColor = Salmon;
+                Button button = new Button { Text = words, Bounds = place, FlatStyle = FlatStyle.Flat, BackColor = Solid(filled ? Salmon : Red), ForeColor = filled ? Dark : Solid(Salmon), UseMnemonic = false, Cursor = Cursors.Hand };
+                button.FlatAppearance.BorderColor = Solid(Salmon);
                 return button;
             }
 
@@ -2520,7 +2572,7 @@ namespace CapriDesktop
             internal Ink()
             {
                 SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
-                BackColor = Red;
+                BackColor = Paper;
                 UseMnemonic = false;
                 Cursor = Cursors.Hand;
             }
@@ -2597,9 +2649,9 @@ namespace CapriDesktop
                     using (GraphicsPath plate = Neon.Cut(area, 0, 0, cut, 0))
                     {
                         if (lit) using (Brush fill = new SolidBrush(Red)) pen.FillPath(fill, plate);
-                        using (Pen edge = new Pen(Enabled ? Red : Color.FromArgb(110, Red), line)) pen.DrawPath(edge, plate);
+                        using (Pen edge = new Pen(Enabled ? Red : Faded(110, Red), line)) pen.DrawPath(edge, plate);
                     }
-                    Color ink = !Enabled ? Color.FromArgb(130, 50, 46) : lit ? Dark : Red;
+                    Color ink = !Enabled ? Shifted(Red, -105, -24, -20) : lit ? Dark : Red;
                     if (!Rolling)
                     {
                         TextRenderer.DrawText(pen, Text, Font, ClientRectangle, ink, BackColorFor(lit), TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
@@ -2634,7 +2686,7 @@ namespace CapriDesktop
                         pen.DrawRectangle(dots, 3 * line, 3 * line, Width - 6 * line - 1, Height - 6 * line - 1);
             }
 
-            private static Color BackColorFor(bool lit) { return lit ? Red : Paper; }
+            private static Color BackColorFor(bool lit) { return lit ? Laid(Red, Paper) : Paper; }
         }
     }
 
@@ -2651,8 +2703,8 @@ namespace CapriDesktop
         internal const double RestAlpha = 81.7 / 255;
         // Where the sheet settles instead: dark glass like the Arasaka panel in Lachy's reference, still on her artist's
         // curve. Its colour is what that panel's sheet measures over a dark room.
-        internal const double GlassAlpha = 0.78;
-        internal static readonly Color Glass = Color.FromArgb(52, 30, 36);
+        internal static double GlassAlpha { get { return Math.Min(0.99, Neon.EditorSheet.A / 255.0); } }
+        internal static Color Glass { get { return Neon.EditorSheet; } }
         // The spine's foot, from frame 1.
         internal static readonly float[] SpineEnds = { 168, 182, 204, 231, 264, 300, 338, 377, 416, 452, 484, 512, 534, 548, 553 };
         // The sheet's right edge, from frame 14.
@@ -2665,8 +2717,9 @@ namespace CapriDesktop
         internal static readonly float[] RuleEnds = { 139, 145, 154, 167, 183, 200, 220, 241, 263, 285, 307, 329, 349, 369, 387, 402, 415, 425, 431, 434 };
         // The block's right end, from frame 25.
         internal static readonly float[] BlockEnds = { 140, 146, 154, 162, 169, 172 };
-        internal static readonly Color Spine = Color.FromArgb(243, 222, 70, 62);
-        internal static readonly Color Rule = Color.FromArgb(222, FileEditor.Red);
+        // The spine a shade under the frame's colour, as the art has it.
+        internal static Color Spine { get { return FileEditor.Faded(243, FileEditor.Shifted(FileEditor.Red, -13, -4, -4)); } }
+        internal static Color Rule { get { return FileEditor.Faded(222, FileEditor.Red); } }
 
         // A value at any moment between the art's frames, on a smooth curve that never overshoots (monotone cubic,
         // after Fritsch and Carlson). It eases out of lead, the frame before first, and holds its last measurement.
@@ -2706,11 +2759,12 @@ namespace CapriDesktop
             return GlassAlpha + (art - RestAlpha) * (top - GlassAlpha) / (top - RestAlpha);
         }
 
-        // The sheet's colour at its alpha: her red when solid, turning to the dark glass as it settles.
+        // The sheet's colour at its alpha: the frame's when solid, turning to the sheet's as it settles.
         internal static Color SheetFill(double alpha)
         {
+            Color frame = FileEditor.Red, glass = Glass;
             double t = Math.Max(0, Math.Min(1, (1 - alpha) / (1 - GlassAlpha)));
-            return Color.FromArgb((int)(alpha * 255), (int)(235 + t * (Glass.R - 235)), (int)(74 + t * (Glass.G - 74)), (int)(66 + t * (Glass.B - 66)));
+            return Color.FromArgb((int)(alpha * 255), (int)(frame.R + t * (glass.R - frame.R)), (int)(frame.G + t * (glass.G - frame.G)), (int)(frame.B + t * (glass.B - frame.B)));
         }
     }
 }

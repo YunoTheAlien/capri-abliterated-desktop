@@ -174,6 +174,18 @@ namespace CapriDesktop
             Invalidate();
         }
 
+        // A click on the bar a page down or up, as the mouse would, for the checks.
+        internal void Page(bool down) { PageBy(down); }
+
+        // A page of a panel is what shows less a little, so a row cut at the edge is shown whole on the next page.
+        private void PageBy(bool down)
+        {
+            if (typing != null || watching == null) { ScrollTo(down ? ThumbTop + Thumb : ThumbTop - Thumb); return; }
+            int step = Math.Max(1, watching.ClientSize.Height - Math.Max(8, watching.ClientSize.Height / 8));
+            watching.AutoScrollPosition = new Point(0, Math.Max(0, Math.Min(Reach, At + (down ? step : -step))));
+            Invalidate();
+        }
+
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
@@ -190,7 +202,7 @@ namespace CapriDesktop
                 return;
             }
             // Anywhere else on the bar jumps a page that way, the way her sliders move by a step.
-            ScrollTo(e.Y < top ? top - tall : top + tall);
+            PageBy(e.Y >= top);
         }
 
         protected override void OnMouseMove(MouseEventArgs e)
@@ -265,6 +277,9 @@ namespace CapriDesktop
         internal ScrollPanel() { AutoScroll = true; }
 
         internal event Action Scrolled;
+
+        // Moved by code, like a row scrolled into view: whatever watches it is told.
+        internal void Moved() { if (Scrolled != null) Scrolled(); }
 
         protected override void WndProc(ref Message message)
         {

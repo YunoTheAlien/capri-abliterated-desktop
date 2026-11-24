@@ -15,7 +15,7 @@ namespace CapriDesktop
         // decay as everything else, so nothing here invents a second kind of arithmetic.
         private static double warmth;
         private static double sore;
-        private static DateTime cooled = DateTime.UtcNow;
+        private static DateTime cooled = SimTime.UtcNow;
         private const double HalfLifeMinutes = 45;
 
         // How kindness and meanness land for her now: her personality's numbers with her mood's added, never under these
@@ -23,25 +23,6 @@ namespace CapriDesktop
         internal const double KindFloor = 0.20, MeanFloor = 0.15;
         internal static double Kind { get { return Math.Max(KindFloor, Personalities.Scaled("kind returns", 1)); } }
         internal static double Mean { get { return Math.Max(MeanFloor, Personalities.Scaled("mean scale", 1)); } }
-
-        // Per act: how long before it can count again, and how many times an hour it may count at all. An act with no
-        // entry is unlimited, which keeps rare one-offs simple.
-        private static readonly string[,] Limits =
-        {
-            //  act            seconds   per hour
-            { "petted",          "20",     "40" },
-            { "thrown",          "12",     "30" },
-            { "insulted",        "20",     "20" },
-            { "praised",         "45",     "12" },
-            { "called on",       "30",     "30" },
-            { "ignored",        "240",      "8" },
-            // A touch on a place other than her head, each its own, as often as a pat.
-            { "touched shoulders", "20",   "40" },
-            { "touched middle",  "20",     "40" },
-            { "touched legs",    "20",     "40" },
-            { "touched feet",    "20",     "40" },
-            { "tickled",         "20",     "40" }
-        };
 
         private static readonly Dictionary<string, DateTime> lastAt = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, List<DateTime>> hourly = new Dictionary<string, List<DateTime>>(StringComparer.OrdinalIgnoreCase);
@@ -52,7 +33,7 @@ namespace CapriDesktop
         {
             if (string.IsNullOrEmpty(act)) return false;
             int seconds = Limit(act, 1), perHour = Limit(act, 2);
-            DateTime now = DateTime.UtcNow;
+            DateTime now = SimTime.UtcNow;
             lock (gate)
             {
                 DateTime had;
@@ -78,11 +59,12 @@ namespace CapriDesktop
             perHour = Limit(act, 2);
         }
 
+        // Per act, from the act list: how long before it can count again, and how many times an hour it may count at
+        // all. An act with no limits is unlimited, which keeps rare one-offs simple.
         private static int Limit(string act, int column)
         {
-            for (int row = 0; row < Limits.GetLength(0); row++)
-                if (string.Equals(Limits[row, 0], act, StringComparison.OrdinalIgnoreCase))
-                    return int.Parse(Limits[row, column]);
+            Acts.Act listed = Acts.Find(act);
+            if (listed != null && listed.Limited) return column == 1 ? listed.Seconds : listed.PerHour;
             // A senpai act's limits come with it, as "seconds, per hour".
             string[] two = (Extended.Get("limit." + (act ?? "").ToLowerInvariant()) ?? "").Split(',');
             int given;
@@ -93,7 +75,7 @@ namespace CapriDesktop
         {
             lock (gate)
             {
-                DateTime now = DateTime.UtcNow;
+                DateTime now = SimTime.UtcNow;
                 double mins = (now - cooled).TotalMinutes;
                 if (mins < 1) return;
                 cooled = now;
@@ -106,51 +88,168 @@ namespace CapriDesktop
         }
 
         // One act, already weighted by her personality and mood: positive feeds warmth, negative upset. Repetition is
-        // uneven: flattery wears thin and goading builds up.
-        internal static void Took(string act, int worth)
+        // uneven: flattery wears thin and goading builds up, both leaning on how willing she is. What it moved goes
+        // into sum, for her log.
+        internal static void Took(string act, int worth, Acts.Sum sum)
         {
-            if (worth == 0) return;
+            if (worth == 0) { sum.Moved("moves nothing", Peek()); return; }
             Cool();
-            int again = Lately(act);
+            int window, shortest, longest;
+            int again = Lately(act, out window, out shortest, out longest);
             double kind = Kind, mean = Mean;
+            Numbers numbers = Numbers.Now();
             lock (gate)
             {
+                int willing = WillingOf(warmth, sore);
+                sum.Repeat(again, window, shortest, longest);
                 if (worth > 0)
                 {
-                    // Diminishing: full the first time, then less each time, never quite nothing. Her personality's "kind
-                    // returns", with her mood's added, sets how fast: under 1 a needy or clingy one keeps more of each.
-                    double much = worth / (1.0 + again * 0.6 * kind);
-                    if (much < 0.4) much = 0.4;
+                    double gain, slow;
+                    double much = Kindly(worth, again, kind, willing, numbers, out gain, out slow), was = warmth;
                     warmth = Math.Min(60, warmth + much);
+                    sum.Moved("willing " + willing + ", gain " + Acts.N(gain) + ", fade " + Acts.N(slow) + ", kind returns " + Acts.N(kind) + " -> warmth " + Acts.Signed(much) + " (" + Acts.F(was) + " to " + Acts.F(warmth) + "), upset " + Acts.F(sore), WillingOf(warmth, sore));
                 }
                 else
                 {
-                    // Escalating, capped at two and a half times so a bad run cannot run away entirely. Her personality's "mean
-                    // scale", with her mood's added, sets how much it hurts: a devoted one lets most of it go.
-                    double much = -worth * mean * Math.Min(2.5, 1.0 + again * 0.35);
+                    double hurt, build, grows;
+                    double much = Meanly(worth, again, mean, willing, numbers, out hurt, out build, out grows), wasUpset = sore, was = warmth;
                     sore = Math.Min(60, sore + much);
                     // A bad moment takes some of the goodwill with it, but only a little: counting it twice, once in
                     // upset and again as lost warmth, was what made three slips enough to stop her helping.
                     warmth = Math.Max(-60, warmth - much * 0.2);
+                    sum.Moved("willing " + willing + ", hurt " + Acts.N(hurt) + ", build " + Acts.N(build) + ", mean scale " + Acts.N(mean) + ", grows x" + Acts.N(grows) + " -> upset " + Acts.Signed(much) + " (" + Acts.F(wasUpset) + " to " + Acts.F(sore) + "), warmth " + Acts.Signed(-much * 0.2) + " (" + Acts.F(was) + " to " + Acts.F(warmth) + ")", WillingOf(warmth, sore));
                 }
             }
         }
 
-        // How many times this act has already landed in the last half hour.
-        private static readonly Dictionary<string, List<DateTime>> recent = new Dictionary<string, List<DateTime>>(StringComparer.OrdinalIgnoreCase);
-
-        private static int Lately(string act)
+        // The repeat numbers from "How she reacts": her personality's with her mood's added, today's values when
+        // unset. Pull and slows stay within 0 to 0.2, so gain and its kin never go below nothing at willing 0 or 10.
+        internal sealed class Numbers
         {
+            internal double Fades = 0.6, Least = 0.4, Grows = 0.35, Most = 2.5, Pull = 0.05, Slows = 0.1;
+
+            internal static Numbers Now()
+            {
+                Numbers n = new Numbers();
+                n.Fades = Math.Max(0, Personalities.Scaled("like fades", n.Fades));
+                n.Least = Math.Max(0, Personalities.Scaled("like least", n.Least));
+                n.Grows = Math.Max(0, Personalities.Scaled("dislike grows", n.Grows));
+                n.Most = Math.Max(1, Personalities.Scaled("dislike most", n.Most));
+                n.Pull = Math.Max(0, Math.Min(0.2, Personalities.Scaled("willing pull", n.Pull)));
+                n.Slows = Math.Max(0, Math.Min(0.2, Personalities.Scaled("willing slows", n.Slows)));
+                return n;
+            }
+        }
+
+        // A kind act's warmth: full the first time, less each repeat, never under "like least". The warmer she is,
+        // the more it lands (gain) and the slower it fades (slow); at willing 5 both are 1.
+        internal static double Kindly(int worth, int again, double kind, int willing, Numbers n, out double gain, out double slow)
+        {
+            gain = 1 + n.Pull * (willing - 5);
+            slow = 1 - n.Slows * (willing - 5);
+            return Math.Max(n.Least, worth * gain / (1.0 + again * n.Fades * kind * slow));
+        }
+
+        // A mean act's upset, growing each repeat up to "dislike most" times. The warmer she is, the less it hurts and
+        // the slower it builds; at willing 5 both are 1.
+        internal static double Meanly(int worth, int again, double mean, int willing, Numbers n, out double hurt, out double build, out double grows)
+        {
+            hurt = 1 - n.Pull * (willing - 5);
+            build = 1 - n.Slows * (willing - 5);
+            grows = Math.Min(n.Most, 1.0 + again * n.Grows * build);
+            return -worth * mean * hurt * grows;
+        }
+
+        // The repeat window's range now, in minutes, from her personality's "repeat window": upset raises its
+        // shortest and warmth lowers its longest, so a good day forgives fast and a bad one piles up.
+        internal static void WindowNow(out int shortest, out int longest)
+        {
+            int low, high;
+            Personalities.Range("repeat window", 20, 60, out low, out high);
+            double tilt;
+            lock (gate) tilt = Math.Max(-1, Math.Min(1, (sore - warmth) / 60.0));
+            shortest = (int)Math.Round(tilt > 0 ? low + (high - low) * tilt : low);
+            longest = (int)Math.Round(tilt < 0 ? high + (high - low) * tilt : high);
+        }
+
+        // Each act's run: when it landed, and the window picked fresh in the range when the run started.
+        private static readonly Dictionary<string, List<DateTime>> recent = new Dictionary<string, List<DateTime>>(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, int> windows = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private static readonly Random dice = new Random();
+
+        // How many times this act has already landed in its run, with the run's window and the range now.
+        private static int Lately(string act, out int window, out int shortest, out int longest)
+        {
+            WindowNow(out shortest, out longest);
+            window = 0;
             if (string.IsNullOrEmpty(act)) return 0;
-            DateTime now = DateTime.UtcNow;
+            DateTime now = SimTime.UtcNow;
             lock (gate)
             {
                 List<DateTime> when;
                 if (!recent.TryGetValue(act, out when)) { when = new List<DateTime>(); recent[act] = when; }
-                when.RemoveAll(delegate(DateTime at) { return (now - at).TotalMinutes >= 30; });
+                int run;
+                windows.TryGetValue(act, out run);
+                when.RemoveAll(delegate(DateTime at) { return (now - at).TotalMinutes >= run; });
+                if (when.Count == 0) { run = dice.Next(shortest, longest + 1); windows[act] = run; }
+                window = run;
                 int had = when.Count;
                 when.Add(now);
                 return had;
+            }
+        }
+
+        // Her mood as it stands, kept whole so a counter run can put it back as if none of its acts happened.
+        internal sealed class Kept
+        {
+            internal double Warmth, Sore;
+            internal DateTime Cooled;
+            internal Dictionary<string, DateTime> LastAt;
+            internal Dictionary<string, List<DateTime>> Hourly, Recent;
+        }
+
+        internal static Kept Keep()
+        {
+            lock (gate)
+                return new Kept { Warmth = warmth, Sore = sore, Cooled = cooled, LastAt = new Dictionary<string, DateTime>(lastAt, StringComparer.OrdinalIgnoreCase), Hourly = Copied(hourly), Recent = Copied(recent) };
+        }
+
+        internal static void PutBack(Kept kept)
+        {
+            if (kept == null) return;
+            lock (gate)
+            {
+                warmth = kept.Warmth;
+                sore = kept.Sore;
+                cooled = kept.Cooled;
+                lastAt.Clear();
+                foreach (KeyValuePair<string, DateTime> one in kept.LastAt) lastAt[one.Key] = one.Value;
+                Restore(hourly, kept.Hourly);
+                Restore(recent, kept.Recent);
+            }
+        }
+
+        private static Dictionary<string, List<DateTime>> Copied(Dictionary<string, List<DateTime>> from)
+        {
+            Dictionary<string, List<DateTime>> copy = new Dictionary<string, List<DateTime>>(StringComparer.OrdinalIgnoreCase);
+            foreach (KeyValuePair<string, List<DateTime>> one in from) copy[one.Key] = new List<DateTime>(one.Value);
+            return copy;
+        }
+
+        private static void Restore(Dictionary<string, List<DateTime>> into, Dictionary<string, List<DateTime>> from)
+        {
+            into.Clear();
+            foreach (KeyValuePair<string, List<DateTime>> one in from) into[one.Key] = new List<DateTime>(one.Value);
+        }
+
+        // For the checks: her warmth and upset set outright.
+        internal static void Feel(double warm, double upset)
+        {
+            lock (gate)
+            {
+                warmth = warm;
+                sore = upset;
+                cooled = SimTime.UtcNow;
             }
         }
 
@@ -163,13 +262,33 @@ namespace CapriDesktop
             get
             {
                 Cool();
-                lock (gate)
+                lock (gate) return WillingOf(warmth, sore);
+            }
+        }
+
+        // Upset outweighs warmth, but not so hard that three bad moments put her at a flat no. Measured: this takes
+        // about four or five before she stops being useful, which is a row rather than a slip.
+        private static int WillingOf(double warm, double upset)
+        {
+            double w = 5 + warm / 4.0 - upset / 4.5;
+            return (int)Math.Round(Math.Max(0, Math.Min(10, w)));
+        }
+
+        // Willing as Cool would leave it, without cooling, so reading it for her log moves nothing.
+        private static int Peek()
+        {
+            lock (gate)
+            {
+                double warm = warmth, upset = sore, mins = (SimTime.UtcNow - cooled).TotalMinutes;
+                if (mins >= 1)
                 {
-                    // Upset outweighs warmth, but not so hard that three bad moments put her at a flat no. Measured:
-                    // this takes about four or five before she stops being useful, which is a row rather than a slip.
-                    double w = 5 + warmth / 4.0 - sore / 4.5;
-                    return (int)Math.Round(Math.Max(0, Math.Min(10, w)));
+                    double keep = Math.Pow(0.5, mins / HalfLifeMinutes);
+                    warm *= keep;
+                    upset *= keep;
+                    if (Math.Abs(warm) < 0.5) warm = 0;
+                    if (Math.Abs(upset) < 0.5) upset = 0;
                 }
+                return WillingOf(warm, upset);
             }
         }
 
@@ -242,10 +361,11 @@ namespace CapriDesktop
             {
                 warmth = 0;
                 sore = 0;
-                cooled = DateTime.UtcNow;
+                cooled = SimTime.UtcNow;
                 lastAt.Clear();
                 hourly.Clear();
                 recent.Clear();
+                windows.Clear();
             }
         }
 

@@ -204,11 +204,11 @@ Running on this PC	Yn rhedeg ar y PC hwn
 NORMAL	ARFEROL
 OFF	I FFWRDD
 Local server address	Cyfeiriad gweinydd lleol
-Remember panel position	Cofio safle'r panel
 Custom colours	Lliwiau personol
 Custom colours...	Lliwiau personol...
 Choose	Dewis
-Hers	Ei rhai hi
+Reset selected colour	Ailosod y lliw a ddewiswyd
+Make a mod	Gwneud mod
 Quiet	Tawel
 Quiet min	Tawel min
 Quiet max	Tawel max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Tawel tan {n}:{n}
 Quiet until turned off	Tawel nes ei ddiffodd
 Export settings	Allforio gosodiadau
 Import settings	Mewnforio gosodiadau
+Save Mainframe position	Cofio safle'r panel

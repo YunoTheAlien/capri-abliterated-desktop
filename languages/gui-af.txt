@@ -204,11 +204,11 @@ Running on this PC	Loop op hierdie rekenaar
 NORMAL	NORMAAL
 OFF	AF
 Local server address	Plaaslike bedieneradres
-Remember panel position	Onthou paneelposisie
 Custom colours	Eie kleure
 Custom colours...	Eie kleure...
 Choose	Kies
-Hers	Hare eie
+Reset selected colour	Stel gekose kleur terug
+Make a mod	Maak n mod
 Quiet	Stil
 Quiet min	Stil min
 Quiet max	Stil max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Stil tot {n}:{n}
 Quiet until turned off	Stil tot afgeskakel
 Export settings	Voer instellings uit
 Import settings	Voer instellings in
+Save Mainframe position	Onthou paneelposisie

@@ -43,9 +43,81 @@ namespace CapriDesktop
         ICapriKeys Keys { get; }
         ICapriSounds Sounds { get; }
         ICapriMusic Music { get; }
+        ICapriActs Acts { get; }
+        ICapriMood Mood { get; }
+        ICapriSlots Slots { get; }
+        ICapriToggles Toggles { get; }
+    }
+
+    // Her acts: a new one the mod defines, one done, and each as it lands with what it was worth. API 6, "mood".
+    public interface ICapriActs
+    {
+        void Define(string name, string kind, int like);
+        void Did(string name);
+        event Action<string, int> Happened;
+        string[] List { get; }
+    }
+
+    // Her act maths: a term added to an act's worth (-3 to 3) or a multiplier on it (0.25 to 2), each named, gone with
+    // the mod; and how she feels now. API 6, "mood".
+    public interface ICapriMood
+    {
+        void Add(string term, string act, int value);
+        void Multiply(string term, string act, double value);
+        void Remove(string term);
+        int Warmth { get; }
+        int Upset { get; }
+        int Willing { get; }
+        string Today { get; }
+    }
+
+    // Her slots, as slots.md names them: take one over, let it go, and who holds it. A pack's conflict box asks the
+    // same way. API 6, "slots".
+    public interface ICapriSlots
+    {
+        bool Override(string slot, string text);
+        void Release(string slot);
+        string Holder(string slot);
+    }
+
+    // A switch of the mod's own in her Toggles window. API 6.
+    public interface ICapriToggles
+    {
+        void Add(string name, bool on, Action<bool> changed);
     }
 
 #if !CROSS
+    // A screensaver mod: its looks by name, one shown when she asks with what her settings say, and taken down when she
+    // says. She keeps the rules: the idle wait, never over full screen, a stream or a job of hers. API 8.
+    public interface ICapriScreensaver
+    {
+        string[] Looks { get; }
+        bool Show(CapriSaverAsk ask);
+        void Hide();
+        bool Showing { get; }
+    }
+
+    // What she asks a screensaver for: the look, and her settings for it as sys.md and her sound switch have them.
+    public sealed class CapriSaverAsk
+    {
+        public string Look;
+        // Seconds before a key may end it, so the click that asked for it doesn't; nought to stay until sent away.
+        public double Settles = 0.6, Ends;
+        // Any key ends it (her prank), not only Space or Escape.
+        public bool AnyKey;
+        // Her reduced motion setting: off, it is up at once rather than fading in.
+        public bool Motion = true;
+        public float Size = 1f, Speed = 1f, Flash = 1f;
+        // How solid it draws, 30 to 255.
+        public byte Solid = 255;
+        // Every screen, or only the one she is on.
+        public bool EveryScreen = true;
+        public Rectangle Hers;
+        // A .wav of theirs to loop while it is up, and its volume 0 to 100 with her sound switch already in it.
+        public string Sound;
+        public int Volume;
+    }
+
     public interface ICapriIntro
     {
         double Seconds { get; }
@@ -226,6 +298,9 @@ namespace CapriDesktop
         // A panel of the mod's own on her Settings page: its title and control, at slot (1 is the top) in the "left" or
         // "right" column; the first loaded keeps a shared slot. simple shows it in Simple Settings too. API 4.
         void AddPanel(string title, string column, int slot, Func<Control> make, bool simple = false);
+        // The same, inside a panel shared by every mod naming this group ("Yuno Mods"): title is its sub-heading there.
+        // The first part placed sets the group's column and slot. API 7.
+        void AddPanel(string title, string column, int slot, Func<Control> make, bool simple, string group);
 #endif
         void ClosePage();
 #if !CROSS
@@ -457,7 +532,7 @@ namespace CapriDesktop
 
     internal sealed partial class Mods
     {
-        internal const int Api = 5;
+        internal const int Api = 8;
 
         // What each permission lets a code mod do, as her approve box says it.
         internal static readonly string[,] PermissionWords =
@@ -474,7 +549,9 @@ namespace CapriDesktop
             { "tools", "add tools her brain can use by itself, and see or stop the tools she's about to use" },
             { "system", "know when you're away or back, when your PC locks, sleeps or wakes, and its battery" },
             { "hotkeys", "add keyboard shortcuts that work in any app" },
-            { "music", "see what's playing, control your music apps and their volume, and hear how loud your PC's sound is" }
+            { "music", "see what's playing, control your music apps and their volume, and hear how loud your PC's sound is" },
+            { "mood", "add acts and change how much she likes them, and read how she feels" },
+            { "slots", "take over parts of her files, the same as a drop-in pack" }
         };
 
         internal static bool KnownPermission(string name)
@@ -510,15 +587,22 @@ namespace CapriDesktop
         // The most whole addresses her question lists under the sites a mod contacts; the rest is a count.
         private const int MostPlaces = 12;
 
+        // Her brain's reading, when they asked for one, named first: it is what they read before answering.
+        internal static string ReadingNote(string explained)
+        {
+            return explained == null ? "" : "Her brain's reading of it is saved here:\n" + explained + "\n\nIt can be wrong; the code that would run is the original.\n\n";
+        }
+
         // The second question, for code that cannot be read. When it is only laid out badly, a readable copy is
         // saved and named so it can be read first. When it carries packed data, nothing can open it, and that
         // is said instead.
-        internal static string Unclear(ModFile mod)
+        internal static string Unclear(ModFile mod, string explained = null)
         {
+            string read = ReadingNote(explained);
             string name = mod.Name ?? mod.Id ?? "This mod";
             string why = mod.Unreadable ?? "it can't be read";
             if (mod.Tidy == null)
-                return name + "'s code can't be read as it is: " + why + ". It can also start programs, call Windows directly or call code by its name, which is how packed data gets run, so what Capri listed about it may not be what it really does.\n\n"
+                return read + name + "'s code can't be read as it is: " + why + ". It can also start programs, call Windows directly or call code by its name, which is how packed data gets run, so what Capri listed about it may not be what it really does.\n\n"
                     + "Mods sometimes carry a picture or a sound this way, but packed data can hide anything. If you didn't expect it from this mod, don't run it.\n\nRun it anyway?";
             string copy = null;
             try
@@ -527,7 +611,7 @@ namespace CapriDesktop
                 System.IO.File.WriteAllText(copy, mod.Tidy);
             }
             catch (Exception caughtOne) { Brain.Caught(caughtOne); copy = null; }
-            return name + "'s code can't be read as it is: " + why + ". What Capri listed about it, and what you'd see opening the file, may not be what it really does.\n\n"
+            return read + name + "'s code can't be read as it is: " + why + ". What Capri listed about it, and what you'd see opening the file, may not be what it really does.\n\n"
                 + (copy == null ? "" : "She laid it back out so it can be read, and saved that copy here:\n" + copy + "\n\nRead that before saying yes. ")
                 + "Generated code can look like this too, so it isn't proof of anything. If you didn't expect it from this mod, don't run it.\n\nRun it anyway?";
         }

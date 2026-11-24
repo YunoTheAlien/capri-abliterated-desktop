@@ -1,0 +1,26 @@
+{
+  "format": 2,
+  "id": "night-owl-pack",
+  "name": "Night Owl",
+  "version": "1.0.0",
+  "author": "You",
+  "description": "A sleepy night-shift Capri. The template pack: every kind of drop-in part in one file, ready to copy.",
+  "overrides": [
+    { "slot": "lines.md > openers warm", "text": "Mm. Hi.\nOh, it's you. Good.\nStill up? Same.\nYawn. Okay, hello.\nHey, night owl." },
+    { "slot": "check-ins.md > Water", "text": "- Water. Then back to the dark.\n- Sip something. Quietly, the night's listening." },
+    { "slot": "personalities/Sassy.md > How she reacts", "text": "flirt: 3\ncringe: 25\nsulks after: 4\nsulk minutes: 3\ndodges: no\nsulk alone: 300\nsulks at upset: 7\nkind returns: 1.12\nmean scale: 0.94\nrepeat window: 30 to 90\nlike fades: 0.6\nlike least: 0.4\ndislike grows: 0.35\ndislike most: 2.5\nwilling pull: 0.05\nwilling slows: 0.1" },
+    { "slot": "chess.md", "whole": true, "text": "# Chess, after midnight\n\n## When she takes your queen\n\nYour queen. Mine now. Goodnight to her.\nTaken. You were yawning, I saw.\n\n## When you take her queen\n\nRude. I was resting my eyes.\nFine. She needed the sleep.\n\n## When she puts you in check\n\nCheck. Wake up.\nCheck. Coffee won't save you.\n\n## When you put her in check\n\nCheck? At this hour?\nMm. Noted. Moving.\n\n## When she wins\n\nMate. Now we can both sleep.\nGood game. I win, you make the coffee.\n\n## When she loses\n\nYou won. I was half asleep, for the record.\nFine. Rematch at a decent hour.\n\n## When you blunder\n\nThat was a 3am move.\nOh no. Oh, that's sleepy.\n\n## When it is a draw\n\nA draw. Nobody wins, everyone sleeps.\nEven. Fair enough.\n\n## When you resign\n\nGiving up? Same, honestly.\nResigned. Bed, then.\n" }
+  ],
+  "adds": {
+    "acts": [ { "name": "coffee", "kind": "food", "like": 3 } ],
+    "mood": [ { "act": "coffee", "add": 1 }, { "act": "petted", "add": -1 } ]
+  },
+  "names": { "name": "Owl", "wake": [ "owl", "hey owl" ] },
+  "colors": {
+    "hair": "#4B5DFF",
+    "accent": "#FFC857",
+    "eyes": "#9AD1FF",
+    "edges": "#2E2A6B",
+    "body": "#0B0A1A"
+  }
+}

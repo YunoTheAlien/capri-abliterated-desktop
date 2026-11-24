@@ -204,11 +204,11 @@ Running on this PC	Kan PC-kan ku shaqeynaya
 NORMAL	CAADI
 OFF	DEMAN
 Local server address	Cinwaanka server-ka maxalliga ah
-Remember panel position	Xasuuso meesha guddiga
 Custom colours	Midabo gaar ah
 Custom colours...	Midabo gaar ah...
 Choose	Dooro
-Hers	Keeda
+Reset selected colour	Dib u deji midabka la doortay
+Make a mod	Samee mod
 Quiet	Aamusnaan
 Quiet min	Aamusnaan min
 Quiet max	Aamusnaan max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Aamusnaan ilaa {n}:{n}
 Quiet until turned off	Aamusnaan ilaa la damiyo
 Export settings	Dhoofi dejinta
 Import settings	Soo deji dejinta
+Save Mainframe position	Xasuuso meesha guddiga

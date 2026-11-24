@@ -204,11 +204,11 @@ Running on this PC	Radi na ovom PC-ju
 NORMAL	NORMALNO
 OFF	ISKLJ.
 Local server address	Adresa lokalnog servera
-Remember panel position	Zapamti položaj panela
 Custom colours	Prilagođene boje
 Custom colours...	Prilagođene boje...
 Choose	Izaberi
-Hers	Njene
+Reset selected colour	Vrati odabranu boju
+Make a mod	Napravi mod
 Quiet	Tiho
 Quiet min	Tiho min
 Quiet max	Tiho max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Tiho do {n}:{n}
 Quiet until turned off	Tiho dok se ne isključi
 Export settings	Izvezi podešavanja
 Import settings	Uvezi podešavanja
+Save Mainframe position	Zapamti položaj panela

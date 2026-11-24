@@ -9,8 +9,9 @@ namespace CapriDesktop
     internal sealed class BoltLook
     {
         internal bool On = true;
-        internal Color Red = Color.FromArgb(255, 0, 70);
-        internal Color Black = Color.FromArgb(8, 6, 12);
+        // From the Cursor bolts fold under ADD-ONS in Custom colours.
+        internal Color Red { get { return AddonColours.Hers(AddonColours.Bolts, "Red"); } }
+        internal Color Black { get { return AddonColours.Hers(AddonColours.Bolts, "Black"); } }
         internal int Count = 4;             // arcs around her while she's moving; idle she keeps about half
         internal float Thickness = 4.2f;    // a ribbon's widest point
         internal float Radius = 26;         // how far from her cursor's middle an arc floats

@@ -105,6 +105,18 @@ namespace CapriDesktop
             catch (UnauthorizedAccessException) { }
         }
 
+        // Whether .shipped holds this text for the name, for a record kept beside a file rather than of it.
+        internal static bool Stamped(string path, string text)
+        {
+            try
+            {
+                string was;
+                return !string.IsNullOrEmpty(path) && ShippedList(path).TryGetValue(Path.GetFileName(path), out was) && string.Equals(was, Hash(text), StringComparison.OrdinalIgnoreCase);
+            }
+            catch (IOException) { return false; }
+            catch (UnauthorizedAccessException) { return false; }
+        }
+
         // Whether there is a record at all of what was last written into the file.
         internal static bool Recorded(string path)
         {
@@ -382,7 +394,10 @@ namespace CapriDesktop
                 foreach (string raw in had)
                     if (Regex.IsMatch((raw ?? "").Trim(), @"^" + Regex.Escape(ResetKey) + @"[ \t]*:", RegexOptions.IgnoreCase))
                     { authority = Marked(fresh); break; }
-                Dictionary<string, List<string>> mine = Noted(InTheirLanguage(authority.Replace("\r\n", "\n").Split('\n')));
+                // A file with copies keeps its notes in English, and its copy has them in their language (LangCopies); any
+                // other file has them in their language in place.
+                string[] shipped = authority.Replace("\r\n", "\n").Split('\n');
+                Dictionary<string, List<string>> mine = Noted(LangCopies.Knows(path) ? shipped : InTheirLanguage(shipped));
                 HashSet<string> moved = MarkedSections(had);
 
                 StringBuilder made = new StringBuilder();
@@ -412,10 +427,11 @@ namespace CapriDesktop
                     }
                     made.AppendLine(raw);
                 }
-                if (!changed) return;
                 string done = made.ToString();
-                if (done == string.Join(Environment.NewLine, had) + Environment.NewLine) return;
-                Overwrite(path, done);
+                if (changed && done != string.Join(Environment.NewLine, had) + Environment.NewLine) Overwrite(path, done);
+                // Its copy in their language follows.
+                string code = LangCopies.Knows(path) ? LangCopies.Code() : null;
+                if (code != null) LangCopies.Lay(path, code);
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
@@ -530,12 +546,14 @@ namespace CapriDesktop
             {
                 "# Twitch", "", "## What you can say to her", "", ">! Spoken or typed, read without her brain.", ">!", ">!   turn off twitch live notifications", ">!   stop telling me who's live", "",
                 "## Reading chat", "", ">! Chat reading is in Twitch > Read chat. Settings are here.", "", "channel: ", "emotes: Kappa, PogChamp", "",
+                "## Lines", "", ">! Tokens: %petname% %name%", "",
                 "## Banned words", "", "badword", "",
             });
             try
             {
                 File.WriteAllText(path, stock, new UTF8Encoding(false));
-                Translate = delegate(string line) { return "[pl] " + line; };
+                List<string> asked = new List<string>();
+                Translate = delegate(string line) { lock (asked) asked.Add(line); return "[pl] " + line; };
                 MenuName = delegate(string name) { return "<" + name + ">"; };
                 Refresh(path, stock);
                 string[] made = File.ReadAllText(path).Split(new[] { "\r\n" }, StringSplitOptions.None);
@@ -548,6 +566,9 @@ namespace CapriDesktop
                 }
                 if (made[4] != ">! [pl] Spoken or typed, read without her brain." || made[11] != ">! [pl] Chat reading is in <Twitch> > <Read chat>. Settings are here.")
                     throw new Exception("Note words or a menu path came out wrong: " + made[4] + " / " + made[11]);
+                if (made[18] != ">! [pl] Tokens: %petname% %name%" || !asked.Contains("Tokens") || asked.Exists(delegate(string one) { return one.Contains("%petname%"); }))
+                    throw new Exception("A label over tokens was not put in their language on its own: " + made[18]);
+                checks.Add("PASS a label over tokens (\"Tokens: %petname% %name%\") goes to her brain alone and comes back in their language, the tokens as written");
                 checks.Add("PASS in another language only \">!\" note words change: headings, settings, lists, the \">!\" spacer and indented command examples stay byte for byte, and a menu path is her menu as it shows");
             }
             finally
@@ -716,7 +737,7 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return false; }
         }
 
-        private static string Plain(string text) { return (text ?? "").TrimStart((char)0xFEFF).Replace("\r\n", "\n").TrimEnd(); }
+        internal static string Plain(string text) { return (text ?? "").TrimStart((char)0xFEFF).Replace("\r\n", "\n").TrimEnd(); }
 
         // personality.md, or any flagged file: a file still as shipped is written whole in their language with every heading,
         // setting and flag kept, goes back to English with no language, and is never touched once they change it.
@@ -754,7 +775,7 @@ namespace CapriDesktop
             }
         }
 
-        private static string[] InTheirLanguage(string[] lines)
+        internal static string[] InTheirLanguage(string[] lines)
         {
             Func<string, string> translate = Translate;
             if (translate == null) return lines;
@@ -770,6 +791,15 @@ namespace CapriDesktop
                 Match named = Regex.Match(text, @"^(\s*[a-z][a-z ]{0,30}:\s+)(.+)$");
                 string lead = named.Success ? named.Groups[1].Value : "", rest = named.Success ? named.Groups[2].Value : text;
                 if (rest.Trim().Length == 0) continue;
+                // A label over a list of tokens ("Tokens: %petname% %name%") reads to her brain as a list to keep as it is, so
+                // only the label goes, and the tokens stay as written.
+                Match listed = Regex.Match(rest.Trim(), @"^([^%:]{1,40}):\s+((?:%[A-Za-z]+%[\s,]*)+)$");
+                if (listed.Success)
+                {
+                    string label = listed.Groups[1].Value.Trim(), named2 = InLanguage(label);
+                    if (!string.IsNullOrEmpty(named2) && named2 != label) made[at] = NoteMark + " " + lead + named2.Trim() + ": " + listed.Groups[2].Value.Trim();
+                    continue;
+                }
                 string said = InLanguage(rest.Trim());
                 if (!string.IsNullOrEmpty(said) && said != rest.Trim()) made[at] = NoteMark + " " + lead + said;
             }
@@ -833,7 +863,7 @@ namespace CapriDesktop
         }
 
         // The nearest line above that is not blank, or -1.
-        private static int Above(IList<string> rows, int at)
+        internal static int Above(IList<string> rows, int at)
         {
             int above = at - 1;
             while (above >= 0 && (rows[above] ?? "").Trim().Length == 0) above--;
@@ -841,7 +871,7 @@ namespace CapriDesktop
         }
 
         // A line fits its setting while it still holds the setting's name and value as they read now.
-        private static bool Fits(string line, string setting)
+        internal static bool Fits(string line, string setting)
         {
             return Squashed(line).IndexOf(Squashed(setting), StringComparison.OrdinalIgnoreCase) >= 0;
         }

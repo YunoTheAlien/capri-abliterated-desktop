@@ -543,14 +543,28 @@ namespace CapriDesktop
                 if (problem != null) { outcome = "refused"; reason = "arguments"; return problem; }
                 string floor = PluginFloor.Refuses(args);
                 if (floor != null) { outcome = "refused"; reason = floor; return "Couldn't use " + tool.Title + ": " + floor + ", so Capri stopped it."; }
-                McpLink server = Server(plugin, tool.Server);
-                PluginFloor.Heard("plugin:" + plugin.Id);
-                object answer = server.Call(tool.Tool, args, CallWait);
-                if (server.Stale) Relist(plugin);
-                bool? failed = PluginJson.Flag(answer, "isError");
-                bool bad = failed.HasValue && failed.Value;
-                if (bad) outcome = "failed";
-                return (bad ? "Couldn't finish " + tool.Title + ". " : "") + Fenced(plugin, tool, Said(answer));
+                SameCall mine = null;
+                string repeat = tool.ReadOnly ? null : Claim(plugin.Id, tool.Tool + " " + PluginJson.Write(Sorted(args)), Security.Resuming, out mine);
+                if (repeat != null)
+                {
+                    if (repeat != StillRunning) PluginFloor.Heard("plugin:" + plugin.Id);
+                    outcome = "repeated";
+                    return repeat;
+                }
+                try
+                {
+                    McpLink server = Server(plugin, tool.Server);
+                    PluginFloor.Heard("plugin:" + plugin.Id);
+                    object answer = server.Call(tool.Tool, args, CallWait);
+                    if (server.Stale) Relist(plugin);
+                    bool? failed = PluginJson.Flag(answer, "isError");
+                    bool bad = failed.HasValue && failed.Value;
+                    if (bad) outcome = "failed";
+                    string result = (bad ? "Couldn't finish " + tool.Title + ". " : "") + Fenced(plugin, tool, Said(answer));
+                    if (mine != null && !bad) Settle(mine, result);
+                    return result;
+                }
+                finally { if (mine != null) Settle(mine, null); }
             }
             catch (McpSignInNeeded)
             {
@@ -563,6 +577,74 @@ namespace CapriDesktop
             catch (McpException error) { outcome = "failed"; reason = error.Message; return "Couldn't use " + tool.Title + ": " + Clean(error.Message, 400); }
             catch (IOException error) { outcome = "failed"; reason = error.Message; return "Couldn't use " + tool.Title + ": " + Clean(error.Message, 400); }
             finally { Record(plugin.Id, tool.Tool, outcome, reason, watch.Elapsed.TotalSeconds); }
+        }
+
+        private sealed class SameCall
+        {
+            internal string Plugin, Key, Result;
+            internal bool Ended;
+            internal DateTime At = DateTime.UtcNow;
+        }
+
+        // A changing tool called again with the same arguments within a minute of working gets what the first call did, since
+        // voice chat, her agent or a brain can repeat one ask; one still running is waited for, and another change in between
+        // runs it again (Lachu).
+        private static readonly TimeSpan RepeatWindow = TimeSpan.FromSeconds(60);
+        internal const string Repeated = "Already done a moment ago, so it didn't run again. This is what it did: ";
+        private const string StillRunning = "The same call is still running, so it didn't start again. Don't call it again; it finishes on its own.";
+        private static readonly List<SameCall> sameCalls = new List<SameCall>();
+
+        private static string Claim(string plugin, string key, bool approved, out SameCall mine)
+        {
+            mine = null;
+            DateTime giveUp = DateTime.UtcNow.AddSeconds(30);
+            lock (sameCalls)
+            {
+                while (true)
+                {
+                    DateTime now = DateTime.UtcNow;
+                    sameCalls.RemoveAll(one => one.Ended && now - one.At > RepeatWindow);
+                    SameCall last = sameCalls.FindLast(one => one.Plugin == plugin);
+                    if (approved || last == null || last.Key != key)
+                    {
+                        sameCalls.RemoveAll(one => one.Plugin == plugin && one.Ended);
+                        foreach (SameCall going in sameCalls) if (going.Plugin == plugin) going.Key = null;
+                        mine = new SameCall { Plugin = plugin, Key = key };
+                        sameCalls.Add(mine);
+                        return null;
+                    }
+                    if (last.Ended) return Repeated + last.Result;
+                    if (now >= giveUp) return StillRunning;
+                    Monitor.Wait(sameCalls, giveUp - now);
+                }
+            }
+        }
+
+        // Only a call that worked is kept: a failed one leaves the next one free to try again.
+        private static void Settle(SameCall call, string result)
+        {
+            lock (sameCalls)
+            {
+                if (call.Ended) return;
+                call.Ended = true;
+                call.Result = result;
+                call.At = DateTime.UtcNow;
+                if (result == null) sameCalls.Remove(call);
+                Monitor.PulseAll(sameCalls);
+            }
+        }
+
+        private static object Sorted(object value)
+        {
+            Dictionary<string, object> map = value as Dictionary<string, object>;
+            if (map != null)
+            {
+                SortedDictionary<string, object> sorted = new SortedDictionary<string, object>(StringComparer.Ordinal);
+                foreach (KeyValuePair<string, object> pair in map) sorted[pair.Key] = Sorted(pair.Value);
+                return sorted;
+            }
+            List<object> list = value as List<object>;
+            return list == null ? value : list.ConvertAll<object>(Sorted);
         }
 
         internal static bool SignedIn(string id)
@@ -770,6 +852,13 @@ class Fake {
                 if (!carried.Contains(PluginFloor.CarriesKey)) throw new Exception("A plug-in call carrying her saved key wasn't stopped: " + carried);
                 string missing = Run("fake_notes__write_note", "{}");
                 if (!missing.Contains("needs text")) throw new Exception("A plug-in call missing what it needs went through: " + missing);
+                // The same change twice within a minute runs once and the second gets what the first did; another change in
+                // between, or their yes to it again, runs it (Lachu).
+                string once = Run("fake_notes__write_note", "repeat-check"), twice = Run("fake_notes__write_note", "repeat-check");
+                if (!twice.StartsWith(Repeated, StringComparison.Ordinal) || !twice.EndsWith(once, StringComparison.Ordinal)) throw new Exception("The same plug-in change ran twice in a minute: " + twice);
+                Run("fake_notes__write_note", "repeat-other");
+                string after = Run("fake_notes__write_note", "repeat-check");
+                if (after.StartsWith(Repeated, StringComparison.Ordinal)) throw new Exception("A plug-in change after a different one didn't run again.");
                 checks.Add("PASS plug-in tools: a plug-in's stdio server starts in its folder without her keys but the one it names, lists its tools (kept by its hash), and each answer reaches her brain fenced as data from that plug-in with its tags defused; a call carrying her saved key or missing what it needs never reaches it");
 
                 // SECURITY: on Trusted a read-only tool runs, one that writes asks; on Guarded every one asks; Lockdown offers none.

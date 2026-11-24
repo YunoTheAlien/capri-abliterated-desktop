@@ -204,11 +204,11 @@ Running on this PC	આ PC પર ચાલે છે
 NORMAL	સામાન્ય
 OFF	બંધ
 Local server address	લોકલ સર્વરનું સરનામું
-Remember panel position	પેનલની જગ્યા યાદ રાખો
 Custom colours	પોતાના રંગો
 Custom colours...	પોતાના રંગો...
 Choose	પસંદ કરો
-Hers	એના પોતાના
+Reset selected colour	પસંદ કરેલો રંગ રીસેટ કરો
+Make a mod	મોડ બનાવો
 Quiet	શાંત
 Quiet min	શાંત min
 Quiet max	શાંત max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	{n}:{n} સુધી શાંત
 Quiet until turned off	બંધ થાય ત્યાં સુધી શાંત
 Export settings	સેટિંગ્સ નિકાસ કરો
 Import settings	સેટિંગ્સ આયાત કરો
+Save Mainframe position	પેનલની જગ્યા યાદ રાખો

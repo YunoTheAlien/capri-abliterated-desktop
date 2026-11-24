@@ -102,6 +102,49 @@ namespace CapriDesktop
             return found;
         }
 
+        // Every program she has seen in front, most used first, with how much; sites in a browser aren't programs.
+        internal static List<KeyValuePair<string, double>> Programs()
+        {
+            List<KeyValuePair<string, double>> all = new List<KeyValuePair<string, double>>();
+            lock (gate)
+            {
+                Load();
+                foreach (KeyValuePair<string, double> one in counts) if (!one.Key.StartsWith(WebMark, StringComparison.OrdinalIgnoreCase)) all.Add(one);
+            }
+            all.Sort(delegate(KeyValuePair<string, double> x, KeyValuePair<string, double> y) { return y.Value.CompareTo(x.Value); });
+            return all;
+        }
+
+        // The kind a program is, by the same names her asks use, or null.
+        internal static string KindOfProgram(string program)
+        {
+            foreach (KeyValuePair<string, string[]> kind in Kinds)
+                foreach (string name in kind.Value)
+                    if ((program ?? "").IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0) return kind.Key;
+            return null;
+        }
+
+        // A program seen in front as a game, by her own game check, kept beside her other picks.
+        private const string GameMark = "game:";
+
+        internal static void Play(string program)
+        {
+            string plain = Plain(program);
+            if (plain.Length == 0) return;
+            lock (gate)
+            {
+                Load();
+                if (picks.ContainsKey(GameMark + plain)) return;
+                picks[GameMark + plain] = "yes";
+                Write();
+            }
+        }
+
+        internal static bool Played(string program)
+        {
+            lock (gate) { Load(); return picks.ContainsKey(GameMark + Plain(program)); }
+        }
+
         // Their own word, which beats any amount of counting.
         internal static void Pick(string kind, string program)
         {

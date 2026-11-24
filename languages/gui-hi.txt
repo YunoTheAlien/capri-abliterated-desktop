@@ -375,11 +375,11 @@ NORMAL	सामान्य
 OFF	बंद
 Local server address	स्थानीय सर्वर पता
 None	कोई नहीं
-Remember panel position	पैनल की जगह याद रखें
 Custom colours	अपने रंग
 Custom colours...	अपने रंग...
 Choose	चुनें
-Hers	उसके अपने
+Reset selected colour	चुना हुआ रंग रीसेट करें
+Make a mod	मॉड बनाएं
 Quiet	शांत
 Quiet min	शांत min
 Quiet max	शांत max
@@ -391,3 +391,4 @@ Quiet until turned off	बंद करने तक शांत
 Export settings	सेटिंग्स निर्यात करें
 Import settings	सेटिंग्स आयात करें
 GENERAL SETTINGS	सामान्य सेटिंग्स
+Save Mainframe position	पैनल की जगह याद रखें

@@ -204,11 +204,11 @@ Running on this PC	Keyrir á þessari tölvu
 NORMAL	VENJULEGT
 OFF	SLÖKKT
 Local server address	Vistfang staðbundins þjóns
-Remember panel position	Muna staðsetningu spjaldsins
 Custom colours	Sérsniðnir litir
 Custom colours...	Sérsniðnir litir...
 Choose	Velja
-Hers	Hennar
+Reset selected colour	Endurstilla valinn lit
+Make a mod	Búa til mod
 Quiet	Þögn
 Quiet min	Þögn min
 Quiet max	Þögn max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Þögn til {n}:{n}
 Quiet until turned off	Þögn þar til slökkt er
 Export settings	Flytja út stillingar
 Import settings	Flytja inn stillingar
+Save Mainframe position	Muna staðsetningu spjaldsins

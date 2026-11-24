@@ -204,11 +204,11 @@ Running on this PC	Běží na tomto PC
 NORMAL	NORMÁLNÍ
 OFF	VYPNUTO
 Local server address	Adresa místního serveru
-Remember panel position	Pamatovat pozici panelu
 Custom colours	Vlastní barvy
 Custom colours...	Vlastní barvy...
 Choose	Vybrat
-Hers	Její
+Reset selected colour	Obnovit vybranou barvu
+Make a mod	Vytvořit mod
 Quiet	Tiše
 Quiet min	Tiše min
 Quiet max	Tiše max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Tiše do {n}:{n}
 Quiet until turned off	Tiše do vypnutí
 Export settings	Exportovat nastavení
 Import settings	Importovat nastavení
+Save Mainframe position	Pamatovat pozici panelu

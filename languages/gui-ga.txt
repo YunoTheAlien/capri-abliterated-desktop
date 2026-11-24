@@ -204,11 +204,11 @@ Running on this PC	Ag rith ar an PC seo
 NORMAL	GNÁTHACH
 OFF	AS
 Local server address	Seoladh freastalaí áitiúil
-Remember panel position	Cuimhnigh ar shuíomh an phainéil
 Custom colours	Dathanna saincheaptha
 Custom colours...	Dathanna saincheaptha...
 Choose	Roghnaigh
-Hers	A cuid féin
+Reset selected colour	Athshocraigh an dath roghnaithe
+Make a mod	Déan mod
 Quiet	Ciúin
 Quiet min	Ciúin min
 Quiet max	Ciúin max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Ciúin go dtí {n}:{n}
 Quiet until turned off	Ciúin go múchtar é
 Export settings	Easpórtáil socruithe
 Import settings	Iompórtáil socruithe
+Save Mainframe position	Cuimhnigh ar shuíomh an phainéil

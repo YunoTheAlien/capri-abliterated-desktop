@@ -363,8 +363,8 @@ namespace CapriDesktop
         private readonly int size, canvas;
         private readonly Dictionary<long, Bitmap> cells = new Dictionary<long, Bitmap>();
         private readonly SolidBrush[] printInk = new SolidBrush[Fades * 2];
-        private readonly SolidBrush barInk = new SolidBrush(Color.FromArgb(255, 255, 45, 120));
-        private readonly SolidBrush barBack = new SolidBrush(Color.FromArgb(238, 16, 14, 24));
+        private readonly SolidBrush barInk = new SolidBrush(Neon.Tone(255, 45, 120));
+        private readonly SolidBrush barBack = new SolidBrush(Color.FromArgb(238, Neon.Tone(16, 14, 24)));
         private readonly Font font = new Font("Consolas", 15f, FontStyle.Bold, GraphicsUnit.Pixel);
         private Native.Surface surface;
         private double last, hintUntil = -1;
@@ -420,8 +420,8 @@ namespace CapriDesktop
             for (int i = 0; i < Fades; i++)
             {
                 int alpha = 200 - i * 200 / Fades;
-                printInk[i] = new SolidBrush(Color.FromArgb(alpha, 255, 45, 120));
-                printInk[Fades + i] = new SolidBrush(Color.FromArgb(alpha, 60, 235, 235));
+                printInk[i] = new SolidBrush(Color.FromArgb(alpha, Neon.Tone(255, 45, 120)));
+                printInk[Fades + i] = new SolidBrush(Color.FromArgb(alpha, Neon.Tone(60, 235, 235)));
             }
             ticks.Interval = 66;
             ticks.Tick += delegate
@@ -790,9 +790,9 @@ namespace CapriDesktop
             int broad = (int)Math.Ceiling(measured.Width) + 22, high = (int)Math.Ceiling(measured.Height) + 16;
             Bitmap card = new Bitmap(broad, high, PixelFormat.Format32bppPArgb);
             using (Graphics graphics = Graphics.FromImage(card))
-            using (SolidBrush back = new SolidBrush(Color.FromArgb(238, 16, 14, 24)))
-            using (Pen edge = new Pen(Color.FromArgb(255, 255, 45, 120), 2))
-            using (SolidBrush ink = new SolidBrush(Color.FromArgb(255, 244, 244, 248)))
+            using (SolidBrush back = new SolidBrush(Color.FromArgb(238, Neon.Tone(16, 14, 24))))
+            using (Pen edge = new Pen(Neon.Tone(255, 45, 120), 2))
+            using (SolidBrush ink = new SolidBrush(Neon.Tone(244, 244, 248)))
             {
                 graphics.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
                 graphics.FillRectangle(back, 0, 0, broad, high);

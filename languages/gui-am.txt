@@ -204,11 +204,11 @@ Running on this PC	በዚህ ፒሲ ላይ እየሰራ
 NORMAL	መደበኛ
 OFF	ጠፍቷል
 Local server address	የሎካል ሰርቨር አድራሻ
-Remember panel position	የፓነሉን ቦታ አስታውስ
 Custom colours	ብጁ ቀለሞች
 Custom colours...	ብጁ ቀለሞች...
 Choose	ምረጥ
-Hers	የራሷ
+Reset selected colour	የተመረጠውን ቀለም ዳግም አስጀምር
+Make a mod	ሞድ ስራ
 Quiet	ጸጥታ
 Quiet min	ጸጥታ min
 Quiet max	ጸጥታ max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	ጸጥታ እስከ {n}:{n}
 Quiet until turned off	እስኪጠፋ ድረስ ጸጥታ
 Export settings	ቅንብሮችን ላክ
 Import settings	ቅንብሮችን አስገባ
+Save Mainframe position	የፓነሉን ቦታ አስታውስ

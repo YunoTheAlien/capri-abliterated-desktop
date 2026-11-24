@@ -12,26 +12,30 @@ namespace CapriDesktop
 {
     internal sealed partial class Mainframe
     {
-        private const int MostModRows = 12, ModRowTop = 242, ModRowHeight = 62, ModsBelow = 130;
+        private const int MostModRows = 12, ModRowTop = 276, ModRowHeight = 62, ModsBelow = 130, PagingTall = 42, ColoursGap = 10;
         private readonly List<KeyValuePair<Control, int>> modLeft = new List<KeyValuePair<Control, int>>();
         private readonly Label[] modNames = new Label[MostModRows], modAbouts = new Label[MostModRows];
         private readonly Key[] modSwitches = new Key[MostModRows], modCogs = new Key[MostModRows], modRemoves = new Key[MostModRows], modPublishes = new Key[MostModRows], modOptions = new Key[MostModRows];
         // What sits under the rows (paging, COLORS and its keys), by how far below a list of four rows it was built.
-        private readonly List<KeyValuePair<Control, int>> modBelow = new List<KeyValuePair<Control, int>>();
+        private readonly List<KeyValuePair<Control, int>> modBelow = new List<KeyValuePair<Control, int>>(), modPaging = new List<KeyValuePair<Control, int>>();
         private Key modColourReset;
 
         // As many rows as the page's height holds under INSTALLED, with paging and COLORS straight under the last one, so
         // the extra space is used; never fewer than four.
         private int ModRows { get { return Math.Max(4, Math.Min(MostModRows, (MainTall(expanded) - ModsBelow - ModRowTop) / ModRowHeight)); } }
 
-        // Paging, COLORS and its keys under the last row shown, at the scale she is drawn.
+        // Paging under the rows, and COLORS under that clear of its keys, at the scale she is drawn. With fewer mods than a
+        // page holds, COLORS comes up under the last one, with no empty rows between.
         private void PlaceModRows()
         {
-            int under = ModRowTop + ModRowHeight * ModRows;
-            foreach (KeyValuePair<Control, int> entry in modBelow) entry.Key.Top = Scaled(under + entry.Value);
+            int total = modShown == null ? 0 : modShown.Count;
+            bool pages = total > ModRows;
+            int under = ModRowTop + ModRowHeight * (pages ? ModRows : Math.Max(1, total));
+            foreach (KeyValuePair<Control, int> entry in modPaging) entry.Key.Top = Scaled(under + entry.Value);
+            foreach (KeyValuePair<Control, int> entry in modBelow) entry.Key.Top = Scaled(under + (pages ? PagingTall : ColoursGap) + entry.Value);
         }
-        private Key modsKey, modBack, modNext, modBrowse;
-        private Head modListHead;
+        private Key modsKey, modBack, modNext, modBrowse, modMake, modImport, modFolder;
+        private Head modListHead, modColoursHead;
         private Toggle untestedSwitch;
 
         // Her own OFF/ON switch and key for a mod's panel (Ui.Switch, Ui.Button), in her colours and font, the column's width.
@@ -61,7 +65,6 @@ namespace CapriDesktop
             };
             return key;
         }
-        private readonly Key[] colourKeys = new Key[ArtColors.Slots];
         private Label modStatus, modEmpty, modNoMatch, modPage;
         private readonly Timer modStatusTimer = new Timer();
         private Entry modSearch;
@@ -85,22 +88,27 @@ namespace CapriDesktop
             Explain(import, "Import mod", "MainframeMods.cs");
             Explain(modBrowse, "Browse mods", "MainframeMods.cs");
             Explain(folder, "Open mods folder", "MainframeMods.cs");
-            untestedSwitch = Switch("Load untested mods", 0, 111, delegate { if (!syncing) UntestedChanged(); });
+            modImport = import;
+            modFolder = folder;
+            modMake = Make("Make a mod", 28, 114, 328, 28, delegate { MakeMod(); });
+            modMake.AccessibleName = "Make a mod: open the mod helper";
+            Explain(modMake, "Make a mod", "MainframeMods.cs");
+            untestedSwitch = Switch("Load untested mods", 0, 145, delegate { if (!syncing) UntestedChanged(); });
             Explain(untestedSwitch, "Load untested mods", "MainframeMods.cs");
-            modStatus = ModLabel("", 28, 142, 328, 36, Font, Faint);
+            modStatus = ModLabel("", 28, 176, 328, 36, Font, Faint);
             modStatusTimer.Tick += delegate { modStatusTimer.Stop(); modStatus.Text = ""; };
             FormClosed += delegate { modStatusTimer.Stop(); modStatusTimer.Dispose(); };
             // A long import error, like a compiler's, is cut to two lines here, and hovering it shows the whole thing.
             ((Note)modStatus).Hovers = true;
             // Mod names can hold an &, like Dice & Decider, so it isn't read as a shortcut key.
             modStatus.UseMnemonic = false;
-            modListHead = Section("INSTALLED >", 0, 184);
-            modSearch = Input(28, 208, 222, 26);
+            modListHead = Section("INSTALLED >", 0, 218);
+            modSearch = Input(28, 242, 222, 26);
             modSearch.Cue = "Search by name or author";
             modSearch.Box.AccessibleName = "Search your installed mods";
             Explain(modSearch, "Search installed mods", "MainframeMods.cs", null, "Search installed mods");
             modSearch.Box.TextChanged += delegate { modFirst = 0; FillMods(); };
-            modUpdate = Make("Update mods", 256, 208, 100, 26, delegate { UpdateMods(); });
+            modUpdate = Make("Update mods", 256, 242, 100, 26, delegate { UpdateMods(); });
             modUpdate.AccessibleName = "Update your installed mods from the mods directory";
             modUpdateUsual = modUpdate.Accent;
             Explain(modUpdate, "Update mods", "MainframeMods.cs", null, "Update mods");
@@ -125,27 +133,25 @@ namespace CapriDesktop
                 modOptions[i] = Make("Options", 214, top + 28, 70, 22, delegate { OpenModOptions(row); });
                 Explain(modOptions[i], "Mod options", "MainframeMods.cs");
             }
-            int belowFrom = Controls.Count, rowsEnd = ModRowTop + ModRowHeight * 4;
+            int pagingFrom = Controls.Count, rowsEnd = ModRowTop + ModRowHeight * 4;
             modBack = Make("Back", 28, rowsEnd, 60, 22, delegate { modFirst -= ModRows; FillMods(); });
             modPage = ModLabel("", 96, rowsEnd + 3, 192, 18, Font, Faint);
             modPage.TextAlign = ContentAlignment.MiddleCenter;
             Explain(modBack, "Mod pages", "MainframeMods.cs");
             modNext = Make("Next", 296, rowsEnd, 60, 22, delegate { modFirst += ModRows; FillMods(); });
             Explain(modNext, "Mod pages", "MainframeMods.cs");
-            int coloursTop = rowsEnd + 30;
-            Section("COLORS >", 0, coloursTop);
+            for (int i = pagingFrom; i < Controls.Count; i++) modPaging.Add(new KeyValuePair<Control, int>(Controls[i], Controls[i].Top - rowsEnd));
+            // Her art's colours are the CAPRI fold in Custom colours, so one key here opens it.
+            int belowFrom = Controls.Count, coloursTop = rowsEnd + PagingTall;
+            modColoursHead = Section("COLORS >", 0, coloursTop);
             int colourRow = coloursTop + 24;
-            for (int i = 0; i < ArtColors.Slots; i++)
-            {
-                int slot = i;
-                colourKeys[i] = Make(ArtColors.Names[i], 28 + i * 66, colourRow, 62, 26, delegate { PickColour(slot); });
-                colourKeys[i].AccessibleName = "Change her " + ArtColors.Names[i].ToLowerInvariant() + " color";
-                Explain(colourKeys[i], "Her colors", "MainframeMods.cs", null, "Her colors");
-            }
+            Key colours = Make("Custom colours", 28, colourRow, 328, 26, delegate { OpenColours(); });
+            colours.AccessibleName = "Open Custom colours, her own colours at the top";
+            Explain(colours, "Her colors", "MainframeMods.cs", null, "Her colors");
             Key colourReset = Make("Reset colors", 28, colourRow + 32, 160, 24, delegate { ResetColours(); });
             Explain(colourReset, "Reset colors", "MainframeMods.cs");
             modColourReset = colourReset;
-            for (int i = belowFrom; i < Controls.Count; i++) modBelow.Add(new KeyValuePair<Control, int>(Controls[i], Controls[i].Top - rowsEnd));
+            for (int i = belowFrom; i < Controls.Count; i++) modBelow.Add(new KeyValuePair<Control, int>(Controls[i], Controls[i].Top - coloursTop));
             for (int i = first; i < Controls.Count; i++)
             {
                 Control control = Controls[i];
@@ -249,10 +255,8 @@ namespace CapriDesktop
                     Application.DoEvents();
                     string crowded = TextFits() ?? Overlap();
                     if (crowded != null) throw new Exception("Mods > MODS is crowded at " + percent + "%: " + crowded);
-                    // The page uses its height: under Reset colors, less than a row is left, unless it already shows every row.
-                    int left = ClientSize.Height - modColourReset.Bottom;
-                    if (left < 0 || (ModRows < MostModRows && left > Scaled(ModRowHeight + 24)))
-                        throw new Exception("Mods doesn't use its height at " + percent + "%: " + ModRows + " rows, " + left + " px left under Reset colors in " + ClientSize.Height);
+                    string placed = ModsPlaced(percent);
+                    if (placed != null) throw new Exception(placed);
                     string file = Path.Combine(folder, "untested-" + percent + ".png");
                     using (Bitmap picture = new Bitmap(Math.Max(1, Width), Math.Max(1, Height)))
                     {
@@ -271,17 +275,57 @@ namespace CapriDesktop
             return shots;
         }
 
+        // For checks: Make a mod spans the three keys above it, COLORS sits under the last row shown with the paging keys
+        // clear of its line, and Reset colors fits; with no mods shown too. Null when it's right, else what isn't.
+        private string ModsPlaced(int percent)
+        {
+            string searchWas = modSearch.Box.Text;
+            try
+            {
+                foreach (bool none in new[] { false, true })
+                {
+                    if (none) { modSearch.Box.Text = "no mod is called this " + Guid.NewGuid().ToString("N"); FillMods(); Application.DoEvents(); }
+                    string at = percent + "%" + (none ? " with no mods shown" : "") + ": ";
+                    if (modMake.Left != modImport.Left || modMake.Right != modFolder.Right || modMake.Top < modImport.Bottom || untestedSwitch.Top < modMake.Bottom)
+                        return "Make a mod doesn't span Import mod to Mods folder between them and the switch at " + at + modMake.Bounds;
+                    int lastRow = modEmpty.Visible ? modEmpty.Bottom : modNoMatch.Visible ? modNoMatch.Bottom : modListHead.Bottom;
+                    for (int i = 0; i < MostModRows; i++) if (modAbouts[i].Visible) lastRow = Math.Max(lastRow, Math.Max(modAbouts[i].Bottom, modPublishes[i].Bottom));
+                    if (modBack.Visible)
+                    {
+                        if (modBack.Top < lastRow || modColoursHead.Top - modBack.Bottom < Scaled(16)) return "The paging keys touch the rows or COLORS at " + at + "back " + modBack.Bounds + ", COLORS " + modColoursHead.Top;
+                        int left = ClientSize.Height - modColourReset.Bottom;
+                        if (left > Scaled(ModRowHeight + 24) && ModRows < MostModRows) return "Mods pages without using its height at " + at + left + " px left under Reset colors";
+                    }
+                    else if (modColoursHead.Top < lastRow || modColoursHead.Top - lastRow > Scaled(ModRowHeight + ColoursGap))
+                        return "COLORS isn't straight under the last row shown at " + at + "last row ends " + lastRow + ", COLORS " + modColoursHead.Top;
+                    if (modColourReset.Bottom > ClientSize.Height) return "Reset colors is cut off at " + at + modColourReset.Bottom + " in " + ClientSize.Height;
+                }
+                return null;
+            }
+            finally { modSearch.Box.Text = searchWas; FillMods(); }
+        }
+
         // What a mod's row on the Mods page says about it, for the checks; null when it isn't shown.
         internal string ModRowAbout(string id)
         {
-            int at = capri.ModList.All.FindIndex(mod => mod.File.Id == id);
-            if (at < 0) return null;
+            int row = ModRowOf(id);
+            return row >= 0 && modAbouts[row].Visible ? modAbouts[row].Text : null;
+        }
+
+        // A mod's row brought onto the page shown, or -1 when it isn't installed.
+        private int ModRowOf(string id)
+        {
+            int at = Installed().FindIndex(mod => mod.File.Id == id);
+            if (at < 0) return -1;
             modSearch.Box.Text = "";
             modFirst = at / ModRows * ModRows;
             FillMods();
             int row = modShown.FindIndex(mod => mod.File.Id == id) - modFirst;
-            return row >= 0 && row < ModRows && modAbouts[row].Visible ? modAbouts[row].Text : null;
+            return row >= 0 && row < ModRows ? row : -1;
         }
+
+        // Its switch pressed, for the checks.
+        internal bool SwitchModRow(string id) { int row = ModRowOf(id); return row >= 0 && SwitchMod(row); }
 
         internal void FillMods()
         {
@@ -295,9 +339,9 @@ namespace CapriDesktop
             List<Mod> installed = Installed();
             List<Mod> mods = ShownMods(installed, modSearch.Box.Text);
             modShown = mods;
-            PlaceModRows();
             int total = mods.Count, pageSize = ModRows;
             modFirst = Math.Max(0, Math.Min(modFirst, (Math.Max(0, total - 1) / pageSize) * pageSize));
+            PlaceModRows();
             modEmpty.Visible = installed.Count == 0;
             modNoMatch.Visible = total == 0 && !modEmpty.Visible;
             // Why a mod was switched off for breaking her, said on its own row until it is turned back on.
@@ -311,6 +355,20 @@ namespace CapriDesktop
                 modAbouts[i].Width = Scaled(options ? 180 : 256);
                 if (mod == null) continue;
                 modCogs[i].AccessibleName = "Open " + (mod.File.Name ?? mod.File.Id) + "'s security overrides";
+                if (mod.Hers)
+                {
+                    // Hers: its name, what it is and its switch; nothing to remove, publish or set overrides for.
+                    modCogs[i].Visible = modRemoves[i].Visible = modPublishes[i].Visible = modOptions[i].Visible = false;
+                    modSwitches[i].Text = mod.On ? "On" : "Off";
+                    modSwitches[i].Accent = mod.On ? Cyan : Rose;
+                    modSwitches[i].AccessibleName = (mod.On ? "Turn off " : "Turn on ") + mod.File.Name;
+                    modSwitches[i].Invalidate();
+                    modNames[i].Text = mod.File.Name;
+                    modNames[i].ForeColor = mod.On ? White : Faint;
+                    modAbouts[i].Text = "HER OWN. Its parts are in Toggles, its colour in Custom colours.";
+                    modAbouts[i].ForeColor = Faint;
+                    continue;
+                }
                 if (mod.Plugin != null)
                 {
                     // A plug-in isn't published from here: its name, what it is, its switch, its cog and Remove.
@@ -329,7 +387,7 @@ namespace CapriDesktop
                 modOptions[i].AccessibleName = "Open " + mod.File.Name + "'s options";
                 modNames[i].Text = mod.File.Name + (string.IsNullOrEmpty(mod.File.Version) ? "" : " v" + mod.File.Version);
                 modNames[i].ForeColor = mod.On ? White : Faint;
-                modAbouts[i].Text = ((mod.Changed ? "CHANGED, approve it again. " : mod.Code ? (mod.File.Checked ? "CHECKED BY CAPRI'S MAKERS, NOT A PROMISE IT'S SAFE. " : "") + "RUNS CODE" + (mod.File.Reaches.Length == 0 ? ". " : ": " + string.Join(", ", mod.File.Reaches) + ". ") : mod.Skin ? (mod.On && capri.ModList.SkinStack.Count > 1 ? "SKIN, LAYER " + (capri.ModList.SkinStack.IndexOf(mod) + 1) + " OF " + capri.ModList.SkinStack.Count + ". " : "SKIN. ") : mod.Skill ? "SKILL. " : "") + (string.IsNullOrEmpty(mod.File.Author) ? "" : "by " + mod.File.Author + ". ") + (mod.File.Description ?? "") + (mod.Code || mod.File.WakeNames.Length == 0 ? "" : " Names: " + string.Join(", ", mod.File.WakeNames)) + (mod.Skill && mod.File.Games.Length > 0 ? " For " + mod.File.Games[0] + "." : "") + (mod.File.Colours ? " Has custom colours." : "")).Trim();
+                modAbouts[i].Text = ((mod.Changed ? "CHANGED, approve it again. " : mod.Code ? (mod.File.Checked ? "CHECKED BY CAPRI'S MAKERS, NOT A PROMISE IT'S SAFE. " : "") + "RUNS CODE" + (mod.File.Reaches.Length == 0 ? ". " : ": " + string.Join(", ", mod.File.Reaches) + ". ") : mod.Skin ? (mod.On && capri.ModList.SkinStack.Count > 1 ? "SKIN, LAYER " + (capri.ModList.SkinStack.IndexOf(mod) + 1) + " OF " + capri.ModList.SkinStack.Count + ". " : "SKIN. ") : mod.Skill ? "SKILL. " : "") + (string.IsNullOrEmpty(mod.File.Author) ? "" : "by " + mod.File.Author + ". ") + (mod.File.Description ?? "") + (mod.Code || mod.File.WakeNames.Length == 0 ? "" : " Names: " + string.Join(", ", mod.File.WakeNames)) + (mod.Skill && mod.File.Games.Length > 0 ? " For " + mod.File.Games[0] + "." : "") + (mod.File.Colours ? " Has custom colours." : "") + PackHolds(mod)).Trim();
                 modAbouts[i].ForeColor = mod.Changed ? Rose : Faint;
                 if (mod.Code && mod.On && Mods.StoppedHere(mod.File.Id))
                 {
@@ -354,14 +412,6 @@ namespace CapriDesktop
             modBack.Enabled = modFirst > 0;
             modNext.Enabled = modFirst + pageSize < total;
             modPage.Text = "Page " + (modFirst / pageSize + 1) + " of " + ((total - 1) / pageSize + 1);
-            string[] colours = capri.ModList.ColoursNow;
-            for (int i = 0; i < ArtColors.Slots; i++)
-            {
-                string shown = colours[i] ?? ArtColors.Usual[i];
-                Color swatch = ColorTranslator.FromHtml(shown);
-                colourKeys[i].Accent = swatch.GetBrightness() < 0.2f ? Faint : swatch;
-                colourKeys[i].Invalidate();
-            }
             if (capri.ModList.Problems.Count > 0) ModSays("Skipped " + capri.ModList.Problems[0], true);
         }
 
@@ -473,6 +523,8 @@ namespace CapriDesktop
                     return false;
                 }
                 FillMods();
+                // A pack that takes over slots another pack holds asks which keeps each.
+                AskConflicts();
                 ModSays(mod.Skin ? Stacked(mod) : mod.Code ? mod.File.Name + " is on and running." : mod.Skill ? mod.File.Name + " is on." + (mod.File.Games.Length == 0 ? " She can read it when it fits." : " She uses it when she plays " + mod.File.Games[0] + ".") : mod.File.WakeNames.Length == 0 ? mod.File.Name + " is on." : mod.File.Name + " is on. She now answers to " + Mods.Listed(mod.File.WakeNames) + " too.", false);
                 return true;
             }
@@ -518,23 +570,8 @@ namespace CapriDesktop
             return error is ModException ? error.Message : lead + error.Message;
         }
 
-        private void PickColour(int slot)
-        {
-            string now = capri.ModList.ColoursNow[slot] ?? ArtColors.Usual[slot];
-            using (ColorDialog dialog = new ColorDialog { FullOpen = true, Color = ColorTranslator.FromHtml(now) })
-            {
-                if (dialog.ShowDialog(this) != DialogResult.OK) return;
-                Color picked = dialog.Color;
-                try
-                {
-                    capri.ModList.SetColour(slot, "#" + picked.R.ToString("X2") + picked.G.ToString("X2") + picked.B.ToString("X2"));
-                    FillMods();
-                    ModSays("Her " + ArtColors.Names[slot].ToLowerInvariant() + " changed. Saved as My Colors, so you can share it.", false);
-                }
-                catch (IOException error) { ModSays("Couldn't save that color: " + error.Message, true); }
-                catch (UnauthorizedAccessException error) { ModSays("Couldn't save that color: " + error.Message, true); }
-            }
-        }
+        // Make a mod: the mod helper, which has the modding guide a key away.
+        private void MakeMod() { OpenModHelper(); }
 
         private void ResetColours()
         {
@@ -568,11 +605,19 @@ namespace CapriDesktop
         {
             Mod mod = ShownMod(row);
             if (mod == null) return false;
+            if (mod.Hers)
+            {
+                capri.SetTamagotchi(!mod.On);
+                FillMods();
+                ModSays(mod.File.Name + (capri.TamagotchiOn ? " is on." : " is off."), false);
+                return true;
+            }
             if (mod.Plugin != null) return SwitchPlugin(mod);
             try
             {
                 bool done = capri.ModList.Set(mod, !mod.On, ModAsk);
                 FillMods();
+                if (done && mod.On) AskConflicts();
                 ModSays(!done ? mod.File.Name + " stays off. Nothing ran." : mod.Skin ? Stacked(mod) : mod.File.Name + (mod.On ? " is on." : " is off."), false);
                 return done;
             }
@@ -612,6 +657,8 @@ namespace CapriDesktop
             if (optionsSheet != null && !optionsSheet.IsDisposed && !capri.HasModOptions(optionsSheet.ModId)) optionsSheet.Close();
             if (pageSheet != null && !pageSheet.IsDisposed && !capri.ModRunningNow(pageSheet.ModId)) pageSheet.Close();
             if (modded) FillMods();
+            capri.KeepWorkMods();
+            RefreshWorkApps();
         }
 
         private ModOptionsSheet optionsSheet;
@@ -828,11 +875,88 @@ namespace CapriDesktop
             }
         }
 
+        // Her questions about a code mod, answered by a check when it sets this.
+        private Func<string, string, bool> modBoxForCheck;
+
+        private bool AskModBox(string text, string caption)
+        {
+            Func<string, string, bool> stand = modBoxForCheck;
+            return stand != null ? stand(text, caption) : Question.Ask(this, text, caption);
+        }
+
         private bool AskToRun(ModFile mod, string hash)
         {
-            if (!Question.Ask(this, Mods.Consent(mod, hash), "Run this code mod?")) return false;
+            // Before the approve box, her brain can lay out code that can't be read, once they know where it goes.
+            string explained = null;
+            string where = ModReadout.Where == null ? null : ModReadout.Where();
+            if (where != null && mod.Source != null && mod.Unreadable != null && AskModBox(ModReadout.Offer(mod, where), "Have her read it first?"))
+                explained = ModReadout.Run(mod, where);
+            if (!AskModBox(Mods.ReadingNote(explained) + Mods.Consent(mod, hash), "Run this code mod?")) return false;
             // Code nobody can read is asked about again, on its own, after the first yes.
-            return !mod.AskTwice || Question.Ask(this, Mods.Unclear(mod), "Run code you can't read?");
+            if (!mod.AskTwice) return true;
+            return AskModBox(Mods.Unclear(mod, explained), "Run code you can't read?");
+        }
+
+        // The offer comes before the first question for any code that can't be read, and never for code that can.
+        internal void CheckModOffer(List<string> checks, string output)
+        {
+            Func<string> whereWas = ModReadout.Where;
+            Func<string, string, string> askWas = ModReadout.Ask;
+            Action<string> openWas = ModReadout.Open;
+            string folderWas = ModReadout.CopyFolder;
+            const string offer = "Have her read it first?", first = "Run this code mod?", second = "Run code you can't read?";
+            string head = "// capri-mod: 1\n// id: offer\n// name: test\n// version: 1\n// author: Smoke\n// description: A test.\nusing System;\n";
+            byte[] art = new byte[900];
+            art[0] = 0x89; art[1] = 0x50; art[2] = 0x4E; art[3] = 0x47;
+            string packed = Convert.ToBase64String(art);
+            ModFile picture = Mods.ReadCode(head + "class M { string art = \"" + packed + "\"; }");
+            ModFile runner = Mods.ReadCode(head + "class M { string art = \"" + packed + "\"; void Go() { System.Diagnostics.Process.Start(\"x\"); } }");
+            ModFile plain = Mods.ReadCode(head + "class M { void Go() { } }");
+            List<string> boxes = new List<string>();
+            string firstBox = null;
+            bool readIt = true, approve = true;
+            Func<ModFile, string> order = delegate(ModFile mod)
+            {
+                boxes.Clear();
+                firstBox = null;
+                AskToRun(mod, "abc");
+                return string.Join(" | ", boxes.ToArray());
+            };
+            try
+            {
+                ModReadout.CopyFolder = Path.Combine(output, "mod-offer");
+                Directory.CreateDirectory(ModReadout.CopyFolder);
+                ModReadout.Open = null;
+                ModReadout.Where = delegate { return "a stand-in"; };
+                ModReadout.Ask = delegate(string rules, string code) { return "// laid out\n" + ModReadout.Body(code); };
+                modBoxForCheck = delegate(string text, string caption)
+                {
+                    boxes.Add(caption);
+                    if (caption == first) { firstBox = text; return approve; }
+                    return caption == offer ? readIt : true;
+                };
+                string pictureOrder = order(picture);
+                bool pictureNamed = firstBox != null && firstBox.StartsWith("Her brain's reading of it is saved here:", StringComparison.Ordinal);
+                string runnerOrder = order(runner), plainOrder = order(plain);
+                readIt = false;
+                string declined = order(picture);
+                bool declinedPlain = firstBox != null && firstBox.IndexOf("Her brain's reading", StringComparison.Ordinal) < 0;
+                readIt = true;
+                approve = false;
+                string refused = order(runner);
+                if (pictureOrder != offer + " | " + first || !pictureNamed || runnerOrder != offer + " | " + first + " | " + second || plainOrder != first
+                    || declined != offer + " | " + first || !declinedPlain || refused != offer + " | " + first)
+                    throw new Exception("Her offer to read a mod wasn't before the approve box: packed art " + pictureOrder + " (copy named " + pictureNamed + "), a runner " + runnerOrder + ", readable " + plainOrder + ", declined " + declined + ", refused " + refused);
+                checks.Add("PASS her offer to read code that can't be read comes before the approve box, also for packed data with no second question; the first box names her copy; readable code gets no offer; No to the offer still asks, and No to the box stops there");
+            }
+            finally
+            {
+                modBoxForCheck = null;
+                ModReadout.Where = whereWas;
+                ModReadout.Ask = askWas;
+                ModReadout.Open = openWas;
+                ModReadout.CopyFolder = folderWas;
+            }
         }
 
         // Whether to delete a removed mod's own saved data too. Only asked when it has some.

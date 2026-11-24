@@ -204,11 +204,11 @@ Running on this PC	이 PC에서 실행 중
 NORMAL	보통
 OFF	꺼짐
 Local server address	로컬 서버 주소
-Remember panel position	패널 위치 기억
 Custom colours	사용자 지정 색상
 Custom colours...	사용자 지정 색상...
 Choose	선택
-Hers	그녀의 색
+Reset selected colour	선택한 색상 재설정
+Make a mod	모드 만들기
 Quiet	조용히
 Quiet min	조용히 min
 Quiet max	조용히 max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	{n}:{n}까지 조용히
 Quiet until turned off	끌 때까지 조용히
 Export settings	설정 내보내기
 Import settings	설정 가져오기
+Save Mainframe position	패널 위치 기억

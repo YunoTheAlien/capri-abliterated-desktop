@@ -774,7 +774,18 @@ namespace CapriDesktop
             held = part;
             Capture = true;
             if (part == PlayerPart.Seek && tune.CanSeek) { scrub = Fraction(OnPlate(e.Location).X); Redraw(); }
-            else if (part == PlayerPart.Volume) { sliding = Level(OnPlate(e.Location).X); Raise("volume:" + sliding.ToString("0.###", CultureInfo.InvariantCulture)); Redraw(); }
+            else if (part == PlayerPart.Volume) { sliding = Level(OnPlate(e.Location).X); Redraw(); }
+        }
+
+        // A drag redraws the whole plate, so it's held to about 30 a second; the last spot is always drawn on letting go.
+        private int dragDrawnAt;
+
+        private void DragRedraw()
+        {
+            int now = Environment.TickCount;
+            if (unchecked(now - dragDrawnAt) < 33) return;
+            dragDrawnAt = now;
+            Redraw();
         }
 
         protected override void OnMouseMove(MouseEventArgs e)
@@ -782,11 +793,12 @@ namespace CapriDesktop
             base.OnMouseMove(e);
             if (grabbing) { Haul(PointToScreen(e.Location)); return; }
             if (tune == null) return;
-            if (scrub >= 0) { scrub = Fraction(OnPlate(e.Location).X); Redraw(); return; }
+            if (scrub >= 0) { scrub = Fraction(OnPlate(e.Location).X); DragRedraw(); return; }
             if (held == PlayerPart.Volume)
             {
                 double want = Level(OnPlate(e.Location).X);
-                if (Math.Abs(want - sliding) > 0.004) { sliding = want; Raise("volume:" + sliding.ToString("0.###", CultureInfo.InvariantCulture)); Redraw(); }
+                // Only the slider moves while held; the volume is set once, where it's let go, since setting it is slow.
+                if (Math.Abs(want - sliding) > 0.004) { sliding = want; DragRedraw(); }
                 return;
             }
             int part = PartAt(OnPlate(e.Location), scale, tune.Heartable);
@@ -805,7 +817,7 @@ namespace CapriDesktop
             if (Capture) Capture = false;
             if (tune == null) return;
             if (e.Button == MouseButtons.Right) { Raise("menu"); return; }
-            if (was == PlayerPart.Volume) return;
+            if (was == PlayerPart.Volume) { SetVolumeHere(); return; }
             if (to >= 0) { SeekTo(to); return; }
             if (was != 0 && was == PartAt(OnPlate(e.Location), scale, tune.Heartable)) Press(was);
         }
@@ -823,6 +835,7 @@ namespace CapriDesktop
             if (Capture) return;
             if (grabbing) LetGo();
             if (held == 0 && scrub < 0) return;
+            if (held == PlayerPart.Volume) SetVolumeHere();
             held = 0;
             scrub = -1;
             if (Visible) Redraw();
@@ -910,6 +923,14 @@ namespace CapriDesktop
         }
 
         // Skips to that far through the song, from 0 to 1.
+        // The volume the slider was let go at, set once.
+        private void SetVolumeHere()
+        {
+            if (sliding < 0) return;
+            Raise("volume:" + sliding.ToString("0.###", CultureInfo.InvariantCulture));
+            if (Visible) Redraw();
+        }
+
         internal void SeekTo(double fraction)
         {
             Tune shown = tune;
@@ -1297,7 +1318,7 @@ namespace CapriDesktop
             using (Brush pink = new SolidBrush(Color.FromArgb(170, Look.PlayerAccent))) graphics.FillEllipse(pink, c.X - r - 1.6f * s, c.Y - r, r * 2, r * 2);
             using (Brush cyan = new SolidBrush(Color.FromArgb(170, Look.PlayerEdge))) graphics.FillEllipse(cyan, c.X - r + 1.6f * s, c.Y - r, r * 2, r * 2);
             using (Brush disc = new SolidBrush(Look.Ink)) graphics.FillEllipse(disc, c.X - r, c.Y - r, r * 2, r * 2);
-            using (Brush dark = new SolidBrush(Color.FromArgb(10, 11, 15)))
+            using (Brush dark = new SolidBrush(Neon.Tone(10, 11, 15)))
             {
                 if (!playing) { graphics.FillPolygon(dark, new[] { new PointF(c.X - 4.5f * s, c.Y - 7.5f * s), new PointF(c.X - 4.5f * s, c.Y + 7.5f * s), new PointF(c.X + 8 * s, c.Y) }); return; }
                 foreach (float x in new[] { c.X - 5.6f * s, c.X + 2 * s })

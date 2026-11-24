@@ -1,0 +1,34 @@
+// capri-mod: 1
+// id: night-owl-switch
+// name: Night Owl Switch
+// version: 1.0.0
+// author: You
+// description: A switch in her Toggles window. On, head pats count for half, the way a sleepy owl takes them.
+// permissions: mood
+// requires: api 6
+
+using System;
+using CapriDesktop;
+
+public class NightOwlSwitch : ICapriMod
+{
+    private ICapriHost capri;
+
+    public void Start(ICapriHost host)
+    {
+        capri = host;
+        // Her Toggles window gets this switch, off to begin with. It goes when the mod stops.
+        capri.Toggles.Add("Sleepy pats", false, Changed);
+    }
+
+    // On: a pat is worth half, after every add, under "sleepy pats" in her mood log. Off: back to hers.
+    private void Changed(bool on)
+    {
+        if (on) capri.Mood.Multiply("sleepy pats", "petted", 0.5);
+        else capri.Mood.Remove("sleepy pats");
+    }
+
+    public bool Heard(string words) { return false; }
+
+    public void Stop() { }
+}

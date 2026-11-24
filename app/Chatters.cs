@@ -21,7 +21,7 @@ namespace CapriDesktop
         private static readonly Dictionary<string, List<Turn>> heard = new Dictionary<string, List<Turn>>(StringComparer.OrdinalIgnoreCase);
 
         // For the test, so five minutes does not have to pass.
-        internal static Func<DateTime> Now = delegate { return DateTime.UtcNow; };
+        internal static Func<DateTime> Now = delegate { return SimTime.UtcNow; };
 
         internal static void Said(string who, string said, string replied)
         {

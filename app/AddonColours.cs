@@ -7,8 +7,8 @@ using System.Text;
 namespace CapriDesktop
 {
     // Colours a mod names for itself through Ui.Colour: one tree per mod in its own colours.md, kept apart from her
-    // palette. One left as the mod's own follows Mainframe colours; Custom colours lists each under the mod's
-    // fold-down.
+    // palette. One left as the mod's own follows Mainframe colours; Custom colours lists each under the mod's fold-down,
+    // after her own items that keep colours the same way.
     internal static class AddonColours
     {
         internal const string FileName = "colours.md";
@@ -92,7 +92,7 @@ namespace CapriDesktop
                     Color? was = usual == null ? null : SysLines.Mixed(usual);
                     tree.Usual[name] = was.HasValue ? Color.FromArgb(255, was.Value) : Color.Gray;
                     Color? theirs = said.Length == 0 ? null : SysLines.Mixed(said);
-                    if (theirs.HasValue) tree.Theirs[name] = Color.FromArgb(255, theirs.Value);
+                    if (theirs.HasValue) tree.Theirs[name] = theirs.Value;
                 }
             }
             catch (IOException caughtOne) { Brain.Caught(caughtOne); }
@@ -127,6 +127,7 @@ namespace CapriDesktop
 
         private static string NameOf(string id)
         {
+            foreach (Item item in Items) if (string.Equals(item.Id, id, StringComparison.OrdinalIgnoreCase)) return item.Name;
             if (Installed != null) foreach (KeyValuePair<string, string> mod in Installed()) if (string.Equals(mod.Key, id, StringComparison.OrdinalIgnoreCase)) return mod.Value;
             return id;
         }
@@ -137,13 +138,13 @@ namespace CapriDesktop
         {
             string key = Clean(name);
             usual = Color.FromArgb(255, usual);
-            if (key.Length == 0 || string.IsNullOrEmpty(id)) return Toned(usual);
+            if (key.Length == 0 || string.IsNullOrEmpty(id)) return Toned(id, usual);
             lock (gate)
             {
                 Tree tree = Of(id);
                 if (!tree.Order.Contains(key))
                 {
-                    if (tree.Order.Count >= Most) return Toned(usual);
+                    if (tree.Order.Count >= Most) return Toned(id, usual);
                     tree.Order.Add(key);
                     tree.Usual[key] = usual;
                     Save(id, NameOf(id), tree);
@@ -154,11 +155,12 @@ namespace CapriDesktop
                     Save(id, NameOf(id), tree);
                 }
                 Color theirs;
-                return tree.Theirs.TryGetValue(key, out theirs) ? theirs : Toned(usual);
+                return tree.Theirs.TryGetValue(key, out theirs) ? theirs : Toned(id, usual);
             }
         }
 
-        private static Color Toned(Color usual) { return Neon.Tone(usual.R, usual.G, usual.B); }
+        // A mod's own colour follows Mainframe colours; one of her own items keeps its own.
+        private static Color Toned(string id, Color usual) { return IsHers(id) ? usual : Neon.Tone(usual.R, usual.G, usual.B); }
 
         // The colours a mod has named, in the order it named them.
         internal static List<string> Names(string id) { lock (gate) return new List<string>(Of(id).Order); }
@@ -176,7 +178,7 @@ namespace CapriDesktop
                 string key = Clean(name);
                 Color colour;
                 if (tree.Theirs.TryGetValue(key, out colour)) return colour;
-                return tree.Usual.TryGetValue(key, out colour) ? Toned(colour) : Color.Empty;
+                return tree.Usual.TryGetValue(key, out colour) ? Toned(id, colour) : Color.Empty;
             }
         }
 
@@ -201,7 +203,7 @@ namespace CapriDesktop
                     }
                     Color was;
                     bool had = tree.Theirs.TryGetValue(key, out was);
-                    if (entry.Value.HasValue && (!had || was.ToArgb() != Color.FromArgb(255, entry.Value.Value).ToArgb())) { tree.Theirs[key] = Color.FromArgb(255, entry.Value.Value); moved = true; }
+                    if (entry.Value.HasValue && (!had || was.ToArgb() != entry.Value.Value.ToArgb())) { tree.Theirs[key] = entry.Value.Value; moved = true; }
                     else if (!entry.Value.HasValue && had) { tree.Theirs.Remove(key); moved = true; }
                 }
                 if (moved) Save(id, NameOf(id), tree);
@@ -216,17 +218,123 @@ namespace CapriDesktop
             catch (Exception caughtOne) { Brain.Caught(caughtOne); }
         }
 
-        // The mods installed now that have named colours, as id and name, in their order.
+        // Her own items with colours, then the mods installed now that have named colours, as id and name, in their order.
         internal static List<KeyValuePair<string, string>> Trees()
         {
             List<KeyValuePair<string, string>> found = new List<KeyValuePair<string, string>>();
+            if (FolderOf != null) foreach (Item item in Items) found.Add(new KeyValuePair<string, string>(item.Id, item.Name));
             if (Installed == null) return found;
+            // A mod with one of her own items' ids (her screensaver) is that item's fold, listed once.
             foreach (KeyValuePair<string, string> mod in Installed())
-                lock (gate) if (Of(mod.Key, true).Order.Count > 0) found.Add(mod);
+                lock (gate) if (!found.Exists(one => one.Key == mod.Key) && Of(mod.Key, true).Order.Count > 0) found.Add(mod);
             return found;
         }
 
         // Forgets what was read, for the checks.
         internal static void Forget() { lock (gate) trees.Clear(); }
+
+        // Her own items that keep colours like a mod's, each a fold under ADD-ONS that doesn't follow the Mainframe's shift.
+        // Their colours start as Night City drew them.
+        internal const string Screensaver = "capri-screensaver", Tear = "capri-tear", Shatter = "capri-shatter", Takeover = "capri-takeover", Bolts = "capri-bolts";
+
+        private sealed class Item
+        {
+            internal readonly string Id, Name;
+            internal readonly string[] Names;
+            internal readonly Color[] Usual;
+            internal Item(string id, string name, params object[] colours)
+            {
+                Id = id;
+                Name = name;
+                Names = new string[colours.Length / 2];
+                Usual = new Color[colours.Length / 2];
+                for (int i = 0; i < Names.Length; i++) { Names[i] = (string)colours[i * 2]; Usual[i] = Color.FromArgb(255, Color.FromArgb((int)colours[i * 2 + 1])); }
+            }
+        }
+
+        private static readonly Item[] Items =
+        {
+            new Item(Screensaver, "Screensaver", "Colour", 0x5EF0F6, "Hexagons", 0xFF1E26, "Background", 0x04060A),
+            new Item(Tear, "Tear prank", "Red", 0xE82440, "Crimson", 0xB00620, "Ink", 0x08060A, "Violet", 0x6E1EAA, "Hot pink", 0xFF788C,
+                "Haze", 0xD20C60, "Halo", 0xE60A50, "Bright violet", 0x7A3CFF, "Mint", 0x1EF08A, "Rim red", 0xEC0644, "Specks", 0xFFDEE8, "White", 0xFFFFFF),
+            new Item(Shatter, "Shatter prank", "Violet", 0x7A3CFF, "Mint", 0x1EF08A, "Red", 0xE82440, "Pink", 0xFF2E88, "White", 0xFFFFFF),
+            new Item(Takeover, "Takeover prank", "Red", 0xE82440, "Pink", 0xFF2E88, "Violet", 0x7A3CFF, "Mint", 0x1EF08A, "Cyan", 0x28E6FF,
+                "Rim red", 0xEC0644, "Dark", 0x0A080E, "Panel top", 0x22162C, "Panel foot", 0x0C0812, "White", 0xFFFFFF),
+            new Item(Bolts, "Cursor bolts", "Red", 0xFF0046, "Black", 0x08060C)
+        };
+
+        internal static bool IsHers(string id)
+        {
+            foreach (Item item in Items) if (string.Equals(item.Id, id, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+
+        // One of her items' colours by name: theirs, or its own.
+        internal static Color Hers(string id, string name)
+        {
+            foreach (Item item in Items)
+                if (string.Equals(item.Id, id, StringComparison.Ordinal))
+                    for (int i = 0; i < item.Names.Length; i++)
+                        if (item.Names[i] == name) return Declare(id, name, item.Usual[i]);
+            return Color.Gray;
+        }
+
+        // Her own items' folds: listed first under ADD-ONS before any is drawn, in Night City's colours whatever the look while
+        // a mod's own follows it, alpha kept, and the screensaver's two sys.md colours taken out once with their notes.
+        internal static void Check(List<string> checks, string output)
+        {
+            string folder = Path.Combine(output, "addon-colours-" + Guid.NewGuid().ToString("N").Substring(0, 6));
+            Func<string, string> folderWas = FolderOf;
+            Func<List<KeyValuePair<string, string>>> installedWas = Installed;
+            try
+            {
+                Directory.CreateDirectory(folder);
+                FolderOf = delegate(string id) { return Path.Combine(folder, id + "-data"); };
+                Installed = delegate { return new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("tint-test", "Tint Test") }; };
+                Forget();
+                Lay();
+                List<KeyValuePair<string, string>> listed = Trees();
+                string[] wanted = { "Screensaver", "Tear prank", "Shatter prank", "Takeover prank", "Cursor bolts" };
+                if (listed.Count < wanted.Length) throw new Exception("Her own items aren't all under ADD-ONS: " + listed.Count);
+                for (int i = 0; i < wanted.Length; i++) if (listed[i].Value != wanted[i]) throw new Exception("Her own items aren't first under ADD-ONS, in order: " + listed[i].Value);
+                if (string.Join(",", Names(Screensaver).ToArray()) != "Colour,Hexagons,Background") throw new Exception("The screensaver's fold doesn't list Colour, Hexagons and Background before it is drawn.");
+                Color saver = Hers(Screensaver, "Colour"), bolt = Hers(Bolts, "Red");
+                Color mod = Declare("tint-test", "Tint", Color.FromArgb(94, 240, 246));
+                Neon.UseLook(1);
+                bool kept = Hers(Screensaver, "Colour").ToArgb() == saver.ToArgb() && Hers(Bolts, "Red").ToArgb() == bolt.ToArgb();
+                bool modFollows = Declare("tint-test", "Tint", Color.FromArgb(94, 240, 246)).ToArgb() != mod.ToArgb();
+                Neon.UseLook(0);
+                if (saver.ToArgb() != Color.FromArgb(94, 240, 246).ToArgb() || bolt.ToArgb() != Color.FromArgb(255, 0, 70).ToArgb()) throw new Exception("Her own items don't start in Night City's colours.");
+                if (!kept) throw new Exception("Her own items followed the Mainframe's look.");
+                if (!modFollows) throw new Exception("A mod's own colour stopped following the Mainframe's look.");
+                Set(Screensaver, new Dictionary<string, Color?> { { "Background", Color.FromArgb(128, 16, 32, 48) } });
+                Forget();
+                if (Hers(Screensaver, "Background").ToArgb() != Color.FromArgb(128, 16, 32, 48).ToArgb()) throw new Exception("A see-through colour lost its alpha in its file.");
+                string sys = Path.Combine(folder, "sys.md");
+                File.WriteAllText(sys, SysLines.SaverHeading + "\n\n>! colour:      a name or hex code. Blank is hers.\n>! background:  blank is near black.\nscreensaver: 1\n"
+                    + SysLines.SaverColourKey + ": #ff0000\n" + SysLines.SaverGroundKey + ": blue\n");
+                Dictionary<string, string> taken = SysLines.TakeSaverColours(sys);
+                string left = File.ReadAllText(sys);
+                if (taken.Count != 2 || taken[SysLines.SaverColourKey] != "#ff0000" || taken[SysLines.SaverGroundKey] != "blue") throw new Exception("The screensaver's colours weren't taken out of sys.md as written.");
+                if (left.Contains(SysLines.SaverColourKey) || left.Contains(">! colour:") || left.Contains(">! background:") || !left.Contains("screensaver: 1")) throw new Exception("sys.md kept the screensaver's colour lines, or lost another: " + left);
+                if (SysLines.TakeSaverColours(sys).Count != 0) throw new Exception("The screensaver's colours were taken out of sys.md twice.");
+                checks.Add("PASS her own items keep colours like a mod's: the screensaver, three pranks and her cursor bolts are first under ADD-ONS before any is drawn, stay in their own colours in any look while a mod's follows, keep alpha, and the screensaver's sys.md colours are taken out once");
+            }
+            finally
+            {
+                FolderOf = folderWas;
+                Installed = installedWas;
+                Forget();
+                Neon.UseLook(0);
+            }
+        }
+
+        // Her items' colours written to their files in order once her folders are known, so Custom colours lists each one
+        // before it is first drawn.
+        internal static void Lay()
+        {
+            if (FolderOf == null) return;
+            foreach (Item item in Items) for (int i = 0; i < item.Names.Length; i++) Declare(item.Id, item.Names[i], item.Usual[i]);
+        }
     }
 }

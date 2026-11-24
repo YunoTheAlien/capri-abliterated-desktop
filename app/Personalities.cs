@@ -204,6 +204,7 @@ namespace CapriDesktop
             { "flowers", "When you give her flowers" },
             { "plushie", "When you give her a plushie" },
             { "gift", "When you give her a gift" },
+            { "pet rock", "When you give her a pet rock" },
             { "nuggies", "When you give her chimpken nuggies" },
             // Her hunger nag in her own words. Only Emo and Bratty ship these, asking for nuggies; the rest use the shared ones.
             { "peckish", "When she is peckish" },
@@ -235,6 +236,14 @@ namespace CapriDesktop
             { "Bored noticed", "Bored noticed" },
             { "Bored ignored", "Bored ignored" }
         };
+
+        // The heading a reaction set is written under, or null for one with none.
+        internal static string SetHeading(string set)
+        {
+            for (int at = 0; at < Sets.GetLength(0); at++)
+                if (string.Equals(Sets[at, 0], set, StringComparison.OrdinalIgnoreCase)) return Sets[at, 1];
+            return null;
+        }
 
         // What moves her, and by how much. The same act has to pull opposite ways for different temperaments: being
         // thrown delights one pack and genuinely upsets a devoted one, so a single global score could never work.
@@ -307,6 +316,7 @@ namespace CapriDesktop
             {
                 // Asked on every reaction, so whether the file is there and changed comes from memory (Stamps).
                 long stamp = path == null ? 0 : Stamps.Of(path);
+                if (stamp != 0) stamp ^= (long)FileSlots.Generation << 56;
                 if (stamp == 0)
                 {
                     lock (gate)
@@ -322,7 +332,7 @@ namespace CapriDesktop
                 List<KeyValuePair<string, int>> wordsIn = new List<KeyValuePair<string, int>>();
                 List<Drift> driftsIn = new List<Drift>();
                 Dictionary<string, string> reactsIn = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                Dictionary<string, string[]> linesIn = Read(Notes.ReadLines(path), likesIn, wordsIn, driftsIn, reactsIn);
+                Dictionary<string, string[]> linesIn = Read(FileSlots.ReadLines(path), likesIn, wordsIn, driftsIn, reactsIn);
                 lock (gate)
                 {
                     aLoaded.Clear(); aLikes.Clear(); aWords.Clear(); aDrifts.Clear(); aReacts.Clear();
@@ -355,14 +365,6 @@ namespace CapriDesktop
         }
 
         // Her own, used when no personality file is chosen.
-        private static readonly string[,] OwnLikes =
-        {
-            { "thrown", "-2" }, { "insulted", "-2" },
-            { "petted", "2" }, { "praised", "2" }, { "ignored", "-1" },
-            { "fed", "2" }, { "treat", "3" }, { "uppies", "2" },
-            { "trinket", "2" }, { "flowers", "3" }, { "plushie", "2" }, { "gift", "3" }, { "nuggies", "2" },
-            { "touched shoulders", "1" }, { "touched middle", "0" }, { "touched legs", "-1" }, { "touched feet", "-1" }, { "tickled", "1" }
-        };
         private static readonly string[,] OwnWords =
         {
             { "good girl", "1" }, { "little one", "1" }, { "clever", "1" }, { "thank you", "1" }
@@ -819,34 +821,79 @@ namespace CapriDesktop
         // Her own score for an act when nothing names it, and for a senpai one, what attached says.
         private static int Own(string act)
         {
-            int own = Pair(OwnLikes, act);
+            int own = Acts.LikeOf(act);
             return own != 0 || !SenpaiSet(act) ? own : Extended.Int("own." + act, 0);
         }
 
-        internal static int Likes(string act)
+        internal static int Likes(string act) { return Likes(act, null, null, 0); }
+
+        // The same, with each part named in sum as it adds: her personality's number, or the default when it names
+        // none, then today's mood's, then one more add, like her hunger for a food, under its own name.
+        internal static int Likes(string act, Acts.Sum sum, string added, int add)
         {
             if (string.IsNullOrEmpty(act)) return 0;
             // Being carried is new, so no personality file mentions it. Rather than reading 0 for all of them it
             // follows how she feels about being petted: one who likes being handled fondly likes being picked up.
             // A file that does say uppies wins, as always.
             if (string.Equals(act, "uppies", StringComparison.OrdinalIgnoreCase) && PersonalityReact("uppies") == null)
-                return Math.Max(0, Likes("petted") - 1);
+            {
+                int carried = Math.Max(0, Likes("petted") - 1);
+                if (sum != null) sum.Term("as petted", carried);
+                return carried;
+            }
             int mine;
+            string whose = Stock;
+            // A food a file doesn't name takes the file's "fed" or "treat", as files did before each food was its own.
+            Acts.Act listed = Acts.Find(act);
+            string group = listed != null && listed.Group != listed.Name ? listed.Group : null;
             if (Under == Stock) mine = Own(act);
             else
             {
                 Fresh();
-                lock (gate) { if (!likes.TryGetValue(act, out mine) && !(Brain.SenpaiLive && Extended.Score(Under, act, out mine))) mine = Own(act); }
+                whose = Under;
+                lock (gate)
+                {
+                    if (!likes.TryGetValue(act, out mine) && !(Brain.SenpaiLive && Extended.Score(Under, act, out mine)))
+                    {
+                        if (group != null && (likes.TryGetValue(group, out mine) || Brain.SenpaiLive && Extended.Score(Under, group, out mine))) whose = Under + " " + group;
+                        else { mine = Own(act); whose = "default"; }
+                    }
+                }
             }
+            if (sum != null) sum.Term(whose, mine);
             // An attitude shifts what she wants, it does not replace it. Sleepy makes attention unwelcome whoever she
             // is, and a pack that likes being thrown still enjoys it underneath, because the two numbers add.
             FreshAttitude();
             lock (gate)
             {
                 int shift;
-                if (aLikes.TryGetValue(act, out shift) || (Brain.SenpaiLive && Extended.Score(aActive, act, out shift))) mine += shift;
+                if (aLikes.TryGetValue(act, out shift) || (Brain.SenpaiLive && Extended.Score(aActive, act, out shift))
+                    || group != null && aLikes.TryGetValue(group, out shift))
+                {
+                    mine += shift;
+                    if (sum != null) sum.Shift(aActive, shift);
+                }
             }
-            return Math.Max(-5, Math.Min(5, mine));
+            if (added != null)
+            {
+                mine += add;
+                if (sum != null) sum.Shift(added, add);
+            }
+            // A pack's mood terms for the act, each under the pack's name.
+            foreach (KeyValuePair<string, int> term in Acts.Terms(act))
+            {
+                mine += term.Value;
+                if (sum != null) sum.Shift(term.Key, term.Value);
+            }
+            // A code mod's multipliers, after every add.
+            foreach (KeyValuePair<string, double> times in Acts.Multipliers(act))
+            {
+                mine = (int)Math.Round(mine * times.Value, MidpointRounding.AwayFromZero);
+                if (sum != null) sum.Then(times.Key + " x" + Acts.N(times.Value), mine);
+            }
+            int held = Math.Max(-5, Math.Min(5, mine));
+            if (sum != null) sum.Held(held);
+            return held;
         }
 
         // What their words were worth to her. Every phrase of hers that appears is counted, so "good girl, little one"
@@ -880,7 +927,7 @@ namespace CapriDesktop
         internal static string Main = Stock;
 
         private static readonly Dictionary<string, double> tally = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
-        private static DateTime cooled = DateTime.UtcNow;
+        private static DateTime cooled = SimTime.UtcNow;
         internal static DateTime DriftedAt = DateTime.MinValue;
 
         // How long a stretch of treatment stays relevant. Without this a tally only ever climbs and she ends up stuck
@@ -894,7 +941,7 @@ namespace CapriDesktop
             lock (gate)
             {
                 tally.Clear();
-                cooled = DateTime.UtcNow;
+                cooled = SimTime.UtcNow;
             }
             DriftedAt = DateTime.MinValue;
         }
@@ -912,7 +959,7 @@ namespace CapriDesktop
         {
             lock (gate)
             {
-                DateTime now = DateTime.UtcNow;
+                DateTime now = SimTime.UtcNow;
                 double mins = (now - cooled).TotalMinutes;
                 if (mins < 1) return;
                 cooled = now;
@@ -924,6 +971,37 @@ namespace CapriDesktop
                     if (Math.Abs(left) < 0.5) tally.Remove(one); else tally[one] = left;
                 }
             }
+        }
+
+        // Who she is and what each act has added up to, kept whole so a counter run can put it back.
+        internal sealed class Kept
+        {
+            internal Dictionary<string, double> Tally;
+            internal DateTime Cooled, DriftedAt;
+            internal string Chosen, Attitude;
+        }
+
+        internal static Kept Keep()
+        {
+            lock (gate) return new Kept { Tally = new Dictionary<string, double>(tally, StringComparer.OrdinalIgnoreCase), Cooled = cooled, DriftedAt = DriftedAt, Chosen = Chosen, Attitude = Attitude };
+        }
+
+        // True when who she is changed since it was kept, so her caller puts her looks and voice back too.
+        internal static bool PutBack(Kept kept)
+        {
+            if (kept == null) return false;
+            bool moved;
+            lock (gate)
+            {
+                tally.Clear();
+                foreach (KeyValuePair<string, double> one in kept.Tally) tally[one.Key] = one.Value;
+                cooled = kept.Cooled;
+                DriftedAt = kept.DriftedAt;
+                moved = Chosen != kept.Chosen || Attitude != kept.Attitude;
+                Chosen = kept.Chosen;
+                Attitude = kept.Attitude;
+            }
+            return moved;
         }
 
         // Records an act and returns who she should be now, or null for no change. Worth is already weighted by her
@@ -1031,6 +1109,37 @@ namespace CapriDesktop
                 }
             }
             return Math.Round(mine + add, 2);
+        }
+
+        // A range from "## How she reacts", like "repeat window: 20 to 60": her personality's, with today's mood's added
+        // to each end in the same form; low and high when her personality says nothing. Never under 1, high never under low.
+        internal static void Range(string named, int low, int high, out int from, out int to)
+        {
+            double[] mine = { low, high }, add = { 0, 0 };
+            FreshAttitude();
+            lock (gate)
+            {
+                string mood;
+                if (aReacts.TryGetValue(named, out mood)) Pair(mood, add);
+            }
+            if (Under != Stock)
+            {
+                Fresh();
+                lock (gate)
+                {
+                    string said;
+                    if (reacts.TryGetValue(named, out said)) Pair(said, mine);
+                }
+            }
+            from = Math.Max(1, (int)Math.Round(mine[0] + add[0]));
+            to = Math.Max(from, (int)Math.Round(mine[1] + add[1]));
+        }
+
+        private static void Pair(string said, double[] into)
+        {
+            string[] ends = Regex.Split((said ?? "").Trim(), @"\s+to\s+", RegexOptions.IgnoreCase);
+            double one, two;
+            if (ends.Length == 2 && Number(ends[0], out one) && Number(ends[1].TrimStart('+'), out two)) { into[0] = one; into[1] = two; }
         }
 
         private static bool Number(string said, out double value)
@@ -1212,13 +1321,6 @@ namespace CapriDesktop
             return null;
         }
 
-        private static int Pair(string[,] table, string named)
-        {
-            for (int row = 0; row < table.GetLength(0); row++)
-                if (string.Equals(table[row, 0], named, StringComparison.OrdinalIgnoreCase)) return int.Parse(table[row, 1]);
-            return 0;
-        }
-
         // Every line the chosen personality says, so they can be queued for translation like her own.
         internal static List<string> All()
         {
@@ -1258,8 +1360,9 @@ namespace CapriDesktop
                 }
                 // Never read on top: the side in use has its own whole copy, which PathOf picked.
                 bool live = Brain.SenpaiLive;
+                stamp ^= (long)FileSlots.Generation << 56;
                 if (Under == active && live == wasSenpaiLive && stamp == wasStamp) return;
-                string[] lines = Notes.ReadLines(path);
+                string[] lines = FileSlots.ReadLines(path);
                 Dictionary<string, int> theirLikes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
                 List<KeyValuePair<string, int>> theirWords = new List<KeyValuePair<string, int>>();
                 List<Drift> theirDrifts = new List<Drift>();
@@ -1967,6 +2070,19 @@ namespace CapriDesktop
             return InSenpai(path) ? senpai : plain;
         }
 
+        // Each pack she ships, by name, with its plain half, for the slot list.
+        internal static List<KeyValuePair<string, string>> PlainPacks()
+        {
+            List<KeyValuePair<string, string>> found = new List<KeyValuePair<string, string>>();
+            for (int pack = 0; pack < Packs.GetLength(0); pack++)
+            {
+                string plain, senpai;
+                Split(Packs[pack, 1], out plain, out senpai);
+                found.Add(new KeyValuePair<string, string>(Packs[pack, 0], plain));
+            }
+            return found;
+        }
+
         // The pack she ships under that name, or null for one of theirs.
         private static string PackText(string named)
         {
@@ -2159,6 +2275,12 @@ trinket: +3
 flowers: +2
 plushie: +1
 gift: +2
+pet rock: -2
+snack: +1
+meal: +1
+drink: +2
+treat: +3
+sweet: +2
 
 ## Words she likes
 
@@ -2189,6 +2311,13 @@ sulk alone: 300
 sulks at upset: 7
 kind returns: 1.12
 mean scale: 0.94
+repeat window: 20 to 60
+like fades: 0.6
+like least: 0.4
+dislike grows: 0.35
+dislike most: 2.5
+willing pull: 0.05
+willing slows: 0.1
 "
             },
             {
@@ -2367,6 +2496,12 @@ trinket: +2
 flowers: +3
 plushie: +2
 gift: +2
+pet rock: -1
+snack: +1
+meal: +3
+drink: +2
+treat: +1
+sweet: +1
 
 ## Words she likes
 
@@ -2398,6 +2533,13 @@ sulks at upset: 0
 gives up at: 0
 kind returns: 0.88
 mean scale: 0.58
+repeat window: 20 to 60
+like fades: 0.6
+like least: 0.4
+dislike grows: 0.35
+dislike most: 2.5
+willing pull: 0.08
+willing slows: 0.15
 "
             },
             {
@@ -2584,6 +2726,12 @@ trinket: +2
 flowers: +3
 plushie: +2
 gift: +2
+pet rock: -1
+snack: +2
+meal: +3
+drink: +2
+treat: +3
+sweet: +3
 
 ## Words she likes
 
@@ -2614,6 +2762,13 @@ sulk alone: 240
 sulks at upset: 8
 kind returns: 0.82
 mean scale: 0.71
+repeat window: 20 to 60
+like fades: 0.6
+like least: 0.4
+dislike grows: 0.35
+dislike most: 2.5
+willing pull: 0.08
+willing slows: 0.15
 "
             },
             
@@ -2787,6 +2942,14 @@ A plushie to hold during the sad songs. Perfect.
 
 You got me something? Okay, my heart did a thing.
 
+
+## When you give her a pet rock
+
+A pet rock. Finally, someone who understands me.
+It doesn't talk, it doesn't leave. Perfect.
+I'm naming it Gerald. Gerald gets me.
+A rock. Dark, quiet, misunderstood. Like me.
+Me and the rock are going to sit in the corner together.
 ## When you give her chimpken nuggies
 
 Nuggies? Nuggies!!! OMG nuggies!!!
@@ -2838,8 +3001,7 @@ insulted: 0
 petted: +3
 praised: +2
 ignored: -3
-fed: +3
-treat: +4
+treat: +3
 touched shoulders: 0
 touched middle: -2
 touched legs: -2
@@ -2849,7 +3011,12 @@ trinket: +3
 flowers: +1
 plushie: +2
 gift: +2
+pet rock: +3
 nuggies: +3
+snack: +3
+meal: 0
+drink: +3
+sweet: +2
 
 ## Words she likes
 
@@ -2882,6 +3049,13 @@ sulk alone: 300
 sulks at upset: 5
 kind returns: 1.18
 mean scale: 1.27
+repeat window: 20 to 60
+like fades: 0.6
+like least: 0.4
+dislike grows: 0.35
+dislike most: 2.5
+willing pull: 0.05
+willing slows: 0.1
 " },
             
             
@@ -3046,6 +3220,14 @@ It's so squishy. I'm never giving it back.
 
 A present! Is it a good one? It better be a good one.
 
+
+## When you give her a pet rock
+
+You think that's funny, huh? ...Okay, it is. I'm keeping it.
+A pet rock? Rude. Mine now.
+I'm going to throw this at you. Lovingly.
+Ha. Fine. The rock lives here now.
+This is the dumbest thing you've ever given me and I love it.
 ## When you give her chimpken nuggies
 
 Nuggies? Nuggies!!! OMG nuggies!!!
@@ -3107,7 +3289,13 @@ trinket: +2
 flowers: +2
 plushie: +2
 gift: +3
+pet rock: +3
 nuggies: +3
+snack: +2
+meal: -1
+drink: +1
+treat: +4
+sweet: +4
 
 ## Words she likes
 
@@ -3132,6 +3320,13 @@ sulk alone: 150
 sulks at upset: 4
 kind returns: 0.97
 mean scale: 0.86
+repeat window: 20 to 60
+like fades: 0.6
+like least: 0.4
+dislike grows: 0.35
+dislike most: 2.5
+willing pull: 0.03
+willing slows: 0.06
 " },
             
             
@@ -3303,6 +3498,12 @@ trinket: +2
 flowers: +2
 plushie: +2
 gift: +3
+pet rock: +1
+snack: +2
+meal: +2
+drink: +2
+treat: +3
+sweet: +3
 
 ## Words she likes
 
@@ -3335,6 +3536,13 @@ sulk alone: 120
 sulks at upset: 4
 kind returns: 0.62
 mean scale: 0.35
+repeat window: 20 to 60
+like fades: 0.6
+like least: 0.4
+dislike grows: 0.35
+dislike most: 2.5
+willing pull: 0.08
+willing slows: 0.15
 " },
             { "Feral", @"# Feral
 
@@ -3503,6 +3711,12 @@ trinket: +3
 flowers: +2
 plushie: +2
 gift: +2
+pet rock: +2
+snack: +3
+meal: +3
+drink: 0
+treat: +2
+sweet: -1
 
 ## Words she likes
 
@@ -3527,6 +3741,13 @@ sulk alone: 90
 sulks at upset: 12
 kind returns: 1.31
 mean scale: 1.22
+repeat window: 20 to 60
+like fades: 0.6
+like least: 0.4
+dislike grows: 0.35
+dislike most: 2.5
+willing pull: 0.03
+willing slows: 0.06
 " },};
     }
 }

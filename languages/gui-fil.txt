@@ -204,11 +204,11 @@ Running on this PC	Tumatakbo sa PC na ito
 NORMAL	NORMAL
 OFF	OFF
 Local server address	Local server address
-Remember panel position	Tandaan ang puwesto ng panel
 Custom colours	Sariling mga kulay
 Custom colours...	Sariling mga kulay...
 Choose	Pumili
-Hers	Sa kanya
+Reset selected colour	I-reset ang napiling kulay
+Make a mod	Gumawa ng mod
 Quiet	Tahimik
 Quiet min	Tahimik min
 Quiet max	Tahimik max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Tahimik hanggang {n}:{n}
 Quiet until turned off	Tahimik hanggang patayin
 Export settings	I-export ang settings
 Import settings	I-import ang settings
+Save Mainframe position	Tandaan ang puwesto ng panel

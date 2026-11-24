@@ -4,12 +4,10 @@ Capri reads four kinds of mod. Import any of them from **Mainframe > CAPRI > Mod
 file into her mods folder (**Mods > Mods folder**) while she runs: she takes it in the same way, a code mod
 after her own check and your yes. Take a file out of that folder and its mod comes out of her.
 
-| File | What it does |
-|---|---|
-| `.capri-mod` | Settings only: extra names, spellings, colours, the hearing log |
-| `.capri-skin` | A zip of her sprite strips that changes how she looks. Several **stack**: each one turned on goes on top |
-| `.capri-skill` | Know-how for a game that she follows when she plays it |
-| `.capri-code` | C# that runs inside Capri, on Windows, Mac and Linux |
+- `.capri-mod`: Settings and drop-in packs: extra names, spellings, colours, the hearing log, and her lines and numbers taken over or added to
+- `.capri-skin`: A zip of her sprite strips that changes how she looks. Several **stack**: each one turned on goes on top
+- `.capri-skill`: Know-how for a game that she follows when she plays it
+- `.capri-code`: C# that runs inside Capri, on Windows, Mac and Linux
 
 Share finished mods in [capri-mods](https://github.com/lachydotmcg/capri-mods).
 
@@ -49,6 +47,75 @@ the same way as hers (open a personality in her editor to see the layout):
   written while that mode is on, and switching back off leaves it where it is. Abliterated mode lowers her
   guardrails, and it stays behind that switch and the terms beside it: the person turning it on accepts those
   terms and takes responsibility for doing so.
+
+## Drop-in packs
+
+A drop-in pack is a `.capri-mod` with `"format": 2`. It changes her without code: it takes over parts of her files,
+adds to them, or both, and everything goes back to hers when it is off. The template in `mods/template` has every
+kind in one pack (`night-owl.capri-mod`), with a file for each part explaining it, ready to copy.
+
+**Mainframe > Mods > Make a mod** opens the mod helper: pick one of her files and a part of it, change its text or
+take it from a file, and add it to your pack. Reload lays the pack on her so you see it at once; change a part and
+Reload again. Save pack writes it to `made` in her mods folder, ready to share or drop in.
+
+```json
+{ "format": 2, "id": "night-owl-pack", "name": "Night Owl", "version": "1.0.0", "author": "You",
+  "description": "A sleepy night-shift Capri.",
+  "overrides": [ { "slot": "lines.md > openers warm", "text": "Mm. Hi.\nStill up? Same." },
+                 { "slot": "chess.md", "whole": true, "text": "# Chess, after midnight\n\n## When she wins\n\nMate. Now we can both sleep." } ],
+  "adds": { "acts": [ { "name": "coffee", "kind": "food", "like": 3 } ],
+            "mood": [ { "act": "coffee", "add": 1 } ] },
+  "names": { "name": "Owl", "wake": [ "owl", "hey owl" ] } }
+```
+
+### Slots and slots.md
+
+A slot is one of her files and a heading in it, like `lines.md > openers warm`, or a whole file. She writes
+`slots.md` in her mods folder at every start: every slot she has, what each holds (lines she says, numbers she reads,
+or text) and which pack holds one now. Her safety rules and SECURITY are not slots.
+
+### Overrides
+
+1. `"slot": "file > heading"` takes over one heading. The rest of the file stays hers.
+2. `"slot": "file", "whole": true` takes over the whole file. Write every heading you want her to use.
+3. `text` is what goes there, as it would be in her file, with `\n` between rows. Numbers are written the same way,
+   so a pack can change `personalities/Sassy.md > How she reacts` or `What she likes`.
+4. Her files on disk are never touched. Up to 60 overrides, each up to 20000 characters.
+
+### Adds
+
+1. `adds.acts`: a new act, with a `name`, a `kind` (like `food`, `touch` or `words`) and a `like` from -5 to 5.
+2. `adds.mood`: a term on an act's worth, hers or the pack's, from -3 to 3.
+3. `names`: a name offered to Custom Names once, and wake names she answers to while the pack is on.
+4. Adds never conflict. Two packs adding to the same act both count.
+
+### Conflicts
+
+When a pack turns on and takes a slot another pack holds, she asks which keeps it, file by file, and a file opens
+into its headings so each heading can come from either. The choice is kept and asked again only when either pack
+changes. Both packs' rows in Mods say what they hold and what they gave up.
+
+### The act maths
+
+Every act is worth something to her: her personality's like, plus each term from her mood, packs and mods, held to -5
+to 5, then each multiplier from a code mod. Her log writes the sum for every act on a `mood` line, each part by
+name, like this:
+
+```
+petted: Sassy 2 + Night Owl -1 = 1, sleepy pats x0.5 = worth 1
+```
+
+### The abliterated mark
+
+`"senpai": true` on an override holds it back until abliterated mode is on, the switch at the bottom of her
+`sys.md`, as it does for personalities and moods above. With the switch off that part isn't laid and the slot stays
+hers.
+
+### With code
+
+A pack can't run code. A switch in her Toggles window, a multiplier, or an act that happens on its own comes from a
+code mod beside it: `capri.Acts`, `capri.Mood`, `capri.Slots` and `capri.Toggles` below (API 6). The template's
+`night-owl-switch.capri-code` is one.
 
 ## Code mods
 
@@ -115,76 +182,66 @@ Her question also says what changed since you last approved a mod: its version t
 
 Using a hook without its permission throws a `CapriPermissionException` that names the missing one.
 
-| Permission | Lets the mod |
-|---|---|
-| `chat` | Read and change what you and Capri say, and talk to her for you |
-| `transcripts` | Read her saved chat transcripts |
-| `memory` | Read, add, change and delete her notes about you and her memories |
-| `screen` | Take screenshots and see what she sees on your screen |
-| `voice` | Hear what your mic picks up and change what she says out loud |
-| `personality` | Add to her personality and change what she calls you |
-| `settings` | Read and change her settings, like her size and volume |
-| `skins` | Change her outfit, and put accessories on and off |
-| `brain` | Ask her brain questions, which can use your API credits |
-| `tools` | Add tools her brain can use by itself, and see or stop the tools she's about to use |
-| `system` | Know when you're away or back, when your PC locks, sleeps or wakes, and its battery |
-| `hotkeys` | Add keyboard shortcuts that work in any app |
-| `music` | See what's playing, control your music apps and their volume, and hear how loud your PC's sound is |
+- `chat`: Read and change what you and Capri say, and talk to her for you
+- `transcripts`: Read her saved chat transcripts
+- `memory`: Read, add, change and delete her notes about you and her memories
+- `screen`: Take screenshots and see what she sees on your screen
+- `voice`: Hear what your mic picks up and change what she says out loud
+- `personality`: Add to her personality and change what she calls you
+- `settings`: Read and change her settings, like her size and volume
+- `skins`: Change her outfit, and put accessories on and off
+- `brain`: Ask her brain questions, which can use your API credits
+- `tools`: Add tools her brain can use by itself, and see or stop the tools she's about to use
+- `system`: Know when you're away or back, when your PC locks, sleeps or wakes, and its battery
+- `hotkeys`: Add keyboard shortcuts that work in any app
+- `music`: See what's playing, control your music apps and their volume, and hear how loud your PC's sound is
 
 ### The host
 
-| Member | Permission | What it does |
-|---|---|---|
-| `Folder` | | A data folder of the mod's own |
-| `Say(line)` | | She says it, out loud if her voice is on |
-| `Log(line)` | | A line in `errors.txt` |
-| `Art(name)`, `Sound(name)`, `PlayIntro()` | | Her sprite strip, one of her sounds, a startup intro |
-| `Api` | | `4` here. Settings panels (`Mainframe.AddPanel`), menus of a mod's own (`Ui.AddMenu`, `Ui.MenuOpening`), `Ui.DrawScale`, `Ui.BubbleOpacity`, `Ui.Switch`, `Ui.Button` and `System.GameInFront` came in 4; brain tools, context, the store, system events, hotkeys, sounds, music, pages, moving her and mod messages in 3; the other hooks in 2 |
-| `CapriVersion`, `Has(permission)` | | Her version, and whether this mod asked for a permission |
+- `Folder`: A data folder of the mod's own
+- `Say(line)`: She says it, out loud if her voice is on
+- `Log(line)`: A line in `errors.txt`
+- `Art(name)`, `Sound(name)`, `PlayIntro()`: Her sprite strip, one of her sounds, a startup intro
+- `Api`: `4` here. Settings panels (`Mainframe.AddPanel`), menus of a mod's own (`Ui.AddMenu`, `Ui.MenuOpening`), `Ui.DrawScale`, `Ui.BubbleOpacity`, `Ui.Switch`, `Ui.Button` and `System.GameInFront` came in 4; brain tools, context, the store, system events, hotkeys, sounds, music, pages, moving her and mod messages in 3; the other hooks in 2
+- `CapriVersion`, `Has(permission)`: Her version, and whether this mod asked for a permission
 
 ### `capri.Chat`
 
-| Member | Permission | What it does |
-|---|---|---|
-| `Sending` | chat | What they typed or said, before her brain sees it. Change `Text`, or set `Cancel` and she ignores it |
-| `Replying` | chat | Her reply before it shows and is spoken. Change `Text` |
-| `Replied` | chat | Her line once it shows. `Source` is `reply` or `remark` |
-| `ToolUsed(tool, result)` | tools | She used one of her tools |
-| `ToolUsing` | tools | She's about to use a tool. `CapriToolCall` has `Tool`, `Doing` (like "open Spotify"), `Name`, `Action` and `Text`. Set `Cancel`, and `Reason` for what her brain is told instead |
-| `AddContext(func)`, `ClearContext()` | chat | `func` returns a fact for her prompt, read fresh for each message, like "Focus timer: 12 minutes left". Up to 5 per mod, 300 characters each. Her brain is told they're facts, not instructions |
-| `LastHeard`, `LastReply` | chat | The last thing she heard and said |
-| `Busy` | | She's thinking, talking or on a job |
-| `Send(text)` | chat | As if they typed it. `Sending` sees `Source == "mod"`. It never answers her asking first: when SECURITY holds a tool, only their own yes runs it |
-| `Start(about)` | chat | She starts a chat herself: her brain writes a line about it. False if she's busy |
-| `Days()`, `Transcript(day)` | transcripts | Days with a transcript, and one day's transcript |
+- `Sending` (needs chat): What they typed or said, before her brain sees it. Change `Text`, or set `Cancel` and she ignores it
+- `Replying` (needs chat): Her reply before it shows and is spoken. Change `Text`
+- `Replied` (needs chat): Her line once it shows. `Source` is `reply` or `remark`
+- `ToolUsed(tool, result)` (needs tools): She used one of her tools
+- `ToolUsing` (needs tools): She's about to use a tool. `CapriToolCall` has `Tool`, `Doing` (like "open Spotify"), `Name`, `Action` and `Text`. Set `Cancel`, and `Reason` for what her brain is told instead
+- `AddContext(func)`, `ClearContext()` (needs chat): `func` returns a fact for her prompt, read fresh for each message, like "Focus timer: 12 minutes left". Up to 5 per mod, 300 characters each. Her brain is told they're facts, not instructions
+- `LastHeard`, `LastReply` (needs chat): The last thing she heard and said
+- `Busy`: She's thinking, talking or on a job
+- `Send(text)` (needs chat): As if they typed it. `Sending` sees `Source == "mod"`. It never answers her asking first: when SECURITY holds a tool, only their own yes runs it
+- `Start(about)` (needs chat): She starts a chat herself: her brain writes a line about it. False if she's busy
+- `Days()`, `Transcript(day)` (needs transcripts): Days with a transcript, and one day's transcript
 
 ### `capri.Memory` (memory)
 
-| Member | What it does |
-|---|---|
-| `Notes` | Her notes about them, from `me.md` |
-| `Remember(fact)`, `Forget(about)` | Add or delete notes, like her own tool does. Returns her line about it |
-| `Update(oldText, newText)` | Rewrite the first note containing `oldText` |
-| `Set(label, value)` | One `- Label: value` note, replaced in place |
-| `Memories`, `WriteMemories(text)` | Read or rewrite `memories.md` |
+- `Notes`: Her notes about them, from `me.md`
+- `Remember(fact)`, `Forget(about)`: Add or delete notes, like her own tool does. Returns her line about it
+- `Update(oldText, newText)`: Rewrite the first note containing `oldText`
+- `Set(label, value)`: One `- Label: value` note, replaced in place
+- `Memories`, `WriteMemories(text)`: Read or rewrite `memories.md`
 
 ### `capri.Ui`
 
-| Member | What it does |
-|---|---|
-| `Drawing` | Draw over her every frame she's drawn. `CapriFrame` has `Graphics`, `Window`, `Body`, `Head`, `FacingLeft`, `Animation`, `Frame` and `Size` |
-| `Redraw()` | Draw her again now, for drawing that changes |
-| `DrawScale` | How much bigger she draws, `1` to `1.15`, about her seat or feet like her own beat pulse and on top of it. Her size setting never changes. Set it as often as each frame, for a pulse of the mod's own; it stays at `1` while Motion is off, and goes back to `1` when the mod stops. Needs API 4 |
-| `Switch(text, on, changed)`, `Button(text, clicked)` | Her own OFF/ON switch and key, in her colours and font and the column's width, to return from `Mainframe.AddPanel`'s `make` so a mod's panel looks like hers and follows Mainframe colours. `changed` gets the new state; a change or click that throws is the mod's failure, not hers. Needs API 4 |
-| `BubbleOpacity` | How solid her speech bubble draws, `0.3` to `1`. With more than one mod asking, the most see-through wins. Back to `1` when the mod stops. Needs API 4 |
-| `AddMenuItem(text, clicked)` | An item under **Mods** in her right-click menu |
-| `AddMenu(text)` | A menu of the mod's own under **Mods** in her right-click menu, in her menu's look. It returns an `ICapriMenu`: `Add(text, clicked)`, `AddCheck(text, on, changed)` for an item with a tick (`changed` gets the new state), `AddLine()`, `Clear()` and `Remove()`. `Add` and `AddCheck` return an `ICapriMenuItem` with `Text`, `Checked`, `Enabled` and `Remove()`, which can be changed any time. Up to 30 items and lines, 60 characters each. It goes when the mod stops. Needs API 4 |
-| `MenuOpening` | Just before her right-click menu opens, to bring a menu's ticks and words up to date. Needs API 4 |
-| `SetOptions(title, make)` | An **Options** button on the mod's row in Mods. `make` returns the WinForms `Control` to show |
-| `Bubble(text)` | A line in her bubble, not spoken |
-| `Window` | Her window |
-| `Colour(name, usual)` | A colour of the mod's own, by a name that says what it colours, up to 40 characters and 16 a mod. The first ask names it, so ask in `Start`. It comes back as they set it in **Custom colours**, under a fold-down of the mod's own below hers, or as `usual` in her current look, following Mainframe colours like her own. Kept in `colours.md` in the mod's own data folder. Its approval and its Mods row say it has custom colours. Needs API 5 |
-| `ColoursChanged` | One of the mod's colours was set, or her look changed: ask `Colour` again. Needs API 5 |
+- `Drawing`: Draw over her every frame she's drawn. `CapriFrame` has `Graphics`, `Window`, `Body`, `Head`, `FacingLeft`, `Animation`, `Frame` and `Size`
+- `Redraw()`: Draw her again now, for drawing that changes
+- `DrawScale`: How much bigger she draws, `1` to `1.15`, about her seat or feet like her own beat pulse and on top of it. Her size setting never changes. Set it as often as each frame, for a pulse of the mod's own; it stays at `1` while Motion is off, and goes back to `1` when the mod stops. Needs API 4
+- `Switch(text, on, changed)`, `Button(text, clicked)`: Her own OFF/ON switch and key, in her colours and font and the column's width, to return from `Mainframe.AddPanel`'s `make` so a mod's panel looks like hers and follows Mainframe colours. `changed` gets the new state; a change or click that throws is the mod's failure, not hers. Needs API 4
+- `BubbleOpacity`: How solid her speech bubble draws, `0.3` to `1`. With more than one mod asking, the most see-through wins. Back to `1` when the mod stops. Needs API 4
+- `AddMenuItem(text, clicked)`: An item under **Mods** in her right-click menu
+- `AddMenu(text)`: A menu of the mod's own under **Mods** in her right-click menu, in her menu's look. It returns an `ICapriMenu`: `Add(text, clicked)`, `AddCheck(text, on, changed)` for an item with a tick (`changed` gets the new state), `AddLine()`, `Clear()` and `Remove()`. `Add` and `AddCheck` return an `ICapriMenuItem` with `Text`, `Checked`, `Enabled` and `Remove()`, which can be changed any time. Up to 30 items and lines, 60 characters each. It goes when the mod stops. Needs API 4
+- `MenuOpening`: Just before her right-click menu opens, to bring a menu's ticks and words up to date. Needs API 4
+- `SetOptions(title, make)`: An **Options** button on the mod's row in Mods. `make` returns the WinForms `Control` to show
+- `Bubble(text)`: A line in her bubble, not spoken
+- `Window`: Her window
+- `Colour(name, usual)`: A colour of the mod's own, by a name that says what it colours, up to 40 characters and 16 a mod. The first ask names it, so ask in `Start`. It comes back as they set it in **Custom colours**, under a fold-down of the mod's own below hers, or as `usual` in her current look, following Mainframe colours like her own. Kept in `colours.md` in the mod's own data folder. Its approval and its Mods row say it has custom colours. Needs API 5
+- `ColoursChanged`: One of the mod's colours was set, or her look changed: ask `Colour` again. Needs API 5
 
 ### `capri.Mainframe`
 
@@ -192,7 +249,7 @@ Using a hook without its permission throws a `CapriPermissionException` that nam
 
 `ShowPage(title, make)` opens a page of the mod's own beside her Mainframe, up to 1200 × 900, for things bigger than options, like a dashboard. `make` returns the `Control`, made fresh each time. One page is open at a time. `ClosePage()` closes it, and it closes by itself when the mod stops.
 
-`AddPanel(title, column, slot, make, simple)` puts a panel of the mod's own on her Settings page, in the same look as hers: `title` is its heading and `make` returns the `Control` under it, the column's width (328 px at 100%) and as tall as it is made. `column` is `"left"` or `"right"`, and `slot` is where in that column, 1 at the top. The panel in that slot and the ones under it move down. When two mods ask for the same slot, the one loaded first keeps it and the next goes straight after it. It shows in Advanced Settings only, unless `simple` is `true`. Where the panels sit is saved with her settings (settings.json), so it is the same after a restart, an update or an import, and when the mod stops or is taken out its panel goes and the panels under it move back up. Approving a mod that calls it shows "adds a Settings panel". Needs API 4: put `// requires: api 4` in its header.
+`AddPanel(title, column, slot, make, simple)` puts a panel of the mod's own on her Settings page, in the same look as hers: `title` is its heading and `make` returns the `Control` under it, the column's width (328 px at 100%) and as tall as it is made. `column` is `"left"` or `"right"`, and `slot` is where in that column, 1 at the top. The panel in that slot and the ones under it move down. When two mods ask for the same slot, the one loaded first keeps it and the next goes straight after it. It shows in Advanced Settings only, unless `simple` is `true`. Where the panels sit is saved with her settings (settings.json), so it is the same after a restart, an update or an import, and when the mod stops or is taken out its panel goes and the panels under it move back up. Approving a mod that calls it shows "adds a Settings panel". Needs API 4: put `// requires: api 4` in its header. `AddPanel(title, column, slot, make, simple, group)` puts it inside a panel every mod naming the same `group` shares, like `"Yuno Mods"`: the group is the panel's heading, and `title` is this mod's sub-heading in it, in big text. The first part placed sets where the panel sits. A mod taken out takes its part, and the panel goes with the last one. Needs API 7.
 
 ```csharp
 public void Start(ICapriHost capri)
@@ -206,24 +263,22 @@ public void Start(ICapriHost capri)
 
 ### `capri.Screen` (screen)
 
-| Member | What it does |
-|---|---|
-| `Capture()`, `Capture(area)` | A screenshot of the screen she's on, or an area. Dispose it when done |
-| `Looked` | She looked or glanced at their screen. The picture is only good during the handler |
+- `Capture()`, `Capture(area)`: A screenshot of the screen she's on, or an area. Dispose it when done
+- `Looked`: She looked or glanced at their screen. The picture is only good during the handler
 
 ### `capri.Voice`
 
-| Member | Permission | What it does |
-|---|---|---|
-| `Speaking` | voice | Her words before her voice says them. Change `Text`, or `Cancel` to keep that line in her bubble |
-| `Started(text)`, `Finished` | voice | Her voice started or stopped |
-| `Heard(text, forHer)` | voice | Their mic heard words, and whether they were for her |
-| `Talking` | | She's talking out loud |
-| `Speak(text)`, `Stop()` | | Say a line, or stop her talking |
+- `Speaking` (needs voice): Her words before her voice says them. Change `Text`, or `Cancel` to keep that line in her bubble
+- `Started(text)`, `Finished` (needs voice): Her voice started or stopped
+- `Heard(text, forHer)` (needs voice): Their mic heard words, and whether they were for her
+- `Talking`: She's talking out loud
+- `Speak(text)`, `Stop()`: Say a line, or stop her talking
 
 ### `capri.Timers`
 
 `After(seconds, run)`, `Every(seconds, run)` and `At(time, run)` each return an `ICapriTimer` with `Cancel()`. They run on her thread.
+
+`After` and `Every` follow While working: a mod's first one lists it under Work apps > What it slows, Extend to start, so its waits stretch, pause or keep their pace while a work app is in front, and stop at the infinity step. `At` is a time on the clock, like a reminder, and is never held.
 
 ### `capri.Personality` (personality)
 
@@ -233,13 +288,11 @@ public void Start(ICapriHost capri)
 
 These are the same switches and sliders her own settings tool uses. API keys and SECURITY are never here.
 
-| Member | What it does |
-|---|---|
-| `Switches`, `Sliders` | Their names, like `wander`, `dance_to_music`, `volume` |
-| `IsOn(name)`, `Turn(name, on)` | Read or flip a switch |
-| `Level(name)`, `Steps(name)`, `SetLevel(name, step)` | Read or move a slider by step |
-| `Size` | Her size in pixels, read or set |
-| `Changed` | Any of these changed, however it was changed |
+- `Switches`, `Sliders`: Their names, like `wander`, `dance_to_music`, `volume`
+- `IsOn(name)`, `Turn(name, on)`: Read or flip a switch
+- `Level(name)`, `Steps(name)`, `SetLevel(name, step)`: Read or move a slider by step
+- `Size`: Her size in pixels, read or set
+- `Changed`: Any of these changed, however it was changed
 
 ### `capri.Skins` (skins)
 
@@ -247,26 +300,22 @@ These are the same switches and sliders her own settings tool uses. API keys and
 
 ### `capri.Her`
 
-| Member | What it does |
-|---|---|
-| `Bounds`, `Head`, `Size` | Where she is on screen |
-| `State`, `StateChanged` | `idle`, `thinking`, `talking`, `dancing`, `asleep` or `hidden` |
-| `Animation`, `Animate(name)` | The strip she's showing, and play one: `dance`, `stop_dancing`, `idle`, `grin`, `glitch` or `blink` |
-| `Clicked`, `Patted` | They clicked her, or gave her a head pat |
-| `Dragged`, `Dropped(hip)`, `Dragging` | They picked her up, or let go of her and where |
-| `Screen` | The working area of the monitor she's on |
-| `MoveTo(hip)` | She glitches over with her hip on that point, then drops onto whatever's under her |
-| `Move(action)` | Her own moves: `come_here`, `other_screen`, `sit`, `stand_up`, `lie_down`, `sit_up`, `walk_around`, `wander`, `hang`, `ride_cursor`, `hop_off`, `hide` or `show`. Returns her line about it |
-| `SitOn(window)` | Sit on top of a window they'd name, like `Discord` or `taskbar` |
+- `Bounds`, `Head`, `Size`: Where she is on screen
+- `State`, `StateChanged`: `idle`, `thinking`, `talking`, `dancing`, `asleep` or `hidden`
+- `Animation`, `Animate(name)`: The strip she's showing, and play one: `dance`, `stop_dancing`, `idle`, `grin`, `glitch` or `blink`
+- `Clicked`, `Patted`: They clicked her, or gave her a head pat
+- `Dragged`, `Dropped(hip)`, `Dragging`: They picked her up, or let go of her and where
+- `Screen`: The working area of the monitor she's on
+- `MoveTo(hip)`: She glitches over with her hip on that point, then drops onto whatever's under her
+- `Move(action)`: Her own moves: `come_here`, `other_screen`, `sit`, `stand_up`, `lie_down`, `sit_up`, `walk_around`, `wander`, `hang`, `ride_cursor`, `hop_off`, `hide` or `show`. Returns her line about it
+- `SitOn(window)`: Sit on top of a window they'd name, like `Discord` or `taskbar`
 
 ### `capri.Brain`
 
-| Member | Permission | What it does |
-|---|---|---|
-| `Ready` | brain | She has a brain set up |
-| `Ask(instructions, question, answered)` | brain | Ask her brain outside her chat. `answered` gets the reply on her thread, or `null` if it failed |
-| `AddTool(name, description, takes, run)` | tools | A tool her brain can pick by itself, like her own. `name` is letters, numbers and `_`. `description` tells her brain when to use it, and `takes` what its text is, or `""`. `run` gets the text and returns what her brain hears back. Up to 8 per mod. False if another running mod has that name. SECURITY > HER MODS > Use tools your code mods added decides whether she asks first: off on Lockdown and Guarded, on on Trusted and Blackwall |
-| `RemoveTool(name)`, `Tools` | tools | Take one away, or list this mod's |
+- `Ready` (needs brain): She has a brain set up
+- `Ask(instructions, question, answered)` (needs brain): Ask her brain outside her chat. `answered` gets the reply on her thread, or `null` if it failed
+- `AddTool(name, description, takes, run)` (needs tools): A tool her brain can pick by itself, like her own. `name` is letters, numbers and `_`. `description` tells her brain when to use it, and `takes` what its text is, or `""`. `run` gets the text and returns what her brain hears back. Up to 8 per mod. False if another running mod has that name. SECURITY > HER MODS > Use tools your code mods added decides whether she asks first: off on Lockdown and Guarded, on on Trusted and Blackwall
+- `RemoveTool(name)`, `Tools` (needs tools): Take one away, or list this mod's
 
 Her brain sees every mod's tools as one tool, `mod`, with a `name` to pick. Chat brains (Claude, OpenAI-style and local) get them. ElevenLabs voice chat doesn't yet. A friend on a call can't use them.
 
@@ -276,14 +325,12 @@ The mod's own saved values, kept in `store.json` in its folder. `Get(key)`, `Get
 
 ### `capri.System` (system)
 
-| Member | What it does |
-|---|---|
-| `Away`, `Back`, `AwayMinutes`, `IsAway` | No mouse or keyboard for `AwayMinutes` (5 unless set), and when they're back |
-| `IdleFor` | How long since they last touched the mouse or keyboard |
-| `Locked`, `Unlocked`, `Sleeping`, `Woke` | The PC locked, unlocked, went to sleep or woke |
-| `NewDay` | Midnight passed while she was running |
-| `Battery`, `Charging`, `BatteryChanged(percent, charging)` | The battery percent, or `-1` with no battery |
-| `GameInFront` | A game's window is the one in front, by her own check, the one that lowers her over games. Read about once a second. Needs API 4 |
+- `Away`, `Back`, `AwayMinutes`, `IsAway`: No mouse or keyboard for `AwayMinutes` (5 unless set), and when they're back
+- `IdleFor`: How long since they last touched the mouse or keyboard
+- `Locked`, `Unlocked`, `Sleeping`, `Woke`: The PC locked, unlocked, went to sleep or woke
+- `NewDay`: Midnight passed while she was running
+- `Battery`, `Charging`, `BatteryChanged(percent, charging)`: The battery percent, or `-1` with no battery
+- `GameInFront`: A game's window is the one in front, by her own check, the one that lowers her over games. Read about once a second. Needs API 4
 
 ### `capri.Mods`
 
@@ -301,23 +348,52 @@ The mod's own saved values, kept in `store.json` in its folder. `Get(key)`, `Get
 
 What's playing, from the same Windows media session her mini player reads, and the presses that go back to the app playing it.
 
-| Member | What it does |
-|---|---|
-| `Changed(track)` | A new song, or `null` when nothing has a title any more |
-| `Updated(track)` | Every read, about once a second, and soon after a press |
-| `Now` | The `CapriTrack` it shows, or `null` |
-| `Sessions` | Every app with something in the media session, Windows' own pick first |
-| `Follow(appId)`, `Following` | Sticks to one app's session by its `AppId`; `null` goes back to whatever Windows picks |
-| `Play()`, `Pause()`, `Toggle()`, `Next()`, `Previous()`, `Seek(seconds)` | Presses, sent off her window's thread. False when there's nothing to press or the app says it can't |
-| `SetShuffle(on)`, `SetRepeat("off" / "one" / "all")` | For apps that take them |
-| `Liked`, `Like(on)` | Spotify's own heart for the song, or `null` elsewhere |
-| `Art` | The cover the app gave Windows, as PNG or JPEG bytes, or `null` |
-| `Volume`, `Muted` | The app's own volume in Windows' volume mixer, 0 to 1, or -1 before it has made a sound |
-| `Levels(bands)`, `Loudness` | How loud the PC's sound is in that many bands from deep bass to treble, each 0 to 1, for a visualizer. It listens to the speakers only while a mod keeps asking, and stops a few seconds after the last ask |
-| `BuiltInPlayer` | Set it to false to keep her own mini player away while the mod runs, for a mod that shows its own player |
-| `Open()` | Brings the app playing it to the front |
+- `Changed(track)`: A new song, or `null` when nothing has a title any more
+- `Updated(track)`: Every read, about once a second, and soon after a press
+- `Now`: The `CapriTrack` it shows, or `null`
+- `Sessions`: Every app with something in the media session, Windows' own pick first
+- `Follow(appId)`, `Following`: Sticks to one app's session by its `AppId`; `null` goes back to whatever Windows picks
+- `Play()`, `Pause()`, `Toggle()`, `Next()`, `Previous()`, `Seek(seconds)`: Presses, sent off her window's thread. False when there's nothing to press or the app says it can't
+- `SetShuffle(on)`, `SetRepeat("off" / "one" / "all")`: For apps that take them
+- `Liked`, `Like(on)`: Spotify's own heart for the song, or `null` elsewhere
+- `Art`: The cover the app gave Windows, as PNG or JPEG bytes, or `null`
+- `Volume`, `Muted`: The app's own volume in Windows' volume mixer, 0 to 1, or -1 before it has made a sound
+- `Levels(bands)`, `Loudness`: How loud the PC's sound is in that many bands from deep bass to treble, each 0 to 1, for a visualizer. It listens to the speakers only while a mod keeps asking, and stops a few seconds after the last ask
+- `BuiltInPlayer`: Set it to false to keep her own mini player away while the mod runs, for a mod that shows its own player
+- `Open()`: Brings the app playing it to the front
 
 A `CapriTrack` has `Title`, `Artist`, `Album`, `App` (a name to show, like `Spotify`), `AppId`, `Playing`, `Music`, `Video`, `Position` and `Length` in seconds at the read, `At()` for where it's got to by now, `CanSeek`, `CanSkip`, `CanBack`, `Shuffle` and `Repeat` (`null` when the app doesn't say), and a `Key` that's the same for the same song in the same app. On Mac and Linux nothing reads yet, so `Now` is `null` and presses return false.
+
+### `capri.Acts` and `capri.Mood` (mood)
+
+Her acts and how much each is worth to her. Needs API 6, so a mod using them says `// requires: api 6`.
+
+- `Acts.Define(name, kind, like)`: A new act while the mod runs: a name of its own (not one of hers), a kind like `food` or `touch`, and how much she likes it, -5 to 5
+- `Acts.Did(name)`: The act happened: she reacts and her mood moves, the same as her own
+- `Acts.Happened(act, worth)`: Every act as it lands, with what it was worth
+- `Acts.List`: Every act she has now: hers, packs' and mods'
+- `Mood.Add(term, act, value)`: Adds -3 to 3 to an act's worth, under the term's name in her mood log
+- `Mood.Multiply(term, act, value)`: Multiplies an act's worth by 0.25 to 2, after every add
+- `Mood.Remove(term)`: Takes the term back
+- `Mood.Warmth`, `Mood.Upset`, `Mood.Willing`, `Mood.Today`: How she feels now, and today's mood by name
+
+A value past its limit throws `ArgumentOutOfRangeException`. Everything the mod added goes when it stops.
+
+### `capri.Slots` (slots)
+
+Her files' slots, as `slots.md` in the mods folder names them, like `lines.md > openers warm` or a whole file. Needs API 6.
+
+- `Override(slot, text)`: Takes the slot over with this text, the same as a drop-in pack; false when it isn't a slot. Two holders of one slot get the conflict box
+- `Release(slot)`: Gives it back
+- `Holder(slot)`: Who holds it, or `null` while it's hers
+
+### `capri.Toggles`
+
+`Add(name, on, changed)` puts a switch of the mod's own in her Toggles window (right-click her > Toggles), under her own; `changed` gets the new state. It goes when the mod stops. Needs API 6.
+
+### Screensavers (`ICapriScreensaver`)
+
+A mod that draws a screensaver implements `ICapriScreensaver` beside `ICapriMod`: `Looks` names its looks, `Show(ask)` puts one up and returns whether it did, `Hide()` takes it down, and `Showing` says whether it is up. She decides when: the PC left alone as long as Toggles says, never over full screen, a stream or a job of hers. `ask` carries the look and her settings for it (size, speed, see through, screens, flashing, sound and volume, how long before a key may end it, and whether any key does). Her own is `capri-screensaver`, carried like the doors; its looks are what Test > Screensavers lists. Needs API 8.
 
 ## Plug-ins
 
@@ -345,3 +421,4 @@ starts, the keys it takes and any website it connects to.
 - [hello-code.capri-code](hello-code.capri-code) answers "mod check".
 - [hooks-tour.capri-code](hooks-tour.capri-code) grows or shrinks her when asked, counts head pats, draws a heart over her head, and adds a menu item and options.
 - [startup-intros.capri-code](startup-intros.capri-code) plays a startup intro.
+- [template](template/README.md) is a drop-in pack with every kind of part, and a code mod with a switch.

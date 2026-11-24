@@ -204,11 +204,11 @@ Running on this PC	この PC で実行中
 NORMAL	通常
 OFF	オフ
 Local server address	ローカルサーバーのアドレス
-Remember panel position	パネルの位置を記憶
 Custom colours	カスタムカラー
 Custom colours...	カスタムカラー...
 Choose	選択
-Hers	彼女の色
+Reset selected colour	選んだ色をリセット
+Make a mod	MODを作る
 Quiet	静か
 Quiet min	静か min
 Quiet max	静か max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	{n}:{n}まで静か
 Quiet until turned off	オフにするまで静か
 Export settings	設定をエクスポート
 Import settings	設定をインポート
+Save Mainframe position	パネルの位置を記憶

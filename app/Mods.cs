@@ -30,6 +30,10 @@ namespace CapriDesktop
         // only written with the switch at the bottom of sys.md on, into the senpai folder, like her own.
         [DataMember(Name = "personalities")] public ModPack[] Personalities;
         [DataMember(Name = "moods")] public ModPack[] Moods;
+        // Format 2, a drop-in pack: slots it takes over, acts and mood terms it adds, and a name with wake names.
+        [DataMember(Name = "overrides")] public ModOverride[] Overrides;
+        [DataMember(Name = "adds")] public ModAdds Adds;
+        [DataMember(Name = "names")] public ModNames Names;
         internal bool Intro;
         internal string[] Permissions = new string[0];
         // A code mod's // requires: line: the mod API it needs, and other mods that must be installed and on.
@@ -50,6 +54,8 @@ namespace CapriDesktop
         // Why its source cannot be read, or null; that source laid back out when it can be; and whether that
         // is worth a second question before it runs.
         internal string Unreadable;
+        // The source itself, kept only when it can't be read, for her brain to lay out if they ask (ModReadout).
+        internal string Source;
         internal string Tidy;
         internal bool AskTwice;
         // The files it carries packed into its code, from its "// assets:" line, so their packing isn't read as hidden text.
@@ -65,6 +71,48 @@ namespace CapriDesktop
         [DataMember(Name = "name")] public string Name;
         [DataMember(Name = "senpai")] public bool Senpai;
         [DataMember(Name = "text")] public string Text;
+    }
+
+    // One slot a pack takes over: a heading ("lines.md > openers warm") or, with whole, a file. Senpai parts wait for
+    // the switch.
+    [DataContract]
+    internal sealed class ModOverride
+    {
+        [DataMember(Name = "slot")] public string Slot;
+        [DataMember(Name = "text")] public string Text;
+        [DataMember(Name = "whole")] public bool Whole;
+        [DataMember(Name = "senpai")] public bool Senpai;
+    }
+
+    [DataContract]
+    internal sealed class ModAdds
+    {
+        [DataMember(Name = "acts")] public ModAct[] Acts;
+        [DataMember(Name = "mood")] public ModTerm[] Mood;
+    }
+
+    // A new act: its name, kind and the like she starts with.
+    [DataContract]
+    internal sealed class ModAct
+    {
+        [DataMember(Name = "name")] public string Name;
+        [DataMember(Name = "kind")] public string Kind;
+        [DataMember(Name = "like")] public int Like;
+    }
+
+    // A term added to an act's worth while the pack is on, named after the pack in her mood log.
+    [DataContract]
+    internal sealed class ModTerm
+    {
+        [DataMember(Name = "act")] public string Act;
+        [DataMember(Name = "add")] public int Add;
+    }
+
+    [DataContract]
+    internal sealed class ModNames
+    {
+        [DataMember(Name = "name")] public string Name;
+        [DataMember(Name = "wake")] public string[] Wake;
     }
 
     [DataContract]
@@ -85,6 +133,8 @@ namespace CapriDesktop
         internal bool On;
         // Own: a skill she was taught here, kept in her own skills folder rather than installed as a mod.
         internal bool Code, Changed, Skin, Skill, Own;
+        // One of her own items listed as a mod, like her screensaver: its switch is hers, and it has no file to remove.
+        internal bool Hers;
         internal string Hash;
         // A skill a plug-in carries: the plug-in's id and name, the skill's folder, and the other files in it read_skill opens.
         internal string Owner, From, Folder;
@@ -101,7 +151,9 @@ namespace CapriDesktop
     internal sealed partial class Mods
     {
         internal const string Extension = ".capri-mod";
-        internal const int Format = 1;
+        // Skills, code mods and skins are format 1. A settings mod's JSON can be format 2, a drop-in pack with overrides,
+        // adds and names; a format 1 one reads as it always has.
+        internal const int Format = 1, PackFormat = 2;
         private const int Largest = 256 * 1024;
         private const int MostNames = 20;
         private const int MostSpellings = 60;
@@ -368,12 +420,14 @@ namespace CapriDesktop
         {
             ModFile read = ReadJson(text);
             read.Zones = ReadZones(text);
-            CheckDetails(read);
+            CheckDetails(read, PackFormat);
             read.WakeNames = read.WakeNames ?? new string[0];
             read.HeardAs = read.HeardAs ?? new string[0];
+            CheckPack(read);
             if (read.WakeNames.Length == 0 && read.HeardAs.Length == 0 && !read.SoundsLike && !read.HearingLog && read.Colors == null && (read.Zones == null || read.Zones.Count == 0)
-                && (read.Personalities == null || read.Personalities.Length == 0) && (read.Moods == null || read.Moods.Length == 0))
-                throw new ModException("That mod doesn't change anything. It needs wake_names, heard_as, sounds_like, hearing_log, colors, zones, personalities or moods.");
+                && (read.Personalities == null || read.Personalities.Length == 0) && (read.Moods == null || read.Moods.Length == 0)
+                && read.Overrides.Length == 0 && read.Adds.Acts.Length == 0 && read.Adds.Mood.Length == 0)
+                throw new ModException("That mod doesn't change anything. It needs wake_names, heard_as, sounds_like, hearing_log, colors, zones, personalities, moods, overrides or adds.");
             if (read.Colors != null) CheckColours(read.Colors);
             if (read.WakeNames.Length > MostNames) throw new ModException("A mod can add up to " + MostNames + " names.");
             if (read.HeardAs.Length > MostSpellings) throw new ModException("A mod can add up to " + MostSpellings + " spellings.");
@@ -395,6 +449,48 @@ namespace CapriDesktop
             return read;
         }
 
+        internal const int MostOverrides = 60, LongestOverride = 20000, MostAdds = 40, MostTerm = 3;
+
+        // A pack's parts, each checked against her slots and acts, with the pack's names joining its wake names.
+        private static void CheckPack(ModFile read)
+        {
+            read.Overrides = read.Overrides ?? new ModOverride[0];
+            read.Adds = read.Adds ?? new ModAdds();
+            read.Adds.Acts = read.Adds.Acts ?? new ModAct[0];
+            read.Adds.Mood = read.Adds.Mood ?? new ModTerm[0];
+            if (read.Overrides.Length > MostOverrides) throw new ModException("A pack can take over " + MostOverrides + " slots at most.");
+            if (read.Adds.Acts.Length + read.Adds.Mood.Length > MostAdds) throw new ModException("A pack can add " + MostAdds + " acts and mood terms at most.");
+            List<string> named = new List<string>();
+            foreach (ModOverride one in read.Overrides)
+            {
+                string slot = (one == null ? "" : one.Slot ?? "").Trim();
+                if (slot.Length == 0) throw new ModException("An override needs a slot, like \"lines.md > openers warm\". slots.md in the mods folder lists them.");
+                if ((one.Text ?? "").Length > LongestOverride) throw new ModException("The override for " + slot + " is too long. " + LongestOverride + " characters at most.");
+                bool heading = slot.IndexOf(" > ", StringComparison.Ordinal) > 0;
+                if (one.Whole == heading) throw new ModException(one.Whole ? "\"whole\" takes a whole file, so " + slot + " should be just its file name." : slot + " is a file: add \"whole\": true to take it all, or name a heading.");
+                if (named.Contains(slot.ToLowerInvariant())) throw new ModException("The pack takes over " + slot + " twice.");
+                string file = heading ? slot.Substring(0, slot.IndexOf(" > ", StringComparison.Ordinal)).Trim() : slot;
+                if (!FileSlots.Knows(file)) throw new ModException(file + " isn't one of her files. slots.md in the mods folder lists them.");
+                named.Add(slot.ToLowerInvariant());
+                one.Slot = slot;
+            }
+            foreach (ModAct one in read.Adds.Acts)
+            {
+                if (one == null || string.IsNullOrWhiteSpace(one.Name) || !GoodId.IsMatch(one.Name.Replace(' ', '-'))) throw new ModException("An added act needs a name of lowercase letters, numbers and dashes.");
+                if (CapriDesktop.Acts.Find(one.Name) != null && !CapriDesktop.Acts.Added(one.Name)) throw new ModException(one.Name + " is one of her own acts; add to it with a mood term instead.");
+                if (one.Like < -5 || one.Like > 5) throw new ModException("An act's like is from -5 to 5.");
+                one.Kind = string.IsNullOrWhiteSpace(one.Kind) ? "other" : one.Kind.Trim().ToLowerInvariant();
+            }
+            foreach (ModTerm one in read.Adds.Mood)
+                if (one == null || string.IsNullOrWhiteSpace(one.Act) || Math.Abs(one.Add) > MostTerm) throw new ModException("A mood term needs an act and an add from -" + MostTerm + " to " + MostTerm + ".");
+            if (read.Names != null && read.Names.Wake != null)
+            {
+                List<string> wake = new List<string>(read.WakeNames ?? new string[0]);
+                foreach (string one in read.Names.Wake) if (!wake.Contains(one)) wake.Add(one);
+                read.WakeNames = wake.ToArray();
+            }
+        }
+
         private static void CheckNames(string[] names)
         {
             for (int i = 0; i < names.Length; i++)
@@ -405,14 +501,20 @@ namespace CapriDesktop
             }
         }
 
-        private static void CheckDetails(ModFile read)
+        private static void CheckDetails(ModFile read, int newest = Format)
         {
-            if (read.Format != Format) throw new ModException("That mod needs format " + read.Format + ", and this Capri reads format " + Format + ".");
+            if (read.Format < 1 || read.Format > newest) throw new ModException("That mod needs format " + read.Format + ", and this Capri reads " + (newest == 1 ? "format 1" : "up to format " + newest) + ".");
             if (read.Id == null || !GoodId.IsMatch(read.Id)) throw new ModException("A mod's id must be lowercase letters, numbers and dashes.");
             if (string.IsNullOrWhiteSpace(read.Name) || read.Name.Length > 40) throw new ModException("A mod needs a name of up to 40 characters.");
             if (read.Version != null && read.Version.Length > 20) throw new ModException("A mod's version can be up to 20 characters.");
             if (read.Author != null && read.Author.Length > 40) throw new ModException("A mod's author can be up to 40 characters.");
-            if (read.Description != null && read.Description.Length > 200) throw new ModException("A mod's description can be up to 200 characters.");
+            // A description past 200 characters is cut at a word to fit where it shows, rather than the mod refused.
+            if (read.Description != null && read.Description.Length > 200)
+            {
+                string cut = read.Description.Substring(0, 197);
+                int space = cut.LastIndexOf(' ');
+                read.Description = (space > 150 ? cut.Substring(0, space) : cut).TrimEnd(' ', ',', ';', ':', '.') + "...";
+            }
         }
 
         internal static string Pattern(string[] names)
@@ -421,6 +523,9 @@ namespace CapriDesktop
             Array.Sort(longestFirst, (one, other) => other.Length.CompareTo(one.Length));
             return @"(?<![\p{L}\p{M}\p{N}_])(?:" + string.Join("|", Array.ConvertAll(longestFirst, delegate(string name) { return Regex.Escape(name).Replace(@"\ ", @"\s+"); })) + @")(?![\p{L}\p{M}\p{N}_])";
         }
+
+        // Laid again after a choice in the conflict box.
+        internal void Reapply() { Apply(); }
 
         private void Apply()
         {
@@ -441,6 +546,14 @@ namespace CapriDesktop
             Zones.DropAll();
             foreach (Mod mod in All) if (mod.On && mod.File.Zones != null && mod.File.Zones.Count > 0) Zones.Claim(mod.File.Name ?? mod.File.Id, mod.File.Zones);
             Zones.Write();
+            // Packs' slots, acts and mood terms, rebuilt whole from the packs that are on, in the order they're listed.
+            List<KeyValuePair<string, ModFile>> packs = new List<KeyValuePair<string, ModFile>>();
+            List<Mod> packMods = new List<Mod>();
+            foreach (Mod mod in All)
+                if (mod.On && (!mod.Code || mod.File.Overrides != null && mod.File.Overrides.Length > 0)) { packs.Add(new KeyValuePair<string, ModFile>(mod.File.Name ?? mod.File.Id, mod.File)); packMods.Add(mod); }
+            FileSlots.Hold(packMods);
+            CapriDesktop.Acts.Hold(packs);
+            FileSlots.Write();
             called = exact.Count == 0 ? null : new Regex(Pattern(exact.ToArray()), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
             sounds = wantSounds ? new SoundsLike(soundsLike) : null;
             logging = wantLog;

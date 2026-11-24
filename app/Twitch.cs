@@ -31,6 +31,20 @@ namespace CapriDesktop
         private readonly List<string> watch = new List<string>();
         private readonly HashSet<string> users = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> bully = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> bots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // The stream's own bots: never answered or read aloud, trusted for pranks and donation lines.
+        internal bool IsBot(string user) { return bots.Contains((user ?? "").Trim().TrimStart('@')); }
+
+        // Who may set off a prank: the broadcaster, a bot, a name on the list, and mods or vips when the list says so.
+        internal bool MayPrank(TwitchLine line, string channel)
+        {
+            if (line == null) return false;
+            string who = (line.Login ?? "").Trim().TrimStart('@');
+            if (line.Has("broadcaster") || string.Equals(who, (channel ?? "").Trim(), StringComparison.OrdinalIgnoreCase) || IsBot(who) || allowed.Contains(who)) return true;
+            return allowed.Contains("mods") && line.Has("moderator") || allowed.Contains("vips") && line.Has("vip");
+        }
 
         // What chat is allowed to set off, and nothing else. An empty list means chat can set off nothing at all.
         internal bool Bully(string word) { return bully.Contains((word ?? "").Trim().TrimStart('!')); }
@@ -155,6 +169,11 @@ namespace CapriDesktop
                 if (line.Length == 0) continue;
                 // Every list takes one per line or several on a line separated by commas, whichever is less tedious to
                 // write. A banned phrase holds spaces but never a comma, so splitting on commas cannot break one up.
+                if (zone == "bots" || zone == "allowed to set off pranks")
+                {
+                    foreach (string piece in line.Split(',')) { string name = piece.Trim().TrimStart('@'); if (name.Length > 0) (zone == "bots" ? rules.bots : rules.allowed).Add(name); }
+                    continue;
+                }
                 if (zone == "streamer bully" || zone == "streamer_bully")
                 {
                     foreach (string piece in line.Split(',')) { string act = piece.Trim().TrimStart('!').ToLowerInvariant(); if (act.Length > 0) rules.bully.Add(act); }
@@ -227,6 +246,71 @@ namespace CapriDesktop
             return new WrittenNote(Kept, Default, writing);
         }
 
+        internal const string BotsHeading = "## Bots", AllowedHeading = "## Allowed to set off pranks";
+        internal const string BotsStock = "nightbot, streamelements, streamlabs, moobot, fossabot, sery_bot", AllowedStock = "mods";
+
+        // A twitch.md from before Bots: the stock bots move out of Banned users into it, names they added stay where they
+        // are, and either heading that is missing is added. Running it again changes nothing.
+        internal static bool MoveBots(string path)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return false;
+                string had = Notes.ReadAll(path);
+                string newline = had.Contains("\r\n") ? "\r\n" : "\n";
+                List<string> rows = new List<string>(had.Replace("\r\n", "\n").Split('\n'));
+                HashSet<string> stock = new HashSet<string>(Regex.Split(BotsStock, @"\s*,\s*"), StringComparer.OrdinalIgnoreCase);
+                List<string> moved = new List<string>();
+                int banned = Heading(rows, "## Banned users");
+                for (int at = banned + 1; banned >= 0 && at < rows.Count && !rows[at].TrimStart().StartsWith("#", StringComparison.Ordinal); at++)
+                {
+                    string row = rows[at].Trim();
+                    if (row.Length == 0 || row.StartsWith(">", StringComparison.Ordinal)) continue;
+                    List<string> kept = new List<string>();
+                    foreach (string piece in row.Split(','))
+                    {
+                        string name = piece.Trim();
+                        if (name.Length == 0) continue;
+                        if (stock.Contains(name.TrimStart('@'))) moved.Add(name.TrimStart('@')); else kept.Add(name);
+                    }
+                    if (kept.Count == row.Split(',').Length) continue;
+                    if (kept.Count == 0) { rows.RemoveAt(at); at--; }
+                    else rows[at] = string.Join(", ", kept.ToArray());
+                }
+                bool changed = moved.Count > 0;
+                int bots = Heading(rows, BotsHeading);
+                if (bots < 0)
+                {
+                    int before = Heading(rows, "## Banned users");
+                    if (before < 0) before = rows.Count;
+                    rows.InsertRange(before, new[] { BotsHeading, "", ">! Your stream's bots. Never answered or read aloud; she reads their lines only for a !capri prank or a", ">! donation they report. One per line or commas.", "", BotsStock, "" });
+                    changed = true;
+                }
+                else if (moved.Count > 0)
+                {
+                    TwitchRules now = Read(path);
+                    List<string> adding = moved.FindAll(name => !now.IsBot(name));
+                    if (adding.Count > 0) rows.Insert(bots + 1, string.Join(", ", adding.ToArray()));
+                }
+                if (Heading(rows, AllowedHeading) < 0)
+                {
+                    int before = Heading(rows, "## Connection");
+                    if (before < 0) before = Heading(rows, BotsHeading);
+                    rows.InsertRange(before, new[] { AllowedHeading, "", ">! Who can set off those pranks. Add a name, one per line or commas. mods means the channel's mods, vips its", ">! VIPs. You and your bots always can; anyone else's !capri prank is skipped.", "", AllowedStock, "" });
+                    changed = true;
+                }
+                if (!changed) return false;
+                Notes.Put(path, string.Join(newline, rows.ToArray()));
+                return true;
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return false; }
+        }
+
+        private static int Heading(List<string> rows, string heading)
+        {
+            return rows.FindIndex(row => string.Equals(row.Trim(), heading, StringComparison.OrdinalIgnoreCase));
+        }
+
         // What chat may set off. Deleting a word is the documented way to switch that prank off.
         internal const string BullyStock = "crash, clones, rampage, dance, mess, alert, surprise, goodbye, alive";
 
@@ -266,7 +350,11 @@ namespace CapriDesktop
         // What the file says when she makes it: the asked-for doxxing words and an empty slur list with a note. Its
         // notes go into their language, or back to English, one for one with the stock notes; a section whose note
         // count they changed is left alone.
-        internal static void NotesInLanguage(string path)
+        internal static void NotesInLanguage(string path) { NotesInLanguage(path, Brain.Language == null); }
+
+        // English puts the stock notes back and takes the example lines out, as twitch.md itself keeps them; otherwise
+        // they go in their language, as its copy has them.
+        internal static void NotesInLanguage(string path, bool inEnglish)
         {
             try
             {
@@ -295,7 +383,7 @@ namespace CapriDesktop
                         string english = ours[at].Substring(Notes.NoteMark.Length + 1);
                         Match named = Regex.Match(english, @"^(\s*[a-z][a-z ]{0,30}:\s+)(.+)$");
                         string lead = named.Success ? named.Groups[1].Value : "", rest = named.Success ? named.Groups[2].Value : english;
-                        string made = Notes.NoteMark + " " + lead + Notes.InLanguage(rest.Trim());
+                        string made = Notes.NoteMark + " " + lead + (inEnglish ? rest.Trim() : Notes.InLanguage(rest.Trim()));
                         int row = section.Value[at];
                         if (rows[row] == made) continue;
                         rows[row] = made;
@@ -314,7 +402,7 @@ namespace CapriDesktop
                     bool above = made2.Count > 0 && made2[made2.Count - 1].StartsWith(Notes.SettingMark, StringComparison.Ordinal);
                     if (does != null)
                     {
-                        string line = Brain.Language == null ? null : Notes.SettingMark + " " + Notes.InLanguage(does);
+                        string line = inEnglish ? null : Notes.SettingMark + " " + Notes.InLanguage(does);
                         if (above && made2[made2.Count - 1] != line) { made2.RemoveAt(made2.Count - 1); changed = true; above = false; }
                         if (line != null && !above) { made2.Add(line); changed = true; }
                     }
@@ -402,6 +490,13 @@ namespace CapriDesktop
                     ">! mess: your icons scatter for a bit. alert: six seconds of flashing red hexagons across your",
                     ">! screens with her alarm over them, ending on any key. None of them touches a file.",
                     "",
+                    AllowedHeading,
+                    "",
+                    ">! Who can set off those pranks. Add a name, one per line or commas. mods means the channel's mods, vips its",
+                    ">! VIPs. You and your bots always can; anyone else's !capri prank is skipped.",
+                    "",
+                    AllowedStock,
+                    "",
                     "## Connection",
                     "",
                     "token:",
@@ -417,11 +512,16 @@ namespace CapriDesktop
                     "location, area, address, addy, postcode, zip code, suburb, ip, dox, doxx",
                     "where do you, where are you, what's your, whats your, real name, phone number",
                     "",
+                    BotsHeading,
+                    "",
+                    ">! Your stream's bots. Never answered or read aloud; she reads their lines only for a !capri prank or a",
+                    ">! donation they report. One per line or commas.",
+                    "",
+                    BotsStock,
+                    "",
                     "## Banned users",
                     "",
-                    ">! Ignored completely. Bots go here. One per line or commas.",
-                    "",
-                    "nightbot, streamelements, streamlabs, moobot, fossabot, sery_bot",
+                    ">! Ignored completely. One per line or commas.",
                     "",
                     "## Ignored",
                     "",
@@ -431,6 +531,146 @@ namespace CapriDesktop
                     "LUL, KEKW, OMEGALUL, Pog, PogChamp, POGGERS, Sadge, copium, W, L, f, lol, lmao, gg",
                     ""
                 });
+            }
+        }
+    }
+
+    // One line from Twitch's chat with the tags it asked for: who, what, their badges, any bits, and for a notice (a sub or
+    // a gift) its kind and details.
+    internal sealed class TwitchLine
+    {
+        internal string Login = "", Text = "", Id = "", Notice;
+        internal int Bits;
+        internal readonly HashSet<string> Badges = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        internal readonly Dictionary<string, string> Tags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        internal bool Has(string badge) { return Badges.Contains(badge); }
+
+        internal string Tag(string name) { string value; return Tags.TryGetValue(name, out value) ? value : ""; }
+
+        // ":name!name@name.tmi.twitch.tv PRIVMSG #channel :what they said", or a USERNOTICE, each with "@tags " in front.
+        private static readonly Regex Spoken = new Regex(@"^(?:@([^ ]+) )?:([^!]+)![^ ]+ PRIVMSG #[^ ]+ :(.*)$", RegexOptions.Compiled);
+        private static readonly Regex Noticed = new Regex(@"^@([^ ]+) :tmi\.twitch\.tv USERNOTICE #[^ ]+(?: :(.*))?$", RegexOptions.Compiled);
+
+        internal static TwitchLine Parse(string line)
+        {
+            Match spoke = Spoken.Match(line ?? ""), notice = spoke.Success ? null : Noticed.Match(line ?? "");
+            if (!spoke.Success && !notice.Success) return null;
+            TwitchLine made = new TwitchLine();
+            string tags = spoke.Success ? spoke.Groups[1].Value : notice.Groups[1].Value;
+            foreach (string pair in tags.Split(';'))
+            {
+                int equals = pair.IndexOf('=');
+                if (equals > 0) made.Tags[pair.Substring(0, equals)] = Unescaped(pair.Substring(equals + 1));
+            }
+            foreach (string badge in made.Tag("badges").Split(',')) { int slash = badge.IndexOf('/'); if (slash > 0) made.Badges.Add(badge.Substring(0, slash)); }
+            int bits;
+            if (int.TryParse(made.Tag("bits"), NumberStyles.Integer, CultureInfo.InvariantCulture, out bits)) made.Bits = Math.Max(0, bits);
+            made.Id = made.Tag("id");
+            if (spoke.Success) { made.Login = spoke.Groups[2].Value; made.Text = spoke.Groups[3].Value.TrimEnd('\r', '\n'); }
+            else { made.Login = made.Tag("login"); made.Text = notice.Groups[2].Value.TrimEnd('\r', '\n'); made.Notice = made.Tag("msg-id"); }
+            return made;
+        }
+
+        // Tag values escape spaces and semicolons.
+        private static string Unescaped(string value)
+        {
+            return value.Replace("\\s", " ").Replace("\\:", ";").Replace("\\\\", "\\").Replace("\\r", "").Replace("\\n", "");
+        }
+    }
+
+    // A donation she may thank someone for: only from a bot's donation line or from Twitch's own bits and subs, never from
+    // a viewer saying they gave. Kind is money, bits, sub or gift; one gift reported twice is one moment.
+    internal sealed class TwitchGift
+    {
+        internal string Login = "", Kind = "", Amount = "";
+
+        internal string Key { get { return Login.ToLowerInvariant() + "|" + Kind + "|" + Amount; } }
+
+        // What happened, for her brief: "cheered 500 bits", "tipped $5", "subscribed", "gifted 5 subs".
+        internal string Said
+        {
+            get
+            {
+                if (Kind == "bits") return "cheered " + Amount + " bits";
+                if (Kind == "money") return "tipped " + Amount;
+                if (Kind == "sub") return "subscribed";
+                return "gifted " + (Amount == "1" ? "a sub" : Amount + " subs");
+            }
+        }
+
+        internal static TwitchGift FromTwitch(TwitchLine line)
+        {
+            if (line == null) return null;
+            if (line.Notice == null) return line.Bits > 0 ? new TwitchGift { Login = line.Login, Kind = "bits", Amount = line.Bits.ToString(CultureInfo.InvariantCulture) } : null;
+            switch (line.Notice)
+            {
+                case "sub": case "resub": return new TwitchGift { Login = line.Login, Kind = "sub" };
+                case "subgift": return new TwitchGift { Login = line.Login, Kind = "gift", Amount = "1" };
+                case "submysterygift":
+                    int count;
+                    return new TwitchGift { Login = line.Login, Kind = "gift", Amount = int.TryParse(line.Tag("msg-param-mass-gift-count"), out count) && count > 0 ? count.ToString(CultureInfo.InvariantCulture) : "1" };
+                default: return null;
+            }
+        }
+
+        private const string Name = @"@?([A-Za-z0-9_]{2,25})";
+        private static readonly Regex Did = new Regex(@"^\W*" + Name + @",?\s+(?:has\s+)?(?:just\s+)?(tipped|donated|cheered|subscribed|resubscribed|subbed|gifted)\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex Thanked = new Regex(@"\bthanks?(?:\s+you)?(?:\s+so\s+much)?,?\s+" + Name + @",?\s+for\b.*?\b(tip|donation|donating|cheer|cheering|bits|sub|subscribing|subscription|gift|gifting)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex From = new Regex(@"\b(tip|donation)\s+(?:of\s+\S+\s+)?from\s+" + Name, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex Money = new Regex(@"([$\u20ac\u00a3\u00a5])\s?(\d+(?:[.,]\d{1,2})?)|(\d+(?:[.,]\d{1,2})?)\s?(USD|EUR|GBP|CAD|AUD|NZD|dollars?|euros?|pounds?)\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex Bits = new Regex(@"(\d[\d,]*)\s*bits\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex Subs = new Regex(@"\bgift(?:ed)?\s+(\d+|an?|one)\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // A bot's own donation wording: "<name> just tipped $5", "Thank you <name> for the $5 donation", "<name> cheered
+        // 500 bits", "<name> gifted 5 subs". A line with no donation word, no name or no amount where one is needed is none.
+        internal static TwitchGift FromBot(string text)
+        {
+            string said = (text ?? "").Trim();
+            string login = null, verb = null;
+            Match found = Did.Match(said);
+            if (found.Success) { login = found.Groups[1].Value; verb = found.Groups[2].Value.ToLowerInvariant(); }
+            else if ((found = Thanked.Match(said)).Success) { login = found.Groups[1].Value; verb = found.Groups[2].Value.ToLowerInvariant(); }
+            else if ((found = From.Match(said)).Success) { login = found.Groups[2].Value; verb = found.Groups[1].Value.ToLowerInvariant(); }
+            if (login == null) return null;
+            Match bits = Bits.Match(said), money = Money.Match(said);
+            if (bits.Success && (verb.StartsWith("cheer", StringComparison.Ordinal) || verb == "bits" || !money.Success))
+                return new TwitchGift { Login = login, Kind = "bits", Amount = bits.Groups[1].Value.Replace(",", "") };
+            if (verb.StartsWith("gift", StringComparison.Ordinal))
+            {
+                Match count = Subs.Match(said);
+                string many = count.Success ? count.Groups[1].Value.ToLowerInvariant() : "1";
+                return new TwitchGift { Login = login, Kind = "gift", Amount = many == "a" || many == "an" || many == "one" ? "1" : many };
+            }
+            if (verb.StartsWith("sub", StringComparison.Ordinal) || verb == "resubscribed") return new TwitchGift { Login = login, Kind = "sub" };
+            if (!money.Success) return null;
+            string sign = money.Groups[1].Success ? money.Groups[1].Value : money.Groups[4].Value.ToUpperInvariant();
+            string number = (money.Groups[2].Success ? money.Groups[2].Value : money.Groups[3].Value).Replace(',', '.');
+            decimal value;
+            if (decimal.TryParse(number, NumberStyles.Float, CultureInfo.InvariantCulture, out value)) number = value.ToString("0.##", CultureInfo.InvariantCulture);
+            return new TwitchGift { Login = login, Kind = "money", Amount = money.Groups[1].Success ? sign + number : number + " " + sign };
+        }
+    }
+
+    // Gifts already thanked: the same one from a bot and from Twitch within two minutes is one, and the single gift subs
+    // Twitch sends after a mystery gift fold into it.
+    internal sealed class TwitchGifts
+    {
+        internal static readonly TimeSpan Window = TimeSpan.FromMinutes(2);
+        private readonly Dictionary<string, DateTime> seen = new Dictionary<string, DateTime>(StringComparer.Ordinal);
+
+        internal bool Fresh(TwitchGift gift, DateTime now)
+        {
+            if (gift == null) return false;
+            lock (seen)
+            {
+                foreach (string old in new List<string>(seen.Keys)) if (now - seen[old] > Window) seen.Remove(old);
+                string run = gift.Login.ToLowerInvariant() + "|giftrun";
+                if (gift.Kind == "gift" && gift.Amount == "1" && seen.ContainsKey(run)) return false;
+                if (seen.ContainsKey(gift.Key)) return false;
+                seen[gift.Key] = now;
+                if (gift.Kind == "gift" && gift.Amount != "1") seen[run] = now;
+                return true;
             }
         }
     }
@@ -535,7 +775,7 @@ namespace CapriDesktop
         private readonly string channel;
         private readonly string login;
         private readonly string token;
-        private readonly Action<string, string> heard;
+        private readonly Action<TwitchLine> heard;
         private readonly Action<string> noted;
         private readonly object gate = new object();
         private Thread reader;
@@ -544,7 +784,7 @@ namespace CapriDesktop
         private volatile bool stopping;
         private volatile bool joined;
 
-        internal TwitchChat(string channel, string login, string token, Action<string, string> heard, Action<string> noted)
+        internal TwitchChat(string channel, string login, string token, Action<TwitchLine> heard, Action<string> noted)
         {
             this.channel = (channel ?? "").Trim().ToLowerInvariant();
             this.login = (login ?? "").Trim().ToLowerInvariant();
@@ -636,8 +876,10 @@ namespace CapriDesktop
 
         // The three lines that join a channel. Anonymous means the nick justinfan followed by digits, which Twitch accepts
         // from anyone with no account and no key, read only.
+        // Tags carry badges and bits, and commands the sub and gift notices; an anonymous reader may ask for both.
         private void Hello(Action<string> send)
         {
+            send("CAP REQ :twitch.tv/tags twitch.tv/commands");
             send("PASS " + (Anonymous ? "SCHMOOPIIE" : "oauth:" + token));
             send("NICK " + (Anonymous ? "justinfan" + new Random().Next(10000, 99999).ToString(CultureInfo.InvariantCulture) : login));
             send("JOIN #" + channel);
@@ -707,16 +949,13 @@ namespace CapriDesktop
             }
         }
 
-        // ":name!name@name.tmi.twitch.tv PRIVMSG #channel :what they said"
-        private static readonly Regex Message = new Regex(@"^(?:@[^ ]+ )?:([^!]+)![^ ]+ PRIVMSG #[^ ]+ :(.*)$", RegexOptions.Compiled);
-
         private void Said(string line)
         {
-            Match spoke = Message.Match(line ?? "");
-            if (!spoke.Success) return;
-            Action<string, string> told = heard;
+            TwitchLine spoke = TwitchLine.Parse(line);
+            if (spoke == null) return;
+            Action<TwitchLine> told = heard;
             if (told == null) return;
-            try { told(spoke.Groups[1].Value, spoke.Groups[2].Value.TrimEnd('\r', '\n')); }
+            try { told(spoke); }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
     }
@@ -894,7 +1133,7 @@ namespace CapriDesktop
         // The words she says for one message: "<name>: <message>", or the message alone when the same person spoke last.
         internal static string Line(TwitchRules rules, string who, string said, string lastWho)
         {
-            if (rules == null || rules.Banned(who)) return null;
+            if (rules == null || rules.Banned(who) || rules.IsBot(who)) return null;
             string text = (said ?? "").Trim();
             // A chat command ("!capri crash") is neither read nor run.
             if (text.Length == 0 || text.StartsWith("!", StringComparison.Ordinal)) return null;

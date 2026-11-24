@@ -204,11 +204,11 @@ Running on this PC	Yana gudana a wannan PC
 NORMAL	AL'ADA
 OFF	A KASHE
 Local server address	Adireshin sabar gida
-Remember panel position	Tuna wurin allon
 Custom colours	Launuka na musamman
 Custom colours...	Launuka na musamman...
 Choose	Zaɓa
-Hers	Nata
+Reset selected colour	Mayar da launin da aka zaɓa
+Make a mod	Yi mod
 Quiet	Shiru
 Quiet min	Shiru min
 Quiet max	Shiru max
@@ -219,3 +219,4 @@ Quiet until {n}:{n}	Shiru har zuwa {n}:{n}
 Quiet until turned off	Shiru har sai an kashe
 Export settings	Fitar da saituna
 Import settings	Shigo da saituna
+Save Mainframe position	Tuna wurin allon

@@ -700,6 +700,7 @@ namespace CapriDesktop
         internal const string Gone = "That model isn't on your key. Pick another one.";
         internal const string Down = "The service failed on its end. Pick another model or retry.";
         internal const string Busy = "Too many requests. Wait a minute, then try again.";
+        internal const string TooBig = "Too big for this key's per-minute limit. Wait a minute, or use a bigger plan or another provider.";
         // With Watch my screen on, her glances make requests of their own, so glancing less often helps too.
         internal const string BusyWatching = "Too many requests. Wait a minute, or set Watch my screen to glance less often.";
         internal static Func<bool> Watching = delegate { return false; };
@@ -709,6 +710,27 @@ namespace CapriDesktop
         internal const string NewKey = "Key rejected. Make a new Google AI Studio key and paste it.";
         internal const string Unserved = "Google doesn't serve Gemini where you are. Press Free key for a free NVIDIA key.";
         internal const string NoCredits = "No credits on this key. Add credits on the service's site, or press Free key for a free NVIDIA key.";
+        // OpenAI sends 429 for walls as well as for going too fast: no credits, a spend or usage limit, one request bigger
+        // than the key's per-minute limit, or a day's requests used up. Waiting gets past none of them (Sage, Lachu).
+        internal const string OpenAiNoCredits = "No credits on your OpenAI key. ChatGPT Plus doesn't include API use, so add a payment method and credits under Billing at platform.openai.com, or press Free key for a free NVIDIA key.";
+        internal const string OpenAiCapped = "Your OpenAI key hit a monthly spend or usage limit. Raise it under Limits at platform.openai.com, or wait for it to reset next month.";
+        internal const string TooLargeStart = "My requests are too big for your OpenAI key's per-minute limit";
+        internal const string DailyLimitStart = "Your OpenAI key hit its daily limit";
+        private const string PlusNote = "ChatGPT Plus doesn't include API use";
+
+        internal static string TooLarge(string model, bool unpaid)
+        {
+            return TooLargeStart + (string.IsNullOrEmpty(model) ? "" : " on " + model) + ", so waiting won't help. " + (unpaid
+                ? PlusNote + ". Add a payment method and credits under Billing at platform.openai.com, or pick a smaller model."
+                : "Pick a smaller model, or add credits under Billing at platform.openai.com to move the key up a tier.");
+        }
+
+        internal static string DailyLimit(string model, bool unpaid)
+        {
+            return DailyLimitStart + (string.IsNullOrEmpty(model) ? "" : " on " + model) + ". It resets within a day, or add " + (unpaid
+                ? "a payment method and credits under Billing at platform.openai.com to raise it. " + PlusNote + "."
+                : "credits under Billing at platform.openai.com to raise it.");
+        }
         internal const string PlusRejected = "Key rejected. ChatGPT Plus doesn't include API use, so make a key with credits at platform.openai.com.";
         // No AI (Lachy): with it on, nothing at all is asked of a model, a provider, Ollama, her own engine, Claude
         // Code or Codex. Every request to one is made in Create or PlanBrain's Start, and both turn it away here.
@@ -855,7 +877,7 @@ namespace CapriDesktop
             get
             {
                 Cloud current = Remote;
-                lock (gate) return current != null && current == waitingRemote && waiting != null && waitingSource == current.Source ? Math.Max(0, (waiting.RetryAt - DateTime.UtcNow).TotalSeconds) : 0;
+                lock (gate) return current != null && current == waitingRemote && waiting != null && waitingSource == current.Source ? Math.Max(0, (waiting.RetryAt - SimTime.UtcNow).TotalSeconds) : 0;
             }
         }
 
@@ -947,8 +969,8 @@ namespace CapriDesktop
                 if (!string.IsNullOrEmpty(Probes.Line())) parts.Add("probe");
                 if (!string.IsNullOrEmpty(Hands.Correcting)) parts.Add("correcting");
                 if (!string.IsNullOrEmpty(Feelings.Line())) parts.Add("their mood");
-                if (!string.IsNullOrEmpty(Hours.Line(DateTime.Now))) parts.Add("hours");
-                if (!string.IsNullOrEmpty(Away.Line(DateTime.Now))) parts.Add("away");
+                if (!string.IsNullOrEmpty(Hours.Line(SimTime.Now))) parts.Add("hours");
+                if (!string.IsNullOrEmpty(Away.Line(SimTime.Now))) parts.Add("away");
                 if (CringeLine() != null) parts.Add("cringe");
                 if (SenpaiLive) parts.Add("extended");
             }
@@ -988,11 +1010,11 @@ namespace CapriDesktop
                 try { string theirs = Feelings.Line(); if (!string.IsNullOrEmpty(theirs)) built += "\n" + theirs; }
                 catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 // When they are usually about, so a late night means something to her rather than the clock alone.
-                try { string hours = Hours.Line(DateTime.Now); if (!string.IsNullOrEmpty(hours)) built += "\n" + hours; }
+                try { string hours = Hours.Line(SimTime.Now); if (!string.IsNullOrEmpty(hours)) built += "\n" + hours; }
                 catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 // And the one spell that just ended, so coming back from a night or a shift is something she knows
                 // about rather than something she has to be told.
-                try { string rested = Away.Line(DateTime.Now); if (!string.IsNullOrEmpty(rested)) built += "\n" + rested; }
+                try { string rested = Away.Line(SimTime.Now); if (!string.IsNullOrEmpty(rested)) built += "\n" + rested; }
                 catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 // Over everyone, both modes: how hard she leans into a bit. Out of dynamic.md, as prose with no
                 // number in it, the way her mood and her forwardness are given to her.
@@ -1035,6 +1057,7 @@ namespace CapriDesktop
             "A very long personality makes small brains slower to reply.\n" +
             "Reset in her settings puts her default back and keeps yours as personality.backup.md.\n" +
             CapriDesktop.Notes.WholeMark + " Shown in your language until you change it.\n" +
+            "Put **silent** before and **/silent** after anything she shows but never says, like a text face.\n" +
             "-->\n\n";
         // About twice her default. A longer one is never cut, only flagged, since a small brain on a slow PC reads all of it before every reply.
         internal const int LongPersonality = 9000;
@@ -1071,19 +1094,24 @@ namespace CapriDesktop
             if (path == null) return DefaultPersonality;
             try
             {
-                FileInfo file = new FileInfo(path);
-                if (!file.Exists) return DefaultPersonality;
-                string seen = path + "|" + file.LastWriteTimeUtc.Ticks + "|" + file.Length;
+                // personality_fr.md while French is picked, made from theirs or hers; personality.md otherwise.
+                string reading = LangCopies.Reading(path);
+                bool copied = reading != path;
+                FileInfo file = new FileInfo(reading);
+                // A pack holding personality.md stands in for it whole, through the same safety pass as theirs.
+                bool packed = FileSlots.Holder(PersonalityName) != null;
+                if (!file.Exists && !packed) return DefaultPersonality;
+                string seen = reading + "|" + (file.Exists ? file.LastWriteTimeUtc.Ticks + "|" + file.Length : "none") + "|" + FileSlots.Generation;
                 lock (personalityGate)
                 {
                     if (seen != personalitySeen)
                     {
-                        string plain = Readable(File.ReadAllText(path));
+                        string plain = Readable(FileSlots.Over(PersonalityName, file.Exists ? File.ReadAllText(reading) : ""));
                         int skipped;
                         string kept = Kept(plain, out skipped);
-                        // Still what she last wrote there, in English or put in their language, is her default: the translation is
-                        // for them to read, and her brain keeps her own words.
-                        bool hers = kept.Length == 0 || plain == DefaultPersonality || Retired.Contains(Stamp(plain)) || CapriDesktop.Notes.Untouched(path);
+                        // Still what she last wrote there in English is her default. A copy in their language is what her brain
+                        // reads while it is picked.
+                        bool hers = kept.Length == 0 || plain == DefaultPersonality || Retired.Contains(Stamp(plain)) || !packed && !copied && CapriDesktop.Notes.Untouched(path);
                         personalityText = hers ? DefaultPersonality : kept;
                         personalityNote = hers ? "" : skipped > 0 ? skipped + (skipped == 1 ? " line" : " lines") + " skipped: they went against her safety lines" : kept.Length > LongPersonality ? LongNote : "";
                         personalitySeen = seen;
@@ -1147,9 +1175,8 @@ namespace CapriDesktop
                 }
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
                 File.WriteAllText(path, PersonalityFile);
-                // Recorded as hers, and put in their language: until they change it, it is her default either way.
+                // Recorded as hers, in English; its copy in their language is made beside it (LangCopies).
                 CapriDesktop.Notes.Shipped(path, PersonalityFile);
-                CapriDesktop.Notes.RewriteWhole(path, PersonalityFile);
                 return true;
             }
             catch (IOException) { return false; }
@@ -1313,8 +1340,34 @@ namespace CapriDesktop
 
         internal static string Speech()
         {
-            string language = Language;
-            return string.IsNullOrEmpty(language) || language == "English" ? "" : "\nAlways reply in " + language + ", whatever language they use. Keep your Night City slang words as they are.";
+            string answers = Answers;
+            if (answers == LanguagePair.Auto) return LanguagePair.Line(Matched);
+            string language = answers ?? Language;
+            if (answers != null && string.IsNullOrEmpty(language)) language = "English";
+            return string.IsNullOrEmpty(language) || (language == "English" && answers == null) ? "" : "\nAlways reply in " + language + ", whatever language they use. Keep your Night City slang words as they are.";
+        }
+
+        // She answers in, from VOICE: null for the same as Language, Auto to match each message, or one of her languages.
+        // Matched is the language of their latest message, worked out on this PC, for Auto (Lachu).
+        internal static volatile string Answers;
+        internal static volatile string Matched;
+
+        internal static void MatchLanguage(string said)
+        {
+            if (Answers != LanguagePair.Auto) return;
+            string heard = LanguagePair.Detect(said, Matched ?? Language ?? "English");
+            if (heard != null) Matched = heard;
+        }
+
+        // The language a line of hers is spoken in, for her voice: what she answers in, worked out from the line when
+        // that is Auto or differs from Language, so a line in Language still gets the voice for it.
+        internal static string Speaking(string words)
+        {
+            string answers = Answers, language = Language;
+            if (answers == null) return language;
+            string lean = answers == LanguagePair.Auto ? Matched ?? language ?? "English" : answers;
+            string found = LanguagePair.Detect(words, lean) ?? lean;
+            return LanguageCode(found) == "en" ? null : found;
         }
 
         // The part of a labelled reply she says out loud, in their language, with the labels and words her code reads back left as written.
@@ -1322,6 +1375,13 @@ namespace CapriDesktop
         {
             string language = Language;
             return string.IsNullOrEmpty(language) || language == "English" ? "" : "\n" + string.Format(rule, language);
+        }
+
+        // Her mood now in one plain sentence, for the end of a small brain's prompt.
+        internal static string MoodLast()
+        {
+            string mood = (Personalities.Attitude ?? "").Trim();
+            return mood.Length == 0 ? "" : "\nRight now your mood is " + mood.ToLowerInvariant() + ". Let it show plainly in every reply, whatever your character usually sounds like.";
         }
 
         private static string Longer()
@@ -1769,7 +1829,7 @@ namespace CapriDesktop
             if (Discreet && Revealing(text)) text = RedactedDetail;
             lock (seeing)
             {
-                sightings.Add(new Sighting { At = DateTime.Now.ToString("o", System.Globalization.CultureInfo.InvariantCulture), Saw = text, Said = string.IsNullOrEmpty(said) ? null : said, Asked = asked });
+                sightings.Add(new Sighting { At = SimTime.Now.ToString("o", System.Globalization.CultureInfo.InvariantCulture), Saw = text, Said = string.IsNullOrEmpty(said) ? null : said, Asked = asked });
                 if (sightings.Count > 30) sightings.RemoveRange(0, sightings.Count - 30);
             }
             Transcribe(null, (watched ? "She watched with you: " : asked ? "She looked at your screen: " : "She glanced at your screen: ") + text.TrimEnd('.') + (string.IsNullOrEmpty(said) && !asked && !watched ? ". She stayed quiet." : "."), asked || watched || FoldsGlances);
@@ -1806,7 +1866,7 @@ namespace CapriDesktop
         {
             List<Sighting> all;
             lock (seeing) all = new List<Sighting>(sightings);
-            DateTime now = DateTime.Now;
+            DateTime now = SimTime.Now;
             List<string> lines = new List<string>();
             // Sightings saved before #88, or while Keep personal details out of her memories was off, are left out here too.
             bool discreet = Discreet;
@@ -1902,7 +1962,7 @@ namespace CapriDesktop
             string text = Regex.Replace(Security.Unshared(reply) ?? "", @"\s+", " ").Trim();
             if (folder == null || text.Length == 0) return;
             string kept = Written(text);
-            DateTime now = DateTime.Now;
+            DateTime now = SimTime.Now;
             lock (writing)
             {
                 try
@@ -1946,7 +2006,7 @@ namespace CapriDesktop
             // A bookmark of theirs she showed in her bubble stays out of her transcripts, which her brain reads back.
             text = Regex.Replace(Security.Unshared(text) ?? "", @"\s+", " ").Trim();
             if (folder == null || !Keeping || text.Length == 0) return;
-            DateTime now = DateTime.Now;
+            DateTime now = SimTime.Now;
             string clock = now.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
             lock (writing)
             {
@@ -2065,7 +2125,7 @@ namespace CapriDesktop
 
         internal void FoldSoon()
         {
-            if (System.Threading.Volatile.Read(ref folding) != 0 || Model == null || DateTime.UtcNow.Ticks < System.Threading.Interlocked.Read(ref foldWait)) return;
+            if (System.Threading.Volatile.Read(ref folding) != 0 || Model == null || SimTime.UtcNow.Ticks < System.Threading.Interlocked.Read(ref foldWait)) return;
             string path = QueuePath;
             string[] queued;
             lock (writing)
@@ -2074,27 +2134,27 @@ namespace CapriDesktop
                 catch (IOException) { return; }
                 catch (UnauthorizedAccessException) { return; }
             }
-            if (!FoldDue(queued, DateTime.Now) || System.Threading.Interlocked.CompareExchange(ref folding, 1, 0) != 0) return;
+            if (!FoldDue(queued, SimTime.Now) || System.Threading.Interlocked.CompareExchange(ref folding, 1, 0) != 0) return;
             System.Threading.ThreadPool.QueueUserWorkItem(delegate
             {
                 // She folds once the chat is quiet for 20 seconds, so a brain on their PC doesn't hold up a reply.
                 // Timed in UTC, so a daylight saving step can't block a fold for an hour.
-                DateTime giveUp = DateTime.UtcNow.AddMinutes(10);
+                DateTime giveUp = SimTime.UtcNow.AddMinutes(10);
                 string problem = null;
                 bool finished = false;
                 // A fold a chat called off isn't a failure: it waits for quiet again within the same ten minutes. If they're still
                 // chatting at the end, the next line in her transcript starts it again.
-                while (DateTime.UtcNow < giveUp)
+                while (SimTime.UtcNow < giveUp)
                 {
-                    while (DateTime.UtcNow < giveUp && (System.Threading.Interlocked.CompareExchange(ref chats, 0, 0) > 0 || DateTime.UtcNow.Ticks - System.Threading.Interlocked.Read(ref lastLine) < FoldQuiet.Ticks)) System.Threading.Thread.Sleep(Math.Max(1, Math.Min(2000, (int)FoldQuiet.TotalMilliseconds)));
-                    if (DateTime.UtcNow >= giveUp) break;
+                    while (SimTime.UtcNow < giveUp && (System.Threading.Interlocked.CompareExchange(ref chats, 0, 0) > 0 || SimTime.UtcNow.Ticks - System.Threading.Interlocked.Read(ref lastLine) < FoldQuiet.Ticks)) System.Threading.Thread.Sleep(Math.Max(1, Math.Min(2000, (int)FoldQuiet.TotalMilliseconds)));
+                    if (SimTime.UtcNow >= giveUp) break;
                     try { problem = Fold(); finished = true; break; }
                     catch (WebException error) { if (error.Status == WebExceptionStatus.RequestCanceled) continue; problem = error.GetType().Name + ": " + error.Message; break; }
                     catch (Exception error) { problem = error.GetType().Name + ": " + error.Message; break; }
                 }
                 if (problem != null)
                 {
-                    System.Threading.Interlocked.Exchange(ref foldWait, DateTime.UtcNow.AddMinutes(10).Ticks);
+                    System.Threading.Interlocked.Exchange(ref foldWait, SimTime.UtcNow.AddMinutes(10).Ticks);
                     Log("memories", -1, "Couldn't fold her chats into memories.md: " + problem);
                 }
                 System.Threading.Interlocked.Exchange(ref folding, 0);
@@ -2152,7 +2212,7 @@ namespace CapriDesktop
                 string raw;
                 try
                 {
-                    if (System.Threading.Interlocked.CompareExchange(ref chats, 0, 0) > 0 || System.Threading.Volatile.Read(ref folding) != 0 && DateTime.UtcNow.Ticks - System.Threading.Interlocked.Read(ref lastLine) < FoldQuiet.Ticks) throw new WebException("Reply cancelled.", WebExceptionStatus.RequestCanceled);
+                    if (System.Threading.Interlocked.CompareExchange(ref chats, 0, 0) > 0 || System.Threading.Volatile.Read(ref folding) != 0 && SimTime.UtcNow.Ticks - System.Threading.Interlocked.Read(ref lastLine) < FoldQuiet.Ticks) throw new WebException("Reply cancelled.", WebExceptionStatus.RequestCanceled);
                     raw = folder.Think(model, messages, false, new List<KeyValuePair<string, ToolArguments>>(), null, 900, ticket, false, null, null, true);
                     folder.Check(ticket);
                 }
@@ -3203,7 +3263,7 @@ namespace CapriDesktop
             finally
             {
                 // Quiet counts from the end of a chat, even one that failed and wrote nothing to the transcript.
-                System.Threading.Interlocked.Exchange(ref lastLine, DateTime.UtcNow.Ticks);
+                System.Threading.Interlocked.Exchange(ref lastLine, SimTime.UtcNow.Ticks);
                 System.Threading.Interlocked.Decrement(ref chats);
             }
         }
@@ -3216,6 +3276,7 @@ namespace CapriDesktop
         {
             followLine = "";
             Learn(text);
+            MatchLanguage(text);
             int ticket;
             lock (gate) ticket = cancelled;
             string model = Model;
@@ -3259,6 +3320,8 @@ namespace CapriDesktop
             string turn = ForYou(Now() + Seen() + Gap() + heard);
             // A brain on their PC chats without her tools, so it's told it can write her heart into a reply (Lachy).
             string heartNote = act != null && !fileChat && OnThisPc ? Hands.LocalHeart : "";
+            // A small brain on their PC loses her mood in a long prompt, so it's said once more, plainly, at the end.
+            if (OnThisPc) callContext += MoodLast();
             messages.Add(new ChatMessage("system", steady + (act != null ? fileChat ? kit.ChatOnly : kit.Chat + Hands.MiniBoard() : "") + heartNote + Hands.SkillNote() + selfGuide + callContext) { Steady = steady.Length });
             if (HuskFacts != null) messages[0].Content += HuskFacts();
             List<ChatMessage> recent;
@@ -3269,7 +3332,7 @@ namespace CapriDesktop
                 recent = LastTurn(history);
                 chat = history.ConvertAll(message => message.Content);
             }
-            messages.Add(new ChatMessage("user", turn + text + Recalled(text, chat) + (self == null ? "" : "\n\n(Facts about yourself in this version of Capri, to use in your own words:\n" + self + "\n)")));
+            messages.Add(new ChatMessage("user", turn + text + Recalled(text, chat) + AskedAgain(text) + (self == null ? "" : "\n\n(Facts about yourself in this version of Capri, to use in your own words:\n" + self + "\n)")));
 #if !CROSS
             if (Attachments.Has)
             {
@@ -3426,7 +3489,7 @@ namespace CapriDesktop
             if (calls.Count == 0 && !fileChat && unable == null)
             {
                 // A brain that hedges on "what time is it?" gets her clock's answer, before anything below takes the hedge for a search to run.
-                if (Hands.ClockDodged(text, Clean(raw))) raw = Hands.ClockLine(DateTime.Now);
+                if (Hands.ClockDodged(text, Clean(raw))) raw = Hands.ClockLine(SimTime.Now);
                 // Her brain on their PC said it would, asked whether to, said it can't, or hedged on something to look up, with no tool
                 // behind it: it takes every tool and decides, instead of her hands guessing for it.
                 string chatted = Clean(raw);
@@ -3589,6 +3652,10 @@ namespace CapriDesktop
             lock (gate)
                 for (int i = Math.Max(0, history.Count - 6); i < history.Count; i++)
                     if (history[i].Role == "assistant") saidLately.Add(history[i].Content ?? "");
+            // A pet name stays in at most one reply in three: either of her last two had one, this one does without.
+            string[] pets = Pets();
+            bool pettedLately = false;
+            for (int i = Math.Max(0, saidLately.Count - 2); i < saidLately.Count; i++) if (Petted(saidLately[i], pets)) pettedLately = true;
             bool praised = false;
             lock (gate)
                 for (int i = Math.Max(0, history.Count - 10); i < history.Count; i++)
@@ -3601,6 +3668,11 @@ namespace CapriDesktop
             if (spoken == null && (Regex.IsMatch(said, @"\A[`'""\s]*chat[.!`'""\s]*\z", RegexOptions.IgnoreCase) || Hands.Typed(raw, out written, out writtenArgs))) { said = ""; after = ""; }
             if (said.Length == 0 && after.Length > 0) { said = after; after = ""; }
             if (said.Length == 0 && done != null) said = done;
+            if (spoken == null)
+            {
+                said = Unpetted(said, pettedLately, pets);
+                after = Unpetted(after, pettedLately || Petted(said, pets), pets);
+            }
             // A reply that was only a tool call still reaches her history.
             if (said.Length == 0)
             {
@@ -3722,7 +3794,8 @@ namespace CapriDesktop
                 {
                     // "Reminder set" with no remind behind it is a claim even after other tools ran this turn.
                     string claimed = Hands.Claimed(said, calls);
-                    bool promised = calls.Count == 0 && (Hands.Promised(said) || Hands.Handed(said));
+                    // Saying the ask back, or saying it is under way, counts as promising it too.
+                    bool promised = calls.Count == 0 && (Hands.Promised(said) || Hands.Handed(said) || Hands.Echoed(said, request) || Hands.Underway(said) && Hands.Requested(request));
                     if (claimed == null && !promised) return raw;
                     if (reminded) return claimed == null ? Hands.Unpromised : Hands.Unclaimed(said, calls) ?? (calls.Count > 0 ? null : Hands.NotYet(claimed, kit));
                     reminded = true;
@@ -4211,7 +4284,8 @@ namespace CapriDesktop
         // her turn in the chat, so when they answer it her brain knows what she said.
         internal void Own(string said)
         {
-            said = Voice.Uncued(said ?? "").Trim();
+            // A meme line's mark is for picking how it is said; her chat and her brain get the words alone.
+            said = Voice.Uncued(Voice.Unsilenced(Sayings.Unmeme(said ?? ""))).Trim();
             if (said.Length == 0) return;
             lock (gate) { history.Add(new ChatMessage("assistant", said)); Kept(); }
             Transcribe("Capri", said);
@@ -5134,12 +5208,12 @@ namespace CapriDesktop
 #endif
             // Out of her head and off the disk together, so a cleared chat isn't read back from chat.json on the next
             // start.
-            chattedAt = DateTime.UtcNow;
+            chattedAt = SimTime.UtcNow;
             Save();
         }
 
         internal string ChatPath;
-        private DateTime chattedAt = DateTime.UtcNow;
+        private DateTime chattedAt = SimTime.UtcNow;
 
         private void Kept()
         {
@@ -5155,7 +5229,7 @@ namespace CapriDesktop
                 history.RemoveRange(0, 2);
             }
             foreach (ChatMessage message in history) message.Content = Hands.Hush(message.Content);
-            chattedAt = DateTime.UtcNow;
+            chattedAt = SimTime.UtcNow;
             Save();
         }
 
@@ -5193,7 +5267,7 @@ namespace CapriDesktop
             catch (SerializationException) { return; }
             catch (System.Xml.XmlException) { return; }
             DateTime at;
-            if (saved == null || saved.Messages == null || !DateTime.TryParse(saved.At, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out at) || DateTime.UtcNow - at.ToUniversalTime() > TimeSpan.FromDays(7)) return;
+            if (saved == null || saved.Messages == null || !DateTime.TryParse(saved.At, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out at) || SimTime.UtcNow - at.ToUniversalTime() > TimeSpan.FromDays(7)) return;
             lock (gate)
             {
                 history.Clear();
@@ -5209,6 +5283,68 @@ namespace CapriDesktop
             }
         }
 
+        // One chatty question asked again within a conversation, like how her day went. Not a request, and not one whose
+        // answer changes, like the time or weather. The second time she says she just told them, then grows more annoyed.
+        private readonly List<KeyValuePair<DateTime, HashSet<string>>> asks = new List<KeyValuePair<DateTime, HashSet<string>>>();
+        private static readonly TimeSpan AskWindow = TimeSpan.FromMinutes(20);
+        private static readonly Regex Changing = new Regex(@"\b(time|clock|weather|temperature|forecast|news|score|price|date|update|status)\b|^\s*(open|play|close|turn|set|launch|start|stop|search|look|show|find|send|remind|call|pause|skip|mute|draw|write|make)\b", RegexOptions.IgnoreCase);
+        private static readonly Regex Asking = new Regex(@"\?\s*$|^\s*(how|what|why|when|where|who|which|do|did|does|are|is|was|can|could|would|tell)\b", RegexOptions.IgnoreCase);
+        private static readonly HashSet<string> AskFiller = new HashSet<string>(("how hows how's was is has have been going so seriously though tell me about and it it's its the a an your you you're " +
+            "for treating doing what whats what's again hey ok okay lol then well just really i my so far like any anything").Split(' '));
+
+        private static HashSet<string> Gist(string text)
+        {
+            HashSet<string> gist = new HashSet<string>();
+            foreach (Match word in Regex.Matches((text ?? "").ToLowerInvariant(), @"[a-z']+"))
+            {
+                string one = word.Value.Trim('\'');
+                if (one == "today" || one == "days") one = "day";
+                if (one.Length > 1 && !AskFiller.Contains(one)) gist.Add(one);
+            }
+            return gist;
+        }
+
+        // A request is never a question asked again: undo, redo, please, or "can you" and the like.
+        private static readonly Regex Requesting = new Regex(@"\b(?:undo|redo|un-do|re-do|please|pls)\b|^\s*(?:can|could|would|will)\s+(?:you|u|ya)\b", RegexOptions.IgnoreCase);
+
+        // When she last said she just told them, in UTC ticks, kept in her settings so a restart keeps it.
+        internal static Func<long> ToldSaved = delegate { return 0L; };
+        internal static Action<long> ToldKeep = delegate { };
+        private static readonly TimeSpan ToldEvery = TimeSpan.FromHours(4);
+
+        internal int TimesAsked(string text)
+        {
+            if (!Asking.IsMatch(text ?? "") || Changing.IsMatch(text ?? "") || Requesting.IsMatch(text ?? "")) return 0;
+            HashSet<string> now = Gist(text);
+            if (now.Count == 0 || now.Count > 6) return 0;
+            DateTime at = SimTime.UtcNow;
+            int asked = 0;
+            lock (asks)
+            {
+                asks.RemoveAll(one => at - one.Key > AskWindow);
+                foreach (KeyValuePair<DateTime, HashSet<string>> one in asks)
+                {
+                    int shared = 0;
+                    foreach (string word in now) if (one.Value.Contains(word)) shared++;
+                    if (shared > 0 && shared * 2 >= Math.Max(now.Count, one.Value.Count)) asked++;
+                }
+                asks.Add(new KeyValuePair<DateTime, HashSet<string>>(at, now));
+            }
+            return asked;
+        }
+
+        internal string AskedAgain(string text)
+        {
+            int asked = TimesAsked(text);
+            if (asked == 0) return "";
+            // Said at most once in four hours; inside that, a question asked again is answered as new.
+            long now = SimTime.UtcNow.Ticks, last = ToldSaved();
+            if (last > 0 && now >= last && now - last < ToldEvery.Ticks) return "";
+            ToldKeep(now);
+            if (asked == 1) return "\n\n(They asked you this a moment ago. It isn't new: say you just told them, briefly and in your own way, instead of answering fresh.)";
+            return "\n\n(They have now asked you this " + (asked + 1) + " times in a row. You're " + (asked == 2 ? "getting annoyed" : "properly fed up") + ", in your own way, like \"I already told you!\" Don't give the same answer again.)";
+        }
+
         internal string Gap()
         {
             TimeSpan ago;
@@ -5217,7 +5353,7 @@ namespace CapriDesktop
                 if (history.Count == 0) return "";
                 // Both sides in UTC: her chat time is kept in UTC, and local time against it read every chat as the
                 // time zone's hours old.
-                ago = DateTime.UtcNow - chattedAt.ToUniversalTime();
+                ago = SimTime.UtcNow - chattedAt.ToUniversalTime();
             }
             if (ago < TimeSpan.FromMinutes(30)) return "";
             string when = ago.TotalHours < 2 ? "about an hour" : ago.TotalHours < 24 ? (int)ago.TotalHours + " hours" : ago.TotalDays < 2 ? "a day" : (int)ago.TotalDays + " days";
@@ -5318,6 +5454,12 @@ namespace CapriDesktop
             // Key and credit lines keep their fix inside the note's 60 characters.
             if (error.StartsWith("No credits on this key.", StringComparison.Ordinal)) return "No credits on this key. Add credits, or press Free key.";
             if (error == PlusRejected) return "Key rejected. Make one with credits at platform.openai.com.";
+            if (error == Engine.Refused) return "Windows blocked llama-server.exe. Press Free key.";
+            if (error == OpenAiNoCredits) return "No API credits. Add them in Billing at platform.openai.com.";
+            if (error == OpenAiCapped) return "OpenAI's monthly limit hit. Raise it at platform.openai.com.";
+            if (error.StartsWith(TooLargeStart, StringComparison.Ordinal)) return "Too big for the key's per-minute limit. Try a smaller model.";
+            if (error.StartsWith(DailyLimitStart, StringComparison.Ordinal)) return "OpenAI's daily limit is used. Try later or add credits.";
+            if (error == TooBig) return "Too big for this key's per-minute limit. Wait a minute.";
             if (error.EndsWith(". Press Forget " + BrainMenu + ", then paste it again.", StringComparison.Ordinal)) return "Key rejected. Press Forget, then paste it again.";
             if (error == NotAKey) return "Not a key she knows. Copy the whole key again and paste it.";
             if (error == Unserved) return "Gemini isn't offered where you are. Press Free key instead.";
@@ -5333,7 +5475,7 @@ namespace CapriDesktop
         // it as their words.
         private static string ForYou(string parts) { return "(For you, not from them:" + parts + "\n)\n\n"; }
 
-        internal static string Now() { return "\nRight now it's " + DateTime.Now.ToString("dddd d MMMM yyyy, h:mm tt", System.Globalization.CultureInfo.InvariantCulture) + " where they are, so answer the time or date from this line without searching for it."; }
+        internal static string Now() { return "\nRight now it's " + SimTime.Now.ToString("dddd d MMMM yyyy, h:mm tt", System.Globalization.CultureInfo.InvariantCulture) + " where they are, so answer the time or date from this line without searching for it."; }
 
         internal const string Gibberish = "My brain sent gibberish. Pick another model in Capri Mainframe.";
         internal const string Wordless = "My brain sent an empty reply. Try again or pick another model in Capri Mainframe.";
@@ -5429,6 +5571,50 @@ namespace CapriDesktop
             string left = string.Join(" ", kept.ToArray()).Trim();
             // If the clock was the only thing she said, she keeps it: a reply cut to nothing reads as her breaking.
             return left.Length == 0 ? said : left;
+        }
+
+        // The names she calls them: theirs, her personality's and mood's, and the usual ones a brain reaches for.
+        private static readonly string[] UsualPets = { "darling", "kitten", "honey", "dear", "babe", "baby", "sweetie", "sweetheart", "sugar", "cutie", "hun", "hon", "love", "pumpkin", "princess", "handsome", "gorgeous" };
+
+        internal static Func<string[]> PetsNow = delegate
+        {
+            List<string> all = new List<string>(UsualPets);
+            try { foreach (string one in Them.Fond ?? new string[0]) if (!string.IsNullOrWhiteSpace(one)) all.Add(one.Trim()); } catch (Exception caughtOne) { Caught(caughtOne); }
+            try { foreach (string one in Personalities.PetNames()) if (!string.IsNullOrWhiteSpace(one)) all.Add(one.Trim()); } catch (Exception caughtOne) { Caught(caughtOne); }
+            return all.ToArray();
+        };
+
+        private static string[] Pets() { return PetsNow(); }
+
+        private static string PetWords(string[] pets)
+        {
+            List<string> words = new List<string>();
+            foreach (string one in pets ?? new string[0]) if (one.Length > 1 && one.Length < 30) words.Add(Regex.Escape(one));
+            return words.Count == 0 ? null : "(?:" + string.Join("|", words.ToArray()) + ")";
+        }
+
+        // A pet name said to them: one opening a sentence with a comma after it, one closing a sentence after a comma, or one on
+        // its own as a sentence.
+        internal static bool Petted(string said, string[] pets)
+        {
+            string words = PetWords(pets);
+            if (words == null || string.IsNullOrEmpty(said)) return false;
+            return Regex.IsMatch(said, @"(^|[.!?]\s+)" + words + @"\s*[,.!?]|,\s*" + words + @"\s*[.!?\u2026]|,\s*" + words + @"\s*$", RegexOptions.IgnoreCase);
+        }
+
+        // The same reply without the pet names said to them, its capitals and commas mended, when one was said lately.
+        internal static string Unpetted(string said, bool lately, string[] pets)
+        {
+            string words = PetWords(pets);
+            if (!lately || words == null || string.IsNullOrEmpty(said) || !Petted(said, pets)) return said ?? "";
+            const RegexOptions Loose = RegexOptions.IgnoreCase;
+            string kept = Regex.Replace(said, @"(^|[.!?]\s+)" + words + @"\s*,\s*(\p{L})", delegate(Match start) { return start.Groups[1].Value + start.Groups[2].Value.ToUpperInvariant(); }, Loose);
+            kept = Regex.Replace(kept, @",\s*" + words + @"\s*(?=[.!?\u2026]|$)", "", Loose);
+            kept = Regex.Replace(kept, @"(^|(?<=[.!?]\s))" + words + @"\s*[.!?]+\s*", "", Loose);
+            kept = Regex.Replace(kept, @"\s+([.!?,])", "$1").Trim();
+            if (kept.Length == 0) return said;
+            if (kept != said) Log("reply", -1, "a pet name held back: one was said in her last two replies");
+            return kept;
         }
 
         internal static string Sparing(string said, bool lately, string name = null)
@@ -5583,7 +5769,7 @@ namespace CapriDesktop
             lock (gate)
             {
                 Check(ticket);
-                if (parts != null && sending != null && sending == waitingRemote && waiting != null && waitingSource == sending.Source && DateTime.UtcNow < waiting.RetryAt) throw waiting;
+                if (parts != null && sending != null && sending == waitingRemote && waiting != null && waitingSource == sending.Source && SimTime.UtcNow < waiting.RetryAt) throw waiting;
             }
             HttpWebRequest request = Create(url, timeout);
             request.Method = "POST";
@@ -5733,6 +5919,7 @@ namespace CapriDesktop
             string url = error.Response.ResponseUri.AbsoluteUri;
             int status = (int)((HttpWebResponse)error.Response).StatusCode;
             string retry = error.Response.Headers["Retry-After"];
+            if (string.IsNullOrEmpty(retry) && status == 413) retry = error.Response.Headers["x-ratelimit-reset-tokens"];
             string broken = null;
             using (WebResponse response = error.Response)
             {
@@ -5750,21 +5937,45 @@ namespace CapriDesktop
             bool toolless = (status == 400 || status == 404 || status == 422) && Toolless(said);
             bool code = Cloud.IsCode(secret) && (status == 401 || status == 403) && Regex.IsMatch(said, @"\AThat Capri code (isn't right|was switched off|has expired|has used up its budget)\.\z");
             string meaning = code ? said : remote && !toolless ? Meaning(status, text, kind == "google", kind == "openai", Cloud.CompanyOf(kind)) : null;
+            // Only a limit that passes gets a wait. Gemini's used-up day, or a request bigger than OpenAI's whole per-minute
+            // limit, would fail again after it.
+            string limit = meaning ?? Meaning(status, text);
             if (meaning == Busy && Watching()) meaning = BusyWatching;
             BrainException problem = meaning != null ? new BrainException(meaning, true) : new BrainException(said);
             problem.Status = status;
             problem.Detail = said;
-            if (status == 429 && Meaning(status, text) == Busy) problem.RetryAt = RetryTime(retry, DateTime.UtcNow);
+            if ((status == 429 && limit == Busy) || (status == 413 && limit == TooBig)) problem.RetryAt = RetryTime(string.IsNullOrEmpty(retry) ? AskedWait(text) : retry, SimTime.UtcNow);
             return problem;
+        }
+
+        // The wait a limit names in its words when there's no Retry-After, like OpenAI's "Please try again in 8.259s", "in 1m26.4s"
+        // or "in 20s", or Gemini's "Please retry in 36.4s", in the form RetryTime reads (Lachu).
+        internal static string AskedWait(string body)
+        {
+            Match asked = Regex.Match(body ?? "", @"\b(?:try again|retry) in (?:(?<span>(?:\d+(?:\.\d+)?(?:ms|h|m|s))+)(?![a-z])|(?<seconds>\d+(?:\.\d+)?) ?seconds?\b)", RegexOptions.IgnoreCase);
+            return !asked.Success ? null : asked.Groups["span"].Success ? asked.Groups["span"].Value.ToLowerInvariant() : asked.Groups["seconds"].Value;
         }
 
         internal static DateTime RetryTime(string header, DateTime now)
         {
             double seconds;
             if (double.TryParse(header, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out seconds) && !double.IsNaN(seconds) && !double.IsInfinity(seconds) && seconds >= 0 && seconds < (DateTime.MaxValue - now).TotalSeconds) return now.AddSeconds(Math.Max(1, seconds));
+            Match span = Regex.Match((header ?? "").Trim(), @"\A(?:(?<h>\d+(?:\.\d+)?)h)?(?:(?<m>\d+(?:\.\d+)?)m(?!s))?(?:(?<s>\d+(?:\.\d+)?)s)?(?:(?<ms>\d+(?:\.\d+)?)ms)?\z");
+            if (span.Success && span.Length > 0)
+            {
+                double total = SpanPart(span, "h") * 3600 + SpanPart(span, "m") * 60 + SpanPart(span, "s") + SpanPart(span, "ms") / 1000;
+                if (!double.IsNaN(total) && total < (DateTime.MaxValue - now).TotalSeconds) return now.AddSeconds(Math.Max(1, total));
+            }
             DateTime when;
             if (DateTime.TryParse(header, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out when)) return when > now ? when : now.AddSeconds(1);
             return now.AddSeconds(60);
+        }
+
+        private static double SpanPart(Match span, string unit)
+        {
+            double value;
+            if (!span.Groups[unit].Success || !double.TryParse(span.Groups[unit].Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value)) return 0;
+            return value;
         }
 
         internal static string ProblemText(string body)
@@ -5816,7 +6027,7 @@ namespace CapriDesktop
         internal static string ScreenProblem(Exception error, string provider)
         {
             BrainException problem = error as BrainException;
-            if (problem != null && problem.RetryAt != default(DateTime)) return provider + " is rate-limited. I'll try the screen again in " + Math.Max(1, Math.Ceiling((problem.RetryAt - DateTime.UtcNow).TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture) + " seconds.";
+            if (problem != null && problem.RetryAt != default(DateTime)) return provider + " is rate-limited. I'll try the screen again in " + Math.Max(1, Math.Ceiling((problem.RetryAt - SimTime.UtcNow).TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture) + " seconds.";
             WebException web = error as WebException;
             if (web != null && web.Status == WebExceptionStatus.Timeout) return provider + " took too long to answer. I'll try the screen again.";
             if (problem != null) return Redacted(problem.Message);
@@ -5846,11 +6057,16 @@ namespace CapriDesktop
         {
             // Gemini's quota for the day names it, like GenerateRequestsPerDayPerProjectPerModel-FreeTier; a minute's doesn't.
             if (google && status == 429 && Regex.IsMatch(body ?? "", @"PerDay|per[ _-]day\b|daily", RegexOptions.IgnoreCase)) return DailyGone;
-            if (status == 429 && Regex.IsMatch(body ?? "", @"RESOURCE_EXHAUSTED|rate[_ -]?limit|too many requests", RegexOptions.IgnoreCase)) return Busy;
+            // Its links are left out, so a billing page's address can't read as a billing problem.
+            string words = Regex.Replace(body ?? "", @"https?:\\?/\\?/(?:[^\s""'<>\\]|\\/)+", "");
+            string walled = openai && status == 429 ? OpenAiWall(words) : null;
+            if (walled != null) return walled;
+            if (status == 429 && Regex.IsMatch(words, @"RESOURCE_EXHAUSTED|rate[_ -]?limit|too many requests|tokens per minute", RegexOptions.IgnoreCase)) return Busy;
+            if (status == 413 && Regex.IsMatch(words, @"rate[_ -]?limit|tokens per minute", RegexOptions.IgnoreCase)) return TooBig;
             // An API turns a bad key away in its own words; an HTML page in their place is a firewall or a country block.
             if (status == 451 || status == 403 && (BlockPage.IsMatch(body ?? "") || (body ?? "").TrimStart().StartsWith("<", StringComparison.Ordinal))) return Blocked;
             if (google && status == 400 && Regex.IsMatch(body ?? "", @"location is not supported|in your (country|region)", RegexOptions.IgnoreCase)) return Unserved;
-            if (status == 402 || Regex.IsMatch(body ?? "", @"insufficient[_ ](quota|balance)|no credits|credit balance|billing", RegexOptions.IgnoreCase)) return NoCredits;
+            if (status == 402 || Regex.IsMatch(words, @"insufficient[_ ](quota|balance)|no credits|credit balance|billing", RegexOptions.IgnoreCase)) return NoCredits;
             if (google && status == 400 && (body ?? "").Contains("FAILED_PRECONDITION")) return Unserved;
             // Google turns a key away with a 400 as well as a 401 or 403, and pasting the same key again doesn't help.
             if (google && (status == 401 || status == 403 || (status == 400 && Regex.IsMatch(body ?? "", @"API[_ ]?key|credential|Authorization header", RegexOptions.IgnoreCase)))) return NewKey;
@@ -5859,6 +6075,19 @@ namespace CapriDesktop
             if (status == 404) return Gone;
             if (status >= 500) return Down;
             return null;
+        }
+
+        // OpenAI's spend and usage limits come with the type insufficient_quota as well as their own codes, so they're read
+        // before credits. Of its "Rate limit reached" lines, only a minute's passes with a wait.
+        private static string OpenAiWall(string words)
+        {
+            if (Regex.IsMatch(words, @"\b(?:organization|project|api_key)_spend_limit_exceeded\b|\borganization_usage_limit_exceeded\b")) return OpenAiCapped;
+            if (Regex.IsMatch(words, @"\bcredit_balance_exhausted\b|insufficient[_ ]quota", RegexOptions.IgnoreCase)) return OpenAiNoCredits;
+            bool unpaid = Regex.IsMatch(words, @"\badd(?:ing)? a payment method\b", RegexOptions.IgnoreCase);
+            Match large = Regex.Match(words, @"\bRequest too large for (?<model>(?=[\w.:]*[\d-])[\w.:-]{1,64})[^""]*?\bper min", RegexOptions.IgnoreCase);
+            if (large.Success) return TooLarge(large.Groups["model"].Value, unpaid);
+            Match day = Regex.Match(words, @"\bRate limit reached for (?<model>(?=[\w.:]*[\d-])[\w.:-]{1,64})[^""]*?\bper day\b", RegexOptions.IgnoreCase);
+            return day.Success ? DailyLimit(day.Groups["model"].Value, unpaid) : null;
         }
 
         // A crash closes her without a word, so errors.txt keeps what it was for the copied details.
@@ -5983,7 +6212,7 @@ namespace CapriDesktop
             {
                 Uri where;
                 string place = Uri.TryCreate(url, UriKind.Absolute, out where) ? where.Host + where.AbsolutePath : url;
-                string line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " | " + Nameless(Redacted(Scrubbed(place))) + " | " + (took < 0 ? "-" : took + " ms") + " | " + Nameless(Redacted(Scrubbed(what))).Replace("\r", " ").Replace("\n", " ");
+                string line = SimTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " | " + Nameless(Redacted(Scrubbed(place))) + " | " + (took < 0 ? "-" : took + " ms") + " | " + Nameless(Redacted(Scrubbed(what))).Replace("\r", " ").Replace("\n", " ");
                 string[] keys = SavedSecrets();
                 lock (typeof(Brain))
                 {
@@ -6124,6 +6353,18 @@ namespace CapriDesktop
             trouble = null;
             name = null;
             return AskName;
+        }
+
+        // Started with the name they gave on her setup card: it is kept, and she goes on to their pronouns (Lachy).
+        internal string Start(string known)
+        {
+            string line = Start();
+            string called = Brain.Nick(known);
+            if (called.Length == 0) return line;
+            name = called;
+            Keep("Name", name);
+            step = 1;
+            return "Let's get to know each other, " + name + ". " + AskPronouns + " Say skip to skip one, or stop to stop.";
         }
 
         internal void Stop() { step = -1; }
@@ -6786,7 +7027,7 @@ namespace CapriDesktop
                 Jump(line);
             }
             bool ready;
-            try { ready = Ready() && DateTime.UtcNow - failed >= Wait; }
+            try { ready = Ready() && SimTime.UtcNow - failed >= Wait; }
             catch (Exception) { ready = false; }
             if (!ready) { then(line); return; }
             int handed = 0;
@@ -6818,7 +7059,7 @@ namespace CapriDesktop
             {
                 string reply;
                 try { reply = Ask(Rules(tongue), Numbered(new List<string> { line }, new List<bool> { named })); }
-                catch (Exception) { lock (gate) failed = DateTime.UtcNow; return null; }
+                catch (Exception) { lock (gate) failed = SimTime.UtcNow; return null; }
                 Dictionary<string, string> got = Read(reply, new List<string> { line }, new List<bool> { named });
                 string translated;
                 if (!got.TryGetValue(line, out translated) || !SameTokens(line, translated)) return null;
@@ -6877,7 +7118,7 @@ namespace CapriDesktop
         {
             lock (gate)
             {
-                if (warming || Ask == null || Brain.Language == null || DateTime.UtcNow - failed < Wait) return;
+                if (warming || Ask == null || Brain.Language == null || SimTime.UtcNow - failed < Wait) return;
                 warming = true;
             }
             bool ready;
@@ -6917,7 +7158,7 @@ namespace CapriDesktop
                     if (batch.Count == 0) return;
                     string reply;
                     try { reply = Ask(Rules(tongue), Numbered(batch, named)); }
-                    catch (Exception) { lock (gate) failed = DateTime.UtcNow; return; }
+                    catch (Exception) { lock (gate) failed = SimTime.UtcNow; return; }
                     Dictionary<string, string> got = Read(reply, batch, named);
                     lock (gate)
                     {
@@ -6946,6 +7187,9 @@ namespace CapriDesktop
             List<string> had = new List<string>(), got = new List<string>();
             foreach (Match one in Regex.Matches(line ?? "", @"%[A-Za-z]+%")) had.Add(one.Value.ToLowerInvariant());
             foreach (Match one in Regex.Matches(translated ?? "", @"%[A-Za-z]+%")) got.Add(one.Value.ToLowerInvariant());
+            // A translation that loses a silent mark would have her say what was meant to stay quiet.
+            foreach (Match one in Regex.Matches(line ?? "", @"\*\*/?silent\*\*", RegexOptions.IgnoreCase)) had.Add(one.Value.ToLowerInvariant());
+            foreach (Match one in Regex.Matches(translated ?? "", @"\*\*/?silent\*\*", RegexOptions.IgnoreCase)) got.Add(one.Value.ToLowerInvariant());
             had.Sort(StringComparer.Ordinal);
             got.Sort(StringComparer.Ordinal);
             return string.Join(" ", had.ToArray()) == string.Join(" ", got.ToArray());
@@ -7011,7 +7255,7 @@ namespace CapriDesktop
         private readonly Func<DateTime> clock;
         private static readonly HashSet<string> Plain = new HashSet<string>(("about again all also and any are around back been being but can choom cool could damn did does doing done down even ever every for from get gets getting going gonna good got great gremlin guess had has have hello hey how here job just know like little look looks maybe more most much nice now okay one only other out preem really right say see should some something still sure than that the their them then there these they thing things think this those through time today too very wanna want was well were what when where which who why will with work would wow yeah yes yet you your yours capri").Split(' '));
 
-        internal OwnSpeech(Func<DateTime> now = null) { clock = now ?? delegate { return DateTime.UtcNow; }; }
+        internal OwnSpeech(Func<DateTime> now = null) { clock = now ?? delegate { return SimTime.UtcNow; }; }
 
         private void Trim()
         {

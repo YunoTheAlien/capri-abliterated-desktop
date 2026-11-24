@@ -1,10 +1,12 @@
 // capri-mod: 1
 // id: door2-intro
 // name: Door 2 Intro
-// version: 1.26.0
+// version: 1.28.0
 // author: Yuno
 // description: Hexagons grow like vines in from her screen's edges and out across every other screen, leaving a solid red circle where she lands; it opens and she wakes in it.
 // intro: yes
+// permissions: settings
+// requires: api 5
 
 using System;
 using System.Collections.Generic;
@@ -103,7 +105,7 @@ public class Door2Intro : ICapriMod, ICapriIntro, ICapriIntroNames, ICapriIntroS
     }
 
     private ICapriHost capri;
-    // Switched on in sys.md, and the test menu's one-shot play.
+    // Switched on in Toggles > Intros, and the test menu's one-shot play.
     private bool on, once;
     private readonly List<Hex> door = new List<Hex>();
     private float doorReach;
@@ -133,9 +135,15 @@ public class Door2Intro : ICapriMod, ICapriIntro, ICapriIntroNames, ICapriIntroS
     // Its colours, named for Custom colours and read back, as any mod's are.
     private void Tint() { Alert = capri.Ui.Colour("Hexagons", AlertUsual); }
 
-    // sys.md's start-up intro list, with no ">" in front of door2.
+    // Toggles > Intros in her settings; an older Capri without it still has sys.md's start-up intro list.
     private bool Switched()
     {
+        try
+        {
+            bool? asked = capri.Settings.IsOn("intro_door2");
+            if (asked != null) return asked.Value;
+        }
+        catch (Exception error) { capri.Log(error.Message); }
         try
         {
             string file = SysFile(Home());

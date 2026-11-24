@@ -225,11 +225,42 @@ namespace CapriDesktop
 
         internal static string Tail(string key) { return key == null || key.Length < 4 ? "" : key.Substring(key.Length - 4); }
 
+        // Text faces like :< or ^_^ show in her bubble and are never read out, as whole tokens only, so a time, a ratio or a link
+        // keeps its colon. Internet words like XD, uwu and rawr are words and are still said.
+        private static readonly Regex Face = new Regex(@"(?<=^|[\s(""'])(?:>?[:;=][-']?[()<>/|\\3DPpOoCc\[\]*]|D[-']?[:;]|</?3|\^_*\^|[Tt]_[Tt]|-_-|>_<|[oO0]_[oO0]|[xX]_[xX]|;_;|u_u|\._\.)(?=$|[\s.,!?)""'])", RegexOptions.CultureInvariant);
+
+        internal static string Faceless(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text ?? "";
+            string plain = Face.Replace(text, "");
+            return plain == text ? text : Regex.Replace(Regex.Replace(plain, @"[ \t]{2,}", " "), @"[ \t]+(?=[.,!?]*$)", "").Trim();
+        }
+
+        // **silent** ... **/silent**: shown in her bubble without the marks and never said by any voice. One left open is
+        // silent to the end of the line.
+        private static readonly Regex Hushed = new Regex(@"\*\*silent\*\*.*?(?:\*\*/silent\*\*|$)", RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
+        private static readonly Regex SilentMark = new Regex(@"[ \t]*\*\*/?silent\*\*[ \t]*", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        internal static string Unspoken(string text) { return string.IsNullOrEmpty(text) || text.IndexOf("**", StringComparison.Ordinal) < 0 ? text ?? "" : Hushed.Replace(text, " "); }
+
+        internal static string Unsilenced(string text)
+        {
+            if (string.IsNullOrEmpty(text) || text.IndexOf("**", StringComparison.Ordinal) < 0) return text ?? "";
+            return SilentMark.Replace(text, delegate(Match mark)
+            {
+                int after = mark.Index + mark.Length;
+                bool closing = mark.Value.IndexOf('/') >= 0;
+                bool edge = mark.Index == 0 || after >= text.Length || closing && ".,!?;:)".IndexOf(text[after]) >= 0;
+                return edge || mark.Value.Trim() == mark.Value ? "" : " ";
+            }).Trim();
+        }
+
         internal static string Spoken(string said) { return Spoken(said, false); }
 
         // cues keeps her emotion cues in, for a Fish Audio voice to say. Every other bracket still comes off.
         internal static string Spoken(string said, bool cues)
         {
+            said = Faceless(Unspoken(said));
 #if !CROSS
             said = FileFinder.Spoken(said);
 #endif
@@ -245,7 +276,7 @@ namespace CapriDesktop
         private const string Sounds = "emphasis|gasping|yawning|snoring|clear throat|clears throat|long-break|break|laughs?|giggl(?:e|es|ing)|chuckles?|sighs?|gasps?|whispers?|sobs?|cr(?:ying|ies)|sniffl(?:e|es|ing)|groans?|yawns?|scoff(?:s|ing)?|snorts?|hum(?:s|ming)?|pauses?|teasing(?:ly)?|playful(?:ly)?|smug(?:ly)?|flirt(?:y|atious|atiously)|sweetly|softly|warm(?:ly)?|cheerful(?:ly)?|mischievous(?:ly)?|annoyed|pout(?:s|ing)?|gentl(?:e|y)|shy(?:ly)?|sleepy|tired|dramatic(?:ally)?|mock(?:ing|ingly)?|sing(?:s|ing)|cheeky|deadpan|quietly|loudly|evil";
         // Plain tones allowed in round brackets as well as square ones. Short on purpose: round brackets turn up in
         // ordinary writing, so only words nobody puts in a sentence by accident go here.
-        private const string Tones = "sleepy|tired|playful|teasing|smug|deadpan|flirty|cheeky|mischievous|softly|sweetly|warmly|gently|quietly|loudly|whispering|laughing|giggling|chuckling|sighing|gasping";
+        private const string Tones = "sleepy|tired|playful|teasing|smug|deadpan|flirty|cheeky|mischievous|softly|sweetly|warmly|gently|quietly|loudly|whispering|laughing|giggling|chuckling|sighing|gasping|squeaky|high pitch voice";
 
         // The same feelings as adverbs, "(smugly)", "[playfully]", which brains write too, and any lone lowercase "-ly"
         // word in round brackets, like a stage direction, but not words like "(only)" or "(daily)".
@@ -263,7 +294,7 @@ namespace CapriDesktop
             return string.Join("|", made.ToArray());
         }
 
-        internal static readonly Regex Cue = new Regex(@"\[\s*(?<cue>(?:(?:very|slightly|extremely|really|super|so|quite|a bit|a little|kind of|kinda)\s+)?(?:" + Feelings + "|" + Sounds + "|" + Tones + "|" + Adverbs + @")(?:[\s-]+[a-z']+){0,3})\s*\](?!\()|\(\s*(?<cue>(?!moved\b)(?:(?:very|slightly|extremely|really|super|so|quite|a bit|a little|kind of|kinda)\s+)?(?:" + Feelings + "|" + Tones + "|" + Adverbs + @"))\s*\)|\(\s*(?<cue>(?!(?:only|early|daily|weekly|monthly|yearly|hourly|nightly|family|reply|apply|supply|ugly|holy|july|italy|bully|belly|jelly|rally|ally|lily|assembly|anomaly|monopoly|homily|comply|imply|multiply)\s*\))[a-z]+ly)\s*\)", RegexOptions.IgnoreCase);
+        internal static readonly Regex Cue = new Regex(@"\[\s*(?<cue>(?:(?:very|slightly|extremely|really|super|so|quite|a bit|a little|kind of|kinda)\s+)?(?:" + Feelings + "|" + Sounds + "|" + Tones + "|" + Adverbs + @")(?:[\s-]+[a-z']+){0,3})\s*\](?!\()|\(\s*(?<cue>(?!moved\b)(?:(?:very|slightly|extremely|really|super|so|quite|a bit|a little|kind of|kinda)\s+)?(?:" + Feelings + "|" + Tones + "|" + Adverbs + @"))\s*\)|\(\s*(?<cue>(?!(?:only|early|daily|weekly|monthly|yearly|hourly|nightly|family|reply|apply|supply|ugly|holy|july|italy|bully|belly|jelly|rally|ally|lily|assembly|anomaly|monopoly|homily|comply|imply|multiply)\s*\))[a-z]+ly)\s*\)|(?<=^|[.!?\u2026]\s+)\(\s*(?<cue>(?!(?:nothing|something|anything|everything|morning|evening|darling|feeling|wedding|ending|beginning|thing|king|ring|spring|string|wing|ceiling|pudding|meaning|saying|setting|warning|heading|reading|writing|loading|pending|trending|working|gaming|streaming)\b)[a-z]+ing(?:\s+[a-z']+){0,2})\s*\)", RegexOptions.IgnoreCase);
 
         // The first cue in a line: Fish Audio acts it out, and VoiceFeel turns it into pitch and pace for her other
         // voices. Whether a word is a known cue, so a mood can be offered as one without inventing it.
@@ -335,6 +366,7 @@ namespace CapriDesktop
 
         private static string Plain(string text)
         {
+            text = Faceless(Unspoken(text));
             text = Regex.Replace(text ?? "", @"https?://(?:www\.)?([^/\s]+?)(?:/\S*?)?(?=[.,!?)]*(?:\s|$))", delegate(Match link) { return link.Groups[1].Value.Replace(".", " dot "); });
             text = Regex.Replace(text, @"[\uD800-\uDBFF][\uDC00-\uDFFF]|[☀-➿️‍]", "");
             text = Regex.Replace(text, @"\s*&\s*", " and ");
@@ -504,6 +536,7 @@ namespace CapriDesktop
 
         internal byte[] Speak(string text)
         {
+            SpokeBy.Last = "ElevenLabs";
             string key = Key;
             string id = VoiceId;
             string model = Model;
@@ -2702,6 +2735,12 @@ namespace CapriDesktop
             return "";
         }
 
+        // Said once in VOICE when no voice on this PC speaks a line's language: where to add one of hers, then where Windows
+        // adds its own, which she uses by itself (Lachu).
+        internal const string WindowsVoiceHow = "Or a Windows voice: Settings > Time & language > Speech > Add voices.";
+
+        internal static string MissingNote(string code, string language) { return Missing(code, language) + " " + WindowsVoiceHow; }
+
         internal static string Missing(string code, string language)
         {
             switch (code)
@@ -2805,7 +2844,7 @@ namespace CapriDesktop
                     try
                     {
                         byte[] wav = Run(voice.Key, Voice.Sayable(text));
-                        if (wav != null && Voice.Seconds(wav) > 0) return VoiceFx.Styled(wav, text);
+                        if (wav != null && Voice.Seconds(wav) > 0) { SpokeBy.Last = "Windows"; return VoiceFx.Styled(wav, text); }
                     }
                     catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 }
@@ -3196,6 +3235,7 @@ namespace CapriDesktop
 
         internal byte[] Speak(string text, string code)
         {
+            SpokeBy.Last = "free";
             if (code != null && !Speaks(code)) throw new VoiceException("Her free voice doesn't have that language yet.");
             Used = Environment.TickCount;
             if (!VoiceLanguage.Reads(text, code ?? "en")) throw new VoiceException(VoiceLanguage.Missing(VoiceLanguage.Tongue(text, Brain.Language), Brain.Language));
@@ -4112,6 +4152,7 @@ namespace CapriDesktop
 
         internal byte[] Speak(string text)
         {
+            SpokeBy.Last = "HD";
             int number;
             lock (gate)
             {
@@ -4258,15 +4299,17 @@ namespace CapriDesktop
         }
 
         // Asleep while a wake is under way, her HD voice gets WakeWait to come up before her free voice takes the line, so the first
-        // line after a quiet spell isn't in another voice. A wake that ends without her up hands it on at once.
-        internal Func<string, byte[]> Waiting(Func<string, byte[]> fallback, Action<string> trouble, Func<bool> waking)
+        // line after a quiet spell isn't in another voice. A wake that ends without her up hands it on, and fellBack hears so.
+        internal Func<string, byte[]> Waiting(Func<string, byte[]> fallback, Action<string> trouble, Func<bool> waking, Action fellBack = null)
         {
             Func<string, byte[]> hd = Or(fallback, trouble);
             return delegate(string words)
             {
                 Stopwatch waited = Stopwatch.StartNew();
                 while (!Awake && waking() && waited.ElapsedMilliseconds < WakeWait) Thread.Sleep(100);
-                return Awake ? hd(words) : fallback(words);
+                if (Awake) return hd(words);
+                if (fellBack != null) fellBack();
+                return fallback(words);
             };
         }
 
@@ -4683,6 +4726,8 @@ namespace CapriDesktop
             string rounded = Voice.Cue.Replace(text ?? "", delegate(Match cue)
             {
                 string name = cue.Groups["cue"].Value.ToLowerInvariant();
+                // A high voice it has no feeling for goes as its nearest one.
+                if (name == "squeaky" || name == "high pitch voice") name = "excited";
                 return Regex.IsMatch(name, "^(?:" + Voice.Feelings + ")$") ? "(" + name + ")" : "";
             });
             return Regex.Replace(rounded, @"[ \t]{2,}", " ").Trim();
@@ -4690,6 +4735,7 @@ namespace CapriDesktop
 
         internal byte[] Speak(string text)
         {
+            SpokeBy.Last = Name(Url, Api);
             string url, api, model, speaker, key;
             lock (Changing)
             {
@@ -4933,4 +4979,14 @@ namespace CapriDesktop
         }
     }
 #endif
+}
+
+namespace CapriDesktop
+{
+    // Which voice made the line just voiced on this thread: HD, free, Windows, a custom or cloud voice by its name, or
+    // ElevenLabs. A fallback speaks after the voice that failed, so the last to speak is the one heard.
+    internal static class SpokeBy
+    {
+        [ThreadStatic] internal static string Last;
+    }
 }
