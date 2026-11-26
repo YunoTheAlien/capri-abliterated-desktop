@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Diam sampai {n}:{n}
 Quiet until turned off	Diam sampai dimatikan
 Export settings	Ekspor pengaturan
 Import settings	Impor pengaturan
-Save Mainframe position	Ingat posisi panel
+Save Mainframe position	Simpan posisi Mainframe
+Capri options	Opsi Capri

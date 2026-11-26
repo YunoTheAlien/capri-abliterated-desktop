@@ -5,7 +5,7 @@ namespace CapriDesktop
     // Where on her you put your hand, and what she says about it. Some zones are named by what attached and work only
     // with the switch on. Her forwardness decides: five or more and she's pleased, under that she moves your hand; on
     // air it is zero.
-    internal static class Touch
+    internal static partial class Touch
     {
         internal const string FileName = "touch.md";
 
@@ -51,6 +51,149 @@ namespace CapriDesktop
             if (forward < Willing) return file.Pick(LineFile.Senpai(NotNow), null);
             return file.Pick(LineFile.Senpai(zone), null);
         }
+
+        // The place a zone names, its words after "her": "head", "shoulders". Null for none.
+        internal static string Part(string zone)
+        {
+            if (string.IsNullOrEmpty(zone)) return null;
+            int her = zone.LastIndexOf(" her ", StringComparison.Ordinal);
+            return (her < 0 ? zone : zone.Substring(her + 5)).Trim().ToLowerInvariant();
+        }
+
+        // What a ctrl click lands as with the switch on, by the place it hit: that place's act, now and then its other act,
+        // its sound, what her brain is told and where her lines come from. Null off her body or with nothing attached.
+        internal sealed class Clicked
+        {
+            internal string Act, Heard, Section;
+            internal Cue Cue = Cue.Snap;
+        }
+
+        internal static Clicked Click(string zone, Func<string, int> worth, Random dice)
+        {
+            string part = Part(zone), first = Extended.Get("click");
+            if (part == null || first == null) return null;
+            string act = Extended.Get("click.at." + part) ?? first;
+            string also = Extended.Get("click.also." + part);
+            if (also != null && dice.NextDouble() < NowAndThen(worth(act), worth(also))) act = also;
+            Cue cue;
+            if (!Enum.TryParse(Extended.Get("click.cue." + act) ?? "", true, out cue) || !Enum.IsDefined(typeof(Cue), cue)) cue = Cue.Snap;
+            return new Clicked
+            {
+                Act = act,
+                Heard = Extended.Get("click.heard." + act + "." + part) ?? Extended.Get("click.heard." + act) ?? (act == first ? Extended.Get("click.heard") : null) ?? act,
+                Section = Extended.Get("click.touch." + act + "." + part) ?? (act == first && zone == Lower ? ClickZone : null),
+                Cue = cue
+            };
+        }
+
+        // A ctrl click held a second with the switch on, by the place it landed: the act attached for it, and how she takes it
+        // as a roll on her personality's stance for that act plus her mood's shift (0 to 2), each score with its own odds.
+        internal sealed class Held
+        {
+            internal string Act, Heard;
+            internal int Way;
+            internal Cue Cue = Cue.Click;
+        }
+
+        internal const int Loves = 0, Takes = 1, Brushes = 2;
+        internal static readonly string[] Ways = { "loves", "takes", "brushes" };
+
+        internal static Held Hold(string part, string personality, string mood, Random dice)
+        {
+            string act = string.IsNullOrEmpty(part) ? null : Extended.Get("hold.at." + part);
+            if (act == null) return null;
+            int score = Score(act, personality, mood);
+            int[] odds = Numbers(Extended.List("hold.odds." + score));
+            int roll = dice.Next(Math.Max(1, odds[0] + odds[1] + odds[2])), way = roll < odds[0] ? Loves : roll < odds[0] + odds[1] ? Takes : Brushes;
+            Cue cue;
+            if (!Enum.TryParse(Extended.Get("hold.cue." + act) ?? "", true, out cue) || !Enum.IsDefined(typeof(Cue), cue)) cue = Cue.Click;
+            return new Held { Act = act, Way = way, Heard = Extended.Get("hold.heard." + act) ?? act, Cue = cue };
+        }
+
+        // Her personality's stance for this act (its place in hold.order) and her mood's shift, kept 0 to 2. A personality
+        // with no stance takes it (1).
+        internal static int Score(string act, string personality, string mood)
+        {
+            string[] order = Extended.List("hold.order"), stance = Extended.List("hold.stance." + (personality ?? ""));
+            int at = Array.FindIndex(order, one => string.Equals(one, act, StringComparison.OrdinalIgnoreCase)), own;
+            if (at < 0 || at >= stance.Length || !int.TryParse(stance[at], out own)) own = 1;
+            return Math.Max(0, Math.Min(2, own + Extended.Int("hold.shift." + (mood ?? ""), 0)));
+        }
+
+        private static int[] Numbers(string[] listed)
+        {
+            int[] made = { 25, 50, 25 };
+            for (int i = 0; i < 3 && i < listed.Length; i++) { int one; if (int.TryParse(listed[i], out one) && one >= 0) made[i] = one; }
+            return made;
+        }
+
+        // Her line for a hold, by how she took it: the act's lines for that way, dressed as her answers are.
+        internal static string HeldSaid(Held held)
+        {
+            if (held == null) return null;
+            string[] lines = Extended.List("hold.lines." + held.Act + "." + Ways[held.Way]);
+            if (lines.Length == 0) return null;
+            return Sayings.DressFrom(lines, held.Way != Brushes, Sayings.Kind.Reply, "extended: hold " + held.Act);
+        }
+
+        // A ctrl click's act welcome by her wanting or mood: "welcome.<act> = <wanting 0-10> | <mood> | ...".
+        internal static bool Welcome(string act, int wanting, string mood)
+        {
+            string[] rule = Extended.List("welcome." + (act ?? ""));
+            if (rule.Length == 0) return false;
+            int least;
+            if (int.TryParse(rule[0], out least) && wanting >= least) return true;
+            for (int i = 1; i < rule.Length; i++) if (string.Equals(rule[i], mood, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+
+        // How often the other act comes instead: half her odds of leaning to it over the first, from what each is worth
+        // to her now, so a personality and mood that like it more get it more, and it never outnumbers the first.
+        internal static double NowAndThen(int first, int other) { return 0.5 / (1 + Math.Exp(first - other)); }
+
+        // Her line for a place only what attached names: her lines for it when she wants it, her not-now lines when she
+        // doesn't, built with the act's own pools the way her other reactions are. Null off the switch or with none.
+        internal static string Said(string section, string act, bool wanted)
+        {
+            if (string.IsNullOrEmpty(section) || !Brain.SenpaiLive) return null;
+            string[] hers = file.Lines(LineFile.Senpai(wanted ? section : NotNow));
+            if (hers.Length == 0) return null;
+            return Sayings.For(act, wanted, hers) ?? Sayings.DressFrom(hers, wanted, Sayings.Kind.Reply, "touch.md: " + (wanted ? section : NotNow));
+        }
+
+#if CHECKS
+        // With stand-in keys, so the public check names nothing of the switch's own: a place with its own act gets it, the
+        // rest the one act, off her body nothing; the other act comes now and then, more as she likes it more; each says
+        // its own words and sound.
+        internal static void Check(System.Collections.Generic.List<string> checks)
+        {
+            string was = Extended.Text;
+            try
+            {
+                Extended.Text = "click = poked\nclick.heard = pokes you\nclick.at.feet = nudged\nclick.also.feet = poked\nclick.cue.nudged = Click\n"
+                    + "click.heard.nudged.feet = nudges your feet\nclick.touch.nudged.feet = When you nudge her feet\n";
+                Func<string, int> even = delegate { return 0; };
+                Clicked head = Click(Head, even, new Random(1)), feet = Click(Feet, delegate(string act) { return act == "nudged" ? 5 : -5; }, new Random(1));
+                if (head == null || head.Act != "poked" || head.Heard != "pokes you" || head.Cue != Cue.Snap || head.Section != null)
+                    throw new Exception("A click on her head wasn't the one act with its words and snap.");
+                if (feet == null || feet.Act != "nudged" || feet.Heard != "nudges your feet" || feet.Cue != Cue.Click || feet.Section != "When you nudge her feet")
+                    throw new Exception("A click on her feet wasn't the act named for her feet, with its words, sound and lines.");
+                if (Click(null, even, new Random(1)) != null) throw new Exception("A click off her body landed as something.");
+                if (Part(Shoulders) != "shoulders" || Part(Head) != "head") throw new Exception("A zone's place is read wrong: " + Part(Shoulders));
+                if (!(NowAndThen(0, 0) < 0.5 && NowAndThen(-3, 3) > NowAndThen(3, -3) && NowAndThen(-5, 5) <= 0.5))
+                    throw new Exception("The other act's odds don't follow what she likes, or can outnumber the first.");
+                int others = 0;
+                Random dice = new Random(7);
+                for (int i = 0; i < 400; i++) if (Click(Feet, even, dice).Act == "poked") others++;
+                if (others < 60 || others > 140) throw new Exception("At even worth the other act came " + others + " in 400, not about a quarter.");
+                checks.Add("PASS the switch-on ctrl click by place: a place's own act, words, sound and lines, the one act elsewhere, nothing off her body, and the place's other act now and then, more often the more she likes it and never past the first");
+            }
+            finally { Extended.Text = was; }
+            LocalClicks(checks);
+        }
+
+        static partial void LocalClicks(System.Collections.Generic.List<string> checks);
+#endif
 
         // The lines she can say for a public zone, as her file holds them.
         internal static string[] Lines(string zone)

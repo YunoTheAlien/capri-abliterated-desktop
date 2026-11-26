@@ -219,4 +219,5 @@ Quiet until {n}:{n}	ጸጥታ እስከ {n}:{n}
 Quiet until turned off	እስኪጠፋ ድረስ ጸጥታ
 Export settings	ቅንብሮችን ላክ
 Import settings	ቅንብሮችን አስገባ
-Save Mainframe position	የፓነሉን ቦታ አስታውስ
+Save Mainframe position	የMainframe ቦታን አስቀምጥ
+Capri options	የCapri አማራጮች

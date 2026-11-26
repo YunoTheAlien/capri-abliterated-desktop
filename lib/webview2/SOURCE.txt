@@ -1,0 +1,2 @@
+Microsoft.Web.WebView2 1.0.2903.40 from https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/1.0.2903.40
+SHA-512 (nuget.org catalog, matched here): pDLSrpyma3xyOGXlw3Aowy7XceBdeJbukZzKLVdPCFvyfnn8PrCLylMn6c456ja0TcOOal8IdQCVONDRU2OGkw==

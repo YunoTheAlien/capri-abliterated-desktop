@@ -98,7 +98,7 @@ namespace CapriDesktop
         internal volatile bool Stopped, Result, Failed;
         internal bool TextSeen, SessionSeen, StopRecorded, Trusted, Uncovered, Partials, Streamed;
         internal string Message = "", Latest = "";
-        internal Timer StreamTimer;
+        internal Clock.OffTimer StreamTimer;
         internal int Attempt, Active;
         internal long ResultAt;
     }
@@ -1313,7 +1313,7 @@ namespace CapriDesktop
                 message.Texts.Add(text);
                 message.Blocks[index] = text;
                 if (turn.StreamTimer == null && !ManualStreams)
-                    turn.StreamTimer = new Timer(delegate(object state)
+                    turn.StreamTimer = new Clock.OffTimer("workspace stream", delegate(object state)
                     {
                         try { PublishStreams(turn); }
                         catch (Exception error) { turn.Fault = error.Message; End(turn); }

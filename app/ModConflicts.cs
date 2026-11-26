@@ -21,7 +21,7 @@ namespace CapriDesktop
             string first = open[0].First, second = open[0].Second;
             List<FileSlots.Contest> pair = FileSlots.Contests().FindAll(one => one.First == first && one.Second == second);
             if (conflictSheet != null && !conflictSheet.IsDisposed) conflictSheet.Close();
-            conflictSheet = new ConflictSheet(this, zoom, first, second, pair);
+            conflictSheet = new ConflictSheet(this, SheetZoom(ConflictSheet.Wide, ConflictSheet.Tall), first, second, pair);
             conflictSheet.Show(this);
             conflictSheet.Activate();
             return true;
@@ -33,6 +33,7 @@ namespace CapriDesktop
         internal void ConflictKeep(string slot, bool first) { if (conflictSheet != null && !conflictSheet.IsDisposed) conflictSheet.Keep(slot, first); }
         internal void ConflictKeepAll(bool first) { if (conflictSheet != null && !conflictSheet.IsDisposed) conflictSheet.KeepAll(first); }
         internal void ConflictDone() { if (conflictSheet != null && !conflictSheet.IsDisposed) conflictSheet.Done(); }
+        internal void ConflictPutAway() { if (conflictSheet != null && !conflictSheet.IsDisposed) conflictSheet.Close(); }
         internal string ConflictCrowded { get { return conflictSheet == null || conflictSheet.IsDisposed ? null : conflictSheet.Crowded(); } }
 
         // What a pack holds and what it gave up, for its row in Mods.
@@ -66,7 +67,7 @@ namespace CapriDesktop
                 foreach (FileSlots.Contest one in pair) keepFirst[one.Slot] = one.Keeper == first;
                 Heading = first + " conflicts with " + second;
                 Words(Heading, 28, 52, 584, 22, Type(11f * Zoom, true), Rose);
-                Words("Both take over the slots below. Pick which one keeps each; the other keeps the rest of what it brings.", 28, 78, 584, 28, Small(), Faint);
+                Words("Both change these. Pick one each.", 28, 78, 584, 28, Small(), Faint);
                 list = new ScrollPanel { Bounds = Box(28, ListTop, ListWide, ListTall), BackColor = Ground };
                 list.Scrolled += delegate { bar.Invalidate(); };
                 Controls.Add(list);
@@ -80,7 +81,7 @@ namespace CapriDesktop
                 allSecond.AccessibleName = "Keep every slot from " + second;
                 Key done = Make("Done", 492, 470, 120, 30, delegate { Done(); });
                 done.AccessibleName = "Keep these choices";
-                Words("Asked again only if either pack changes.", 28, 476, 440, 20, Small(), Faint);
+                Words("", 28, 476, 440, 20, Small(), Faint);
                 Fill();
                 ResumeLayout(false);
             }
@@ -204,6 +205,7 @@ namespace CapriDesktop
         // Two packs on the same slots: the box asks once, a file row taking its headings and one heading kept from each,
         // the choice kept per pair, each pack's row saying what it holds and gave up, asked again when one changes, Keep
         // all, and adds from both counting.
+#if CHECKS
         private void SmokeConflicts(List<string> checks, string output)
         {
             Mods mods = ModList;
@@ -270,8 +272,11 @@ namespace CapriDesktop
                 preferences.PackPicks = picksWas;
                 SavePreferences();
                 mainframe.ModAsk = askWas;
+                // Her own code mods it stopped, laid again and running, so no check after it finds them gone.
+                ModsBack();
             }
         }
+#endif
     }
 #endif
 }

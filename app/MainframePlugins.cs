@@ -20,7 +20,6 @@ namespace CapriDesktop
         // Her installed mods, then her plug-ins, one row each.
         // Her screensaver's id as a mod item, the same as its colours' folder name under ADD-ONS.
         internal const string ScreensaverItem = AddonColours.Screensaver;
-        internal const string TamagotchiItem = "her-tamagotchi";
 
         private List<Mod> Installed()
         {
@@ -28,11 +27,6 @@ namespace CapriDesktop
             List<Mod> rows = new List<Mod>(listed != null ? listed() : capri.ModList.All);
             foreach (PluginInfo plugin in PluginsNow())
                 rows.Add(new Mod { File = new ModFile { Id = plugin.Id, Name = plugin.Name ?? plugin.Id, Version = plugin.Version, Author = plugin.Author, Description = plugin.Description }, Path = plugin.Root, Plugin = plugin, On = !plugin.Off, Changed = plugin.Changed });
-            // Tamagotchi is her own mod item, last, switched in Toggles as well. Her screensaver is a mod of its own now.
-            if (listed == null)
-            {
-                rows.Add(new Mod { File = new ModFile { Id = TamagotchiItem, Name = "Tamagotchi", Author = "Capri", Description = "Her own pet game" }, On = capri.TamagotchiOn, Hers = true, Path = "" });
-            }
             return rows;
         }
 
@@ -199,7 +193,8 @@ namespace CapriDesktop
                     {
                         int column = c;
                         heads[i, c] = Words(headNames[c], ColumnsLeft + c * ColumnWide, y + 4, ColumnWide, 18, headType, Faint);
-                        heads[i, c].Bounds = new Rectangle(Z(ColumnsLeft + c * ColumnWide), Z(y + 4), Z(ColumnsLeft + (c + 1) * ColumnWide) - Z(ColumnsLeft + c * ColumnWide), Z(18));
+                        // A pixel clear each side: scaled for the screen, two heads that touched could round into each other.
+                        heads[i, c].Bounds = new Rectangle(Z(ColumnsLeft + c * ColumnWide) + 1, Z(y + 4), Z(ColumnsLeft + (c + 1) * ColumnWide) - Z(ColumnsLeft + c * ColumnWide) - 2, Z(18));
                         heads[i, c].TextAlign = ContentAlignment.MiddleCenter;
                         cells[i, c] = Make("", ColumnsLeft + c * ColumnWide + (ColumnWide - 30) / 2, y, 30, 22, delegate { Turn(row, column); });
                     }
@@ -316,6 +311,7 @@ namespace CapriDesktop
 
         // Mods > INSTALLED's cogs at 100, 150 and 200%: same place, nothing crowded, each opening the right overrides.
         // A click cycles a cell for this side only, and a code mod crossed at this level stops until the cross goes.
+#if CHECKS
         internal void CheckModCogs(List<string> checks, string output)
         {
             Func<List<PluginInfo>> listedWas = PluginsListed;
@@ -328,6 +324,7 @@ namespace CapriDesktop
             List<string> shots = new List<string>();
             FormWindowState stateWas = WindowState;
             Mod running = null;
+            bool pickWas = capri.ModsPlugins;
             try
             {
                 // Drawn where it can be seen: a minimised Mainframe draws as its title bar alone.
@@ -356,30 +353,37 @@ namespace CapriDesktop
                 if (door != null) listed.Insert(1, door);
                 ModsListed = delegate { return listed; };
                 Mod notesRow = Installed().Find(each => each.Plugin == notes);
-                int expected = listed.Count + 3;
                 foreach (int percent in new[] { 100, 150, 200 })
                 {
                     LayoutScale(96, percent, false);
                     ShowMods(true);
                     modSearch.Box.Text = "";
-                    int seen = 0;
-                    for (int page = 0; page * ModRows < expected; page++)
+                    // Each pick shows its own kind only, every row of it, and the two together are every row there is.
+                    foreach (bool plugins in new[] { false, true })
                     {
-                        modFirst = page * ModRows;
-                        FillMods();
-                        Application.DoEvents();
-                        string crowded = TextFits() ?? Overlap();
-                        if (crowded != null) throw new Exception("Mods > INSTALLED is crowded at " + percent + "%, page " + (page + 1) + ": " + crowded);
-                        for (int i = 0; i < ModRows; i++)
+                        PickPlugins(plugins);
+                        StatusAtRest();
+                        int seen = 0, expected = plugins ? 3 : listed.Count;
+                        for (int page = 0; page * ModRows < expected; page++)
                         {
-                            if (!modNames[i].Visible) continue;
-                            seen++;
-                            if (!modCogs[i].Visible || modCogs[i].Left != modCogs[0].Left || modCogs[i].Top != modRemoves[i].Top || !modSwitches[i].Visible || modCogs[i].Right > modSwitches[i].Left || modSwitches[i].Right > modRemoves[i].Left)
-                                throw new Exception("A row's cog is missing or out of line at " + percent + "%: " + modNames[i].Text);
+                            modFirst = page * ModRows;
+                            FillMods();
+                            Application.DoEvents();
+                            string crowded = TextFits() ?? Overlap();
+                            if (crowded != null) throw new Exception("Mods > INSTALLED is crowded at " + percent + "%, " + (plugins ? "Plug-ins" : "Mods") + " page " + (page + 1) + ": " + crowded);
+                            for (int i = 0; i < ModRows; i++)
+                            {
+                                if (!modNames[i].Visible) continue;
+                                seen++;
+                                if ((modShown[modFirst + i].Plugin != null) != plugins) throw new Exception((plugins ? "Plug-ins" : "Mods") + " showed a row of the other kind: " + modNames[i].Text);
+                                if (!modCogs[i].Visible || modCogs[i].Left != modCogs[0].Left || modCogs[i].Top != modRemoves[i].Top || !modSwitches[i].Visible || modCogs[i].Right > modSwitches[i].Left || modSwitches[i].Right > modRemoves[i].Left)
+                                    throw new Exception("A row's cog is missing or out of line at " + percent + "%: " + modNames[i].Text);
+                            }
+                            if (percent == 100 || page == 0) shots.Add(Shot(this, Path.Combine(folder, "mods-" + (plugins ? "plugins-" : "") + "cogs-" + percent + "-page" + (page + 1) + ".png")));
                         }
-                        if (percent == 100 || page == 0) shots.Add(Shot(this, Path.Combine(folder, "mods-cogs-" + percent + "-page" + (page + 1) + ".png")));
+                        if (seen != expected) throw new Exception((plugins ? "Plug-ins" : "Mods") + " under INSTALLED showed " + seen + " rows at " + percent + "%, not " + expected);
+                        if (modUpdate.Visible == plugins) throw new Exception("Update mods showed under " + (plugins ? "Plug-ins" : "Mods") + " the wrong way round at " + percent + "%");
                     }
-                    if (seen != expected) throw new Exception("Mods > INSTALLED showed " + seen + " rows at " + percent + "%, not " + expected);
                     foreach (Mod row in door == null ? new[] { code, skin, notesRow } : new[] { code, door, skin, notesRow })
                     {
                         using (OverridesSheet sheet = CogFor(row, percent / 100f))
@@ -454,6 +458,7 @@ namespace CapriDesktop
             }
             finally
             {
+                capri.ModsPlugins = pickWas;
                 PluginsListed = listedWas;
                 ModsListed = modsWas;
                 PluginToolsListed = toolsWas;
@@ -471,6 +476,7 @@ namespace CapriDesktop
                 if (WindowState != stateWas) WindowState = stateWas;
             }
         }
+#endif
 
         private static string Shot(Form form, string path)
         {

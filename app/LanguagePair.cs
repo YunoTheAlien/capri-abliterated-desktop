@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 namespace CapriDesktop
 {
     // The language she answers in, apart from the one they speak: Same, Auto to match each message, or one of hers;
-    // and the language a line is in, worked out on this PC (Lachu). Our Language row is his I speak.
+    // and the language a line is in, worked out on this PC (Lachu). The I speak row in VOICE is upstream's.
     internal static class LanguagePair
     {
         internal const string Same = "Same";
@@ -33,7 +33,66 @@ namespace CapriDesktop
 
         internal static string Line(string heard)
         {
-            return "\nAnswer in the language of their latest message, which is " + (Known(heard) ?? "English") + ". If they switch languages, switch with them. Every rule you have holds in every language. Keep your Night City slang words as they are.";
+            return "\nAnswer in the language of their latest message, which is " + (Known(heard) ?? "English") + ". If they switch languages, switch with them. Every rule you have holds in every language. Keep your Night City slang words as they are." + AsHerself(heard);
+        }
+
+        // Languages whose grammar shows who is speaking, with two things she might say of herself in each, as a woman.
+        // Replies in French were seen calling herself "parfait" and "occupé", and then, told so, calling them "fatiguée".
+        private static readonly string[,] Herself =
+        {
+            { "French", "je suis fatiguée, je suis prête" },
+            { "Spanish", "estoy cansada, estoy lista" },
+            { "Italian", "sono stanca, sono pronta" },
+            { "Portuguese", "estou cansada, estou pronta" },
+            { "Brazilian Portuguese", "estou cansada, estou pronta" },
+            { "Catalan", "estic cansada, estic preparada" },
+            { "Galician", "estou cansa, estou lista" },
+            { "Romanian", "sunt obosită, sunt pregătită" },
+            { "Polish", "jestem zmęczona, zrobiłam to" },
+            { "Czech", "jsem unavená, udělala jsem to" },
+            { "Slovak", "som unavená, urobila som to" },
+            { "Slovenian", "utrujena sem, naredila sem to" },
+            { "Croatian", "umorna sam, napravila sam to" },
+            { "Bosnian", "umorna sam, uradila sam to" },
+            { "Serbian", "umorna sam, uradila sam to" },
+            { "Russian", "я устала, я сделала это" },
+            { "Ukrainian", "я втомилася, я зробила це" },
+            { "Belarusian", "я стомленая, я зрабіла гэта" },
+            { "Bulgarian", "уморена съм, готова съм" },
+            { "Macedonian", "уморна сум, подготвена сум" },
+            { "Latvian", "esmu nogurusi, esmu gatava" },
+            { "Lithuanian", "esu pavargusi, esu pasiruošusi" },
+            { "Greek", "είμαι κουρασμένη, είμαι έτοιμη" },
+            { "Icelandic", "ég er þreytt, ég er tilbúin" },
+            { "Maltese", "jien għajjiena, jien lesta" },
+            { "Albanian", "jam e lodhur, jam e gatshme" },
+            { "Hebrew", "אני עייפה, אני מוכנה" },
+            { "Arabic", "أنا متعبة، أنا مستعدة" },
+            { "Hindi", "मैं थक गई हूँ, मैं आ रही हूँ" },
+            { "Urdu", "میں تھک گئی ہوں، میں آ رہی ہوں" },
+            { "Nepali", "म थाकेकी छु, म तयार भएकी छु" },
+            { "Marathi", "मी थकले आहे, मी येत आहे" },
+            { "Gujarati", "હું થાકી ગઈ છું, હું આવી રહી છું" },
+            { "Punjabi", "ਮੈਂ ਥੱਕ ਗਈ ਹਾਂ, ਮੈਂ ਆ ਰਹੀ ਹਾਂ" },
+            { "Thai", "ฉันเหนื่อยแล้วค่ะ, ฉันพร้อมแล้วค่ะ" },
+        };
+
+        internal static string AsHerself(string language)
+        {
+            for (int i = 0; i < Herself.GetLength(0); i++)
+                if (Herself[i, 0] == language) return "\nYou are a woman: when you speak of yourself in " + language + ", use the feminine forms, as in \"" + Herself[i, 1] + "\", never the masculine ones. That is about you only: speak of them as your notes about them say, and where your notes don't say, in " + language + "'s usual forms for someone whose gender you don't know.";
+            return "";
+        }
+
+        // A reply meant for a language that came back in English or half English: the whole of it, or one sentence of
+        // four words or more, reads as English.
+        internal static bool EnglishIn(string text, string held)
+        {
+            if (string.IsNullOrWhiteSpace(text) || Known(held) == null || held == "English") return false;
+            if (Detect(text, held) == "English") return true;
+            foreach (string sentence in Regex.Split(text, @"(?<=[.!?\u2026])\s+"))
+                if (Regex.Matches(sentence, @"\p{L}+").Count >= 4 && Detect(sentence, held) == "English") return true;
+            return false;
         }
 
         internal static string Detect(string text, string lean)

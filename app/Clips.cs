@@ -596,7 +596,7 @@ namespace CapriDesktop
             IntPtr handle = IntPtr.Zero;
             try { handle = CreateWaitableTimerExW(IntPtr.Zero, null, 2, 0x1F0003); }
             catch (EntryPointNotFoundException) { }
-            if (handle != IntPtr.Zero) timer = new Timer(handle);
+            if (handle != IntPtr.Zero) timer = new Timer(handle); // not her clock: a high-resolution wait handle her clip thread sleeps on
         }
 
         internal void Until(AutoResetEvent changed, long at)
@@ -1506,7 +1506,7 @@ namespace CapriDesktop
     {
         internal const int Shown = 4000, Slide = 160, Fade = 320, Step = 16;
         private static SoundPlayer chime;
-        private readonly System.Windows.Forms.Timer ticks = new System.Windows.Forms.Timer();
+        private readonly Clock.Frames ticks = new Clock.Frames("ClipToast");
         private Bitmap plate;
         private string saved, game;
         private double seconds;

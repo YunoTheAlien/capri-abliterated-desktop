@@ -384,7 +384,7 @@ namespace CapriDesktop
     {
         internal const int Wide = 372, Tall = 486;
         internal readonly MiniGame Game;
-        private readonly System.Windows.Forms.Timer ticks = new System.Windows.Forms.Timer();
+        private readonly Clock.Frames ticks = new Clock.Frames("MiniBoard");
         private float scale = 1;
         private bool motion, placing;
         private int selected, held = -1, pulse;
@@ -668,7 +668,7 @@ namespace CapriDesktop
         private readonly Dictionary<string, MiniScore> miniScores = new Dictionary<string, MiniScore>();
         private readonly Random miniRandom = new Random();
         private readonly MiniChat miniChat = new MiniChat();
-        private readonly System.Windows.Forms.Timer miniTicks = new System.Windows.Forms.Timer();
+        private readonly Clock.Frames miniTicks = new Clock.Frames("Minis");
         private volatile string miniContext = "", miniKind = "";
         private MiniLine miniLine;
         private int miniTicket;

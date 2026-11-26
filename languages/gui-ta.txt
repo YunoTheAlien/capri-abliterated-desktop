@@ -219,4 +219,5 @@ Quiet until {n}:{n}	{n}:{n} வரை அமைதி
 Quiet until turned off	அணைக்கும் வரை அமைதி
 Export settings	அமைப்புகளை ஏற்றுமதி செய்
 Import settings	அமைப்புகளை இறக்குமதி செய்
-Save Mainframe position	பேனல் இடத்தை நினைவில் வை
+Save Mainframe position	Mainframe இடத்தைச் சேமி
+Capri options	Capri விருப்பங்கள்

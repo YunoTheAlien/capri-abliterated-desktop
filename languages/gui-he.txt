@@ -219,4 +219,5 @@ Quiet until {n}:{n}	שקט עד {n}:{n}
 Quiet until turned off	שקט עד כיבוי
 Export settings	ייצוא הגדרות
 Import settings	ייבוא הגדרות
-Save Mainframe position	לזכור את מיקום החלונית
+Save Mainframe position	שמירת מיקום ה-Mainframe
+Capri options	אפשרויות Capri

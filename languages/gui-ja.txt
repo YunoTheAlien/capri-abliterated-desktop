@@ -219,4 +219,5 @@ Quiet until {n}:{n}	{n}:{n}まで静か
 Quiet until turned off	オフにするまで静か
 Export settings	設定をエクスポート
 Import settings	設定をインポート
-Save Mainframe position	パネルの位置を記憶
+Save Mainframe position	Mainframe の位置を保存
+Capri options	Capri のオプション

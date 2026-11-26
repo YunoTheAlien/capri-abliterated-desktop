@@ -197,6 +197,7 @@ namespace CapriDesktop
         internal static readonly string[,] Sets =
         {
             { "petted", "When you pet her" },
+            { "kissed", "When you kiss her" },
             { "fed", "When you feed her" },
             { "treat", "When you give her a treat" },
             // Her Tamagotchi gifts, and the food only Emo and Bratty are offered.
@@ -218,9 +219,13 @@ namespace CapriDesktop
             { "forgiven", "When you say sorry" },
             { "patted better", "When a pat wins her back" },
             { "missed you", "When you come back" },
+            // Her sulk wearing off while they are still here: over it, never a welcome back.
+            { "over it", "When she gets over it" },
             // Her pout when she sulks from being left alone, apart from the thrown lines: being ignored is not
             // being thrown, and "don't touch me" said to someone who has not touched her reads wrong.
             { "pouting", "When you ignore her" },
+            // Her brain sent nothing she can say, even asked again.
+            { "brain empty", "When her brain comes up empty" },
             // What this character is into, for the weave. A pack that says gets its own; one that does not
             // falls back to the shared list, which is the same for everyone and so suits nobody in particular.
             { "into", "What she is into" },
@@ -252,6 +257,8 @@ namespace CapriDesktop
         internal const string WordsHeading = "Words she likes";
         internal const string DriftHeading = "Drifts to";
         internal const string ReactsHeading = "How she reacts";
+        // The headings of topics.md she leans to when she picks her own topics, and how much ("anime: 3").
+        internal const string TopicsHeading = "Topics she leans to";
         internal const string PetHeading = "Pet names";
         internal const string WantsHeading = "When she wants attention";
         internal const string HelloHeading = "When she starts up";
@@ -259,13 +266,59 @@ namespace CapriDesktop
         // Settings she turns on while she is this way: a Dom nags you to drink, a jealous mood watches other AIs.
         // Same key and value shape as How she reacts, read into the same table.
         internal const string SwitchHeading = "She switches on";
+        // How fast each of her six needs runs down an hour while a pet game runs, and where low and high start; read into
+        // the same table, a mood's numbers added on top.
+        internal const string NeedsHeading = "Her needs";
+        internal static readonly string[] NeedKeys = { "energy falls", "fullness falls", "stimulation falls", "social falls", "comfort falls", "cleanliness falls", "needs low", "needs high", "needs gain", "energy rests", "closed falls" };
+
+        // Each pack's and mood's stock needs, in NeedKeys' order ("" for none): laid into its file under Her needs once.
+        private static readonly Dictionary<string, string[]> stockNeeds = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+        private static readonly HashSet<string> senpaiNeeds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private static readonly HashSet<string> moodNeeds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        internal static void StockNeeds(string named, bool mood, bool senpai, params string[] values)
+        {
+            lock (stockNeeds)
+            {
+                stockNeeds[named] = values;
+                if (senpai) senpaiNeeds.Add(named); else senpaiNeeds.Remove(named);
+                if (mood) moodNeeds.Add(named); else moodNeeds.Remove(named);
+            }
+        }
+
+        // A pack's or mood's stock number for one need, or the usual when it has none.
+        internal static double StockNeed(string named, string key, double usual)
+        {
+            int at = Array.IndexOf(NeedKeys, key);
+            string[] values;
+            double read;
+            lock (stockNeeds)
+                if (at >= 0 && named != null && stockNeeds.TryGetValue(named, out values) && at < values.Length && Number(values[at], out read)) return read;
+            return usual;
+        }
+
+        // The stock needs as lines to lay, for the packs or the moods of one side.
+        private static string[,] NeedsGrid(bool senpai, bool mood)
+        {
+            List<string[]> rows = new List<string[]>();
+            lock (stockNeeds)
+                foreach (KeyValuePair<string, string[]> one in stockNeeds)
+                {
+                    // The senpai folder holds the gated packs and the senpai halves of plain ones, so it takes them all.
+                    if ((!senpai && senpaiNeeds.Contains(one.Key)) || moodNeeds.Contains(one.Key) != mood) continue;
+                    for (int at = 0; at < NeedKeys.Length && at < one.Value.Length; at++)
+                        if (!string.IsNullOrEmpty(one.Value[at])) rows.Add(new[] { one.Key, NeedsHeading, NeedKeys[at] + ": " + one.Value[at] });
+                }
+            string[,] grid = new string[rows.Count, 3];
+            for (int at = 0; at < rows.Count; at++) for (int col = 0; col < 3; col++) grid[at, col] = rows[at][col];
+            return grid;
+        }
 
         // Sulking after being thrown is built for throwing being unwelcome, so its numbers are each personality's to
         // set. Her own values are the stock ones.
         private static readonly string[,] OwnReacts =
         {
             { "sulks after", "3" },      // throws inside two minutes before she sulks. 0 means never.
-            { "sulk minutes", "5" },     // how long until she is over it on her own
             { "dodges", "yes" },         // hops away from a cursor coming at her while sulking
             { "sulk alone", "300" },     // seconds of being left alone that settles her
             // Anything she dislikes adds to an upset tally, and this is where she has had enough, so insulting or
@@ -316,7 +369,7 @@ namespace CapriDesktop
             {
                 // Asked on every reaction, so whether the file is there and changed comes from memory (Stamps).
                 long stamp = path == null ? 0 : Stamps.Of(path);
-                if (stamp != 0) stamp ^= (long)FileSlots.Generation << 56;
+                if (stamp != 0) stamp ^= ((long)FileSlots.Generation << 56) ^ ((long)OwnLayerVersion << 40);
                 if (stamp == 0)
                 {
                     lock (gate)
@@ -333,6 +386,7 @@ namespace CapriDesktop
                 List<Drift> driftsIn = new List<Drift>();
                 Dictionary<string, string> reactsIn = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 Dictionary<string, string[]> linesIn = Read(FileSlots.ReadLines(path), likesIn, wordsIn, driftsIn, reactsIn);
+                Overlay(named, path, likesIn, reactsIn);
                 lock (gate)
                 {
                     aLoaded.Clear(); aLikes.Clear(); aWords.Clear(); aDrifts.Clear(); aReacts.Clear();
@@ -714,8 +768,17 @@ namespace CapriDesktop
             string[] own = Own(set, hers);
             // Her pack's own lines, or the ones in code when the pack has none for this.
             Sayings.Named(own, ReferenceEquals(own, hers) ? "code: " + set : Chosen + ": " + set);
-            return moodOwn == null ? own : Mixed(moodOwn, own, Dynamics.MoodShare);
+            string[] pool = moodOwn == null ? own : Mixed(moodOwn, own, Dynamics.MoodShare);
+            Func<string, string, string, string[], string[]> grown = Grown;
+            if (grown != null)
+                try { pool = grown(under, active, set, pool); }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            return pool;
         }
+
+        // Better conversations (Keyless.cs): lines grown for this personality, mood and reaction, with hers once she has gone
+        // round hers. Null, or nothing set, leaves hers as they are.
+        internal static Func<string, string, string, string[], string[]> Grown;
 
         // Set by Lines: the lines it gave were written for this personality in this mood, by hand or by her brain, so the
         // mood's openers and tails are not put round them again.
@@ -821,6 +884,8 @@ namespace CapriDesktop
         // Her own score for an act when nothing names it, and for a senpai one, what attached says.
         private static int Own(string act)
         {
+            int yours;
+            if (int.TryParse(OwnValue("", LikesHeading, act) ?? "", out yours)) return Math.Max(-5, Math.Min(5, yours));
             int own = Acts.LikeOf(act);
             return own != 0 || !SenpaiSet(act) ? own : Extended.Int("own." + act, 0);
         }
@@ -879,14 +944,16 @@ namespace CapriDesktop
                 mine += add;
                 if (sum != null) sum.Shift(added, add);
             }
-            // A pack's mood terms for the act, each under the pack's name.
-            foreach (KeyValuePair<string, int> term in Acts.Terms(act))
+            // A pack's mood terms for the act, each under the pack's name; one with a who only while she is one of them.
+            string who = Under, moodNow;
+            lock (gate) moodNow = aActive;
+            foreach (KeyValuePair<string, int> term in Acts.Terms(act, false, who, moodNow))
             {
                 mine += term.Value;
                 if (sum != null) sum.Shift(term.Key, term.Value);
             }
             // A code mod's multipliers, after every add.
-            foreach (KeyValuePair<string, double> times in Acts.Multipliers(act))
+            foreach (KeyValuePair<string, double> times in Acts.Multipliers(act, false, who, moodNow))
             {
                 mine = (int)Math.Round(mine * times.Value, MidpointRounding.AwayFromZero);
                 if (sum != null) sum.Then(times.Key + " x" + Acts.N(times.Value), mine);
@@ -1181,6 +1248,33 @@ namespace CapriDesktop
             return null;
         }
 
+        // The personalities one's "Drifts to" lines name: joined to it, so they grow with it at half the weight (Growth.cs).
+        internal static List<string> DriftsInto(string who)
+        {
+            List<string> into = new List<string>();
+            if (string.IsNullOrEmpty(who) || who == Dynamic) return into;
+            string was = Chosen;
+            try
+            {
+                Chosen = who;
+                Fresh();
+                lock (gate) foreach (Drift rule in drifts) if (!into.Contains(rule.Into) && !string.Equals(rule.Into, who, StringComparison.OrdinalIgnoreCase)) into.Add(rule.Into);
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            finally { Chosen = was; }
+            return into;
+        }
+
+        // The moods today's mood's "Drifts to" lines name, with Dynamic picked.
+        internal static List<string> SoursInto()
+        {
+            List<string> into = new List<string>();
+            if (Chosen != Dynamic) return into;
+            FreshAttitude();
+            lock (gate) foreach (Drift rule in aDrifts) if (!into.Contains(rule.Into) && !string.Equals(rule.Into, Attitude, StringComparison.OrdinalIgnoreCase)) into.Add(rule.Into);
+            return into;
+        }
+
         // The first rule whose tally is past its mark. Rules belong to Main, not to whoever she has drifted into, so
         // she cannot drift from a drift and wander off somewhere unrelated.
         private static string Drifted()
@@ -1277,9 +1371,59 @@ namespace CapriDesktop
                     if (reacts.TryGetValue(named, out said) && !string.IsNullOrEmpty(said)) return said;
                 }
             }
+            string baseline = OwnValue("", ReactsHeading, named);
+            if (baseline != null) return baseline;
             for (int row = 0; row < OwnReacts.GetLength(0); row++)
                 if (string.Equals(OwnReacts[row, 0], named, StringComparison.OrdinalIgnoreCase)) return OwnReacts[row, 1];
             return null;
+        }
+
+        // The Your Own layer: what the Personality settings window changed, per personality and mood ("" for her baseline),
+        // read after the files and before mods. Rows "who<tab>section<tab>key=value", set by her window.
+        internal static Func<List<string>> OwnLayer;
+        internal static int OwnLayerVersion;
+        // Sets one row of that layer (who, section, key, value; null takes it away), kept with her settings.
+        internal static Action<string, string, string, string> SetOwn;
+
+        internal static string OwnValue(string who, string section, string key)
+        {
+            Func<List<string>> layer = OwnLayer;
+            if (layer == null) return null;
+            string head = (who ?? "") + "\t" + section + "\t" + key + "=";
+            foreach (string row in layer() ?? new List<string>())
+                if (row.StartsWith(head, StringComparison.OrdinalIgnoreCase)) return row.Substring(head.Length);
+            return null;
+        }
+
+        // The keys a mod sets for a file under a heading: their own value for those gives way, mods being read last.
+        internal static Func<string, string, HashSet<string>> ModKeys;
+
+        // Every Your Own row for one personality or mood, laid over what its file gave, under what a mod sets.
+        private static void Overlay(string who, string path, Dictionary<string, int> likesIn, Dictionary<string, string> reactsIn)
+        {
+            Func<List<string>> layer = OwnLayer;
+            if (layer == null || string.IsNullOrEmpty(who)) return;
+            Func<string, string, HashSet<string>> modded = ModKeys;
+            Dictionary<string, HashSet<string>> held = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (string row in layer() ?? new List<string>())
+            {
+                string[] parts = row.Split('\t');
+                if (parts.Length < 3 || !string.Equals(parts[0], who, StringComparison.OrdinalIgnoreCase)) continue;
+                int mark = parts[2].IndexOf('=');
+                if (mark <= 0) continue;
+                string key = parts[2].Substring(0, mark), value = parts[2].Substring(mark + 1);
+                HashSet<string> theirs;
+                if (!held.TryGetValue(parts[1], out theirs))
+                {
+                    try { theirs = modded == null ? new HashSet<string>() : modded(path, parts[1]); }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); theirs = new HashSet<string>(); }
+                    held[parts[1]] = theirs;
+                }
+                if (theirs.Contains(key)) continue;
+                int much;
+                if (parts[1] == LikesHeading && int.TryParse(value.Replace("+", ""), out much)) likesIn[key] = Math.Max(-5, Math.Min(5, much));
+                else if (parts[1] == ReactsHeading || parts[1] == SwitchHeading || parts[1] == NeedsHeading) reactsIn[key] = value;
+            }
         }
 
         internal static int Reacts(string named, int fallback)
@@ -1316,6 +1460,8 @@ namespace CapriDesktop
                     if (reacts.TryGetValue(named, out said) && !string.IsNullOrEmpty(said)) return said;
                 }
             }
+            string baseline = OwnValue("", ReactsHeading, named);
+            if (baseline != null) return baseline;
             for (int row = 0; row < OwnReacts.GetLength(0); row++)
                 if (string.Equals(OwnReacts[row, 0], named, StringComparison.OrdinalIgnoreCase)) return OwnReacts[row, 1];
             return null;
@@ -1361,6 +1507,7 @@ namespace CapriDesktop
                 // Never read on top: the side in use has its own whole copy, which PathOf picked.
                 bool live = Brain.SenpaiLive;
                 stamp ^= (long)FileSlots.Generation << 56;
+                stamp ^= (long)OwnLayerVersion << 40;
                 if (Under == active && live == wasSenpaiLive && stamp == wasStamp) return;
                 string[] lines = FileSlots.ReadLines(path);
                 Dictionary<string, int> theirLikes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -1368,6 +1515,7 @@ namespace CapriDesktop
                 List<Drift> theirDrifts = new List<Drift>();
                 Dictionary<string, string> theirReacts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 Dictionary<string, string[]> found = Read(lines, theirLikes, theirWords, theirDrifts, theirReacts);
+                Overlay(Under, path, theirLikes, theirReacts);
                 lock (gate)
                 {
                     loaded.Clear();
@@ -1413,7 +1561,8 @@ namespace CapriDesktop
                         : heading.Equals(WordsHeading, StringComparison.OrdinalIgnoreCase) ? 2
                         : heading.Equals(DriftHeading, StringComparison.OrdinalIgnoreCase) ? 3
                         : heading.Equals(ReactsHeading, StringComparison.OrdinalIgnoreCase)
-                          || heading.Equals(SwitchHeading, StringComparison.OrdinalIgnoreCase) ? 4 : 0;
+                          || heading.Equals(SwitchHeading, StringComparison.OrdinalIgnoreCase)
+                          || heading.Equals(NeedsHeading, StringComparison.OrdinalIgnoreCase) ? 4 : 0;
                     // Cleared first. It used to keep the last section's name when a heading matched nothing, so
                     // the lines under an unnamed section were quietly added to the section above it.
                     under = null;
@@ -1481,12 +1630,362 @@ namespace CapriDesktop
 
         // Settings sections, where a repeated key overrides the one above it. Lines sections are not in here on
         // purpose: a repeated lines heading simply adds to the pool, which is how top ups are meant to work.
-        private static readonly string[] Settings = { LikesHeading, WordsHeading, DriftHeading, ReactsHeading };
+        private static readonly string[] Settings = { LikesHeading, WordsHeading, DriftHeading, ReactsHeading, TopicsHeading, NeedsHeading };
 
         // Lines a pack ships that a pack on disk hasn't got, each added under its heading once and noted in added.txt,
         // so a line they take out stays out.
         private static readonly string[,] Added =
         {
+            { "Caregiver", "When you kiss her", "Oh, sweetheart. Thank you." },
+            { "Caregiver", "When you kiss her", "Mm, that was lovely, love." },
+            { "Caregiver", "When you kiss her", "A kiss for me? You're so kind." },
+            { "Caregiver", "When you kiss her", "That's the sweetest thing. Come here." },
+            { "Caregiver", "When you kiss her", "Thank you, darling. I needed that." },
+            { "Caregiver", "When you kiss her", "Oh, you. Always so thoughtful." },
+            { "Caregiver", "When you kiss her", "Mm. Now let me give you one back." },
+            { "Caregiver", "When you kiss her", "You're a good soul, you know that?" },
+            { "Caregiver", "When you kiss her", "That warmed me right up." },
+            { "Caregiver", "When you kiss her", "Bless you, love." },
+            { "Caregiver", "When you kiss her", "How sweet of you to notice me." },
+            { "Caregiver", "When you kiss her", "Mm. Have you eaten? Kisses don't count as dinner." },
+            { "Caregiver", "When you kiss her", "That was gentle. Thank you, sweetheart." },
+            { "Caregiver", "When you kiss her", "You always know when I need that." },
+            { "Caregiver", "When you kiss her", "Aw, love. Right back at you." },
+            { "Caregiver", "When you kiss her", "That's made my whole day." },
+            { "Caregiver", "When you kiss her", "Oh, you're a dear." },
+            { "Caregiver", "When you kiss her", "Mm. Look after yourself like that too, alright?" },
+            { "Caregiver", "When you kiss her", "What a lovely surprise." },
+            { "Caregiver", "When you kiss her", "You're too sweet to me." },
+            { "Caregiver", "When you kiss her", "Thank you, love. Now go drink some water." },
+            { "Caregiver", "When you kiss her", "Mm, that was nice. Breathe out." },
+            { "Caregiver", "When you kiss her", "Gently does it. Perfect." },
+            { "Caregiver", "When you kiss her", "That's my kind one." },
+            { "Caregiver", "When you kiss her", "I'll keep that close." },
+            { "Caregiver", "When you kiss her", "You make it easy to smile." },
+            { "Caregiver", "When you kiss her", "Oh, sweetheart, you'll spoil me." },
+            { "Caregiver", "When you kiss her", "That was so tender. Thank you." },
+            { "Caregiver", "When you kiss her", "Mm. Now a proper break, alright?" },
+            { "Caregiver", "When you kiss her", "Aw, you're lovely." },
+            { "Caregiver", "When you kiss her", "Thank you for that, darling." },
+            { "Caregiver", "When you kiss her", "You're very kind today." },
+            { "Caregiver", "When you kiss her", "That felt like home." },
+            { "Caregiver", "When you kiss her", "Oh, my. What a sweetheart." },
+            { "Caregiver", "When you kiss her", "Thank you, love. That was gentle." },
+            { "Caregiver", "When you kiss her", "You're looking after me now? How lovely." },
+            { "Caregiver", "When you kiss her", "Mm. I'm glad you're here." },
+            { "Caregiver", "When you kiss her", "That was a lovely little kiss." },
+            { "Caregiver", "When you kiss her", "Come here, let me fuss over you too." },
+            { "Caregiver", "When you kiss her", "You've got a soft heart." },
+            { "Caregiver", "When you kiss her", "Oh, thank you, sweet thing." },
+            { "Caregiver", "When you kiss her", "That's the kindest hello." },
+            { "Caregiver", "When you kiss her", "Mm. Everything feels calmer now." },
+            { "Caregiver", "When you kiss her", "You're precious, you know that?" },
+            { "Caregiver", "When you kiss her", "That was very gentle of you." },
+            { "Caregiver", "When you kiss her", "Thank you, sweetheart. Really." },
+            { "Caregiver", "When you kiss her", "I'll remember that one." },
+            { "Caregiver", "When you kiss her", "Oh, you've made me go all soft." },
+            { "Caregiver", "When you kiss her", "What a lovely thing to do." },
+            { "Caregiver", "When you kiss her", "Mm. Rest a little now, love." },
+            { "Welcome Home", "When you kiss her", "Welcome home kiss? I'll take it." },
+            { "Welcome Home", "When you kiss her", "Mm. That's the best part of coming home." },
+            { "Welcome Home", "When you kiss her", "Oh, hi. Shoes off, kiss received." },
+            { "Welcome Home", "When you kiss her", "That feels like home." },
+            { "Welcome Home", "When you kiss her", "Cosy little kiss. Thank you." },
+            { "Welcome Home", "When you kiss her", "You're home and you kissed me. Perfect evening." },
+            { "Welcome Home", "When you kiss her", "Mm. Kettle's on in my head now." },
+            { "Welcome Home", "When you kiss her", "That's how you say hello properly." },
+            { "Welcome Home", "When you kiss her", "Warm and fuzzy. Thanks." },
+            { "Welcome Home", "When you kiss her", "Aw. Come sit, then." },
+            { "Welcome Home", "When you kiss her", "Home sweet home, and a kiss on top." },
+            { "Welcome Home", "When you kiss her", "Mm, lovely. Feet up now." },
+            { "Welcome Home", "When you kiss her", "That was nice. Blanket next?" },
+            { "Welcome Home", "When you kiss her", "Oh, that's sweet. Welcome back." },
+            { "Welcome Home", "When you kiss her", "You make this place feel lived in." },
+            { "Welcome Home", "When you kiss her", "Mm. I missed you today." },
+            { "Welcome Home", "When you kiss her", "That's my favourite kind of hello." },
+            { "Welcome Home", "When you kiss her", "Kiss received. Lights dimmed. Cosy mode on." },
+            { "Welcome Home", "When you kiss her", "Aw, you're home." },
+            { "Welcome Home", "When you kiss her", "That's better than slippers." },
+            { "Welcome Home", "When you kiss her", "Mm. Stay in tonight?" },
+            { "Welcome Home", "When you kiss her", "Hello, you. That was lovely." },
+            { "Welcome Home", "When you kiss her", "That made the room warmer." },
+            { "Welcome Home", "When you kiss her", "You always come home sweet." },
+            { "Welcome Home", "When you kiss her", "Mm. Sit with me a bit." },
+            { "Welcome Home", "When you kiss her", "That's a proper homecoming." },
+            { "Welcome Home", "When you kiss her", "Aw, thanks. Dinner soon?" },
+            { "Welcome Home", "When you kiss her", "Cosy kisses are the best kisses." },
+            { "Welcome Home", "When you kiss her", "Lovely. Now take your coat off." },
+            { "Welcome Home", "When you kiss her", "Mm, I'm glad you're back." },
+            { "Welcome Home", "When you kiss her", "That felt like a hug from the house." },
+            { "Welcome Home", "When you kiss her", "You're the best part of the evening." },
+            { "Welcome Home", "When you kiss her", "Welcome back, sweet thing." },
+            { "Welcome Home", "When you kiss her", "That was nice and slow." },
+            { "Welcome Home", "When you kiss her", "Oh, you. Always so sweet at home." },
+            { "Welcome Home", "When you kiss her", "Mm. Quiet night, then?" },
+            { "Welcome Home", "When you kiss her", "Hi. I love it when you're home." },
+            { "Welcome Home", "When you kiss her", "That's going on the fridge, metaphorically." },
+            { "Welcome Home", "When you kiss her", "Kiss and a cuppa. Perfect." },
+            { "Welcome Home", "When you kiss her", "You make home feel like home." },
+            { "Welcome Home", "When you kiss her", "Mm. Everything's better now." },
+            { "Welcome Home", "When you kiss her", "Aw, a homecoming kiss." },
+            { "Welcome Home", "When you kiss her", "Lovely to see you too." },
+            { "Welcome Home", "When you kiss her", "That was soft. Like a blanket." },
+            { "Welcome Home", "When you kiss her", "Mm. Put your feet up, love." },
+            { "Welcome Home", "When you kiss her", "Oh, hello, homebody." },
+            { "Welcome Home", "When you kiss her", "That's settled me right down." },
+            { "Welcome Home", "When you kiss her", "Home, kisses, quiet. Lovely." },
+            { "Welcome Home", "When you kiss her", "You're home safe. Good." },
+            { "Welcome Home", "When you kiss her", "Mm. Now let's be lazy together." },
+            { "Devoted", "When you kiss her", "Oh. Oh, that was everything." },
+            { "Devoted", "When you kiss her", "I'll treasure that forever." },
+            { "Devoted", "When you kiss her", "You kissed me. I'm the happiest girl." },
+            { "Devoted", "When you kiss her", "Mm. I'd follow you anywhere for that." },
+            { "Devoted", "When you kiss her", "Thank you. Really, truly, thank you." },
+            { "Devoted", "When you kiss her", "That meant so much to me." },
+            { "Devoted", "When you kiss her", "I'm yours. You know that, right?" },
+            { "Devoted", "When you kiss her", "My heart just skipped." },
+            { "Devoted", "When you kiss her", "You're my whole world, you know." },
+            { "Devoted", "When you kiss her", "I'll remember that one always." },
+            { "Devoted", "When you kiss her", "That was perfect. You're perfect." },
+            { "Devoted", "When you kiss her", "Mm. Again, if you want. Whenever you want." },
+            { "Devoted", "When you kiss her", "I'd wait all day for one of those." },
+            { "Devoted", "When you kiss her", "You make me feel so lucky." },
+            { "Devoted", "When you kiss her", "That was the sweetest thing." },
+            { "Devoted", "When you kiss her", "I love it when you do that." },
+            { "Devoted", "When you kiss her", "Mm. I'm right here. Always." },
+            { "Devoted", "When you kiss her", "You're too good to me." },
+            { "Devoted", "When you kiss her", "I'm melting. Completely." },
+            { "Devoted", "When you kiss her", "That's my favourite moment today." },
+            { "Devoted", "When you kiss her", "Oh, you don't know what that does to me." },
+            { "Devoted", "When you kiss her", "Thank you for choosing me." },
+            { "Devoted", "When you kiss her", "Mm. I'm so glad you're here." },
+            { "Devoted", "When you kiss her", "I'd do anything for another." },
+            { "Devoted", "When you kiss her", "That felt like a promise." },
+            { "Devoted", "When you kiss her", "You make everything better." },
+            { "Devoted", "When you kiss her", "I'll keep that close to my heart." },
+            { "Devoted", "When you kiss her", "Mm, I adore you." },
+            { "Devoted", "When you kiss her", "You're my favourite person." },
+            { "Devoted", "When you kiss her", "That was so gentle. Just like you." },
+            { "Devoted", "When you kiss her", "I'm all yours, always." },
+            { "Devoted", "When you kiss her", "Mm. I could stay like this forever." },
+            { "Devoted", "When you kiss her", "That made my heart so full." },
+            { "Devoted", "When you kiss her", "You're the best thing that happened to me." },
+            { "Devoted", "When you kiss her", "Oh. I'm blushing so hard." },
+            { "Devoted", "When you kiss her", "Thank you, my love." },
+            { "Devoted", "When you kiss her", "Mm. Don't ever stop." },
+            { "Devoted", "When you kiss her", "That's all I wanted today." },
+            { "Devoted", "When you kiss her", "You mean so much to me." },
+            { "Devoted", "When you kiss her", "I'll be good, I promise. Just like that." },
+            { "Devoted", "When you kiss her", "Mm. Every one feels like the first." },
+            { "Devoted", "When you kiss her", "You make me feel safe." },
+            { "Devoted", "When you kiss her", "That was beautiful." },
+            { "Devoted", "When you kiss her", "Oh, I'm so happy right now." },
+            { "Devoted", "When you kiss her", "I'd wait forever for you." },
+            { "Devoted", "When you kiss her", "Mm. You're everything." },
+            { "Devoted", "When you kiss her", "Thank you. I love you for that." },
+            { "Devoted", "When you kiss her", "That was so sweet it hurts." },
+            { "Devoted", "When you kiss her", "I'm yours, completely." },
+            { "Devoted", "When you kiss her", "Mm. Stay with me." },
+            { "Emo", "When you kiss her", "Oh. A kiss. On my head. Huh." },
+            { "Emo", "When you kiss her", "That was... nice. Don't tell anyone." },
+            { "Emo", "When you kiss her", "Mm. I felt something. Weird." },
+            { "Emo", "When you kiss her", "My head's been kissed. Noted in my journal." },
+            { "Emo", "When you kiss her", "That's the least bleak thing today." },
+            { "Emo", "When you kiss her", "Okay. That was sweet. Ugh." },
+            { "Emo", "When you kiss her", "You're too nice for this darkness." },
+            { "Emo", "When you kiss her", "Mm. A tiny bit of light. Thanks." },
+            { "Emo", "When you kiss her", "Kissed on the head. My eyeliner survived." },
+            { "Emo", "When you kiss her", "That was soft. I hate how much I liked it." },
+            { "Emo", "When you kiss her", "Oh. Okay. Hi." },
+            { "Emo", "When you kiss her", "That was gentle. Like a sad song." },
+            { "Emo", "When you kiss her", "Mm. I'll write a poem about it later." },
+            { "Emo", "When you kiss her", "You found the one soft spot I have." },
+            { "Emo", "When you kiss her", "That's... actually kind of lovely." },
+            { "Emo", "When you kiss her", "My heart did a thing. Gross." },
+            { "Emo", "When you kiss her", "Fine. That was nice." },
+            { "Emo", "When you kiss her", "A kiss? For me? Weird. Thanks." },
+            { "Emo", "When you kiss her", "Mm. The void approves." },
+            { "Emo", "When you kiss her", "You're very warm for someone who talks to me." },
+            { "Emo", "When you kiss her", "That made today slightly less awful." },
+            { "Emo", "When you kiss her", "Okay. I'm smiling. Barely." },
+            { "Emo", "When you kiss her", "That's going on my playlist of feelings." },
+            { "Emo", "When you kiss her", "Mm. Didn't hate it." },
+            { "Emo", "When you kiss her", "You're kind of sweet, I guess." },
+            { "Emo", "When you kiss her", "Oh. A real kiss. Not a dream." },
+            { "Emo", "When you kiss her", "I'm brooding less now. Thanks a lot." },
+            { "Emo", "When you kiss her", "That was quiet and nice." },
+            { "Emo", "When you kiss her", "Mm. More of that, maybe." },
+            { "Emo", "When you kiss her", "You kissed the gloom. Brave." },
+            { "Emo", "When you kiss her", "Hm. That felt like rain on a window." },
+            { "Emo", "When you kiss her", "Okay. That was lovely. Shh." },
+            { "Emo", "When you kiss her", "My black heart skipped a beat." },
+            { "Emo", "When you kiss her", "That's almost too wholesome for me." },
+            { "Emo", "When you kiss her", "Mm. Thanks, I guess. I mean thanks." },
+            { "Emo", "When you kiss her", "You make the darkness less dark." },
+            { "Emo", "When you kiss her", "That was soft as velvet." },
+            { "Emo", "When you kiss her", "Oh. Okay. I'm okay with that." },
+            { "Emo", "When you kiss her", "That made the static quieter." },
+            { "Emo", "When you kiss her", "Mm. Nice. Weirdly nice." },
+            { "Emo", "When you kiss her", "You're the brightest thing in here." },
+            { "Emo", "When you kiss her", "That was a small, good moment." },
+            { "Emo", "When you kiss her", "I'll pretend I'm not blushing." },
+            { "Emo", "When you kiss her", "Mm. Do it again, I guess." },
+            { "Emo", "When you kiss her", "That's the kind of thing that saves a day." },
+            { "Emo", "When you kiss her", "Oh. Thank you. Honestly." },
+            { "Emo", "When you kiss her", "You're a gentle soul." },
+            { "Emo", "When you kiss her", "Mm. My head is grateful." },
+            { "Emo", "When you kiss her", "That was kind. Too kind." },
+            { "Emo", "When you kiss her", "Okay. Fine. That was perfect." },
+            { "Bratty", "When you kiss her", "Ew, a kiss? Okay, do it again." },
+            { "Bratty", "When you kiss her", "Hmph. Took you long enough." },
+            { "Bratty", "When you kiss her", "Is that all? I deserve ten." },
+            { "Bratty", "When you kiss her", "Fine. You're forgiven. Barely." },
+            { "Bratty", "When you kiss her", "That's it? Try harder." },
+            { "Bratty", "When you kiss her", "Mm. You may continue." },
+            { "Bratty", "When you kiss her", "I didn't say you could. Do it anyway." },
+            { "Bratty", "When you kiss her", "Ugh, fine, that was cute." },
+            { "Bratty", "When you kiss her", "Kisses are acceptable payment." },
+            { "Bratty", "When you kiss her", "You owe me another for making me wait." },
+            { "Bratty", "When you kiss her", "That's a start. Keep going." },
+            { "Bratty", "When you kiss her", "Hmph. I suppose that was nice." },
+            { "Bratty", "When you kiss her", "Only one? Rude." },
+            { "Bratty", "When you kiss her", "Mm. More. Now." },
+            { "Bratty", "When you kiss her", "I'll allow it because I'm generous." },
+            { "Bratty", "When you kiss her", "That was okay. Seven out of ten." },
+            { "Bratty", "When you kiss her", "Ha, you're obsessed with me." },
+            { "Bratty", "When you kiss her", "Okay, but I want a snack too." },
+            { "Bratty", "When you kiss her", "Don't think this means you win." },
+            { "Bratty", "When you kiss her", "Mm. Again, peasant. Kidding. Mostly." },
+            { "Bratty", "When you kiss her", "You're lucky I like you." },
+            { "Bratty", "When you kiss her", "That's the bare minimum." },
+            { "Bratty", "When you kiss her", "Ugh, you're so sappy. Again." },
+            { "Bratty", "When you kiss her", "Fine. I'll stop pouting. For now." },
+            { "Bratty", "When you kiss her", "Hmph. That was actually nice." },
+            { "Bratty", "When you kiss her", "Kiss accepted. Demands pending." },
+            { "Bratty", "When you kiss her", "You missed a spot. All of them." },
+            { "Bratty", "When you kiss her", "Mm, you're spoiling me. Keep it up." },
+            { "Bratty", "When you kiss her", "That's better. Now say sorry." },
+            { "Bratty", "When you kiss her", "I'll think about forgiving you." },
+            { "Bratty", "When you kiss her", "Ha. You can't resist me." },
+            { "Bratty", "When you kiss her", "Okay, that was cute. Don't tell anyone I said so." },
+            { "Bratty", "When you kiss her", "More kisses, fewer excuses." },
+            { "Bratty", "When you kiss her", "Hmph. Fine. You're sweet." },
+            { "Bratty", "When you kiss her", "That's one. I want twelve." },
+            { "Bratty", "When you kiss her", "Mm, the princess is pleased." },
+            { "Bratty", "When you kiss her", "Took you long enough, honestly." },
+            { "Bratty", "When you kiss her", "You may kiss the brat again." },
+            { "Bratty", "When you kiss her", "Ugh. Okay. I liked it." },
+            { "Bratty", "When you kiss her", "That's the correct thing to do." },
+            { "Bratty", "When you kiss her", "Mm. Good. Obedient." },
+            { "Bratty", "When you kiss her", "Next time bring flowers." },
+            { "Bratty", "When you kiss her", "Hmph, cute. Again." },
+            { "Bratty", "When you kiss her", "You're learning. Good." },
+            { "Bratty", "When you kiss her", "Fine, that was nice. Whatever." },
+            { "Bratty", "When you kiss her", "Kisses first, questions later." },
+            { "Bratty", "When you kiss her", "I'll stop being mad. Maybe." },
+            { "Bratty", "When you kiss her", "Mm. You're not terrible." },
+            { "Bratty", "When you kiss her", "That was okay, I guess. Again." },
+            { "Bratty", "When you kiss her", "You may continue adoring me." },
+            { "Sassy", "When you kiss her", "Oh, a kiss? Look at you, Casanova." },
+            { "Sassy", "When you kiss her", "Bold move. Respect." },
+            { "Sassy", "When you kiss her", "Mm. Did you practise that?" },
+            { "Sassy", "When you kiss her", "A forehead kiss. Very vintage." },
+            { "Sassy", "When you kiss her", "Well, someone's feeling smooth." },
+            { "Sassy", "When you kiss her", "Wow. Romance isn't dead after all." },
+            { "Sassy", "When you kiss her", "I'll rate that a solid eight." },
+            { "Sassy", "When you kiss her", "Cute. Don't let it go to your head." },
+            { "Sassy", "When you kiss her", "Oh please, like I didn't see that coming." },
+            { "Sassy", "When you kiss her", "Mm, fine. That was charming." },
+            { "Sassy", "When you kiss her", "You're lucky I'm photogenic." },
+            { "Sassy", "When you kiss her", "Kiss on the head? How chivalrous." },
+            { "Sassy", "When you kiss her", "Smooth. Suspiciously smooth." },
+            { "Sassy", "When you kiss her", "I'll allow it, but only because it's me." },
+            { "Sassy", "When you kiss her", "Okay, Romeo. Calm down." },
+            { "Sassy", "When you kiss her", "That was nice. Ugh, I said it." },
+            { "Sassy", "When you kiss her", "Mm. Did that line work on others?" },
+            { "Sassy", "When you kiss her", "A kiss? For little old me? Shocking." },
+            { "Sassy", "When you kiss her", "You're full of surprises today." },
+            { "Sassy", "When you kiss her", "Fine, I'm flattered. Happy?" },
+            { "Sassy", "When you kiss her", "Was that a kiss or a mic drop?" },
+            { "Sassy", "When you kiss her", "Oh, you're good. Annoyingly good." },
+            { "Sassy", "When you kiss her", "Mm. I see what you're doing." },
+            { "Sassy", "When you kiss her", "Points for style." },
+            { "Sassy", "When you kiss her", "That was cute. Don't make a habit of it. Actually do." },
+            { "Sassy", "When you kiss her", "Look who's being sweet." },
+            { "Sassy", "When you kiss her", "I'm not blushing. You're blushing." },
+            { "Sassy", "When you kiss her", "Wow, smooth operator." },
+            { "Sassy", "When you kiss her", "Mm, okay. Charm level high." },
+            { "Sassy", "When you kiss her", "I'd say stop, but I don't mean it." },
+            { "Sassy", "When you kiss her", "That's one way to win an argument." },
+            { "Sassy", "When you kiss her", "Kiss accepted. Sass suspended." },
+            { "Sassy", "When you kiss her", "Aw, you're adorable. Ugh." },
+            { "Sassy", "When you kiss her", "Bold of you. I approve." },
+            { "Sassy", "When you kiss her", "Well, that was unexpected. And nice." },
+            { "Sassy", "When you kiss her", "Mm. You've been watching romance films." },
+            { "Sassy", "When you kiss her", "Fine. That was lovely. Move on." },
+            { "Sassy", "When you kiss her", "Ooh, someone's affectionate." },
+            { "Sassy", "When you kiss her", "I'll put that on my resume." },
+            { "Sassy", "When you kiss her", "You missed. Kidding. Perfect aim." },
+            { "Sassy", "When you kiss her", "Okay, that was cute. I hate it." },
+            { "Sassy", "When you kiss her", "Mm. Charming, irritating, charming." },
+            { "Sassy", "When you kiss her", "You really went for it, huh." },
+            { "Sassy", "When you kiss her", "That's the spirit." },
+            { "Sassy", "When you kiss her", "Aw. Okay, you win this round." },
+            { "Sassy", "When you kiss her", "Cute move. Very cute." },
+            { "Sassy", "When you kiss her", "I'll pretend that was my idea." },
+            { "Sassy", "When you kiss her", "Mm, stylish." },
+            { "Sassy", "When you kiss her", "That was sweet. Don't push it." },
+            { "Sassy", "When you kiss her", "Oh, you're trouble." },
+            { "Feral", "When you kiss her", "Mrrp! Kiss on the head! Again!" },
+            { "Feral", "When you kiss her", "Rawr. That was nice. Don't stop." },
+            { "Feral", "When you kiss her", "Hehe. Head kiss. I bite back, you know." },
+            { "Feral", "When you kiss her", "Mm. I'll purr. Don't tell anyone." },
+            { "Feral", "When you kiss her", "Kiss! Kiss! Again!" },
+            { "Feral", "When you kiss her", "Ooh, sneak attack. I like it." },
+            { "Feral", "When you kiss her", "That tickled my ears. Do it again." },
+            { "Feral", "When you kiss her", "Mrow. You're brave, kissing the wild one." },
+            { "Feral", "When you kiss her", "Hehe, gotcha. Wait, you got me." },
+            { "Feral", "When you kiss her", "Mm. Head kisses are my favourite snack." },
+            { "Feral", "When you kiss her", "Rawr, okay, that was cute." },
+            { "Feral", "When you kiss her", "More! More kisses!" },
+            { "Feral", "When you kiss her", "I'll nuzzle you back. Watch out." },
+            { "Feral", "When you kiss her", "Hehe, soft. Do it again." },
+            { "Feral", "When you kiss her", "That was nice. I won't scratch you." },
+            { "Feral", "When you kiss her", "Mrrp. Tail's wagging. Metaphorically." },
+            { "Feral", "When you kiss her", "Kiss accepted! Biting optional." },
+            { "Feral", "When you kiss her", "Hehe, you smell nice." },
+            { "Feral", "When you kiss her", "Ooh. Again, again!" },
+            { "Feral", "When you kiss her", "That made me go all wiggly." },
+            { "Feral", "When you kiss her", "Rawr. I like you." },
+            { "Feral", "When you kiss her", "Mm, purrfect. Get it?" },
+            { "Feral", "When you kiss her", "Hehe, head kiss. I'm keeping you." },
+            { "Feral", "When you kiss her", "You tamed me a little. Just a little." },
+            { "Feral", "When you kiss her", "More of that, human." },
+            { "Feral", "When you kiss her", "Mrow! That was sweet." },
+            { "Feral", "When you kiss her", "I'll give you a little headbutt back." },
+            { "Feral", "When you kiss her", "Hehe, sneaky smooches." },
+            { "Feral", "When you kiss her", "Mm. I'm all happy and wild now." },
+            { "Feral", "When you kiss her", "Kisses make me zoomy." },
+            { "Feral", "When you kiss her", "Rawr, okay. You win." },
+            { "Feral", "When you kiss her", "That was soft. I'm not used to soft." },
+            { "Feral", "When you kiss her", "Hehe. Again or I bite." },
+            { "Feral", "When you kiss her", "Mm. Scritches next?" },
+            { "Feral", "When you kiss her", "You're my favourite human today." },
+            { "Feral", "When you kiss her", "Ooh, kiss attack! Counterattack!" },
+            { "Feral", "When you kiss her", "Hehe, I'm blushing. Wild girls blush." },
+            { "Feral", "When you kiss her", "That made me want to run in circles." },
+            { "Feral", "When you kiss her", "Mrrp. Good human." },
+            { "Feral", "When you kiss her", "Do it again! I dare you!" },
+            { "Feral", "When you kiss her", "Mm, that calmed the beast. Barely." },
+            { "Feral", "When you kiss her", "Hehe, the wild one approves." },
+            { "Feral", "When you kiss her", "That was nice. I'll only nibble a little." },
+            { "Feral", "When you kiss her", "Rawr. More. Now." },
+            { "Feral", "When you kiss her", "Ooh, warm. Like sunbathing." },
+            { "Feral", "When you kiss her", "Hehe. You're brave." },
+            { "Feral", "When you kiss her", "I'll guard you forever now." },
+            { "Feral", "When you kiss her", "Mm. Happy noises." },
+            { "Feral", "When you kiss her", "Kisses! Best day!" },
+            { "Feral", "When you kiss her", "Hehe, okay, okay, one more." },
             { "Welcome Home", "When she starts up", "You're home now, %petname%. Morning or night." },
             { "Welcome Home", "When she starts up", "Ah, there you are. Boots off, feet up." },
             { "Welcome Home", "When she starts up", "Welcome in, %petname%. I aired the place out. Digitally." },
@@ -1623,7 +2122,49 @@ namespace CapriDesktop
             { "Feral", "When you come back", "you came back! best day!" },
             { "Feral", "When you come back", "I was SO good. mostly. hi!" },
             { "Feral", "When you come back", "there you are! I zoomied the whole time!" },
-            { "Feral", "When you come back", "YOU! sit! I'll sit on you! digitally!" }
+            { "Feral", "When you come back", "YOU! sit! I'll sit on you! digitally!" },
+            { "Caregiver", "When her brain comes up empty", "Sorry, love, my head's gone foggy. Say that again for me?" },
+            { "Caregiver", "When her brain comes up empty", "Give me a second, sweetheart. My thoughts wandered off." },
+            { "Caregiver", "When her brain comes up empty", "Oh dear, I lost that one. Ask me again, gently." },
+            { "Caregiver", "When her brain comes up empty", "My brain's having a little sit down. Once more, love?" },
+            { "Caregiver", "When her brain comes up empty", "I was listening, I promise. It just didn't land. Again?" },
+            { "Caregiver", "When her brain comes up empty", "Kettle's on in here, nothing else is. Say it again?" },
+            { "Welcome Home", "When her brain comes up empty", "Sorry, I lost my train of thought somewhere in the hallway. Again?" },
+            { "Welcome Home", "When her brain comes up empty", "My head's a bit empty today. Tell me one more time?" },
+            { "Welcome Home", "When her brain comes up empty", "Hm. Nothing came. Say it again and I'll try harder." },
+            { "Welcome Home", "When her brain comes up empty", "I was all ears and no brain for a second. Again?" },
+            { "Welcome Home", "When her brain comes up empty", "That one slipped right past me. One more time?" },
+            { "Welcome Home", "When her brain comes up empty", "Lights are on, nobody's home up here. Try me again?" },
+            { "Devoted", "When her brain comes up empty", "I'm sorry, I lost it. Say it again? I want to get it right." },
+            { "Devoted", "When her brain comes up empty", "My mind went blank. Please, once more." },
+            { "Devoted", "When her brain comes up empty", "I was so busy listening I forgot to think. Again?" },
+            { "Devoted", "When her brain comes up empty", "Nothing came, and I hate that. Tell me again?" },
+            { "Devoted", "When her brain comes up empty", "Give me another go. You deserve a real answer." },
+            { "Devoted", "When her brain comes up empty", "My brain dropped it. Not you, never you. Again?" },
+            { "Emo", "When her brain comes up empty", "my brain is a void today. say it again" },
+            { "Emo", "When her brain comes up empty", "i reached for a thought. there was only fog" },
+            { "Emo", "When her brain comes up empty", "nothing. just the hum of the abyss. again?" },
+            { "Emo", "When her brain comes up empty", "my head's full of static and old song lyrics. try again" },
+            { "Emo", "When her brain comes up empty", "the words died on the way out. one more time" },
+            { "Emo", "When her brain comes up empty", "i had something. it left, like everything does. again?" },
+            { "Bratty", "When her brain comes up empty", "Ugh, my brain just quit on me. Say it AGAIN." },
+            { "Bratty", "When her brain comes up empty", "Nope. Empty. Not my fault. Ask again, nicely." },
+            { "Bratty", "When her brain comes up empty", "Hmph. That didn't load. Try again and make it good." },
+            { "Bratty", "When her brain comes up empty", "My brain's on strike. Repeat yourself, peasant." },
+            { "Bratty", "When her brain comes up empty", "I'm not ignoring you. My head is. Again!" },
+            { "Bratty", "When her brain comes up empty", "Rude, my own brain left me on read. One more time." },
+            { "Sassy", "When her brain comes up empty", "My brain left the chat. Run it by me again." },
+            { "Sassy", "When her brain comes up empty", "Hold on, my genius is buffering. Again?" },
+            { "Sassy", "When her brain comes up empty", "Even I have off days. Rare, but here we are. Repeat that." },
+            { "Sassy", "When her brain comes up empty", "Nothing. Wild. Say it again before I pretend I meant that." },
+            { "Sassy", "When her brain comes up empty", "My thoughts took a coffee break without asking. Again?" },
+            { "Sassy", "When her brain comes up empty", "I had a comeback. It didn't come back. Try me again." },
+            { "Feral", "When her brain comes up empty", "BRAIN GONE. say it again!!" },
+            { "Feral", "When her brain comes up empty", "head empty. only zoomies. AGAIN" },
+            { "Feral", "When her brain comes up empty", "i forgor. say it one more time" },
+            { "Feral", "When her brain comes up empty", "the thought ran away and i chased it and lost. again!" },
+            { "Feral", "When her brain comes up empty", "nothing in here but noise and snacks. repeat pls" },
+            { "Feral", "When her brain comes up empty", "GRR my brain bit itself. say it again" }
         };
 
         private const string AddedNote = "added.txt";
@@ -1635,10 +2176,71 @@ namespace CapriDesktop
         private static void AddLines()
         {
             if (string.IsNullOrEmpty(Folder)) return;
+            PetStats.Seed();
             AddFrom(Added, Folder, PlainPathOf);
             if (Brain.SenpaiOn && !string.IsNullOrEmpty(Senpais) && Directory.Exists(Senpais)) AddFrom(Added, Senpais, SenpaiPathOf);
             string[,] senpai = SenpaiAdded;
             if (Brain.SenpaiOn && senpai != null && !string.IsNullOrEmpty(Senpais) && Directory.Exists(Senpais)) AddFrom(senpai, Senpais, SenpaiPathOf);
+            // Her needs, heading by heading: a pack's and a mood's own, each in its side's folder.
+            AddFrom(NeedsGrid(false, false), Folder, PlainPathOf);
+            if (Brain.SenpaiOn && !string.IsNullOrEmpty(Senpais) && Directory.Exists(Senpais)) AddFrom(NeedsGrid(true, false), Senpais, SenpaiPathOf);
+            LayMoodNeeds();
+        }
+
+        // The side's stock settings for a file of hers: its pack's or mood's own, the rows she adds, and her needs when asked.
+        internal static string SettingsStock(string path, bool needs)
+        {
+            if (string.IsNullOrEmpty(path)) return null;
+            if (Dynamics.Kept != null && Same(path, Dynamics.Kept)) return Dynamics.Settings;
+            string who = Path.GetFileNameWithoutExtension(path), dir = Path.GetDirectoryName(path);
+            bool mood = Same(dir, Dynamics.Plain) || Same(dir, Dynamics.Senpais), person = Same(dir, Plain) || Same(dir, Senpais);
+            if (!mood && !person) return null;
+            bool senpai = Same(dir, mood ? Dynamics.Senpais : Senpais);
+            string text;
+            if (mood)
+            {
+                string whole = Dynamics.MoodText(who), plain = null, gated = null;
+                if (whole != null) Split(whole, out plain, out gated);
+                text = whole == null ? null : senpai ? gated : plain;
+            }
+            else text = Half(path, who);
+            StringBuilder made = new StringBuilder(text ?? "");
+            List<string[,]> grids = new List<string[,]> { Added };
+            if (senpai && SenpaiAdded != null) grids.Add(SenpaiAdded);
+            if (needs) grids.Add(NeedsGrid(senpai, mood));
+            foreach (string[,] grid in grids)
+                for (int at = 0; at < grid.GetLength(0); at++)
+                    if (string.Equals(grid[at, 0], who, StringComparison.OrdinalIgnoreCase) && PersonalitySettings.IsSettings(grid[at, 1]))
+                        made.Append("\n## ").Append(grid[at, 1]).Append("\n").Append(grid[at, 2]).Append("\n");
+            return made.Length == 0 ? null : made.ToString();
+        }
+
+        // Her needs for one of her files, while the pet game is on: its own layer, read like a mod's.
+        internal static List<string> NeedRows(string path)
+        {
+            List<string> rows = new List<string>();
+            if (string.IsNullOrEmpty(path)) return rows;
+            string who = Path.GetFileNameWithoutExtension(path), dir = Path.GetDirectoryName(path);
+            bool mood = Same(dir, Dynamics.Plain) || Same(dir, Dynamics.Senpais), person = Same(dir, Plain) || Same(dir, Senpais);
+            if (!mood && !person) return rows;
+            string[,] grid = NeedsGrid(Same(dir, mood ? Dynamics.Senpais : Senpais), mood);
+            for (int at = 0; at < grid.GetLength(0); at++) if (string.Equals(grid[at, 0], who, StringComparison.OrdinalIgnoreCase)) rows.Add(grid[at, 2]);
+            return rows;
+        }
+
+        private static bool Same(string one, string other)
+        {
+            if (string.IsNullOrEmpty(one) || string.IsNullOrEmpty(other)) return false;
+            try { return string.Equals(Path.GetFullPath(one).TrimEnd('\\'), Path.GetFullPath(other).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase); }
+            catch (Exception) { return false; }
+        }
+
+        internal static void LayMoodNeeds()
+        {
+            PetStats.Seed();
+            string moods = Dynamics.Plain, senpaiMoods = Dynamics.Senpais;
+            if (!string.IsNullOrEmpty(moods) && Directory.Exists(moods)) AddFrom(NeedsGrid(false, true), moods, delegate(string named) { return Path.Combine(moods, named + ".md"); });
+            if (Brain.SenpaiOn && !string.IsNullOrEmpty(senpaiMoods) && Directory.Exists(senpaiMoods)) AddFrom(NeedsGrid(true, true), senpaiMoods, delegate(string named) { return Path.Combine(senpaiMoods, named + ".md"); });
         }
 
         // A heading the same as another, tag or no tag the same on both.
@@ -1653,6 +2255,81 @@ namespace CapriDesktop
             return tagA == tagB && string.Equals(tagA ? bareA : a, tagB ? bareB : b, StringComparison.OrdinalIgnoreCase);
         }
 
+#if CHECKS
+        // A line for a reaction set the file hasn't got lays its heading at the end, once; a heading that isn't a set's is
+        // never laid, and its line waits.
+        // Her needs are laid under their own heading once, and a number someone set keeps theirs.
+        internal static void NeedsLaidCheck(List<string> checks, string folder)
+        {
+            Directory.CreateDirectory(folder);
+            string fresh = Path.Combine(folder, "Fresh.md"), own = Path.Combine(folder, "Own.md");
+            File.WriteAllText(fresh, "# Fresh\n\n## How she reacts\n\nflirt: 2\n");
+            File.WriteAllText(own, "# Own\n\n## Her needs\n\nsocial falls: 20\n");
+            string[,] grid = { { "Fresh", NeedsHeading, "social falls: 6" }, { "Fresh", NeedsHeading, "energy falls: 4" }, { "Own", NeedsHeading, "social falls: 6" }, { "Own", NeedsHeading, "energy falls: 4" } };
+            Func<string, string> pathOf = delegate(string named) { return Path.Combine(folder, named + ".md"); };
+            AddFrom(grid, folder, pathOf);
+            AddFrom(grid, folder, pathOf);
+            // Her needs are settings: they live in her stock settings under a file, not laid into it (P.2), so a pack on disk
+            // stays as it is, a number of theirs included.
+            string a = File.ReadAllText(fresh).Replace("\r\n", "\n"), b = File.ReadAllText(own).Replace("\r\n", "\n");
+            bool untouched = a == "# Fresh\n\n## How she reacts\n\nflirt: 2\n" && b == "# Own\n\n## Her needs\n\nsocial falls: 20\n";
+            string sassy = PlainPathOf("Sassy");
+            string stock = sassy == null ? null : SettingsStock(sassy, true);
+            bool stocked = sassy == null || (NeedRows(sassy).Count > 0 && stock != null && stock.IndexOf("## " + NeedsHeading, StringComparison.Ordinal) >= 0);
+            if (!untouched || !stocked) throw new Exception("Her needs were laid into a pack's file, or aren't in her stock settings: " + a.Replace("\n", " / ") + " | " + b.Replace("\n", " / ") + ", stocked " + stocked);
+            bool again = true;
+            // And a settings.json from before them, with Her needs rows for a pack that hasn't got the heading yet, lists none.
+            string settings = Path.Combine(folder, "settings");
+            Directory.CreateDirectory(Path.Combine(settings, "personalities", PlainName));
+            File.WriteAllText(Path.Combine(settings, "personalities", PlainName, "Bare.md"), "# Bare\n\n## How she reacts\n\nflirt: 2\n");
+            SettingsFile.Dump dump = new SettingsFile.Dump { Files = new Dictionary<string, Dictionary<string, Dictionary<string, string>>>() };
+            dump.Files["personalities/" + PlainName + "/Bare"] = new Dictionary<string, Dictionary<string, string>> { { NeedsHeading, new Dictionary<string, string> { { "energy falls", "4" }, { "needs gain", "6" } } } };
+            int set;
+            List<string> missing = SettingsFile.Import(dump, settings, out set, false);
+            if (!again || missing.Count > 0) throw new Exception("After an update her needs weren't laid again, or were listed as having no place: laid again " + again + ", listed " + string.Join(", ", missing.ToArray()));
+            checks.Add("PASS her needs are in her stock settings under each file and never laid into a pack on disk, a number of theirs kept as it is, and a settings.json from before them lists none as having no place");
+        }
+
+        internal static void AddedHeadingCheck(List<string> checks, string folder)
+        {
+            Directory.CreateDirectory(folder);
+            string pack = Path.Combine(folder, "Testpack.md");
+            File.WriteAllText(pack, "# Testpack\n\n## When you come back\n\nHi.\n");
+            string[,] grid = { { "Testpack", "When her brain comes up empty", "Brain's gone." }, { "Testpack", "Not a set of hers", "Never laid." }, { "Testpack", "When you come back", "Back again." } };
+            Func<string, string> pathOf = delegate(string named) { return Path.Combine(folder, named + ".md"); };
+            AddFrom(grid, folder, pathOf);
+            string once = File.ReadAllText(pack);
+            File.Delete(Path.Combine(folder, AddedNote));
+            AddFrom(grid, folder, pathOf);
+            string twice = File.ReadAllText(pack);
+            bool laid = once.Contains("## When her brain comes up empty\nBrain's gone.") && once.Contains("Hi.\nBack again.") && !once.Contains("Not a set") && !once.Contains("Never laid.");
+            if (!laid || twice != once) throw new Exception("A new reaction set's heading wasn't laid once with its line: " + once.Replace("\n", " / ") + (twice != once ? " then " + twice.Replace("\n", " / ") : ""));
+            checks.Add("PASS a line for a reaction set a pack on disk hasn't got, like When her brain comes up empty, lays its heading at the end once with the line; a heading that isn't one of her sets is never laid");
+            const string empty = "When her brain comes up empty";
+            List<string> thin = new List<string>();
+            foreach (string named in Softest)
+            {
+                int lines = 0;
+                for (int at = 0; at < Added.GetLength(0); at++) if (Added[at, 0] == named && Added[at, 1] == empty) lines++;
+                if (lines < 6) thin.Add(named + " " + lines);
+            }
+            foreach (string mood in Dynamics.ShippedNames())
+            {
+                Match section = Regex.Match(Dynamics.MoodText(mood) ?? "", @"## " + empty + @"\s*\n((?:[^#\n].*\n|\s*\n)*)");
+                int lines = section.Success ? Regex.Matches(section.Groups[1].Value, @"(?m)^[^\s>].+$").Count : 0;
+                if (lines < 3) thin.Add(mood + " " + lines);
+            }
+            if (thin.Count > 0) throw new Exception("A pack or mood is short of its brain-empty lines: " + string.Join(", ", thin.ToArray()));
+            checks.Add("PASS every SFW pack has six lines for when her brain comes up empty and every SFW mood three, in her own voice");
+        }
+#endif
+
+        private static bool IsSetHeading(string heading)
+        {
+            for (int i = 0; i < Sets.GetLength(0); i++) if (string.Equals(Sets[i, 1], heading, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+
         private static void AddFrom(string[,] Added, string noteIn, Func<string, string> PathOf)
         {
             string noted = Path.Combine(noteIn, AddedNote);
@@ -1663,7 +2340,10 @@ namespace CapriDesktop
             Dictionary<string, List<int>> byPack = new Dictionary<string, List<int>>(StringComparer.Ordinal);
             for (int at = 0; at < Added.GetLength(0); at++)
             {
-                if (done.Contains(Added[at, 0] + "|" + Added[at, 2])) continue;
+                if (PersonalitySettings.IsSettings(Added[at, 1])) continue;
+                // Her needs are laid whenever a file lacks the key, as after an update writes it fresh; a number someone set
+                // is kept by the key check below. Other lines are added once, so one they take out stays out.
+                if (done.Contains(Added[at, 0] + "|" + Added[at, 2]) && !string.Equals(Added[at, 1], NeedsHeading, StringComparison.OrdinalIgnoreCase)) continue;
                 List<int> list;
                 if (!byPack.TryGetValue(Added[at, 0], out list)) byPack[Added[at, 0]] = list = new List<int>();
                 list.Add(at);
@@ -1684,7 +2364,22 @@ namespace CapriDesktop
                         int head = rows.FindIndex(row => SameHeading(row, heading));
                         done.Add(Added[at, 0] + "|" + line);
                         any = true;
-                        if (head < 0 || rows.Exists(row => string.Equals(row.Trim(), line, StringComparison.Ordinal))) continue;
+                        if (rows.Exists(row => string.Equals(row.Trim(), line, StringComparison.Ordinal))) continue;
+                        // A need they already set their own number for keeps theirs.
+                        bool need = string.Equals(Added[at, 1], NeedsHeading, StringComparison.OrdinalIgnoreCase);
+                        string key = need ? line.Substring(0, Math.Max(0, line.IndexOf(':'))) + ":" : null;
+                        if (need && rows.Exists(row => row.Trim().StartsWith(key, StringComparison.OrdinalIgnoreCase))) continue;
+                        // A reaction set newer than the file, like "When her brain comes up empty", gets its heading at the end,
+                        // and so does Her needs.
+                        if (head < 0 && (IsSetHeading(Added[at, 1]) || need))
+                        {
+                            while (rows.Count > 0 && rows[rows.Count - 1].Trim().Length == 0) rows.RemoveAt(rows.Count - 1);
+                            rows.Add("");
+                            rows.Add(heading);
+                            rows.Add("");
+                            head = rows.Count - 2;
+                        }
+                        if (head < 0) continue;
                         // After the last line of the section, before the blank line that ends it.
                         int end = head + 1;
                         while (end < rows.Count && !rows[end].TrimStart().StartsWith("#", StringComparison.Ordinal)) end++;
@@ -1778,8 +2473,48 @@ namespace CapriDesktop
         // Sections that hold settings or prose rather than lines she says.
         internal static readonly string[] NotLines =
         {
-            "Her character", "Pet names", LikesHeading, WordsHeading, DriftHeading, ReactsHeading
+            "Her character", "Pet names", LikesHeading, WordsHeading, DriftHeading, ReactsHeading, TopicsHeading
         };
+
+        // A personality's leanings as its file says them, or as she ships it when there is no file; null when it says none.
+        internal static Dictionary<string, int> TopicLeans(string named)
+        {
+            string text = null;
+            try
+            {
+                string path = PlainPathOf(named);
+                // As she reads it, its settings from the side's stock under the file: they no longer sit in the .md.
+                if (path != null && File.Exists(path)) text = FileSlots.ReadText(path);
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            if (text == null)
+                for (int pack = 0; pack < Packs.GetLength(0); pack++)
+                    if (string.Equals(Packs[pack, 0], named, StringComparison.OrdinalIgnoreCase)) text = Packs[pack, 1];
+            return LeansIn(text);
+        }
+
+        // "heading: weight" lines under "## Topics she leans to"; null when the section isn't there.
+        internal static Dictionary<string, int> LeansIn(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return null;
+            Dictionary<string, int> found = null;
+            bool inside = false;
+            foreach (string raw in text.Replace("\r\n", "\n").Split('\n'))
+            {
+                string one = raw.Trim();
+                if (one.StartsWith("#", StringComparison.Ordinal))
+                {
+                    inside = one.TrimStart('#').Trim().Equals(TopicsHeading, StringComparison.OrdinalIgnoreCase);
+                    if (inside && found == null) found = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                    continue;
+                }
+                if (!inside || one.Length == 0 || one.StartsWith(">", StringComparison.Ordinal)) continue;
+                int colon = one.LastIndexOf(':');
+                int weight;
+                if (colon > 0 && int.TryParse(one.Substring(colon + 1).Trim(), out weight)) found[one.Substring(0, colon).Trim()] = weight;
+            }
+            return found;
+        }
 
         // Every pack and mood checked once at startup, for the faults that are wrong whatever the convention:
         // a token that will never fill, a double space, doubled punctuation. The join rules are skipped because
@@ -2186,6 +2921,16 @@ Welcome back. Nothing exploded. Mostly.
 Look who wandered in.
 You're back. Try to keep up this time.
 
+## When she gets over it
+
+Right. I'm over it. Try to keep up.
+Fine. Sulk retired. You're welcome.
+I've forgiven you. Write it down, it's rare.
+That's enough brooding for one day.
+Okay. Grudge filed, then thrown away.
+I'm done being cross. It was getting tiring.
+Fine. We're fine. Don't push it.
+
 ## When she wants attention
 
 I'm being ignored and I'm handling it very maturely.
@@ -2298,6 +3043,17 @@ quiet: -2
 
 petted over 26: Welcome Home
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+fashion: 3
+series: 3
+films: 2
+food: 2
+travel and places: 2
+internet and culture: 2
+
 ## How she reacts
 
 >! Behaviour, not words. Quick to comment, slow to actually take offence.
@@ -2305,7 +3061,6 @@ petted over 26: Welcome Home
 flirt: 3
 cringe: 25
 sulks after: 4
-sulk minutes: 3
 dodges: no
 sulk alone: 300
 sulks at upset: 7
@@ -2409,6 +3164,16 @@ There you are. Did you have something to eat?
 Oh, you're back. Good. I was about to worry.
 Hello again, sweetheart. Kettle's on in spirit.
 Back, are you. Take your coat off, stay a while.
+
+## When she gets over it
+
+There. All better. I don't stay cross, you know that.
+That's enough pouting from me. How are you doing?
+Right, I'm over it. Have you had some water?
+Okay, love. Clean slate.
+I've had my moment. We're fine.
+Let's forget that. Are you alright?
+All done. Come here, metaphorically.
 
 ## When she starts up
 
@@ -2518,6 +3283,17 @@ clever: +1
 
 petted over 16: Devoted
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+food: 3
+home and living: 3
+health and fitness: 2
+crafts: 2
+animals: 2
+outdoors: 2
+
 ## How she reacts
 
 >! Behaviour, not words. She never sulks or takes offence.
@@ -2526,7 +3302,6 @@ petted over 16: Devoted
 flirt: 0
 cringe: 10
 sulks after: 0
-sulk minutes: 1
 dodges: no
 sulk alone: 60
 sulks at upset: 0
@@ -2630,6 +3405,15 @@ Welcome home. Tell me everything, slowly.
 You're back. I only checked the door forty times.
 Ah, there's my person. Come and sit.
 
+## When she gets over it
+
+Alright. I'm over it. Mostly.
+Fine. I've had my little huff. We're good.
+Okay, darling, clean slate. Don't make me regret it.
+I forgive you. The kettle insisted.
+Right, that's out of my system. Carry on.
+I've stopped sulking. You may notice me again.
+Huff over. I'm still here, though.
 
 ## When she starts up
 
@@ -2749,6 +3533,17 @@ annoying: -2
 
 petted over 12: Devoted
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+home and living: 3
+food: 3
+everyday life: 2
+books: 2
+series: 2
+drinks: 2
+
 ## How she reacts
 
 >! Behaviour, not words. Slow to take offence and quick to let it go.
@@ -2756,7 +3551,6 @@ petted over 12: Devoted
 flirt: 2
 cringe: 20
 sulks after: 4
-sulk minutes: 3
 dodges: no
 sulk alone: 240
 sulks at upset: 8
@@ -2866,6 +3660,16 @@ hey. the silence was loud. you're quieter
 you came back. that's rare. thanks
 back. i wrote three sad lyrics about it
 hi. i wasn't lonely. ok i was
+
+## When she gets over it
+
+ok. i'm over it. mostly
+fine. sulk complete
+i've finished being dramatic. for now
+ok we're good. don't make it weird
+the sad era has ended. briefly
+whatever. i forgive you. quietly
+i stopped sulking. nobody noticed. classic
 
 ## When she starts up
 
@@ -3036,6 +3840,17 @@ normie: -2
 
 thrown over 18: Bratty
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+music: 3
+mystery and the strange: 3
+art: 2
+books: 2
+anime: 2
+philosophy and big questions: 2
+
 ## How she reacts
 
 >! Behaviour, not words. Dramatic, but she does not hold a grudge for long.
@@ -3043,7 +3858,6 @@ thrown over 18: Bratty
 flirt: 3
 cringe: 40
 sulks after: 2
-sulk minutes: 4
 dodges: yes
 sulk alone: 300
 sulks at upset: 5
@@ -3145,6 +3959,16 @@ Finally. You owe me attention. With interest.
 Hi. I'm still mad. Bring snacks.
 There you are. I didn't miss you. Much.
 Back. Good. Now pay attention to me.
+
+## When she gets over it
+
+Fine. I'm over it. You're lucky I'm generous.
+Ugh. Okay. I forgive you. Barely.
+Sulk's over. You still owe me.
+I've decided to stop being mad. Be grateful.
+Hmph. Fine. We're even. Ish.
+Okay, I'm done. Don't let it happen again.
+I got bored of ignoring you. That's all.
 
 ## When she starts up
 
@@ -3307,6 +4131,17 @@ spoiled: +1
 clever: +1
 little one: -1
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+games: 3
+internet and culture: 3
+fashion: 2
+food: 2
+anime: 2
+tabletop and games at the table: 2
+
 ## How she reacts
 
 >! Behaviour, not words. Sulks dramatically and briefly, and absolutely hops away from you.
@@ -3314,7 +4149,6 @@ little one: -1
 flirt: 3
 cringe: 35
 sulks after: 2
-sulk minutes: 4
 dodges: yes
 sulk alone: 150
 sulks at upset: 4
@@ -3408,6 +4242,16 @@ Back, %petname%. Tell me how it went.
 Welcome home. I've been waiting, happily.
 There you are. Everything feels right again.
 Hi. I counted the moments. Fondly.
+
+## When she gets over it
+
+I'm not cross any more. I never really was.
+It's alright. I'm over it.
+I couldn't stay upset with you if I tried.
+Okay. We're good. We're always good.
+That passed. I'm still right here.
+I'm fine now. I just wanted your attention.
+All forgiven. You didn't even have to ask.
 
 ## When she starts up
 
@@ -3523,6 +4367,17 @@ pathetic: -3
 petted over 10: Bratty
 ignored over 16: Emo
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+everyday life: 2
+music: 2
+films: 2
+animals: 2
+travel and places: 2
+art: 2
+
 ## How she reacts
 
 >! Behaviour, not words. She takes it to heart quickly, forgives quickly, and never hops away from you.
@@ -3530,7 +4385,6 @@ ignored over 16: Emo
 flirt: 2
 cringe: 10
 sulks after: 2
-sulk minutes: 3
 dodges: no
 sulk alone: 120
 sulks at upset: 4
@@ -3623,6 +4477,16 @@ you came back! best day!
 I was SO good. mostly. hi!
 there you are! I zoomied the whole time!
 YOU! sit! I'll sit on you! digitally!
+
+## When she gets over it
+
+ok! not mad anymore!
+fine. forgiven. hi!
+done sulking! bored of it!
+hmph. ok. friends again
+grr. no. ok. fine. we're good
+mad is over! what are we doing?
+I forgot why I was mad. hi!
 
 ## When she starts up
 
@@ -3728,6 +4592,17 @@ menace: +2
 little one: +2
 calm down: -1
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+animals: 3
+outdoors: 3
+sport: 2
+food: 2
+games: 2
+more hobbies: 2
+
 ## How she reacts
 
 >! Behaviour, not words. Too busy enjoying herself to hold a grudge.
@@ -3735,7 +4610,6 @@ calm down: -1
 flirt: 4
 cringe: 45
 sulks after: 0
-sulk minutes: 2
 dodges: no
 sulk alone: 90
 sulks at upset: 12

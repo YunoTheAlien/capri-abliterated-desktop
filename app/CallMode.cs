@@ -316,7 +316,7 @@ namespace CapriDesktop
         private readonly CallEars callEars = new CallEars();
         private CallPanel callPanel;
         private CallPill callPill;
-        private System.Windows.Forms.Timer callEndTicks;
+        private Clock.Ticker callEndTicks;
         private bool callSmall, callPillPlaced, callDismissed, callWindowsTest;
         private int callAnswers, callCounted = -1;
         private string callWho, callSaid;
@@ -702,7 +702,7 @@ namespace CapriDesktop
             if (testing && !callWindowsTest) return;
             if (callEndTicks == null)
             {
-                callEndTicks = new System.Windows.Forms.Timer { Interval = 6000 };
+                callEndTicks = new Clock.Ticker("CallMode callEndTicks") { Interval = 6000 };
                 callEndTicks.Tick += delegate { FinishCallCard(); };
             }
             callEndTicks.Stop();
@@ -1095,6 +1095,7 @@ namespace CapriDesktop
 
         // A game job that means talking to people puts her on the game's call itself, since her voice only reaches their mic
         // in call mode (Lachy).
+#if CHECKS
         private void SmokeCallJob(List<string> checks)
         {
             foreach (string talky in new[] { "play Mic Up and make some new friends", "hop on mike up", "go on roblox and talk to some random people", "make friends in brookhaven", "join a server and chat with the other players" })
@@ -1161,8 +1162,10 @@ namespace CapriDesktop
                 CloseTalk(); SavePreferences();
             }
         }
+#endif
 
         // Call mode still on from before she started: her ears open for the call; ears they shut stay shut (Lachu).
+#if CHECKS
         private void SmokeCallRestart(List<string> checks)
         {
             bool callWas = CallModeOn, savedCallWas = preferences.CallMode, listenWas = preferences.ListenCapri, chatWas = chatting, localWas = local;
@@ -1208,12 +1211,14 @@ namespace CapriDesktop
                 earsClosed = closedWas; hidden = hiddenWas; ears.Muted = mutedWas; listenAt = listenAtWas;
             }
         }
+#endif
 
+#if CHECKS
         private void SmokeCallDisplay(List<string> checks)
         {
             CallPanel panelWas = callPanel;
             CallPill pillWas = callPill;
-            System.Windows.Forms.Timer endTicksWas = callEndTicks;
+            Clock.Ticker endTicksWas = callEndTicks;
             bool panelUp = panelWas != null && panelWas.Visible, pillUp = pillWas != null && pillWas.Visible;
             bool onWas = CallModeOn, savedOn = preferences.CallMode, smallWas = callSmall, placedWas = callPillPlaced, dismissedWas = callDismissed, testWas = callWindowsTest;
             bool captionsWas = preferences.CallCaptionsOff, discordWas = preferences.CallDiscordOff, motionWas = preferences.Motion, topWas = preferences.OnTop;
@@ -1392,7 +1397,9 @@ namespace CapriDesktop
                 if (pillUp && pillWas != null) pillWas.Open();
             }
         }
+#endif
 
+#if CHECKS
         internal static void SmokeCallMode(List<string> checks, string folder)
         {
             Directory.CreateDirectory(folder);
@@ -1562,7 +1569,9 @@ namespace CapriDesktop
                 Hands.Forget();
             }
         }
+#endif
 
+#if CHECKS
         private static void SmokeCallModeUi(List<string> checks, string folder)
         {
             using (TypeBox proof = new TypeBox())
@@ -1598,6 +1607,7 @@ namespace CapriDesktop
             checks.Add("PASS call mode chat bar: the beta switch works and the exact reminder fits beneath the input at 100, 150 and 200 percent");
             CallPanel.Smoke(checks, folder, Takeover.Face);
         }
+#endif
     }
 
     internal sealed partial class Companion
@@ -1714,14 +1724,14 @@ namespace CapriDesktop
             if (act.Kind == "done" && act.Aloud && !string.IsNullOrWhiteSpace(act.Reply) && brain.Model != null && !testing)
             {
                 int delivered = 0;
-                System.Threading.Timer fallback = null;
+                Clock.OffTimer fallback = null;
                 Action<string> deliver = delegate(string line)
                 {
                     if (Interlocked.Exchange(ref delivered, 1) != 0) return;
                     if (fallback != null) fallback.Dispose();
                     Post(delegate { HuskSay(act, line); });
                 };
-                fallback = new System.Threading.Timer(delegate { deliver(act.Line); }, null, 1800, Timeout.Infinite);
+                fallback = new Clock.OffTimer("CallMode fallback", delegate { deliver(act.Line); }, null, 1800, Timeout.Infinite);
                 string who = HuskWatch.Name(HuskWatch.SourceOf(act.Session));
                 ThreadPool.QueueUserWorkItem(delegate
                 {

@@ -219,4 +219,5 @@ Quiet until {n}:{n}	{n}:{n} အထိ တိတ်ဆိတ်
 Quiet until turned off	ပိတ်သည်အထိ တိတ်ဆိတ်
 Export settings	ဆက်တင်များ ထုတ်ယူရန်
 Import settings	ဆက်တင်များ ထည့်သွင်းရန်
-Save Mainframe position	ပန်နယ်တည်နေရာကို မှတ်ထားရန်
+Save Mainframe position	Mainframe နေရာကို သိမ်းရန်
+Capri options	Capri ရွေးချယ်စရာများ

@@ -182,6 +182,7 @@ namespace CapriDesktop
 
         // A spare beside a pack, with a title the pack no longer has, is never taken for the pack: finding it says none, and
         // writing it goes to a new numbered file, so an update never spares a spare.
+#if CHECKS
         internal static void CheckSpares(List<string> checks, string output)
         {
             string folder = System.IO.Path.Combine(output, "slots-" + Guid.NewGuid().ToString("N").Substring(0, 6));
@@ -201,5 +202,6 @@ namespace CapriDesktop
                 try { Directory.Delete(folder, true); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
+#endif
     }
 }

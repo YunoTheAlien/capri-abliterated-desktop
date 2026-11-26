@@ -145,6 +145,7 @@ namespace CapriDesktop
             if (longest > 259) throw new Exception("The run folder is too deep: " + run + " makes Workspace's longest save path " + longest + " letters, past Windows' 259. Run the smoke from a shorter folder.");
         }
 
+#if CHECKS
         private void SmokeWorkspaceLook(List<string> checks, string folder)
         {
             string run = folder;
@@ -400,9 +401,11 @@ namespace CapriDesktop
             if (cueless.Count > 0) throw new Exception("Workspace's empty message box lost its cue in: " + string.Join(", ", cueless.ToArray()));
             checks.Add("PASS Workspace's empty message box shows its cue in every picture where it's empty and uncovered");
         }
+#endif
 
         // Chats in her folder take their titles from their first message, pictured with the empty state at 100%, 125% and 150%:
         // a long message cut at a word, a short one, and files with no words named after the first file. A typed title wins.
+#if CHECKS
         private void SmokeWorkspaceTitles(List<string> checks, string folder, string projects, string pipe, Func<string, string> alias, Action<WorkspaceWindow, string, ToolStripDropDown> shoot)
         {
             string box = Path.Combine(folder, "titles"), home = Path.Combine(folder, "profile", "Capri", "Workspace");
@@ -501,10 +504,12 @@ namespace CapriDesktop
             if (narrow != "Read these and tell me\u2026") throw new Exception("A title cut for width didn't end at a word with the dots tight against it: " + narrow);
             checks.Add("PASS Workspace chats take their title from their first message while it's still the one they were given (her folder's New chat, or a picked folder's name): the first words cut at a word near 40 letters ending in a tight \u2026, or the first file's name; titles cut for width end at a word the same way; two chats in one picked folder end up told apart, and a typed title is never replaced");
         }
+#endif
 
         // Her folder and files as attachments, through the real send path with a stand-in claude.cmd: a new chat in her
         // folder, files riding with one message and kept in the chat across a restart, removal, re-attach, Retry. 100%,
         // 125%, 150%.
+#if CHECKS
         private void SmokeWorkspaceAttachments(List<string> checks, string folder, string projects, string pipe, Func<string, string> alias, Action<WorkspaceWindow, string, ToolStripDropDown> shoot)
         {
             string box = Path.Combine(folder, "att"), data = Path.Combine(box, "data");
@@ -649,10 +654,12 @@ namespace CapriDesktop
             }
             checks.Add("PASS Workspace opens straight into a chat in her folder when it has none, and a folder picked with change or dropped on it before the first message takes its place; + New chat opens a trusted chat in her own folder (made when its first message goes), ready to type in and reused while unused, whose folder the runs-here chip can change until the first message; files ride with one message then leave the composer but stay part of the chat across a restart; a chip taken off before sending is un-attached, a sent file added again rides again, files can go with no words, and a failed start keeps the message and its files for Retry");
         }
+#endif
 
         // An Edit through the real path with a stand-in claude.cmd: the card shows removed and added lines from the
         // tool's input, survives a restart, Undo follows the engine, and a 5,000-line Write keeps at most
         // Workspace.ShownAll letters.
+#if CHECKS
         private void SmokeWorkspaceEdits(List<string> checks, string folder, string projects, string pipe, Func<string, string> alias, Action<WorkspaceWindow, string, ToolStripDropDown> shoot)
         {
             string box = Path.Combine(folder, "edits"), project = Path.Combine(projects, "shop"), data = Path.Combine(box, "data");
@@ -817,6 +824,7 @@ namespace CapriDesktop
                 }
             }
         }
+#endif
     }
 
     internal sealed partial class Companion
@@ -837,6 +845,7 @@ namespace CapriDesktop
             return turn;
         }
 
+#if CHECKS
         private static void WorkspaceChatHomes(List<string> checks, string folder)
         {
             string home = Path.Combine(folder, "home"), spare = Path.Combine(folder, "spare");
@@ -848,7 +857,7 @@ namespace CapriDesktop
             try
             {
                 string exe = WorkspaceStandin(folder, session), firstId, legacyId = Guid.NewGuid().ToString("N");
-                using (Workspace work = new Workspace(data, null) { Home = home, HomeFallback = spare, Executable = exe })
+                using (Workspace work = new Workspace(data, "CapriWorkspace-" + Process.GetCurrentProcess().Id + "-homes-" + Guid.NewGuid().ToString("N")) { Home = home, HomeFallback = spare, Executable = exe })
                 using (WorkspaceWindow window = new WorkspaceWindow(work, delegate { return false; }, 1f, false))
                 {
                     Action<WorkspaceChat, string> checkHome = delegate(WorkspaceChat chat, string name)
@@ -910,7 +919,7 @@ namespace CapriDesktop
                         "id", legacyId, "title", "A saved chat", "folder", home, "session", session,
                         "items", new List<object> { new WorkspaceItem { Kind = "user", Text = "An earlier question" }.Json() })));
                 }
-                using (Workspace loaded = new Workspace(data, null) { Home = home, HomeFallback = spare, Executable = exe })
+                using (Workspace loaded = new Workspace(data, "CapriWorkspace-" + Process.GetCurrentProcess().Id + "-homes-" + Guid.NewGuid().ToString("N")) { Home = home, HomeFallback = spare, Executable = exe })
                 {
                     WorkspaceChat first = loaded.Chats().Find(delegate(WorkspaceChat chat) { return chat.Id == firstId; });
                     if (first == null || !loaded.Trusted(first) || !Workspace.Same(first.Folder, Path.Combine(home, "Build a clock"))) throw new Exception("Workspace lost ownership of a saved chat's folder.");
@@ -920,7 +929,7 @@ namespace CapriDesktop
                         !File.ReadAllText(Path.Combine(folder, "args.txt")).Replace("\"", "").Contains("--resume " + session))
                         throw new Exception("Workspace moved or couldn't resume a shared-folder chat.");
                 }
-                using (Workspace loaded = new Workspace(data, null) { Home = home, HomeFallback = spare, Executable = exe })
+                using (Workspace loaded = new Workspace(data, "CapriWorkspace-" + Process.GetCurrentProcess().Id + "-homes-" + Guid.NewGuid().ToString("N")) { Home = home, HomeFallback = spare, Executable = exe })
                 {
                     WorkspaceChat chat = loaded.Chats().Find(delegate(WorkspaceChat found) { return found.Id == firstId; });
                     string replaced = chat.Folder;
@@ -936,7 +945,7 @@ namespace CapriDesktop
                 }
                 string blocked = Path.Combine(folder, "blocked");
                 File.WriteAllText(blocked, "file in the way");
-                using (Workspace work = new Workspace(Path.Combine(folder, "fallback"), null) { Home = blocked, HomeFallback = spare, Executable = exe })
+                using (Workspace work = new Workspace(Path.Combine(folder, "fallback"), "CapriWorkspace-" + Process.GetCurrentProcess().Id + "-homes-" + Guid.NewGuid().ToString("N")) { Home = blocked, HomeFallback = spare, Executable = exe })
                 {
                     WorkspaceChat chat = work.HomeChat(false);
                     if (WorkspaceSent(work, chat, "Build a clock") == null || !work.Trusted(chat) ||
@@ -949,9 +958,11 @@ namespace CapriDesktop
             }
             finally { Directory.Delete(folder, true); }
         }
+#endif
 
         // Folders after the first ride to Claude Code with --add-dir, each new one asks for trust, an untrusted one keeps the
         // safe flags, and added files go out once with the next message and count as inside for reads and edits.
+#if CHECKS
         private void SmokeWorkspaceFolders(List<string> checks, string folder)
         {
             string run = folder;
@@ -1040,9 +1051,11 @@ namespace CapriDesktop
             SmokeWorkspaceArguments(checks, folder);
             SmokeWorkspaceInside(checks, folder);
         }
+#endif
 
         // The window at 100% to 200% and smallest: nothing crowded, and every control behaving. A change made just
         // before closing is on disk on reopen, even with a slow save already under way.
+#if CHECKS
         private static void WorkspaceClosingSaves(List<string> checks, string data, string project)
         {
             Directory.CreateDirectory(data);
@@ -1070,7 +1083,9 @@ namespace CapriDesktop
             if (closing.ElapsedMilliseconds > 3500) throw new Exception("Closing Workspace waited " + closing.ElapsedMilliseconds + " ms for its saves.");
             checks.Add("PASS Workspace finishes a save already being written and writes a waiting one before it closes, with one-second saves, in " + closing.ElapsedMilliseconds + " ms (3 s at most)");
         }
+#endif
 
+#if CHECKS
         private static void SmokeWorkspaceMaximized(List<string> checks)
         {
             Rectangle primary = new Rectangle(0, 0, 1920, 1080), main = new Rectangle(0, 0, 1920, 1040);
@@ -1092,7 +1107,9 @@ namespace CapriDesktop
             }
             checks.Add("PASS Workspace chooses the working area on the left, right and above the primary monitor at 100% and 150%");
         }
+#endif
 
+#if CHECKS
         private static void WorkspaceFinalReply(List<string> checks, Workspace work, WorkspaceWindow window, string project)
         {
             string longText = string.Join("\n\n", Array.ConvertAll(new string[70], delegate(string unused) { return "The next step is to check whether the clock matches the requested format."; }));
@@ -1132,7 +1149,9 @@ namespace CapriDesktop
             }
             checks.Add("PASS Workspace settles a long final reply at its first block, leaves short replies at the end, and respects an earlier scroll offset");
         }
+#endif
 
+#if CHECKS
         private void SmokeWorkspaceWindow(List<string> checks, string folder)
         {
             string run = folder;
@@ -1249,7 +1268,9 @@ namespace CapriDesktop
                         window.Close();
                     }
                     mainframe.LayoutScale(96, scale);
+                    mainframe.ShowSetupPage(true);
                     string keyFit = mainframe.WorkspaceKeyFits();
+                    mainframe.ShowSetupPage(false);
                     if (keyFit != null) throw new Exception(keyFit + " Text at " + scale + "%.");
                 }
                 mainframe.LayoutScale(0, 0);
@@ -1303,6 +1324,7 @@ namespace CapriDesktop
             SmokeWorkspaceFirstMinute(checks, folder);
             SmokeWorkspaceCost(checks, folder);
         }
+#endif
     }
 
     // The smoke test's hands on a real Explorer picker: finding it among this process's windows, picturing it, typing into
@@ -1452,6 +1474,7 @@ namespace CapriDesktop
             return standin;
         }
 
+#if CHECKS
         private void SmokeWorkspaceFailures(List<string> checks, string folder, string projects, string pipe, Func<string, string> alias, Action<WorkspaceWindow, string, ToolStripDropDown> shoot)
         {
             string fixture = Path.Combine(folder, "fault"), project = Path.Combine(projects, "clock");
@@ -1558,9 +1581,11 @@ namespace CapriDesktop
             }
             checks.Add("PASS Workspace retries failed results and exit errors with the same attached files and one copy of the prompt, shows sign-in and limit details, keeps Retry after reopening and removes it when stopped or superseded");
         }
+#endif
 
         // The pictures' stand-in answers in a believable few seconds and cost. Tool calls behind one closed summary
         // line per run, marked when failed or denied, with a running call's shine that stops when idle or minimised.
+#if CHECKS
         private void SmokeWorkspaceTools(List<string> checks, string folder, string projects, string pipe, Func<string, string> alias, Action<WorkspaceWindow, string, ToolStripDropDown> shoot)
         {
             string box = Path.Combine(folder, "tools"), project = Path.Combine(projects, "capri-desktop");
@@ -1879,6 +1904,7 @@ namespace CapriDesktop
             if (failures.Count > 0) throw new Exception(string.Join(" | ", failures.ToArray()));
             checks.Add("PASS Workspace puts each run of tool calls behind one closed line worded by what finished (commands ran, files read, edited and written, searches, web lookups, agents, MCP calls), marks a failed or denied call on that line and names what's running while it shines; the shine's clock runs only while a running call is seen and stops when it finishes or the window is minimised");
         }
+#endif
 
         // The user's open and save dialog history (HKCU ...\Explorer\ComDlg32: the last folder per program, and recent files
         // per file type), read before a smoke opens real dialogs and put back after: values the run added go, values it changed
@@ -2179,7 +2205,7 @@ namespace CapriDesktop
             try
             {
                 string reply = "# Cyber clock\n\n"
-                    + "Here's what changed, with **bold words**, *a slanted aside*, ~~the old way~~ and `inline code`, plus a link to [her site](https://capriai.app) you can open.\n\n"
+                    + "Here's what changed, with **bold words**, *a slanted aside*, ~~the old way~~ and `inline code`, plus a link to [her site](https://example.com) you can open.\n\n"
                     + "## How it loads\n\n"
                     + "1. Capri reads the mods folder\n"
                     + "2. Each mod gets the ModApi to draw with\n"
@@ -2223,9 +2249,9 @@ namespace CapriDesktop
                 else
                 {
                     window.MoveOver(links[0].Key);
-                    if (window.TranscriptPointer != Cursors.Hand || window.TipNow != "https://capriai.app") failures.Add(scale + "%: over the link the pointer is " + window.TranscriptPointer + " and the tip " + window.TipNow);
+                    if (window.TranscriptPointer != Cursors.Hand || window.TipNow != "https://example.com") failures.Add(scale + "%: over the link the pointer is " + window.TranscriptPointer + " and the tip " + window.TipNow);
                     window.PressAtText(links[0].Key);
-                    if (opened.Count != 1 || opened[0] != "https://capriai.app/") failures.Add(scale + "%: clicking the link opened " + string.Join(", ", opened.ToArray()));
+                    if (opened.Count != 1 || opened[0] != "https://example.com/") failures.Add(scale + "%: clicking the link opened " + string.Join(", ", opened.ToArray()));
                     window.MoveOver(new Point(-1, -1));
                 }
                 foreach (string bad in new[] { "javascript:alert(1)", "file:///C:/Windows/notepad.exe", "ftp://example.com/x", "C:\\Windows" }) WorkspaceWindow.OpenLink(bad);
@@ -2386,6 +2412,7 @@ namespace CapriDesktop
 
         // Every folder the chat names reaches Claude Code as one --add-dir each, exactly as written, whatever it's called and
         // wherever it is, and nothing after it is swallowed as another folder.
+#if CHECKS
         private void SmokeWorkspaceArguments(List<string> checks, string folder)
         {
             string box = Path.Combine(folder, "arguments");
@@ -2437,8 +2464,10 @@ namespace CapriDesktop
                 checks.Add("PASS Workspace drops repeats by case, slash and trailing backslash, adds nothing from a list with a missing folder, keeps a drive root's backslash, and an untrusted chat with a drive root still runs limited");
             }
         }
+#endif
 
         // Ways to talk the hook into treating a path as inside the chat's folders and files when it isn't, and the other way.
+#if CHECKS
         private void SmokeWorkspaceInside(List<string> checks, string folder)
         {
             string box = Path.Combine(folder, "inside");
@@ -2499,9 +2528,11 @@ namespace CapriDesktop
             if (wrong.Count > 0) throw new Exception("Workspace's hook got these wrong: " + string.Join("; ", wrong.ToArray()));
             checks.Add("PASS Workspace hook paths: .., case, forward slashes, \\\\?\\, 8.3 names, streams, junctions out, a file beside an added one, C:\\work against C:\\workshop, and globs that climb out are all judged by where they really are");
         }
+#endif
 
         // Explorer's own pickers, opened for real on the smoke's hidden desktop and driven by messages from another thread:
         // pictured, read back, cancelled, and accepted with known folders and files.
+#if CHECKS
         private void SmokeWorkspacePickers(List<string> checks, string folder)
         {
             // Windows remembers where a program's open dialogs went, by program name, so this run's picks would be where their own
@@ -2515,7 +2546,9 @@ namespace CapriDesktop
                 else if (memory.Leftover() > 0) checks.Add("LIMIT Workspace pickers: Windows' dialog history still names this run's folders after " + put + " values were put back.");
             }
         }
+#endif
 
+#if CHECKS
         private void PickersOnce(List<string> checks, string folder)
         {
             string run = folder;
@@ -2528,6 +2561,8 @@ namespace CapriDesktop
             File.WriteAllText(fileOne, "1");
             File.WriteAllText(fileTwo, "2");
             List<string> notes = new List<string>();
+            // Words already in a picker's name box before the check typed: keys from outside, the picker being in front.
+            List<string> strays = new List<string>();
             using (Workspace work = new Workspace(Path.Combine(folder, "data"), "CapriWorkspace-" + Process.GetCurrentProcess().Id + "-pickers-" + Guid.NewGuid().ToString("N")) { Home = Path.Combine(folder, "her-folder") })
             using (WorkspaceWindow window = new WorkspaceWindow(work, delegate { return false; }, 1f, false))
             {
@@ -2581,6 +2616,8 @@ namespace CapriDesktop
                     {
                         IntPtr nameBox = WorkspaceDialogs.NameBox(dialog);
                         if (nameBox == IntPtr.Zero) return "no name box among " + string.Join(", ", WorkspaceDialogs.Edits(dialog).ToArray());
+                        string before = WorkspaceDialogs.Text(nameBox).Trim();
+                        if (before.Length > 0) lock (notes) strays.Add(before);
                         WorkspaceDialogs.Type(nameBox, typed);
                         System.Threading.Thread.Sleep(300);
                         WorkspaceDialogs.Press(dialog, 1);
@@ -2595,6 +2632,12 @@ namespace CapriDesktop
                 };
                 List<string> failed = new List<string>();
                 Action<string> fail = delegate(string problem) { if (problem != null) failed.Add(problem); };
+                // A pick that went wrong after keys from outside reached the picker is theirs, not the picker's: said as a limit.
+                Action<string> wrongPick = delegate(string problem)
+                {
+                    if (strays.Count == 0) { failed.Add(problem); return; }
+                    checks.Add("LIMIT Workspace pickers: keys from outside reached the open picker (its name box read \"" + strays[strays.Count - 1] + "\" before the check typed), so this pick can't be judged: " + problem);
+                };
 
                 WorkPickers.Opened = 0;
                 fail(drive("folders-cancel", delegate { window.ChooseFolders(); }, cancel));
@@ -2603,7 +2646,7 @@ namespace CapriDesktop
                 if (window.Chat == null || !work.IsHome(window.Chat.Folder) || work.Chats().Count != 1 || window.Picking) failed.Add("Cancelling the folder picker changed something.");
 
                 fail(drive("folders-accept-one", delegate { window.ChooseFolders(); }, accept(started)));
-                if (window.Chat == null || !Workspace.Same(window.Chat.Folder, started) || window.Chat.Folders.Count != 0) failed.Add("Accepting a typed folder didn't start a chat there: " + (window.Chat == null ? "no chat" : window.Chat.Folder));
+                if (window.Chat == null || !Workspace.Same(window.Chat.Folder, started) || window.Chat.Folders.Count != 0) wrongPick("Accepting a typed folder didn't start a chat there: " + (window.Chat == null ? "no chat" : window.Chat.Folder));
                 WorkspaceChat first = window.Chat;
                 if (first != null)
                 {
@@ -2611,13 +2654,13 @@ namespace CapriDesktop
                     window.ShowChat(inProject);
                     fail(drive("folders-add-one", delegate { window.ChooseFolders(); }, accept("pick one")));
                     List<string> added = Workspace.AllFolders(inProject);
-                    if (added.Count != 2 || !added.Exists(delegate(string path) { return Workspace.Same(path, one); })) failed.Add("A folder named in the picker didn't come back: " + string.Join(", ", added.ToArray()));
+                    if (added.Count != 2 || !added.Exists(delegate(string path) { return Workspace.Same(path, one); })) wrongPick("A folder named in the picker didn't come back: " + string.Join(", ", added.ToArray()));
 
                     fail(drive("files-cancel", delegate { window.ChooseFiles(); }, cancel));
                     if (Workspace.AllFiles(inProject).Count != 0 || window.Picking) failed.Add("Cancelling the file picker changed something.");
                     fail(drive("files-accept-two", delegate { window.ChooseFiles(); }, accept("\"first file.txt\" \"second.md\"")));
                     List<string> files = Workspace.AllFiles(inProject);
-                    if (files.Count != 2 || !files.Contains(fileOne) || !files.Contains(fileTwo)) failed.Add("Two files picked together didn't both come back: " + string.Join(", ", files.ToArray()));
+                    if (files.Count != 2 || !files.Contains(fileOne) || !files.Contains(fileTwo)) wrongPick("Two files picked together didn't both come back: " + string.Join(", ", files.ToArray()));
                 }
                 window.Close();
                 foreach (string note in notes) checks.Add("NOTE " + note);
@@ -2627,9 +2670,11 @@ namespace CapriDesktop
                 if (!File.Exists(Path.Combine(pictures, name + ".png"))) throw new Exception("Picker picture missing: " + name);
             checks.Add("PASS Workspace opens Windows' own folder picker (pick folders, several at once, file system only) and file picker, owned by its window and never twice; cancelling changes nothing, a typed folder starts a chat there or joins one, and two files picked together both come back. Two folders at once need clicks in the picker's view, which this doesn't do. Pictures in " + pictures);
         }
+#endif
 
         // What a person does in their first minute: types during a turn, stops it and sends again, closes the window mid-turn,
         // shrinks it, makes 100 chats with long names, drops 30 files or something that isn't a file, pastes a long log.
+#if CHECKS
         private void SmokeWorkspaceFirstMinute(List<string> checks, string folder)
         {
             string box = Path.Combine(folder, "first");
@@ -2759,9 +2804,11 @@ namespace CapriDesktop
             try { Directory.Delete(Path.GetDirectoryName(longName), true); } catch (IOException) { }
             checks.Add("PASS Workspace's first minute: typing during a turn keeps the words, Stop then Enter sends again, closing mid-turn and reopening shows it done, the smallest size holds, 100 chats, a 200-letter title and a 150-letter folder fit, 30 dropped files fit and come off, words and non-files dropped do nothing, a 100,000-letter paste goes in whole, and undo with nothing to undo is off");
         }
+#endif
 
         // How long a 1,000-item chat takes to open, scroll and take one more item while a turn streams, and whether opening
         // and closing the window leaves window handles or GDI objects behind.
+#if CHECKS
         private void SmokeWorkspaceCost(List<string> checks, string folder)
         {
             string box = Path.Combine(folder, "cost"), project = Path.Combine(box, "project");
@@ -2826,5 +2873,6 @@ namespace CapriDesktop
             }
             checks.Add("PASS Workspace opens, scrolls and streams into a 1,000-item chat quickly, and 21 opens and closes leave no window handles or GDI objects behind");
         }
+#endif
     }
 }

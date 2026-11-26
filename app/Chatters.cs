@@ -101,6 +101,7 @@ namespace CapriDesktop
 
         // That a chatter's earlier lines stay data when they reach her system prompt, and that one trying to
         // write past the block cannot.
+#if CHECKS
         internal static void TrustCheck(List<string> checks)
         {
             Forget();
@@ -120,6 +121,7 @@ namespace CapriDesktop
             }
             finally { Forget(); }
         }
+#endif
 
         private static string Short(string text)
         {

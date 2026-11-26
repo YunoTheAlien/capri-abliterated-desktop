@@ -109,9 +109,9 @@ namespace CapriDesktop
             }
         }
 
-        private readonly Timer slideHold = new Timer { Interval = SlideHoldMs };
-        private readonly Timer pictureTimer = new Timer { Interval = PictureTickMs };
-        private readonly Timer pictureForget = new Timer { Interval = PictureForgetMs };
+        private readonly Clock.Ticker slideHold = new Clock.Ticker("slide hold") { Interval = SlideHoldMs };
+        private readonly Clock.Ticker pictureTimer = new Clock.Ticker("page picture") { Interval = PictureTickMs };
+        private readonly Clock.Ticker pictureForget = new Clock.Ticker("page picture forget") { Interval = PictureForgetMs };
         private readonly System.Diagnostics.Stopwatch pictureAge = new System.Diagnostics.Stopwatch();
         private readonly Queue<Control> piecesWaiting = new Queue<Control>();
         private readonly HashSet<Control> pieceQueued = new HashSet<Control>();
@@ -262,7 +262,7 @@ namespace CapriDesktop
                     if (head == null || head.Span <= 0 || !head.Visible || head.Left >= wide) continue;
                     RectangleF band = head.Band(s);
                     band.Offset(0, shift);
-                    DrawBand(page, band, s);
+                    DrawBand(page, band, s, head);
                 }
             }
             DrawGlowColumn(s);
@@ -503,6 +503,8 @@ namespace CapriDesktop
             sliding = false;
             pumpToken = null;
             if (slideAt != pageScroll) MoveControls(slideAt);
+            // A slide that ends where it began moves nothing, so the band it raised is set back by the scroll here.
+            titleBand.Visible = paged && pageScroll > 0;
             pictureQuiet = true;
             WriteWindowStyle(Handle, ExtendedStyle, ReadWindowStyle(Handle, ExtendedStyle) | ComposedStyle);
             slideCover.Visible = false;
@@ -596,6 +598,7 @@ namespace CapriDesktop
 
         // Her title band on screen through slides a notch at a time, from the top of the page and back to it, at the
         // sizes picked for it: each frame, the gap beside Back shows the band's own colour, never the page sliding under it.
+#if CHECKS
         internal void CheckBandWhileSliding(List<string> checks)
         {
             bool pagedWas = paged, topWas = TopMost;
@@ -649,6 +652,7 @@ namespace CapriDesktop
                 if (WindowState != stateWas) WindowState = stateWas;
             }
         }
+#endif
 
         private static void Pause(int ms)
         {
@@ -674,6 +678,7 @@ namespace CapriDesktop
             return real;
         }
 
+#if CHECKS
         internal void CheckPageSlide(List<string> checks)
         {
             FormWindowState wasState = WindowState;
@@ -705,6 +710,7 @@ namespace CapriDesktop
             string rate = framesASecond.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " frames a second, longest gap " + longestGap.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " ms";
             checks.Add((frameCost <= 16 && framesASecond >= 45 ? "PASS" : "LIMIT") + " Settings slides as one picture at " + cost + " ms a frame at 200% and " + rate + ", each frame reaching the screen whole, turning back at once and easing only a flick's lumps, without moving a control until it stops; the picture matches the real page control by control and survives reopening Settings, a control that repaints is redrawn in it, with no memory for it she scrolls the old way, and a press, a layout change or minimising brings the real page straight back where it had slid to");
         }
+#endif
 
         private string SlideProblem(out double frameCost, out double framesASecond, out double longestGap)
         {

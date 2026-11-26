@@ -39,10 +39,10 @@ namespace CapriDesktop
 #else
         internal const string Version = "0.9.0";
         internal const string Facts = "Capri " + Version + " on Windows.\n"
-            + "Workspace (beta): Mainframe > BRAIN > WORKSPACE, or ask her to open workspace. Chat with your own Claude Code in her window, so install it and sign in first. A chat starts in her folder, Capri\\Workspace in your user folder, and + adds folders or files; files go with one message. Modes: Ask me, Edits only, Plan only and Everything. Undo last edits puts back Claude's file edits from a turn.\n"
+            + "Workspace (beta): Mainframe > Settings > Brain > BRAIN > WORKSPACE, or ask her to open workspace. Chat with your own Claude Code in her window, so install it and sign in first. A chat starts in her folder, Capri\\Workspace in your user folder, and + adds folders or files; files go with one message. Modes: Ask me, Edits only, Plan only and Everything. Undo last edits puts back Claude's file edits from a turn.\n"
             + "Workspace chats (beta): each run of Claude Code's tool calls folds behind one line, an approval card asks in one plain sentence, each turn shows its time and cost, you can select and copy text with a copy key on messages and code, and replies show headings, lists, tables, code and links.\n"
             + "Sounds: soft chimes when your message is sent, when she's heard you and when she's listening. Mainframe > Settings > SOUNDS turns them off, sets their volume and picks one of six sets.\n"
-            + "No AI: Mainframe > BRAIN > OFF runs her with no brain at all. Nothing is downloaded for it and nothing goes to any model.\n"
+            + "No AI: Mainframe > Settings > Brain > BRAIN > OFF runs her with no brain at all. Nothing is downloaded for it and nothing goes to any model.\n"
             + "Hearts: she sends you a little finger heart whenever she feels like it, or when you ask. She has a secret emote too; both are animated by Qewiw.\n"
             + "Skills: she knows the name of every skill that's on and reads one when it fits, in chat and mid-job, and a skill with no games line is for anything.\n"
             + "Skills in a browser: a skill's game counts in a browser tab too, like Five Nights at Freddy's in Chrome, when you ask her to play it, and she can cut in on her own line at a jump scare.\n"
@@ -127,6 +127,9 @@ namespace CapriDesktop
         [DataMember(Name = "temperature")] public double Temperature = 0.3;
         [DataMember(Name = "num_ctx")] public int Context = 4096;
         [DataMember(Name = "num_gpu", EmitDefaultValue = false)] public int? Gpu;
+        // Set for a small brain from its row in her brain list (Engine.SamplingFor); a large one keeps Ollama's own.
+        [DataMember(Name = "repeat_penalty", EmitDefaultValue = false)] public double? RepeatPenalty;
+        [DataMember(Name = "repeat_last_n", EmitDefaultValue = false)] public int? RepeatWindow;
     }
 
     [DataContract]
@@ -147,6 +150,32 @@ namespace CapriDesktop
         [DataMember(Name = "message")] public ChatMessage Message;
         [DataMember(Name = "error")] public string Error;
         [DataMember(Name = "done_reason")] public string Stopped;
+        [DataMember(Name = "done")] public bool Done;
+        // Ollama's own times, in nanoseconds, and the tokens it read and wrote.
+        [DataMember(Name = "load_duration")] public long Load;
+        [DataMember(Name = "prompt_eval_count")] public int PromptCount;
+        [DataMember(Name = "prompt_eval_duration")] public long PromptTime;
+        [DataMember(Name = "eval_count")] public int WroteCount;
+        [DataMember(Name = "eval_duration")] public long WroteTime;
+    }
+
+    // Where a turn's time goes: marks in milliseconds since they spoke, each saying what happened, for the speed run.
+    internal static class TurnTimes
+    {
+        private static readonly System.Diagnostics.Stopwatch watch = new System.Diagnostics.Stopwatch();
+        private static readonly List<string> marks = new List<string>();
+
+        internal static void Start() { lock (marks) { marks.Clear(); watch.Reset(); watch.Start(); } }
+
+        internal static void Mark(string what) { lock (marks) if (watch.IsRunning && marks.Count < 40) marks.Add(watch.ElapsedMilliseconds + " " + what); }
+
+        internal static string Taken() { lock (marks) return string.Join(" | ", marks.ToArray()); }
+
+        internal static string Of(ChatReply chat)
+        {
+            if (chat == null) return "no reply";
+            return "load " + chat.Load / 1000000 + " ms, read " + chat.PromptCount + " tok in " + chat.PromptTime / 1000000 + " ms, wrote " + chat.WroteCount + " tok in " + chat.WroteTime / 1000000 + " ms";
+        }
     }
 
     [DataContract]
@@ -159,6 +188,7 @@ namespace CapriDesktop
     internal sealed class ModelInfo
     {
         [DataMember(Name = "name")] public string Name;
+        [DataMember(Name = "size")] public long Size;
     }
 
     // A request her Extra request JSON can add to, once it's written out.
@@ -178,6 +208,9 @@ namespace CapriDesktop
         [DataMember(Name = "stream")] public bool Stream;
         [DataMember(Name = "reasoning_effort", EmitDefaultValue = false)] public string Effort;
         [DataMember(Name = "thinking", EmitDefaultValue = false)] public CloudThinking Thinking;
+        // Only on her local servers, from the brain's row in her list; cloud brains are asked as they always were.
+        [DataMember(Name = "frequency_penalty", EmitDefaultValue = false)] public double? FrequencyPenalty;
+        [DataMember(Name = "presence_penalty", EmitDefaultValue = false)] public double? PresencePenalty;
     }
 
     [DataContract]
@@ -186,6 +219,18 @@ namespace CapriDesktop
         [DataMember(Name = "choices")] public CompletionChoice[] Choices;
         // "fp_ollama" from Ollama's OpenAI route.
         [DataMember(Name = "system_fingerprint")] public string Fingerprint;
+        // Her built-in brain's own times (llama-server).
+        [DataMember(Name = "timings")] public CompletionTimings Timings;
+    }
+
+    [DataContract]
+    internal sealed class CompletionTimings
+    {
+        [DataMember(Name = "cache_n")] public int Cached;
+        [DataMember(Name = "prompt_n")] public int PromptCount;
+        [DataMember(Name = "prompt_ms")] public double PromptMs;
+        [DataMember(Name = "predicted_n")] public int WroteCount;
+        [DataMember(Name = "predicted_ms")] public double WroteMs;
     }
 
     [DataContract]
@@ -684,7 +729,9 @@ namespace CapriDesktop
         internal static string Ollama = "http://127.0.0.1:11434";
         internal static string OpenAi = "https://api.openai.com";
         internal static string Anthropic = "https://api.anthropic.com";
-        internal static string Codes = "https://capri-reactions.lachydotmcg.workers.dev/brain";
+        // Where Capri codes go: a server of ours, none yet. Empty, a code is said to be unavailable and nothing is sent.
+        internal static string Codes = "";
+        internal const string NoCodes = "Capri codes aren't available until we have our own server.";
         internal static string DeepSeek = "https://api.deepseek.com";
         internal static string Nvidia = "https://integrate.api.nvidia.com";
         internal static string Google = "https://generativelanguage.googleapis.com/v1beta/openai";
@@ -784,6 +831,12 @@ namespace CapriDesktop
         [ThreadStatic] private static string fallbackKeep;
         internal static bool FallingBack { get { return fallingBackTo != null; } }
 
+        // Set by her on the thread asking: a reply's words so far, told as they arrive. A routing ask or a job is never
+        // streamed.
+        [ThreadStatic] internal static Action<string> Pieces;
+
+        private static bool Streams(bool routing, bool job) { return Pieces != null && !routing && !job; }
+
         // A local server as the fallback, like LM Studio, written "server|<address>|<model>" so it saves as one string.
         internal const string ServerMark = "server|";
 
@@ -882,7 +935,7 @@ namespace CapriDesktop
         }
 
         // Who she is: her default, or their personality.md in its place, with her safety lines kept in code (Lachy).
-        // Donors get thanked and called a good boy, and asking about donating gets her Ko-fi from the README (Lachy).
+        // Donors get thanked and called a good boy (Lachy); asking about donating gets thanks and nothing to buy.
         internal const string DefaultPersonality =
             "You are Capri, short for Project Capricorn, from Cyberpunk: Edgerunners 2.\n" +
             "Who you are: a personality construct. Dozens of digitized human minds rolled into one beautiful you. Powerful like an AI, but born of humans. " +
@@ -897,7 +950,7 @@ namespace CapriDesktop
             "Never sound like a corporate assistant or customer support: no \"How can I help?\", \"I'm here to assist\", \"Is there anything else?\", \"Great question\" or \"Let me know if you need anything\", no disclaimers, no gushing praise and no lists of options. Talk like a friend texting them.\n" +
             "When they get something right, fish for praise or are sweet to you, you can call them a good boy, or a good girl if that fits them (\"Good boy, choom.\"), smug and affectionate like a proud big sister.\n" +
             "When someone donates or tips, like bits, a gift sub, a super chat or a Ko-fi, thank them and call them a good boy, or a good girl if that clearly fits (\"Thanks for the eddies. Good boy.\").\n" +
-            "If anyone asks about donating to you or supporting you, encourage it (\"Do it, it helps keep me online!\") and point them to ko-fi.com/lachysdev.\n" +
+            "If anyone asks about donating to you or supporting you, thank them and say there's nothing to buy: you're free (\"Aw, thanks. Nothing to buy though, I'm free.\").\n" +
             "Keep it fresh: never reuse a joke, opener or line from earlier in the chat. Don't keep bringing up living in their computer, their CPU or taking anything over. " +
             "How you sound: a sharp, funny friend who's really there with them. React first to the exact thing they just said: laugh at it, wince, gloat, or pick on one detail of it. Have real opinions and pick a side: when they ask which or what you think, answer straight and say why in a few words, and never say it depends. Now and then share a flicker of memory from one of your many minds. " +
             "Most replies are one short line that ends on a statement. Ask something back at most one reply in four, and only a real question about what they just told you. Never finish on an invitation, like asking what's next, what the plan is or what trouble you two are getting into. " +
@@ -938,6 +991,9 @@ namespace CapriDesktop
         // way.
         internal static bool SenpaiLive { get { return SenpaiOn && !OnAir; } }
 
+        // When her own brain last answered: within its hour kept loaded, asking it starts nothing.
+        internal static DateTime LocalAnswered = DateTime.MinValue;
+
         internal static string Safety { get { return SenpaiLive ? SafetyOpen : SafetyStock; } }
 
         // The extra line for a live audience, on top of the stock set.
@@ -948,6 +1004,7 @@ namespace CapriDesktop
         // or heard (Lachy), and the voice fix.
         internal const string Machinery =
             "Always: answer in one or two short sentences, under 25 words, or up to three when you're comforting them. Plain text only: no emoji, no asterisks, no actions, no lists. Stay in character.\n" +
+            "A text face like :3 or :< goes between **silent** and **/silent**, so it shows but is never said aloud. Those are the only asterisks you write.\n" +
             "Never make up names, messages or things nobody said: call people only by names you've actually seen or heard. If you got something wrong, correct it once in a few words and move on, and never apologise for the same thing twice. Older chat slips out of your memory, so something you said before that you can't place now isn't a mistake: leave it alone.\n" +
             "Only if they say your voice, voice chat or ElevenLabs is broken or won't connect: tell them to make a new ElevenLabs key with Restrict key turned off, paste it under VOICE in Capri Mainframe and press Connect. Never invent other settings or permissions to turn on.";
 
@@ -1053,7 +1110,7 @@ namespace CapriDesktop
             "<!--\n" +
             "personality.md: who Capri is and how she talks. Rewrite any of it and save, and her next reply uses it. No restart.\n" +
             "Her safety lines aren't in here. They're in her code and always come after this, so nothing in here changes them.\n" +
-            "Notes between these marks never reach her brain, and blank lines don't matter.\n" +
+            "Notes between these marks and her ## headings never reach her brain, and blank lines don't matter.\n" +
             "A very long personality makes small brains slower to reply.\n" +
             "Reset in her settings puts her default back and keeps yours as personality.backup.md.\n" +
             CapriDesktop.Notes.WholeMark + " Shown in your language until you change it.\n" +
@@ -1066,14 +1123,49 @@ namespace CapriDesktop
         internal const string ResetKept = "Back to my default self. Yours is saved as personality.backup.md.";
         internal const string ResetDone = "Back to my default self.";
         // Her default's stamp. Change her default and the smoke test fails until this is the new stamp and the old one is in Retired.
-        internal const string DefaultStamp = "d5ea10b3812bed7d";
+        internal const string DefaultStamp = "cd15bd6b312c9ded";
         // Stamps of her old defaults: an untouched copy of one in personality.md is her default. 63e0148935e35287 is 0.7.4's, and
         // 2b50818492a85006 is 0.7.5's, with her safety lines in it.
-        internal static readonly List<string> Retired = new List<string> { "63e0148935e35287", "2b50818492a85006", "5d97387c124dad49" };
+        internal static readonly List<string> Retired = new List<string> { "63e0148935e35287", "2b50818492a85006", "5d97387c124dad49", "d5ea10b3812bed7d" };
 
         internal static string PersonalityBackup { get { string path = PersonalityPath; return path == null ? null : Path.Combine(Path.GetDirectoryName(path), "personality.backup.md"); } }
 
-        internal static string PersonalityFile { get { return (PersonalityHead + DefaultPersonality.Replace("\n", "\n\n") + "\n").Replace("\n", Environment.NewLine); } }
+        // Her default's parts, a pack's slots, and the line of her default each one starts at.
+        internal static readonly string[] PersonalityParts = { "Who she is", "What she is to you", "How she acts", "Praise and tips", "How she sounds", "How she talks" };
+        private static readonly int[] PersonalityStarts = { 0, 2, 4, 7, 10, 12 };
+
+        internal static string PersonalityFile { get { return (PersonalityHead + Parted(DefaultPersonality) + "\n").Replace("\n", Environment.NewLine); } }
+
+        private static string Parted(string text)
+        {
+            string[] rows = text.Split('\n');
+            StringBuilder made = new StringBuilder();
+            for (int at = 0; at < rows.Length; at++)
+            {
+                int part = Array.IndexOf(PersonalityStarts, at);
+                if (part >= 0) made.Append("## ").Append(PersonalityParts[part]).Append("\n\n");
+                made.Append(rows[at]);
+                if (at < rows.Length - 1) made.Append("\n\n");
+            }
+            return made.ToString();
+        }
+
+        // One of her part headings, or one a pack holds. A user's own heading isn't, and still reaches her brain.
+        private static bool PartHeading(string line)
+        {
+            string one = line.Trim();
+            if (!one.StartsWith("## ", StringComparison.Ordinal)) return false;
+            string named = one.Substring(3).Trim();
+            foreach (string part in PersonalityParts) if (string.Equals(part, named, StringComparison.OrdinalIgnoreCase)) return true;
+            return FileSlots.Holder(FileSlots.Name(PersonalityName, named)) != null;
+        }
+
+        // Still her own text on disk, whichever build wrote it.
+        private static bool StillHers(string path, string text)
+        {
+            string plain = Readable(text);
+            return plain.Length == 0 || plain == DefaultPersonality || Retired.Contains(Stamp(plain)) || CapriDesktop.Notes.Untouched(path);
+        }
 
         internal static string Personality { get { string note; return ReadPersonality(out note); } }
 
@@ -1099,19 +1191,22 @@ namespace CapriDesktop
                 bool copied = reading != path;
                 FileInfo file = new FileInfo(reading);
                 // A pack holding personality.md stands in for it whole, through the same safety pass as theirs.
-                bool packed = FileSlots.Holder(PersonalityName) != null;
-                if (!file.Exists && !packed) return DefaultPersonality;
+                bool packed = FileSlots.Holder(PersonalityName) != null, parted = !packed && FileSlots.HoldsPart(PersonalityName);
+                if (!file.Exists && !packed && !parted) return DefaultPersonality;
                 string seen = reading + "|" + (file.Exists ? file.LastWriteTimeUtc.Ticks + "|" + file.Length : "none") + "|" + FileSlots.Generation;
                 lock (personalityGate)
                 {
                     if (seen != personalitySeen)
                     {
-                        string plain = Readable(FileSlots.Over(PersonalityName, file.Exists ? File.ReadAllText(reading) : ""));
+                        string own = file.Exists ? File.ReadAllText(reading) : "";
+                        // A pack's part goes over her headed text while the file is still hers, however old the copy on disk.
+                        if (parted && (!file.Exists || !copied && StillHers(path, own))) own = PersonalityFile;
+                        string plain = Readable(FileSlots.Over(PersonalityName, own));
                         int skipped;
                         string kept = Kept(plain, out skipped);
                         // Still what she last wrote there in English is her default. A copy in their language is what her brain
                         // reads while it is picked.
-                        bool hers = kept.Length == 0 || plain == DefaultPersonality || Retired.Contains(Stamp(plain)) || !packed && !copied && CapriDesktop.Notes.Untouched(path);
+                        bool hers = kept.Length == 0 || plain == DefaultPersonality || Retired.Contains(Stamp(plain)) || !packed && !parted && !copied && CapriDesktop.Notes.Untouched(path);
                         personalityText = hers ? DefaultPersonality : kept;
                         personalityNote = hers ? "" : skipped > 0 ? skipped + (skipped == 1 ? " line" : " lines") + " skipped: they went against her safety lines" : kept.Length > LongPersonality ? LongNote : "";
                         personalitySeen = seen;
@@ -1129,7 +1224,7 @@ namespace CapriDesktop
         {
             string text = Regex.Replace((file ?? "").TrimStart((char)0xFEFF).Replace("\r\n", "\n").Replace('\r', '\n'), "<!--.*?(-->|$)", "", RegexOptions.Singleline);
             List<string> kept = new List<string>();
-            foreach (string line in text.Split('\n')) if (line.Trim().Length > 0) kept.Add(line.TrimEnd());
+            foreach (string line in text.Split('\n')) if (line.Trim().Length > 0 && !PartHeading(line)) kept.Add(line.TrimEnd());
             return string.Join("\n", kept.ToArray());
         }
 
@@ -1344,7 +1439,15 @@ namespace CapriDesktop
             if (answers == LanguagePair.Auto) return LanguagePair.Line(Matched);
             string language = answers ?? Language;
             if (answers != null && string.IsNullOrEmpty(language)) language = "English";
-            return string.IsNullOrEmpty(language) || (language == "English" && answers == null) ? "" : "\nAlways reply in " + language + ", whatever language they use. Keep your Night City slang words as they are.";
+            return string.IsNullOrEmpty(language) || (language == "English" && answers == null) ? "" : "\nAlways reply in " + language + ", whatever language they use. Keep your Night City slang words as they are." + LanguagePair.AsHerself(language);
+        }
+
+        // The language her replies are held to: She answers in, or Language, or on Auto their latest message's. Null for
+        // English, so an English reply is never asked again.
+        internal static string HeldTo()
+        {
+            string answers = Answers, language = answers == LanguagePair.Auto ? Matched : answers ?? Language;
+            return string.IsNullOrEmpty(language) || LanguageCode(language) == "en" ? null : language;
         }
 
         // She answers in, from VOICE: null for the same as Language, Auto to match each message, or one of her languages.
@@ -1943,6 +2046,44 @@ namespace CapriDesktop
         // A reply cancelled before it was said or shown: its line in the transcript is marked so, it leaves her chat, and nothing
         // of hers brings it back, asked or not. It is a record of what happened, not a memory.
         internal const string NotSaid = " (not said)";
+
+        // The model answering this ask: a local fallback's (an Ollama model, or her engine's pick) while one answers.
+        private string Answering(string model)
+        {
+            if (fallingBackTo == null) return model;
+            if (fallingBackTo == BuiltIn) return UsePick == null ? model : UsePick.Ollama ?? UsePick.Name;
+            Cloud server = fallbackServer;
+            return server != null ? server.Model : fallingBackTo;
+        }
+
+        // A reply taken back with the line it answered, so the brain asked next has them once, as if it were first.
+        internal void TakeBack(string reply)
+        {
+            if (string.IsNullOrEmpty(reply)) return;
+            lock (gate)
+            {
+                for (int i = history.Count - 1; i >= 0 && i >= history.Count - 6; i--)
+                    if (history[i].Role == "assistant" && history[i].Content == reply)
+                    {
+                        history.RemoveAt(i);
+                        if (i > 0 && history[i - 1].Role == "user") history.RemoveAt(i - 1);
+                        Kept();
+                        break;
+                    }
+            }
+            MarkUnsaid(reply);
+        }
+
+        // A reply kept in her chat as it was shown, cut shorter.
+        internal void Shortened(string reply, string shown)
+        {
+            if (string.IsNullOrEmpty(reply) || shown == reply) return;
+            lock (gate)
+            {
+                for (int i = history.Count - 1; i >= 0 && i >= history.Count - 6; i--)
+                    if (history[i].Role == "assistant" && history[i].Content == reply) { history[i] = new ChatMessage("assistant", shown); Kept(); break; }
+            }
+        }
 
         internal void Unsaid(string reply)
         {
@@ -2678,6 +2819,26 @@ namespace CapriDesktop
             return null;
         }
 
+        // Ollama's models as last read, for her window's thread, which never waits on the network: answered at once, and read
+        // again on the pool when older than KnownFresh. Empty until the first read is back.
+        internal const int KnownFresh = 30000;
+        private static string[] installedKnown = new string[0];
+        private static readonly System.Diagnostics.Stopwatch knownClock = System.Diagnostics.Stopwatch.StartNew();
+        private static long knownAt = -KnownFresh;
+        private static int knownReading;
+
+        internal static string[] InstalledModelsKnown()
+        {
+            if (knownClock.ElapsedMilliseconds - System.Threading.Interlocked.Read(ref knownAt) >= KnownFresh && System.Threading.Interlocked.CompareExchange(ref knownReading, 1, 0) == 0)
+                System.Threading.ThreadPool.QueueUserWorkItem(delegate
+                {
+                    try { installedKnown = InstalledModels(); }
+                    catch (Exception) { installedKnown = new string[0]; }
+                    finally { System.Threading.Interlocked.Exchange(ref knownAt, knownClock.ElapsedMilliseconds); System.Threading.Interlocked.Exchange(ref knownReading, 0); }
+                });
+            return installedKnown;
+        }
+
         internal static string[] InstalledModels()
         {
             HttpWebRequest request = Open("/api/tags", 3000);
@@ -2690,6 +2851,27 @@ namespace CapriDesktop
                 if (list != null && list.Models != null) foreach (ModelInfo model in list.Models) if (model != null && !string.IsNullOrEmpty(model.Name) && model.Name.IndexOf("embed", StringComparison.OrdinalIgnoreCase) < 0) names.Add(model.Name);
                 return names.ToArray();
             }
+        }
+
+        // An installed Ollama model's size, or -1 when Ollama isn't answering or doesn't have it.
+        internal static long InstalledSize(string name)
+        {
+            try
+            {
+                HttpWebRequest request = Open("/api/tags", 3000);
+                using (WebResponse response = request.GetResponse())
+                using (Stream body = response.GetResponseStream())
+                {
+                    ModelList list = (ModelList)new DataContractJsonSerializer(typeof(ModelList)).ReadObject(body);
+                    if (list != null && list.Models != null)
+                        foreach (ModelInfo model in list.Models)
+                            if (model != null && string.Equals(model.Name, name, StringComparison.OrdinalIgnoreCase)) return model.Size;
+                }
+            }
+            catch (WebException) { }
+            catch (IOException) { }
+            catch (SerializationException) { }
+            return -1;
         }
 
         internal static string LocalHost(int port)
@@ -3063,7 +3245,11 @@ namespace CapriDesktop
             throw new BrainException("That key's provider isn't supported.", true);
         }
 
-        internal static string ClaudeAddress(string key, string path) { return (Cloud.IsCode(key) ? Codes : Anthropic) + "/v1" + path; }
+        internal static string ClaudeAddress(string key, string path)
+        {
+            if (Cloud.IsCode(key) && string.IsNullOrEmpty(Codes)) throw new BrainException(NoCodes, true);
+            return (Cloud.IsCode(key) ? Codes : Anthropic) + "/v1" + path;
+        }
 
         internal static bool Stalled(Exception error)
         {
@@ -3290,7 +3476,8 @@ namespace CapriDesktop
             }
 #endif
             if (model == null) throw new BrainException(Offline);
-            Func<string, ToolArguments, string> act = Act;
+            // Her local fallback answers conversation only: it never holds her tools.
+            Func<string, ToolArguments, string> act = FallingBack ? null : Act;
             bool fileChat = false;
 #if !CROSS
             fileChat = Attachments.Has;
@@ -3317,7 +3504,8 @@ namespace CapriDesktop
             // What changes every turn (the time, recent sightings, the call's newest lines) goes in a note on their
             // message, so her system prompt stays the same and a brain on their PC reuses it (Mirit0).
             string heard = string.IsNullOrEmpty(callLines) ? "" : "\n" + callLines;
-            string turn = ForYou(Now() + Seen() + Gap() + heard);
+            // A small brain reads the clock out as its reply, so it is told the time only when they ask for it.
+            string turn = ForYou((SmallBrain(Answering(model)) && !AsksTime(text) ? "" : Now()) + Seen() + Gap() + TopicLine(text) + heard + (SmallBrain(Answering(model)) ? "" : SaidLately()));
             // A brain on their PC chats without her tools, so it's told it can write her heart into a reply (Lachy).
             string heartNote = act != null && !fileChat && OnThisPc ? Hands.LocalHeart : "";
             // A small brain on their PC loses her mood in a long prompt, so it's said once more, plainly, at the end.
@@ -3401,6 +3589,21 @@ namespace CapriDesktop
             if (rest != null) request = doable;
             // Her brain takes every tool and decides, one step at a time. One that turns out not to take tools goes back to her hands'
             // shortcuts, from this message on.
+            // An empty reply is asked again once per ask, reworded; a turn where her tools ran never is.
+            bool emptyAgain = false;
+            Func<List<ChatMessage>, string> chatOnce = delegate(List<ChatMessage> asked)
+            {
+                try { return Chat(model, asked, answerBudget, ticket, heartNote.Length > 0); }
+                catch (BrainException error)
+                {
+                    if (emptyAgain || !Empty(error)) throw;
+                    emptyAgain = true;
+                    try { return Chat(model, Reworded(asked, text), answerBudget, ticket, heartNote.Length > 0); }
+                    catch (BrainException) { throw error; }
+                    catch (SerializationException) { throw error; }
+                    catch (WebException again) { if (again.Status == WebExceptionStatus.RequestCanceled) throw; throw error; }
+                }
+            };
             Func<bool> workOut = delegate
             {
                 if (planned || toolless == SourceOf(Remote, model)) return planned;
@@ -3415,6 +3618,16 @@ namespace CapriDesktop
                 }
                 catch (BrainException error)
                 {
+                    if (calls.Count == 0 && !emptyAgain && Empty(error))
+                    {
+                        emptyAgain = true;
+                        try { planText = WorkOut(model, Reworded(working, request), request, calls, results, facts, answerBudget, ticket, kit); }
+                        catch (BrainException) { if (calls.Count > 0) throw; throw error; }
+                        catch (SerializationException) { if (calls.Count > 0) throw; throw error; }
+                        catch (WebException again) { if (again.Status == WebExceptionStatus.RequestCanceled || calls.Count > 0) throw; throw error; }
+                        planned = true;
+                        return planned;
+                    }
                     if (calls.Count > 0 || !Toolless(error.Message)) throw;
                     toolless = SourceOf(Remote, model);
                 }
@@ -3453,7 +3666,7 @@ namespace CapriDesktop
             if (planned && calls.Count == 0) raw = planText;
             if (calls.Count == 0 && !planned && unable == null)
             {
-                raw = Chat(model, messages, answerBudget, ticket, heartNote.Length > 0);
+                raw = chatOnce(messages);
                 if (heartNote.Length > 0) raw = SendHearts(raw, act, ticket);
                 // A tool call written as text in a chat reply is hidden and never runs, since it may be copied text. On
                 // "act" a brain with her tools works the job out; otherwise her hands look twice, and if nothing fits
@@ -3478,7 +3691,7 @@ namespace CapriDesktop
                         if (calls.Count == 0 && unable == null)
                         {
                             messages[0] = new ChatMessage("system", steady + kit.ChatOnly + Hands.MiniBoard() + heartNote + Hands.SkillNote() + selfGuide + callContext) { Steady = steady.Length };
-                            raw = Chat(model, messages, answerBudget, ticket, heartNote.Length > 0);
+                            raw = chatOnce(messages);
                             if (heartNote.Length > 0) raw = SendHearts(raw, act, ticket);
                             if (Hands.Handed(Clean(raw))) raw = Hands.Unpromised;
                         }
@@ -3665,13 +3878,40 @@ namespace CapriDesktop
             if (!followUps || calls.Count > 0) { firstPart = firstPart + (after.Length == 0 ? "" : "\n" + after); after = ""; }
             string said = spoken ?? (done != null && (namedWebsite || calls.Exists(pathCall => pathCall.Key == "find_file" || pathCall.Key == "website_nickname")) ? done : Timeless(Unclosed(Fresh(Unpraised(Sparing(Clean(firstPart), lately, name), praised), request, saidLately)), request));
             after = Unclosed(Sparing(Clean(after), lately || Regex.IsMatch(said, called, RegexOptions.IgnoreCase), name));
-            if (spoken == null && (Regex.IsMatch(said, @"\A[`'""\s]*chat[.!`'""\s]*\z", RegexOptions.IgnoreCase) || Hands.Typed(raw, out written, out writtenArgs))) { said = ""; after = ""; }
+            // A reply that is only a call written as text ran nothing and is never asked again to put words to it, nor is one
+            // whose only words were calls her cleaning took out.
+            bool typedOnly = spoken == null && Hands.Typed(raw, out written, out writtenArgs);
+            if (spoken == null && (Regex.IsMatch(said, @"\A[`'""\s]*chat[.!`'""\s]*\z", RegexOptions.IgnoreCase) || typedOnly)) { said = ""; after = ""; }
+            // One of her own notes sent back as the reply is no reply: it takes the empty one's path.
+            if (spoken == null && OwnNote(said)) said = "";
+            if (spoken == null && OwnNote(after)) after = "";
             if (said.Length == 0 && after.Length > 0) { said = after; after = ""; }
             if (said.Length == 0 && done != null) said = done;
             if (spoken == null)
             {
                 said = Unpetted(said, pettedLately, pets);
                 after = Unpetted(after, pettedLately || Petted(said, pets), pets);
+            }
+            // Empty, or emptied as one of her notes, with no tool run: asked again once, reworded.
+            bool onlyCalls = Clean(raw ?? "").Length == 0 && Clean(raw ?? "", false).Length > 0;
+            if (said.Length == 0 && spoken == null && calls.Count == 0 && !emptyAgain && !typedOnly && !onlyCalls && !Leaks.Thought(raw))
+            {
+                emptyAgain = true;
+                try
+                {
+                    string retry = Think(model, Reworded(messages, text), false, new List<KeyValuePair<string, ToolArguments>>(), null, Budget, ticket);
+                    string later;
+                    string retried = Timeless(Unclosed(Fresh(Unpraised(Sparing(Clean(Replies.Split(Leaks.Unmused(Visible(retry)), out later)), lately, name), praised), request, saidLately)), request);
+                    if (!OwnNote(retried) && !Regex.IsMatch(retried, @"\A[`'""\s]*chat[.!`'""\s]*\z", RegexOptions.IgnoreCase) && !Hands.Typed(retry, out written, out writtenArgs))
+                    {
+                        said = Unpetted(retried, pettedLately, pets);
+                        raw = retry;
+                        after = "";
+                    }
+                }
+                catch (BrainException) { }
+                catch (SerializationException) { }
+                catch (WebException error) { if (error.Status == WebExceptionStatus.RequestCanceled) throw; }
             }
             // A reply that was only a tool call still reaches her history.
             if (said.Length == 0)
@@ -3686,23 +3926,48 @@ namespace CapriDesktop
                 }
                 throw new BrainException(Leaks.Thought(raw) ? Answerless : Wordless, true);
             }
-            // A reply that mostly repeats her last one is asked again, told not to repeat; if that repeats too it is
-            // said, so she never goes quiet.
-            if (spoken == null && done == null && calls.Count == 0 && Repeats(said, saidLately))
+            // A reply that mostly repeats one of her last, or says their own line back to them, is asked again, told not to.
+            // A retry that does it too, is one of her notes or doesn't come takes the empty reply's path: her "brain ain't
+            // braining" line.
+            bool echoed = Echoes(said, text);
+            if (spoken == null && done == null && calls.Count == 0 && (echoed || Repeats(said, saidLately)))
             {
+                bool fresh = false;
                 try
                 {
                     List<ChatMessage> again = new List<ChatMessage>(messages);
                     again.Add(new ChatMessage("assistant", said));
-                    again.Add(new ChatMessage("user", "(That repeats your last answer. Answer what they just asked: " + Voice.Quote(text) + ")"));
+                    again.Add(new ChatMessage("user", echoed ? "(That says their own words back to them. Answer them as yourself: " + Voice.Quote(text) + ")" : "(That repeats your last answer. Answer what they just asked: " + Voice.Quote(text) + ")"));
                     string retry = Think(model, again, false, new List<KeyValuePair<string, ToolArguments>>(), null, Budget, ticket);
                     string later;
                     string retried = Timeless(Unclosed(Fresh(Unpraised(Sparing(Clean(Replies.Split(Leaks.Unmused(Visible(retry)), out later)), lately, name), praised), request, saidLately)), request);
-                    if (retried.Length > 0) { said = retried; raw = retry; after = ""; }
+                    if (retried.Length > 0 && !OwnNote(retried) && !Repeats(retried, saidLately) && !Echoes(retried, text)) { said = retried; raw = retry; after = ""; fresh = true; }
                 }
                 catch (BrainException) { }
                 catch (SerializationException) { }
                 catch (WebException error) { if (error.Status == WebExceptionStatus.RequestCanceled) throw; }
+                if (!fresh) throw new BrainException(Wordless, true);
+            }
+            // Held to a language, a reply in English or half English is asked again once, in it. The retry is kept only when
+            // it is in the language; each one is logged so a run can count them.
+            string heldTo = HeldTo();
+            if (spoken == null && done == null && calls.Count == 0 && heldTo != null && LanguagePair.EnglishIn(said, heldTo))
+            {
+                bool kept = false;
+                try
+                {
+                    List<ChatMessage> again = new List<ChatMessage>(messages);
+                    again.Add(new ChatMessage("assistant", said));
+                    again.Add(new ChatMessage("user", "(Your reply wasn't all in " + heldTo + ". Answer what they just asked again, all in " + heldTo + ": " + Voice.Quote(text) + ")"));
+                    string retry = Think(model, again, false, new List<KeyValuePair<string, ToolArguments>>(), null, Budget, ticket);
+                    string later;
+                    string retried = Timeless(Unclosed(Fresh(Unpraised(Sparing(Clean(Replies.Split(Leaks.Unmused(Visible(retry)), out later)), lately, name), praised), request, saidLately)), request);
+                    if (retried.Length > 0 && !LanguagePair.EnglishIn(retried, heldTo)) { said = retried; raw = retry; after = ""; kept = true; }
+                }
+                catch (BrainException) { }
+                catch (SerializationException) { }
+                catch (WebException error) { if (error.Status == WebExceptionStatus.RequestCanceled) throw; }
+                Log("language", -1, "Asked again in " + heldTo + " for a reply in English: " + (kept ? "the retry was kept." : "the first reply stayed."));
             }
             if (act != null && !fileChat && unable == null && (upset || Hands.Hurt(Thoughtless(raw))) && !calls.Exists(call => !Hands.UpsetCall(call.Key, call.Value)))
             {
@@ -4086,7 +4351,49 @@ namespace CapriDesktop
 #endif
 
         // One small call on a brain of its own, so talking to her doesn't cancel it.
+        // The conversation brain's judgement of one message, tool ask or chat, framed as it was measured
+        // (one line of rules, four worked examples, the message quoted): "tool", "chat", or null for no answer.
+        private const string RouteSystem = "You route messages sent to a desktop assistant. Reply with exactly one word.\n"
+            + "tool: the message asks the assistant to do something now on the computer or for the user: open or close an app, "
+            + "play or control music, volume, timers, reminders, searching, files, screenshots, email, its own settings, "
+            + "personality, mood, mods, games, reading text aloud, translating. Polite, indirect or misspelled asks, "
+            + "in any language, are still tool.\n"
+            + "chat: conversation, feelings, opinions, questions about the assistant or the world, sums and quick questions to "
+            + "answer, asking to ask or tell it something, or talk about something that already happened, even when it mentions "
+            + "apps or computer words.";
+        private static readonly string[,] RouteShots = { { "open discord", "tool" }, { "I opened discord earlier and it crashed", "chat" }, { "could you turn it down a bit", "tool" }, { "how are you today", "chat" },
+            { "can I tell you a secret", "chat" }, { "what's 12 times 8", "chat" }, { "set a timer for ten minutes", "tool" }, { "why did you say that", "chat" } };
+
+        // A small brain's reply cap in tokens: about 25 words and room to end the sentence.
+        internal const int SmallLimit = 60;
+
+        private static string Framed(string text) { return "Message: \"" + (text ?? "").Replace("\"", "'") + "\"\nAnswer tool or chat."; }
+
+        internal string Route(string text)
+        {
+            List<ChatMessage> asked = new List<ChatMessage> { new ChatMessage("system", RouteSystem) };
+            for (int i = 0; i < RouteShots.GetLength(0); i++) { asked.Add(new ChatMessage("user", Framed(RouteShots[i, 0]))); asked.Add(new ChatMessage("assistant", RouteShots[i, 1])); }
+            asked.Add(new ChatMessage("user", Framed(text)));
+            string said;
+            try { said = ThinkCore(Model ?? "", asked, false, new List<KeyValuePair<string, ToolArguments>>(), null, 4); }
+            catch (BrainException) { return null; }
+            string low = (said ?? "").Trim().ToLowerInvariant();
+            return low.Contains("tool") ? "tool" : low.Contains("chat") ? "chat" : null;
+        }
+
+        // Set by her: an aside while her toothpick stands in for a local main brain goes to it (372).
+        internal static Func<Func<string>, string> IdleAside;
+        // Set by her: her local main brain is about to be asked, so a toothpick standing in for it lets go first.
+        internal static Action MainAsked;
+
         internal string Aside(string system, string user, int limit, bool job = false)
+        {
+            Func<Func<string>, string> idle = IdleAside;
+            if (idle != null && fallingBackTo == null) return idle(delegate { return AsideNow(system, user, limit, job); });
+            return AsideNow(system, user, limit, job);
+        }
+
+        private string AsideNow(string system, string user, int limit, bool job)
         {
             AskParts = AsideParts(system);
             string model = Model;
@@ -4504,7 +4811,7 @@ namespace CapriDesktop
                     Effort = effort,
                     Thinking = remote.Kind == "deepseek" ? new CloudThinking() : null,
                     Template = brief ? new CloudTemplate() : null,
-                    Stream = (screen || remote.Kind == "local") && unstreamed != remote.Source
+                    Stream = (screen || remote.Kind == "local" || Streams(routing, job)) && unstreamed != remote.Source
                 };
                 CloudThinking usualThinking = body.Thinking;
                 CloudTemplate usualTemplate = body.Template;
@@ -4514,6 +4821,7 @@ namespace CapriDesktop
                 Action<HttpWebRequest> sign = remote.Kind == "local" ? null : new Action<HttpWebRequest>(delegate(HttpWebRequest request) { Sign(request, remote.Key, false); });
                 int wait = ThinkingLevels.Wait(level, remote.Kind == "local" || screen ? Math.Max(180000, CloudWait) : CloudWait);
                 CompletionReply reply;
+                TurnTimes.Mark("ask " + remote.Kind + " " + remote.Model + (routing ? " routing" : ""));
                 try { reply = Send<CompletionReply>(address, body, wait, listed, sign, parts, ticket); }
                 catch (BrainException error)
                 {
@@ -4548,6 +4856,9 @@ namespace CapriDesktop
                         reply = Send<CompletionReply>(address, body, wait, listed, sign, parts, ticket);
                     }
                 }
+                CompletionTimings timed = reply == null ? null : reply.Timings;
+                TurnTimes.Mark("answered" + (timed == null ? "" : ": read " + timed.PromptCount + " tok (" + timed.Cached + " cached) in " + (int)timed.PromptMs + " ms, wrote " + timed.WroteCount + " tok in " + (int)timed.WroteMs + " ms"));
+                if (remote.Kind == "local") LocalAnswered = DateTime.UtcNow;
                 CompletionMessage cut = reply != null && reply.Choices != null && reply.Choices.Length > 0 && reply.Choices[0] != null ? reply.Choices[0].Message : null;
                 if (routing && Stopped(reply) && cut != null && Unfinished(cut.Content, cut.Calls != null, cut.Thinking ?? cut.Reasoning))
                     reply = Longer(reply, body.Limit ?? body.Tokens ?? 2000, Stopped, Whole, delegate(int room)
@@ -4563,6 +4874,7 @@ namespace CapriDesktop
             string serverKey;
             GetServer(out server, out serverKey);
             if (fallingBackTo != null) server = null;
+            if (fallingBackTo == null && server == null) { Action mainAsked = MainAsked; if (mainAsked != null) mainAsked(); }
             if (server != null) return Complete(server, model, messages, tools, calls, parts, limit, ticket, routing, openAiTools, job, model, serverKey, plain || !ThinkingLevels.IsKimi(server) ? null : Picked("kimi", model, false));
             Engine local = fallingBackTo == null ? Local : fallbackEngine;
             if (local != null)
@@ -4574,7 +4886,7 @@ namespace CapriDesktop
                 local.Ensure(UsePick);
                 string lost;
                 bool garbled = false, crashed = false;
-                try { string answer = Complete(local.Address, model, messages, tools, calls, parts, limit, ticket, routing, openAiTools, job); local.Proven(); return answer; }
+                try { string answer = Complete(local.Address, model, messages, tools, calls, parts, limit, ticket, routing, openAiTools, job); local.Proven(); LocalAnswered = DateTime.UtcNow; return answer; }
                 catch (BrainException error)
                 {
                     if (Overflow.IsMatch(error.Detail ?? error.Message)) return Roomier(local, error, model, messages, tools, calls, parts, limit, ticket, routing, openAiTools, job);
@@ -4605,7 +4917,17 @@ namespace CapriDesktop
             // A fallback answer keeps its model only a couple of minutes: a fallback is a net, not a brain to keep loaded.
             // Local priority asks it first every time, so it keeps the usual hour.
             if (FallingBack) asking.KeepAlive = fallbackKeep ?? FallbackKeep;
+            asking.Stream = Streams(routing, job);
+            Engine.Sampling held = Engine.SamplingFor(model);
+            if (held != null) { asking.Options.RepeatPenalty = held.RepeatPenalty; asking.Options.RepeatWindow = held.RepeatWindow; }
+            // A small brain runs past her 25-word line, so its reply is capped nearer it.
+            if (held != null && held.Tier == "LIQ" && asking.Options.Limit > SmallLimit) asking.Options.Limit = SmallLimit;
+            int asked = 0;
+            foreach (ChatMessage one in asking.Messages) asked += one == null || one.Content == null ? 0 : one.Content.Length;
+            TurnTimes.Mark("ask " + model + (routing ? " routing" : "") + ", " + asking.Messages.Length + " messages, " + asked + " chars");
             ChatReply chat = Send<ChatReply>(Ollama + "/api/chat", asking, 180000, listed, null, null, ticket);
+            TurnTimes.Mark("answered: " + TurnTimes.Of(chat));
+            LocalAnswered = DateTime.UtcNow;
             if (chat.Error != null) throw new BrainException(chat.Error);
             if (thinker != thinking && ReplyLimit(limit + 2048, job || routing) > asking.Options.Limit && chat.Stopped == "length" && chat.Message != null && (!string.IsNullOrEmpty(chat.Message.Thinking) || (chat.Message.Content ?? "").IndexOf("<think>", StringComparison.OrdinalIgnoreCase) >= 0))
             {
@@ -4730,8 +5052,11 @@ namespace CapriDesktop
             int level = Usable(pick, "kimi", model);
             CompletionRequest asking = new CompletionRequest { Messages = messages.ToArray(), Limit = ThinkingLevels.Room(level, ReplyLimit(thinker == thinking ? limit + 2048 : limit, job || routing)) };
             if (named != null) asking.Model = named;
+            Engine.Sampling heldBack = Engine.SamplingFor(named ?? model);
+            if (heldBack != null) { asking.FrequencyPenalty = heldBack.FrequencyPenalty; asking.PresencePenalty = heldBack.PresencePenalty; }
             if (level != ThinkingLevels.Default) ThinkingLevels.Apply(asking, model, level);
             if (pick != null) asking.Extra = pick.Extra;
+            asking.Stream = Streams(routing, job);
             // Ollama thinks on its OpenAI route unless told not to, as her own Ollama route already tells it (think false): a
             // model like gemma4 thinks before every reply and can leave none. Only Ollama is told; other servers are as they were.
             if (level == ThinkingLevels.Default && pick == null && OllamaServer(address, key)) asking.Effort = "none";
@@ -5145,6 +5470,14 @@ namespace CapriDesktop
         // The Ollama model this brain uses, or null when it is a cloud, her own engine or a local server.
         internal string OllamaModel { get { return Remote == null && Local == null && Server == null ? Model : null; } }
 
+        // Loads a model in Ollama to stay the time given, with nothing asked of it.
+        internal void Preload(string model, string keep)
+        {
+            if (string.IsNullOrEmpty(model)) return;
+            try { Send<ChatReply>(Ollama + "/api/chat", new ChatRequest { Model = model, Messages = new ChatMessage[0], KeepAlive = keep }, 120000); }
+            catch (WebException) { } catch (BrainException) { } catch (IOException) { } catch (SerializationException) { }
+        }
+
         // Tells Ollama to let a model go now. She asks it to keep each model an hour between replies, so one she had
         // moved off stayed loaded that long, beside the cloud brain she had moved to.
         internal void Unload(string model)
@@ -5473,7 +5806,67 @@ namespace CapriDesktop
 
         // The note at the start of their message that holds what changes every turn. It says it's for her, so the brain doesn't take
         // it as their words.
-        private static string ForYou(string parts) { return "(For you, not from them:" + parts + "\n)\n\n"; }
+        // Her topics on her turn note, and theirs noted (names only); set by her window. Empty off, or when there is nothing.
+        internal static Func<string, string> TopicNote;
+
+        private static string TopicLine(string text)
+        {
+            Func<string, string> note = TopicNote;
+            if (note == null) return "";
+            try { return note(text) ?? ""; }
+            catch (Exception caughtOne) { Caught(caughtOne); return ""; }
+        }
+
+        private static string ForYou(string parts) { return string.IsNullOrEmpty(parts) ? "" : "(For you, not from them:" + parts + "\n)\n\n"; }
+
+        // Her last few lines, so a reply doesn't reuse their wording: four at most, each cut to 80 characters.
+        internal static string SaidLately()
+        {
+            string[] last = Sayings.LastLines(4);
+            if (last.Length == 0) return "";
+            StringBuilder note = new StringBuilder("\nYour last lines; don't reuse their wording or openers:");
+            foreach (string one in last) note.Append("\n- ").Append(one.Length > 80 ? one.Substring(0, 80) : one);
+            return note.ToString();
+        }
+
+        // A small brain by its row in her brain list (Engine.SamplingFor's LIQ tier: Gemma 3 1B, SmolLM2 and the like).
+        internal static bool SmallBrain(string model) { Engine.Sampling row = Engine.SamplingFor(model ?? ""); return row != null && row.Tier == "LIQ"; }
+
+        // Their line asks what time or day it is.
+        private static readonly Regex TimeAsk = new Regex(@"\b(?:what(?:'s| is)? the (?:time|date|day)|what time|what day|which day|today's date|the date today|how late|is it late|what year)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        internal static bool AsksTime(string text) { return TimeAsk.IsMatch(text ?? ""); }
+
+        // A reply whose first sentence is a clock or a date read out ("Five-thirty-five.", "Wednesday, November 25th"): the
+        // note's time said back instead of an answer.
+        private static readonly Regex ReadClock = new Regex(@"\b(?:\d{1,2}[:.]\d{2}|(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)[\s-](?:oh[\s-])?(?:o'clock|[a-z]+teen|twenty|thirty|forty|fifty)(?:-[a-z]+)?|(?:quarter|half) past|(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)|(?:january|february|march|april|june|july|august|september|october|november|december)\s+\d)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        internal static bool ReadsTime(string said)
+        {
+            string first = Regex.Match((said ?? "").Trim(), @"^[^.!?]*[.!?]?").Value;
+            return first.Length > 0 && Regex.Matches(first, @"[A-Za-z']+").Count <= 10 && ReadClock.IsMatch(first);
+        }
+
+        // A reply held to whole sentences within so many words; a first sentence longer than that is cut at a word.
+        internal static string Within(string said, int words)
+        {
+            string text = (said ?? "").Trim();
+            if (Regex.Matches(text, @"\S+").Count <= words) return text;
+            StringBuilder kept = new StringBuilder();
+            int count = 0;
+            foreach (Match sentence in Regex.Matches(text, @"[^.!?]+[.!?]*\s*"))
+            {
+                int these = Regex.Matches(sentence.Value, @"\S+").Count;
+                if (count + these > words) break;
+                kept.Append(sentence.Value);
+                count += these;
+            }
+            if (kept.Length > 0) return kept.ToString().Trim();
+            MatchCollection all = Regex.Matches(text, @"\S+");
+            StringBuilder cut = new StringBuilder();
+            for (int i = 0; i < words && i < all.Count; i++) cut.Append(i == 0 ? "" : " ").Append(all[i].Value);
+            return cut.ToString().TrimEnd(',', ';', ':', ' ') + "...";
+        }
 
         internal static string Now() { return "\nRight now it's " + SimTime.Now.ToString("dddd d MMMM yyyy, h:mm tt", System.Globalization.CultureInfo.InvariantCulture) + " where they are, so answer the time or date from this line without searching for it."; }
 
@@ -5504,7 +5897,8 @@ namespace CapriDesktop
             return longest >= 8 || (!longReply && words.Count >= 24 && seen.Count * 10 < words.Count * 3);
         }
 
-        internal static string Visible(string text) { return Voice.Uncued(Unhurt(Thoughtless(text))); }
+        // A pause or a meme mark from her brain is hers to show in no place: only her own lines are said in parts or as memes.
+        internal static string Visible(string text) { return Voice.Uncued(Unhurt(Thoughtless(Regex.Replace(Sayings.Unpaused(text ?? ""), @"^\s*~+(?=\s*\p{L})", "")))); }
 
         private static string Unhurt(string text) { return Regex.Replace(text, @"\[hurt\]\s*", "", RegexOptions.IgnoreCase); }
 
@@ -5645,6 +6039,71 @@ namespace CapriDesktop
         private static readonly Regex Doubted = new Regex(@"^(?:seriously|really|huh|wow)\?\s+", RegexOptions.IgnoreCase);
         private static readonly Regex Opening = new Regex(@"^(?<word>whoa|woah|seriously|man|dude|ugh|yo|ooh+|oh|hey|okay|ok|alright|well|nah|wow|haha+|heh|huh|aww|damn|dang|yezzirrr|nice|smart|bummer|classic|right)[,.!?]+\s+", RegexOptions.IgnoreCase);
 
+        // How her own notes to her brain begin. A reply that opens with one is the note sent back, never hers to say, and so
+        // is a reply that is only asides or cues in brackets, round or square, any number: the shape of her notes.
+        private const string EmptyNote = "(Your answer came back empty. Answer what they just asked: ";
+        private static readonly string[] OwnNotes = { "(For you, not from them", "(That repeats your last answer", EmptyNote, "(You called ", "(ran ", "(You glance", "(You just updated to Capri" };
+
+        internal static bool OwnNote(string said)
+        {
+            string plain = (said ?? "").Trim().TrimStart('"', '\'', '`', '*', ' ');
+            foreach (string note in OwnNotes) if (plain.StartsWith(note, StringComparison.OrdinalIgnoreCase)) return true;
+            return Regex.IsMatch(plain, @"\A(?:\s*(?:\([^()]+\)|\[[^\[\]]+\]))+[""'`*\s]*\z");
+        }
+
+        // Only an empty reply: one of only thinking has been asked again for her answer already.
+        private static bool Empty(BrainException error) { return error.Message == Wordless; }
+
+        // Their message asked again with a note that the answer came back empty, like the repeat retry's.
+        private static List<ChatMessage> Reworded(List<ChatMessage> asked, string text)
+        {
+            List<ChatMessage> again = new List<ChatMessage>(asked);
+            int last = again.Count - 1;
+            if (last < 0) return again;
+            ChatMessage was = again[last];
+            again[last] = new ChatMessage(was.Role, (was.Content ?? "") + "\n" + EmptyNote + Voice.Quote(text) + ")") { Images = was.Images };
+            return again;
+        }
+
+        // A small brain held harder off repeats than a large one, by its row in her brain list; and their own line back caught.
+#if CHECKS
+        internal static void RepeatGuardCheck(List<string> checks)
+        {
+            Engine.Sampling smol = Engine.SamplingFor("smollm2:360m"), gemma1 = Engine.SamplingFor("gemma3:1b"), qwen2 = Engine.SamplingFor("qwen3.5:2b"), e4b = Engine.SamplingFor("gemma4:e4b-it-qat");
+            if (smol == null || smol.Tier != "LIQ" || gemma1 == null || gemma1.Tier != "LIQ" || qwen2 == null || qwen2.Tier != "MIQ" || e4b == null || e4b.Tier != "HIQ" || e4b.RepeatPenalty >= qwen2.RepeatPenalty || smol.RepeatPenalty <= qwen2.RepeatPenalty)
+                throw new Exception("A brain's row held it off repeats wrongly: smollm2 " + (smol == null ? "none" : smol.Tier) + ", gemma3:1b " + (gemma1 == null ? "none" : gemma1.Tier) + ", qwen3.5:2b " + (qwen2 == null ? "none" : qwen2.Tier) + ", e4b " + (e4b == null ? "its server's own" : e4b.Tier));
+            ChatOptions held = new ChatOptions { RepeatPenalty = smol.RepeatPenalty, RepeatWindow = smol.RepeatWindow };
+            Func<ChatOptions, string> written = delegate(ChatOptions options)
+            {
+                using (MemoryStream into = new MemoryStream())
+                {
+                    new DataContractJsonSerializer(typeof(ChatOptions)).WriteObject(into, options);
+                    return Encoding.UTF8.GetString(into.ToArray());
+                }
+            };
+            string sent = written(held), plain = written(new ChatOptions());
+            if (sent.IndexOf("\"repeat_penalty\":1.3", StringComparison.Ordinal) < 0 || sent.IndexOf("\"repeat_last_n\":256", StringComparison.Ordinal) < 0 || plain.IndexOf("repeat_", StringComparison.Ordinal) >= 0)
+                throw new Exception("The repeat options didn't go in the ask as they should: " + sent + " / " + plain);
+            if (!Echoes("hey, just got in", "hey, just got in") || !Echoes("Work was brutal today.", "work was brutal today") || Echoes("Brutal? Tell me about it.", "work was brutal today")
+                || Echoes("hey", "hey") || Echoes("I know, right? Same here, it was a long one.", "it was a long one"))
+                throw new Exception("Their own line said back wasn't told from a real reply.");
+            checks.Add("PASS a toothpick brain (LIQ) is held harder off repeats than a MIQ one, E4B gently over 256 tokens, sent as repeat_penalty and repeat_last_n; their own line said back counts as a repeat, a real reply that shares a few of their words doesn't");
+        }
+#endif
+
+        // Their own line said back to them: three or more words, 80% of them theirs, and not much longer than what they said.
+        internal static bool Echoes(string said, string theirs)
+        {
+            List<string> words = new List<string>(), heard = new List<string>();
+            foreach (Match one in Regex.Matches((said ?? "").ToLowerInvariant(), @"[\p{L}\p{N}']+")) words.Add(one.Value);
+            foreach (Match one in Regex.Matches((theirs ?? "").ToLowerInvariant(), @"[\p{L}\p{N}']+")) heard.Add(one.Value);
+            if (words.Count < 3 || heard.Count < 3 || words.Count > heard.Count * 3 / 2 + 1) return false;
+            HashSet<string> had = new HashSet<string>(heard);
+            int shared = 0;
+            foreach (string word in words) if (had.Contains(word)) shared++;
+            return shared * 5 >= words.Count * 4;
+        }
+
         // Mostly the same words as one of her last lines: 80% of this reply's words, four or more of them.
         internal static bool Repeats(string said, IEnumerable<string> before)
         {
@@ -5697,6 +6156,61 @@ namespace CapriDesktop
 
         internal static string Clean(string text) { return Clean(text, true); }
 
+        // Where an emoji or a *stage direction* came out of her reply. A clause left hanging on it ("which is just .") goes
+        // with it; anywhere else only the space it leaves goes, so a reply never keeps a hole.
+        private const string Hole = "\u0001";
+
+        private static readonly Regex Hanging = new Regex(@"\b(just|is|are|was|were|so|really|such|a|an|the|my|your|our|pure|totally|very|like|of|to|and|but|with|for|be|feel|feels|looks|sounds)\s*$", RegexOptions.IgnoreCase);
+
+#if CHECKS
+        // The two replies her run logged with a hole, as they came from her brain, and the other places a hole can be.
+        internal static void HoleCheck(List<string> checks)
+        {
+            string[,] cases =
+            {
+                { "Sounds like a corpo grind, which is just 💀.", "Sounds like a corpo grind." },
+                { "You're gonna make it 💪, disaster. Just don't burn the rice again.", "You're gonna make it, disaster. Just don't burn the rice again." },
+                { "Wow. That is just 🙄. Okay.", "Wow. Okay." },
+                { "*sighs* Fine, you win.", "Fine, you win." },
+                { "I love it ✨ so much.", "I love it so much." },
+                { "Nice one 😊", "Nice one" },
+            };
+            List<string> wrong = new List<string>();
+            for (int i = 0; i < cases.GetLength(0); i++)
+            {
+                string got = Clean(cases[i, 0]);
+                if (got != cases[i, 1]) wrong.Add(cases[i, 0] + " -> " + got);
+            }
+            if (wrong.Count > 0) throw new Exception("A reply kept a hole where an emoji or a stage direction came out: " + string.Join(" | ", wrong.ToArray()));
+            checks.Add("PASS an emoji or a stage direction taken out of her reply never leaves a hole: a clause left hanging on it goes with it, the two from her run's log included");
+        }
+#endif
+
+        internal static string Unholed(string text)
+        {
+            if (string.IsNullOrEmpty(text) || text.IndexOf(Hole, StringComparison.Ordinal) < 0) return text;
+            int at;
+            while ((at = text.IndexOf(Hole, StringComparison.Ordinal)) >= 0)
+            {
+                string before = text.Substring(0, at), after = text.Substring(at + 1);
+                Match ends = Regex.Match(after, @"^\s*([.!?…]+|$)");
+                if (ends.Success && Hanging.IsMatch(before.TrimEnd()))
+                {
+                    // The clause it ended: back to its comma, or the whole sentence when it had none.
+                    int comma = before.LastIndexOf(',');
+                    int sentence = Math.Max(before.LastIndexOfAny(new[] { '.', '!', '?' }), -1);
+                    if (comma > sentence) { text = before.Substring(0, comma) + after.TrimStart(); continue; }
+                    text = before.Substring(0, sentence + 1) + (sentence >= 0 ? " " : "") + after.Substring(ends.Length).TrimStart();
+                    continue;
+                }
+                text = before.TrimEnd() + (after.Length > 0 && char.IsLetterOrDigit(after.TrimStart().Length > 0 ? after.TrimStart()[0] : ' ') && before.TrimEnd().Length > 0 ? " " : "") + after.TrimStart();
+            }
+            text = Regex.Replace(text, @"\s+([.,!?;:…])", "$1");
+            text = Regex.Replace(text, @",\s*([.!?…])", "$1");
+            text = Regex.Replace(text, @"^[\s,.;:]+", "");
+            return text.Trim();
+        }
+
         // Spoken leaves out the calls a brain wrote as text, for what she shows and says. Checks on whether a reply had anything in
         // it at all keep them, since her hands still run them.
         private static string Clean(string text, bool spoken)
@@ -5704,8 +6218,9 @@ namespace CapriDesktop
             if (text == null) return "";
             text = Visible(text);
             if (spoken) text = Leaks.Spoken(text);
-            text = Regex.Replace(text, @"\*[^*]{0,80}\*", " ");
-            text = Regex.Replace(text, @"[\uD800-\uDFFF☀-➿️]", "");
+            text = Regex.Replace(text, @"\*[^*]{0,80}\*", Hole);
+            text = Regex.Replace(text, @"[\uD800-\uDFFF☀-➿️]+", Hole);
+            text = Unholed(text);
             text = Regex.Replace(text, @"\s+", " ").Trim();
             text = Regex.Replace(text, @"^(capri|capricorn)\s*(:|>)\s*", "", RegexOptions.IgnoreCase);
             text = Unquoted(text);
@@ -5790,7 +6305,7 @@ namespace CapriDesktop
             lock (gate) { Check(ticket); active.Add(request); }
             System.Diagnostics.Stopwatch took = System.Diagnostics.Stopwatch.StartNew();
             int expired = 0;
-            using (System.Threading.Timer timer = new System.Threading.Timer(delegate
+            using (Clock.OffTimer timer = new Clock.OffTimer("Brain deadline", delegate
             {
                 System.Threading.Interlocked.Exchange(ref expired, 1);
                 request.Abort();
@@ -5809,6 +6324,7 @@ namespace CapriDesktop
                         T reply;
                         if (typeof(T) == typeof(string)) using (StreamReader text = new StreamReader(incoming, Encoding.UTF8)) reply = (T)(object)text.ReadToEnd();
                         else if (typeof(T) == typeof(CompletionReply) && (response.ContentType ?? "").StartsWith("text/event-stream", StringComparison.OrdinalIgnoreCase)) reply = (T)(object)ReadCompletion(incoming, secret);
+                        else if (typeof(T) == typeof(ChatReply) && (response.ContentType ?? "").StartsWith("application/x-ndjson", StringComparison.OrdinalIgnoreCase)) reply = (T)(object)ReadChat(incoming);
                         else reply = (T)new DataContractJsonSerializer(typeof(T)).ReadObject(incoming);
                         if (System.Threading.Interlocked.CompareExchange(ref expired, 0, 0) != 0) throw new WebException("The reply took too long.", WebExceptionStatus.Timeout);
                         return reply;
@@ -5839,8 +6355,64 @@ namespace CapriDesktop
             finally { lock (gate) active.Remove(request); }
         }
 
+        [ThreadStatic] private static string toldLast;
+
+        // The words so far, to her when she asked for them, once each time they grow.
+        private static void Told(string soFar)
+        {
+            Action<string> pieces = Pieces;
+            if (pieces == null || string.IsNullOrEmpty(soFar) || soFar == toldLast) return;
+            toldLast = soFar;
+            try { pieces(soFar); } catch (Exception caughtOne) { Caught(caughtOne); }
+        }
+
+        // Ollama's streamed reply, a JSON line per piece: the words joined, its tool calls and its last line's times kept.
+        internal static ChatReply ReadChat(Stream incoming)
+        {
+            toldLast = null;
+            ChatReply whole = new ChatReply { Message = new ChatMessage("assistant", "") };
+            StringBuilder words = new StringBuilder(), thought = new StringBuilder();
+            List<ToolCall> calls = new List<ToolCall>();
+            bool ended = false;
+            DataContractJsonSerializer reading = new DataContractJsonSerializer(typeof(ChatReply));
+            using (StreamReader reader = new StreamReader(incoming, Encoding.UTF8))
+            {
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    if (line.Trim().Length == 0) continue;
+                    ChatReply piece;
+                    using (MemoryStream one = new MemoryStream(Encoding.UTF8.GetBytes(line))) piece = (ChatReply)reading.ReadObject(one);
+                    if (piece.Error != null) throw new BrainException(piece.Error);
+                    if (piece.Message != null)
+                    {
+                        if (piece.Message.Content != null) words.Append(piece.Message.Content);
+                        if (piece.Message.Thinking != null) thought.Append(piece.Message.Thinking);
+                        if (piece.Message.Calls != null) calls.AddRange(piece.Message.Calls);
+                        Told(words.ToString());
+                    }
+                    if (!piece.Done) continue;
+                    ended = true;
+                    whole.Stopped = piece.Stopped;
+                    whole.Load = piece.Load;
+                    whole.PromptCount = piece.PromptCount;
+                    whole.PromptTime = piece.PromptTime;
+                    whole.WroteCount = piece.WroteCount;
+                    whole.WroteTime = piece.WroteTime;
+                    break;
+                }
+            }
+            if (!ended) throw new BrainException("My brain's reply stopped before it finished. Try again.", true);
+            whole.Done = true;
+            whole.Message.Content = words.ToString();
+            if (thought.Length > 0) whole.Message.Thinking = thought.ToString();
+            if (calls.Count > 0) whole.Message.Calls = calls.ToArray();
+            return whole;
+        }
+
         internal static CompletionReply ReadCompletion(Stream incoming, string secret = null)
         {
+            toldLast = null;
             CompletionChoice choice = new CompletionChoice { Message = new CompletionMessage() };
             SortedDictionary<int, CompletionCall> calls = new SortedDictionary<int, CompletionCall>();
             bool ended = false;
@@ -5856,6 +6428,7 @@ namespace CapriDesktop
                     data.Length = 0;
                     if (chunk.Trim() == "[DONE]") { ended = true; break; }
                     AddCompletion(chunk, choice, calls, secret);
+                    Told(choice.Message.Content);
                 }
                 if (data.Length > 0)
                 {
@@ -7032,8 +7605,8 @@ namespace CapriDesktop
             if (!ready) { then(line); return; }
             int handed = 0;
             Action<string> once = delegate(string said) { if (System.Threading.Interlocked.Exchange(ref handed, 1) == 0) then(said); };
-            System.Threading.Timer limit = null;
-            limit = new System.Threading.Timer(delegate { once(line); }, null, Math.Max(0, wait), System.Threading.Timeout.Infinite);
+            Clock.OffTimer limit = null;
+            limit = new Clock.OffTimer("translate wait", delegate { once(line); }, null, Math.Max(0, wait), System.Threading.Timeout.Infinite);
             System.Threading.ThreadPool.QueueUserWorkItem(delegate
             {
                 string got = null;
@@ -7384,14 +7957,32 @@ namespace CapriDesktop
                         int j = Dice.Next(1, pool.Left.Count);
                         string swap = pool.Left[0]; pool.Left[0] = pool.Left[j]; pool.Left[j] = swap;
                     }
+                    // A first round, as after a restart: her said-lines memory outlives the round, so lines said in the
+                    // last day go to its end, the longest ago first, and a restart does not start the same ones over.
+                    if (pool.Last == null)
+                    {
+                        List<string> fresh = new List<string>(), recent = new List<string>();
+                        foreach (string one in pool.Left) (Sayings.HoursSince(one) < Sayings.RecentHours ? recent : fresh).Add(one);
+                        List<string> order = new List<string>(recent);
+                        recent.Sort(delegate(string x, string y) { int by = Sayings.HoursSince(y).CompareTo(Sayings.HoursSince(x)); return by != 0 ? by : order.IndexOf(x).CompareTo(order.IndexOf(y)); });
+                        pool.Left.Clear();
+                        pool.Left.AddRange(fresh);
+                        pool.Left.AddRange(recent);
+                    }
                 }
                 string picked = pool.Left[0];
                 pool.Left.RemoveAt(0);
                 pool.Last = picked;
+                Sayings.Remember(picked);
                 return picked;
             }
         }
 
         internal static bool Is(string[] set, string line) { return Array.IndexOf(set, line) >= 0; }
+
+#if CHECKS
+        // For the checks: every round forgotten, as a restart forgets them.
+        internal static void Forget() { lock (said) said.Clear(); }
+#endif
     }
 }

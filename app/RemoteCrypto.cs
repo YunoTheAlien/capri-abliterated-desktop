@@ -15,7 +15,8 @@ namespace CapriDesktop
         internal const byte PhoneToPc = 1, PcToPhone = 2;
         internal const int HeaderBytes = 8, IvBytes = 16, TagBytes = 32, IdBytes = 16, MinEnvelope = HeaderBytes + IvBytes + 16 + TagBytes;
         internal const string PairLabel = "capri-remote/1 pair", ConfirmLabel = "capri-remote/1 confirm", HelloLabel = "capri-remote/1 hello", SessionLabel = "capri-remote/1 session";
-        internal const string QrBase = "https://capriai.app/remote/";
+        // The phone page a pairing QR opens: one of ours, none yet. Empty, Remote says it isn't available.
+        internal static string QrBase = "";
         private static readonly RNGCryptoServiceProvider Dice = new RNGCryptoServiceProvider();
 
         internal static byte[] Random(int count)

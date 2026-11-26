@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Тишина до {n}:{n}
 Quiet until turned off	Тишина до исклучување
 Export settings	Извези поставки
 Import settings	Увези поставки
-Save Mainframe position	Запомни ја положбата на панелот
+Save Mainframe position	Зачувај ја позицијата на Mainframe
+Capri options	Опции на Capri

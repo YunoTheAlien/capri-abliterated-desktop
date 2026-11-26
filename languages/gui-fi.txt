@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Hiljainen klo {n}:{n} asti
 Quiet until turned off	Hiljainen kunnes kytketään pois
 Export settings	Vie asetukset
 Import settings	Tuo asetukset
-Save Mainframe position	Muista paneelin sijainti
+Save Mainframe position	Tallenna Mainframen sijainti
+Capri options	Capri-asetukset

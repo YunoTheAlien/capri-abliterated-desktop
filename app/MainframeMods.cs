@@ -12,7 +12,7 @@ namespace CapriDesktop
 {
     internal sealed partial class Mainframe
     {
-        private const int MostModRows = 12, ModRowTop = 276, ModRowHeight = 62, ModsBelow = 130, PagingTall = 42, ColoursGap = 10;
+        private const int MostModRows = 12, ModRowTop = 332, ModRowHeight = 62, ModsBelow = 130, PagingTall = 42, ColoursGap = 10;
         private readonly List<KeyValuePair<Control, int>> modLeft = new List<KeyValuePair<Control, int>>();
         private readonly Label[] modNames = new Label[MostModRows], modAbouts = new Label[MostModRows];
         private readonly Key[] modSwitches = new Key[MostModRows], modCogs = new Key[MostModRows], modRemoves = new Key[MostModRows], modPublishes = new Key[MostModRows], modOptions = new Key[MostModRows];
@@ -66,7 +66,11 @@ namespace CapriDesktop
             return key;
         }
         private Label modStatus, modEmpty, modNoMatch, modPage;
-        private readonly Timer modStatusTimer = new Timer();
+        // At rest the status box says this, and goes back to it when a message ends.
+        internal const string StatusOk = "[STATUS:OK]";
+        // Mods or Plug-ins: which kind INSTALLED lists, the picked one lit.
+        private Key modsPick, pluginsPick;
+        private readonly Clock.Ticker modStatusTimer = new Clock.Ticker("mods status");
         private Entry modSearch;
         private List<Mod> modShown = new List<Mod>();
         private bool modded;
@@ -90,25 +94,37 @@ namespace CapriDesktop
             Explain(folder, "Open mods folder", "MainframeMods.cs");
             modImport = import;
             modFolder = folder;
-            modMake = Make("Make a mod", 28, 114, 328, 28, delegate { MakeMod(); });
-            modMake.AccessibleName = "Make a mod: open the mod helper";
-            Explain(modMake, "Make a mod", "MainframeMods.cs");
+            modMake = Make("Mod maker", 28, 114, 328, 28, delegate { MakeMod(); });
+            modMake.AccessibleName = "Mod maker: the mod helper and Conflicts";
+            Explain(modMake, "Mod maker", "MainframeMods.cs");
             untestedSwitch = Switch("Load untested mods", 0, 145, delegate { if (!syncing) UntestedChanged(); });
             Explain(untestedSwitch, "Load untested mods", "MainframeMods.cs");
-            modStatus = ModLabel("", 28, 176, 328, 36, Font, Faint);
-            modStatusTimer.Tick += delegate { modStatusTimer.Stop(); modStatus.Text = ""; };
+            // The status box, Toggles' own: [STATUS:OK] at rest, a message in it while one shows.
+            modStatus = StatusBox(StatusOk, Font, new Rectangle(28, 176, 328, 36));
+            Controls.Add(modStatus);
+            modStatusTimer.Tick += delegate { modStatusTimer.Stop(); StatusAtRest(); };
             FormClosed += delegate { modStatusTimer.Stop(); modStatusTimer.Dispose(); };
             // A long import error, like a compiler's, is cut to two lines here, and hovering it shows the whole thing.
             ((Note)modStatus).Hovers = true;
             // Mod names can hold an &, like Dice & Decider, so it isn't read as a shortcut key.
             modStatus.UseMnemonic = false;
-            modListHead = Section("INSTALLED >", 0, 218);
-            modSearch = Input(28, 242, 222, 26);
+            // One divider under the status box, the pair under it, then INSTALLED, which never changes, without a second line.
+            Head divider = Section("", 0, 228);
+            divider.RuleOnly = true;
+            divider.AutoSize = false;
+            divider.Size = new Size(1, 1);
+            modsPick = Make("Mods", 28, 230, 161, 28, delegate { PickPlugins(false); });
+            pluginsPick = Make("Plug-ins", 195, 230, 161, 28, delegate { PickPlugins(true); });
+            Explain(modsPick, "Show mods", "MainframeMods.cs");
+            Explain(pluginsPick, "Show plug-ins", "MainframeMods.cs");
+            modListHead = Section("INSTALLED >", 0, 274);
+            modListHead.Unruled = true;
+            modSearch = Input(28, 298, 222, 26);
             modSearch.Cue = "Search by name or author";
             modSearch.Box.AccessibleName = "Search your installed mods";
             Explain(modSearch, "Search installed mods", "MainframeMods.cs", null, "Search installed mods");
             modSearch.Box.TextChanged += delegate { modFirst = 0; FillMods(); };
-            modUpdate = Make("Update mods", 256, 242, 100, 26, delegate { UpdateMods(); });
+            modUpdate = Make("Update mods", 256, 298, 100, 26, delegate { UpdateMods(); });
             modUpdate.AccessibleName = "Update your installed mods from the mods directory";
             modUpdateUsual = modUpdate.Accent;
             Explain(modUpdate, "Update mods", "MainframeMods.cs", null, "Update mods");
@@ -185,7 +201,9 @@ namespace CapriDesktop
 
         private void CheckModsKey()
         {
-            if (more.Left != Scaled(146) || more.Text != "Settings" || modsKey.Top != more.Top || modsKey.Left < more.Right || modsKey.Right > minimize.Left) throw new Exception("Settings or Mods is in the wrong place.");
+            ShowSetupPage(false);
+            if (advancedKey.Left < Far || more.Left != Scaled(146) || more.Text != "Settings" || modsKey.Left != Scaled(234) || modsKey.Top != more.Top || modsKey.Left < more.Right || modsKey.Right > minimize.Left || close.Right > ClientSize.Width)
+                throw new Exception("The front page's bar isn't MAINFRAME, Settings, Mods, minimise and close.");
             try
             {
                 foreach (bool fallback in new[] { false, true })
@@ -210,11 +228,11 @@ namespace CapriDesktop
         {
             DismissHint();
             if (on && paged) ShowSettings(false);
+            if (on) setuped = false;
             modded = on;
-            more.Text = on ? "Back" : "Settings";
-            more.Invalidate();
+            Retitle();
             Place();
-            foreach (KeyValuePair<Control, int> entry in mainLeft) Reachable(entry.Key, !on);
+            ReachMain();
             foreach (KeyValuePair<Control, int> entry in modLeft) Reachable(entry.Key, on);
             Reachable(modsKey, !on);
             if (Hidden(ActiveControl) || (on && ActiveControl == modsKey)) more.Focus();
@@ -287,7 +305,7 @@ namespace CapriDesktop
                     if (none) { modSearch.Box.Text = "no mod is called this " + Guid.NewGuid().ToString("N"); FillMods(); Application.DoEvents(); }
                     string at = percent + "%" + (none ? " with no mods shown" : "") + ": ";
                     if (modMake.Left != modImport.Left || modMake.Right != modFolder.Right || modMake.Top < modImport.Bottom || untestedSwitch.Top < modMake.Bottom)
-                        return "Make a mod doesn't span Import mod to Mods folder between them and the switch at " + at + modMake.Bounds;
+                        return "Mod maker doesn't span Import mod to Mods folder between them and the switch at " + at + modMake.Bounds;
                     int lastRow = modEmpty.Visible ? modEmpty.Bottom : modNoMatch.Visible ? modNoMatch.Bottom : modListHead.Bottom;
                     for (int i = 0; i < MostModRows; i++) if (modAbouts[i].Visible) lastRow = Math.Max(lastRow, Math.Max(modAbouts[i].Bottom, modPublishes[i].Bottom));
                     if (modBack.Visible)
@@ -312,11 +330,16 @@ namespace CapriDesktop
             return row >= 0 && modAbouts[row].Visible ? modAbouts[row].Text : null;
         }
 
+        // Software, listed under Plug-ins: a plug-in, or a mod of kind app. Every other mod is under Mods.
+        private static bool Software(Mod mod) { return mod.Plugin != null || mod.File.App; }
+
         // A mod's row brought onto the page shown, or -1 when it isn't installed.
         private int ModRowOf(string id)
         {
-            int at = Installed().FindIndex(mod => mod.File.Id == id);
-            if (at < 0) return -1;
+            Mod found = Installed().Find(mod => mod.File.Id == id);
+            if (found == null) return -1;
+            if (capri.ModsPlugins != Software(found)) capri.ModsPlugins = Software(found);
+            int at = Installed().FindAll(mod => Software(mod) == capri.ModsPlugins).FindIndex(mod => mod.File.Id == id);
             modSearch.Box.Text = "";
             modFirst = at / ModRows * ModRows;
             FillMods();
@@ -336,8 +359,12 @@ namespace CapriDesktop
                 untestedSwitch.Checked = capri.UntestedMods;
                 syncing = was;
             }
-            List<Mod> installed = Installed();
+            bool plugins = capri.ModsPlugins;
+            ShowPick(plugins);
+            List<Mod> installed = Installed().FindAll(mod => Software(mod) == plugins);
             List<Mod> mods = ShownMods(installed, modSearch.Box.Text);
+            modEmpty.Text = plugins ? "No plug-ins yet. Import one with Import mod." : "No mods yet. Import a " + Mods.Extension + " file.";
+            modUpdate.Visible = !plugins;
             modShown = mods;
             int total = mods.Count, pageSize = ModRows;
             modFirst = Math.Max(0, Math.Min(modFirst, (Math.Max(0, total - 1) / pageSize) * pageSize));
@@ -355,20 +382,6 @@ namespace CapriDesktop
                 modAbouts[i].Width = Scaled(options ? 180 : 256);
                 if (mod == null) continue;
                 modCogs[i].AccessibleName = "Open " + (mod.File.Name ?? mod.File.Id) + "'s security overrides";
-                if (mod.Hers)
-                {
-                    // Hers: its name, what it is and its switch; nothing to remove, publish or set overrides for.
-                    modCogs[i].Visible = modRemoves[i].Visible = modPublishes[i].Visible = modOptions[i].Visible = false;
-                    modSwitches[i].Text = mod.On ? "On" : "Off";
-                    modSwitches[i].Accent = mod.On ? Cyan : Rose;
-                    modSwitches[i].AccessibleName = (mod.On ? "Turn off " : "Turn on ") + mod.File.Name;
-                    modSwitches[i].Invalidate();
-                    modNames[i].Text = mod.File.Name;
-                    modNames[i].ForeColor = mod.On ? White : Faint;
-                    modAbouts[i].Text = "HER OWN. Its parts are in Toggles, its colour in Custom colours.";
-                    modAbouts[i].ForeColor = Faint;
-                    continue;
-                }
                 if (mod.Plugin != null)
                 {
                     // A plug-in isn't published from here: its name, what it is, its switch, its cog and Remove.
@@ -400,6 +413,15 @@ namespace CapriDesktop
                     modAbouts[i].Text = "SWITCHED OFF: " + switchedWhy + ". " + modAbouts[i].Text;
                     modAbouts[i].ForeColor = Rose;
                 }
+                // The app it plugs into, and that it waits while that app is missing or off.
+                if (mod.File.PlugsInto != null)
+                {
+                    Tool app = capri.AppNamed(mod.File.PlugsInto);
+                    string named = (app != null ? app.Short : mod.File.PlugsInto).ToUpperInvariant();
+                    bool waits = mod.On && capri.AppAbsent(mod.File.PlugsInto) != null;
+                    modAbouts[i].Text = (waits ? "WAITS FOR " : "PLUGS INTO ") + named + ". " + modAbouts[i].Text;
+                    if (waits) modAbouts[i].ForeColor = Rose;
+                }
                 modSwitches[i].Text = mod.On ? "On" : "Off";
                 modSwitches[i].Accent = mod.On ? Cyan : Rose;
                 modSwitches[i].AccessibleName = (mod.On ? "Turn off " : "Turn on ") + mod.File.Name;
@@ -411,8 +433,10 @@ namespace CapriDesktop
             modBack.Visible = modNext.Visible = modPage.Visible = pages;
             modBack.Enabled = modFirst > 0;
             modNext.Enabled = modFirst + pageSize < total;
-            modPage.Text = "Page " + (modFirst / pageSize + 1) + " of " + ((total - 1) / pageSize + 1);
+            modPage.Text = PageText(modFirst, total, pageSize);
             if (capri.ModList.Problems.Count > 0) ModSays("Skipped " + capri.ModList.Problems[0], true);
+            // Rows hidden or moved up leave their old places to be painted again, with the footer that came up.
+            Repaint();
         }
 
         private static List<Mod> ShownMods(List<Mod> mods, string search)
@@ -429,13 +453,112 @@ namespace CapriDesktop
         private void ModSays(string text, bool problem)
         {
             modStatusTimer.Stop();
+            if (string.IsNullOrEmpty(text)) { StatusAtRest(); return; }
             modStatus.Text = text;
             modStatus.ForeColor = problem ? Rose : Cyan;
-            if (!string.IsNullOrEmpty(text))
+            modStatus.Invalidate();
             {
                 modStatusTimer.Interval = problem ? 10000 : 5000;
                 modStatusTimer.Start();
             }
+        }
+
+        // For checks: the status box at rest, with a message and back; the pick kept in her saved settings. Null when right.
+#if CHECKS
+        internal string StatusAndPickCheck(Func<bool> savedPick)
+        {
+            bool pickWas = capri.ModsPlugins;
+            try
+            {
+                ModSays("", false);
+                bool rest = modStatus.Text == StatusOk && modStatus.ForeColor == DeepEdge;
+                ModSays("Smoke said something.", false);
+                bool said = modStatus.Text == "Smoke said something." && modStatus.ForeColor == Cyan;
+                ModSays("Smoke went wrong.", true);
+                bool wrong = modStatus.ForeColor == Rose;
+                StatusAtRest();
+                bool back = modStatus.Text == StatusOk && modStatus.ForeColor == DeepEdge;
+                PickPlugins(true);
+                bool keptPlugins = savedPick() && pluginsPick.Accent == Cyan && modsPick.Accent == Rose;
+                PickPlugins(false);
+                bool keptMods = !savedPick() && modsPick.Accent == Cyan;
+                if (!rest || !said || !wrong || !back) return "The status box went wrong: at rest " + rest + ", a message " + said + ", a problem " + wrong + ", back at rest " + back;
+                if (!keptPlugins || !keptMods) return "The Mods / Plug-ins pick wasn't kept in her saved settings or lit: plug-ins " + keptPlugins + ", mods " + keptMods;
+                return null;
+            }
+            finally { capri.ModsPlugins = pickWas; StatusAtRest(); }
+        }
+#endif
+
+        private void StatusAtRest()
+        {
+            modStatus.Text = StatusOk;
+            modStatus.ForeColor = DeepEdge;
+            modStatus.Invalidate();
+        }
+
+        // Mods or Plug-ins under INSTALLED, kept with her settings; the search and the page start over.
+#if CHECKS
+        // Every control a swap moved or hid has its old place painted again (Mods / Plug-ins, front page to Mods, Settings
+        // scrolled), counted from what the window paints, since a picture redraws everything. Null when right.
+        internal string LeftoversCheck()
+        {
+            List<string> wrong = new List<string>();
+            Func<string, Action, string> swap = delegate(string named, Action act)
+            {
+                Dictionary<Control, Rectangle> before = new Dictionary<Control, Rectangle>();
+                foreach (Control one in Controls) if (one.Visible && ClientRectangle.IntersectsWith(one.Bounds)) before[one] = one.Bounds;
+                Application.DoEvents();
+                Update();
+                Painted = Rectangle.Empty;
+                act();
+                Application.DoEvents();
+                Update();
+                foreach (KeyValuePair<Control, Rectangle> was in before)
+                {
+                    bool moved = !was.Key.Visible || was.Key.Bounds != was.Value;
+                    Rectangle seen = Rectangle.Intersect(was.Value, ClientRectangle);
+                    if (moved && !seen.IsEmpty && !Painted.Contains(seen)) return named + " left " + (was.Key.Text.Length > 0 ? was.Key.Text : was.Key.GetType().Name) + "'s old place " + seen + " unpainted (painted " + Painted + ")";
+                }
+                return null;
+            };
+            bool pickWas = capri.ModsPlugins;
+            try
+            {
+                Show();
+                ShowMods(false);
+                ShowSettings(false);
+                string one = swap("the front page to Mods", delegate { ShowMods(true); });
+                if (one != null) wrong.Add(one);
+                PickPlugins(false);
+                one = swap("Mods to Plug-ins", delegate { PickPlugins(true); });
+                if (one != null) wrong.Add(one);
+                one = swap("Plug-ins to Mods", delegate { PickPlugins(false); });
+                if (one != null) wrong.Add(one);
+                ShowMods(false);
+                ShowSettings(true);
+                one = swap("Settings scrolled", delegate { Wheel(-3); });
+                if (one != null) wrong.Add(one);
+            }
+            finally { capri.ModsPlugins = pickWas; ShowSettings(false); ShowMods(false); }
+            return wrong.Count == 0 ? null : string.Join("; ", wrong.ToArray());
+        }
+#endif
+
+        private void PickPlugins(bool plugins)
+        {
+            if (capri.ModsPlugins != plugins) { capri.ModsPlugins = plugins; modFirst = 0; }
+            FillMods();
+        }
+
+        private void ShowPick(bool plugins)
+        {
+            modsPick.Accent = plugins ? Rose : Cyan;
+            pluginsPick.Accent = plugins ? Cyan : Rose;
+            modsPick.Status = plugins ? null : "Shown";
+            pluginsPick.Status = plugins ? "Shown" : null;
+            modsPick.Invalidate();
+            pluginsPick.Invalidate();
         }
 
         private void ImportMod()
@@ -498,7 +621,7 @@ namespace CapriDesktop
                     ModSays("Not imported. Nothing ran.", false);
                     return false;
                 }
-                FillMods();
+                PickPlugins(true);
                 ModSays((plugin.Name ?? plugin.Id) + " is in, and off. Turning it on in its row asks first.", false);
                 return true;
             }
@@ -522,10 +645,11 @@ namespace CapriDesktop
                     ModSays("Not imported. Nothing ran.", false);
                     return false;
                 }
-                FillMods();
+                PickPlugins(false);
                 // A pack that takes over slots another pack holds asks which keeps each.
                 AskConflicts();
-                ModSays(mod.Skin ? Stacked(mod) : mod.Code ? mod.File.Name + " is on and running." : mod.Skill ? mod.File.Name + " is on." + (mod.File.Games.Length == 0 ? " She can read it when it fits." : " She uses it when she plays " + mod.File.Games[0] + ".") : mod.File.WakeNames.Length == 0 ? mod.File.Name + " is on." : mod.File.Name + " is on. She now answers to " + Mods.Listed(mod.File.WakeNames) + " too.", false);
+                string mark = capri.ModList.LastMark == null ? "" : capri.ModList.LastMark + " ";
+                ModSays(mark + (mod.Skin ? Stacked(mod) : mod.Code ? mod.File.Name + " is on and running." : mod.Skill ? mod.File.Name + " is on." + (mod.File.Games.Length == 0 ? " She can read it when it fits." : " She uses it when she plays " + mod.File.Games[0] + ".") : mod.File.WakeNames.Length == 0 ? mod.File.Name + " is on." : mod.File.Name + " is on. She now answers to " + Mods.Listed(mod.File.WakeNames) + " too."), false);
                 return true;
             }
             catch (ModException error)
@@ -551,7 +675,7 @@ namespace CapriDesktop
                 }
                 UpdateDone(id, file);
                 FillMods();
-                ModSays(mod.File.Name + " is updated" + (mod.File.Version != null ? " to " + mod.File.Version : "") + (mod.On ? "." : ". It's still off."), false);
+                ModSays((capri.ModList.LastMark == null ? "" : capri.ModList.LastMark + " ") + mod.File.Name + " is updated" + (mod.File.Version != null ? " to " + mod.File.Version : "") + (mod.On ? "." : ". It's still off."), false);
                 return true;
             }
             catch (ModException error)
@@ -592,8 +716,8 @@ namespace CapriDesktop
             {
                 string path = modShown[at].Path;
                 string id = modShown[at].File.Id;
-                bool plugin = modShown[at].Plugin != null;
-                Mod current = Installed().Find(delegate(Mod mod) { return (mod.Plugin != null) == plugin && string.Equals(mod.Path, path, StringComparison.OrdinalIgnoreCase) && string.Equals(mod.File.Id, id, StringComparison.OrdinalIgnoreCase); });
+                bool plugin = Software(modShown[at]);
+                Mod current = Installed().Find(delegate(Mod mod) { return Software(mod) == plugin && string.Equals(mod.Path, path, StringComparison.OrdinalIgnoreCase) && string.Equals(mod.File.Id, id, StringComparison.OrdinalIgnoreCase); });
                 if (current != null) return current;
             }
             FillMods();
@@ -605,13 +729,6 @@ namespace CapriDesktop
         {
             Mod mod = ShownMod(row);
             if (mod == null) return false;
-            if (mod.Hers)
-            {
-                capri.SetTamagotchi(!mod.On);
-                FillMods();
-                ModSays(mod.File.Name + (capri.TamagotchiOn ? " is on." : " is off."), false);
-                return true;
-            }
             if (mod.Plugin != null) return SwitchPlugin(mod);
             try
             {
@@ -666,20 +783,30 @@ namespace CapriDesktop
         private void OpenModOptions(int row)
         {
             Mod mod = ShownMod(row);
-            if (mod == null) return;
+            if (mod != null) OpenModOptions(mod.File.Id);
+        }
+
+        // A code mod's options by its id: from its row, or asked for by the mod itself.
+        internal void OpenModOptions(string id)
+        {
             Control made;
             string title;
-            string problem = capri.MakeModOptions(mod.File.Id, out made, out title);
+            string problem = capri.MakeModOptions(id, out made, out title);
             if (problem != null) { ModSays(problem, true); return; }
             if (optionsSheet != null && !optionsSheet.IsDisposed) optionsSheet.Close();
             Size wanted = made.Width > 0 && made.Height > 0 ? made.Size : made.PreferredSize;
             int wide = Math.Max(360, Math.Min(1000, wanted.Width + 48)), tall = Math.Max(160, Math.Min(760, wanted.Height + 84));
-            optionsSheet = new ModOptionsSheet(this, SheetZoom(wide, tall), mod.File.Id, title, made, wide, tall);
+            optionsSheet = new ModOptionsSheet(this, SheetZoom(wide, tall), id, title, made, wide, tall);
             optionsSheet.Show(this);
             optionsSheet.Activate();
         }
 
         internal string ModOptionsTitle { get { return optionsSheet == null || optionsSheet.IsDisposed ? null : optionsSheet.Text; } }
+
+#if CHECKS
+        // For checks: the options sheet shut, so the next opening can be told apart.
+        internal void CloseModOptions() { if (optionsSheet != null && !optionsSheet.IsDisposed) optionsSheet.Close(); }
+#endif
 
         // A code mod's own page, opened from the mod: one at a time, in a sheet like its options, bigger if it wants.
         private ModOptionsSheet pageSheet;
@@ -734,7 +861,7 @@ namespace CapriDesktop
         private readonly Dictionary<string, DateTime> dropsDue = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, string> dropsKnown = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> dropsGone = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        private Timer dropTick;
+        private Clock.Ticker dropTick;
 
         internal void WatchMods()
         {
@@ -752,7 +879,7 @@ namespace CapriDesktop
                 modWatch.Renamed += delegate(object sender, System.IO.RenamedEventArgs e) { Dropped(e.OldFullPath, true); Dropped(e.FullPath, false); };
                 modWatch.Deleted += delegate(object sender, System.IO.FileSystemEventArgs e) { Dropped(e.FullPath, true); };
                 modWatch.EnableRaisingEvents = true;
-                dropTick = new Timer { Interval = 500 };
+                dropTick = new Clock.Ticker("mods drop") { Interval = 500 };
                 dropTick.Tick += delegate { TakeDrops(); };
                 dropTick.Start();
             }
@@ -844,6 +971,15 @@ namespace CapriDesktop
 
         // A mod dropped straight into her folder is taken in, the same file again is left alone, and one taken out
         // goes. The watcher is off in a test run, so this drives what it would hand over.
+#if CHECKS
+        // For the checks: a file dropped into, or taken out of, her mods folder, as the watcher would hand it over.
+        internal void DropForCheck(string file, bool gone)
+        {
+            dropsKnown.Remove(file);
+            if (gone) dropsGone.Add(file); else dropsGone.Remove(file);
+            TakeDrop(file);
+        }
+
         internal void CheckDrops(List<string> checks)
         {
             Mods mods = capri.ModList;
@@ -874,6 +1010,7 @@ namespace CapriDesktop
                 if (File.Exists(file)) File.Delete(file);
             }
         }
+#endif
 
         // Her questions about a code mod, answered by a check when it sets this.
         private Func<string, string, bool> modBoxForCheck;
@@ -898,6 +1035,7 @@ namespace CapriDesktop
         }
 
         // The offer comes before the first question for any code that can't be read, and never for code that can.
+#if CHECKS
         internal void CheckModOffer(List<string> checks, string output)
         {
             Func<string> whereWas = ModReadout.Where;
@@ -958,6 +1096,7 @@ namespace CapriDesktop
                 ModReadout.CopyFolder = folderWas;
             }
         }
+#endif
 
         // Whether to delete a removed mod's own saved data too. Only asked when it has some.
         internal Func<Mod, bool> DataAsk;
@@ -1004,6 +1143,7 @@ namespace CapriDesktop
             }
         }
 
+#if CHECKS
         internal void CheckModData(List<string> checks, string output)
         {
             Mods mods = capri.ModList;
@@ -1056,6 +1196,7 @@ namespace CapriDesktop
                 if (File.Exists(file)) File.Delete(file);
             }
         }
+#endif
 
         // The Mods page as it is now, saved as a picture, and the words on a mod's row; for checks.
         internal string PictureMods(string file, string id)
@@ -1077,6 +1218,7 @@ namespace CapriDesktop
             return row;
         }
 
+#if CHECKS
         internal void CheckMods(List<string> checks, string output)
         {
             FormWindowState wasState = WindowState;
@@ -1094,7 +1236,7 @@ namespace CapriDesktop
             ShowMods(true);
             if (!modded || more.Text != "Back" || modStatus.Left >= Far || modsKey.Left < Far) throw new Exception("The Mods page did not open, or it kept a Mods key to itself.");
             if (!ImportMod(good)) throw new Exception("A good mod was refused: " + modStatus.Text);
-            if (mods.All.Count != 1 || !File.Exists(Path.Combine(mods.Folder, "custom-names" + Mods.Extension))) throw new Exception("An imported mod was not saved.");
+            if (mods.All.Count != 1 || Directory.GetFiles(mods.Folder, "custom-names" + Mods.Extension, SearchOption.AllDirectories).Length != 1) throw new Exception("An imported mod was not saved.");
             if (!Hands.HeardName("hey nova, what time is it") || !Hands.HeardName("BIG Z open notepad") || !Hands.HeardName("big   z") || !Hands.HeardName("ask capricorn") || !Hands.HeardName("Capri, hello"))
                 throw new Exception("An imported name was not heard.");
             if (Hands.HeardName("the supernova was bright") || Hands.HeardName("novas are bright") || Hands.HeardName("big zebra"))
@@ -1126,7 +1268,8 @@ namespace CapriDesktop
             for (int i = 0; i < bad.GetLength(0); i++)
                 if (ImportMod(sample(bad[i, 0] + Mods.Extension, bad[i, 1])) || mods.All.Count != 1) throw new Exception("A bad mod was let in: " + bad[i, 0]);
             if (ImportMod(sample("wrong.txt", "{}"))) throw new Exception("A file that isn't a mod was let in.");
-            if (Directory.GetFiles(mods.Folder, "*" + Mods.Extension).Length != 1) throw new Exception("A refused mod was left in her folder.");
+            // Her templates are loose files to copy, not mods, so their folders aren't counted.
+            if (Array.FindAll(Directory.GetFiles(mods.Folder, "*" + Mods.Extension, SearchOption.AllDirectories), one => !Mods.Templates(Path.GetDirectoryName(one))).Length != 1) throw new Exception("A refused mod was left in her folder.");
             checks.Add("PASS mods: broken files, bad ids and bad names are refused");
             RemoveMod(0);
             if (mods.All.Count != 0 || Hands.HeardName("hey nova")) throw new Exception("Removing a mod left it behind.");
@@ -1167,7 +1310,13 @@ namespace CapriDesktop
             if (File.Exists(mods.LogPath)) throw new Exception("Removing the hearing log mod left its list behind.");
             checks.Add("PASS mods: the hearing log only runs while its mod is on, and goes with it");
             CheckModCogs(checks, output);
+            string statusWrong = StatusAndPickCheck(capri.ModsPluginsSaved);
+            if (statusWrong != null) throw new Exception(statusWrong);
+            checks.Add("PASS Mods > INSTALLED shows the kind picked, Mods or Plug-ins, lit, kept in her saved settings; the status box reads " + StatusOk + " at rest, shows a message in its colour and goes back");
             CheckDirectory(checks, output);
+            // Her own code mods it stopped, laid again and running, so no check after it finds them gone.
+            capri.ModsBack();
         }
+#endif
     }
 }

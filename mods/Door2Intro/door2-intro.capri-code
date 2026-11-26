@@ -1,7 +1,7 @@
 // capri-mod: 1
 // id: door2-intro
 // name: Door 2 Intro
-// version: 1.28.0
+// version: 1.29.0
 // author: Yuno
 // description: Hexagons grow like vines in from her screen's edges and out across every other screen, leaving a solid red circle where she lands; it opens and she wakes in it.
 // intro: yes
@@ -135,36 +135,11 @@ public class Door2Intro : ICapriMod, ICapriIntro, ICapriIntroNames, ICapriIntroS
     // Its colours, named for Custom colours and read back, as any mod's are.
     private void Tint() { Alert = capri.Ui.Colour("Hexagons", AlertUsual); }
 
-    // Toggles > Intros in her settings; an older Capri without it still has sys.md's start-up intro list.
+    // Toggles > Intros in her settings.
     private bool Switched()
     {
-        try
-        {
-            bool? asked = capri.Settings.IsOn("intro_door2");
-            if (asked != null) return asked.Value;
-        }
-        catch (Exception error) { capri.Log(error.Message); }
-        try
-        {
-            string file = SysFile(Home());
-            if (!File.Exists(file)) return false;
-            bool inside = false;
-            foreach (string raw in File.ReadAllLines(file))
-            {
-                string one = (raw ?? "").Trim();
-                if (one.StartsWith("#"))
-                {
-                    inside = one.TrimStart('#').Trim().Equals("Her start-up intro", StringComparison.OrdinalIgnoreCase);
-                    continue;
-                }
-                if (!inside || one.Length == 0 || one.StartsWith(">")) continue;
-                if (one.StartsWith("intros:", StringComparison.OrdinalIgnoreCase)) one = one.Substring(7);
-                foreach (string part in one.Split(','))
-                    if (part.Trim().Equals("door2", StringComparison.OrdinalIgnoreCase)) return true;
-            }
-        }
-        catch (Exception error) { capri.Log(error.Message); }
-        return false;
+        try { return capri.Settings.IsOn("intro_door2") == true; }
+        catch (Exception error) { capri.Log(error.Message); return false; }
     }
 
     public bool Heard(string words)
@@ -1126,30 +1101,5 @@ public class Door2Intro : ICapriMod, ICapriIntro, ICapriIntroNames, ICapriIntroS
         return made;
     }
 
-
-    // Her data folder: a mod's own folder is mods\<id>-data inside it.
-    private string Home() { return Path.GetDirectoryName(Path.GetDirectoryName(capri.Folder)) ?? ""; }
-
     private static double Clamp(double value) { return value < 0 ? 0 : value > 1 ? 1 : value; }
-
-    // Her sys.md now sits in a folder of its own under personalSettings, one per side, and only the one she is
-    // using is written as she starts. So the newest sys.md under personalSettings is hers; the old places are the
-    // fallback for an older Capri.
-    private static string SysFile(string home)
-    {
-        string newest = null;
-        DateTime when = DateTime.MinValue;
-        try
-        {
-            string settings = Path.Combine(home, "personalSettings");
-            if (Directory.Exists(settings))
-                foreach (string one in Directory.GetFiles(settings, "sys.md", SearchOption.AllDirectories))
-                {
-                    DateTime at = File.GetLastWriteTimeUtc(one);
-                    if (newest == null || at > when) { newest = one; when = at; }
-                }
-        }
-        catch (Exception) { newest = null; }
-        return newest ?? Path.Combine(home, "sys.md");
-    }
 }

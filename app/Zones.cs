@@ -198,6 +198,7 @@ namespace CapriDesktop
         // The zone system's check: a mod claiming a pool, her lines coming back when it lets go, a contested zone, the
         // modders' list. Mod packs written only while on and taken away after; edited or older files and the switch
         // respected.
+#if CHECKS
         internal void CheckModPacks(List<string> checks, string output)
         {
             Mods mods = ModList;
@@ -237,9 +238,13 @@ namespace CapriDesktop
                 catch (IOException) { }
                 Brain.SenpaiOn = switchWas;
                 mainframe.ModAsk = askWas;
+                // Her own code mods it stopped, laid again and running, so no check after it finds them gone.
+                ModsBack();
             }
         }
+#endif
 
+#if CHECKS
         internal void CheckModZones(List<string> checks, string output)
         {
             Mods mods = ModList;
@@ -342,11 +347,15 @@ namespace CapriDesktop
                 mainframe.ModAsk = askWas;
                 foreach (Mod left in mods.All.ToArray()) mods.Remove(left);
                 Zones.DropAll();
+                // Her own code mods it stopped, laid again and running, so no check after it finds them gone.
+                ModsBack();
             }
         }
+#endif
 
         // Every pool of every line file read back through her own reader, so a "name: value" settings line is never
         // said aloud, for pools added later and edited files too.
+#if CHECKS
         internal void CheckPoolLines(List<string> checks, string output)
         {
             Func<string, bool> setting = delegate(string line)
@@ -395,9 +404,11 @@ namespace CapriDesktop
                     if (setting(line)) throw new Exception("A settings line in the preamble was read into the pool " + pool.Key + ": " + line);
             checks.Add("PASS pool lines: a settings line between a title and a section of the same words stays out of every pool, which is the case that made her say one");
         }
+#endif
 
         // The spares an update leaves beside the new programs. Nothing exercised them, and they grew without
         // limit: four programs at about 30 MB each, kept for every update ever applied.
+#if CHECKS
         internal void CheckSpares(List<string> checks, string output)
         {
             string folder = Path.Combine(output, "spares");
@@ -451,6 +462,7 @@ namespace CapriDesktop
                 throw new Exception("\"--close\" was not read as closing her, or another command was.");
             checks.Add("PASS updater --close: with or without a folder it only closes her and is decided before any update, so an updater never takes it for one");
         }
+#endif
     }
 #endif
 }

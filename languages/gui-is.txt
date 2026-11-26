@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Þögn til {n}:{n}
 Quiet until turned off	Þögn þar til slökkt er
 Export settings	Flytja út stillingar
 Import settings	Flytja inn stillingar
-Save Mainframe position	Muna staðsetningu spjaldsins
+Save Mainframe position	Vista staðsetningu Mainframe
+Capri options	Capri valkostir

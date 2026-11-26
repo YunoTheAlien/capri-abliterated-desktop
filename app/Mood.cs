@@ -16,7 +16,7 @@ namespace CapriDesktop
         private static double warmth;
         private static double sore;
         private static DateTime cooled = SimTime.UtcNow;
-        private const double HalfLifeMinutes = 45;
+        internal const double HalfLifeMinutes = 45;
 
         // How kindness and meanness land for her now: her personality's numbers with her mood's added, never under these
         // floors, so a kindness always counts for something and she never lets mistreatment go entirely.
@@ -347,12 +347,6 @@ namespace CapriDesktop
                 if (real) warmth = Math.Min(60, warmth + 2);
                 return (int)Math.Round(eased);
             }
-        }
-
-        // Forgiven, or simply put down for long enough.
-        internal static void Settle()
-        {
-            lock (gate) { sore = 0; }
         }
 
         internal static void Forget()

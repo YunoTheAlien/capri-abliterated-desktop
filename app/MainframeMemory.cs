@@ -17,7 +17,7 @@ namespace CapriDesktop
         internal void OpenMemory()
         {
             if (memorySheet != null && !memorySheet.IsDisposed && memorySheet.Zoom != zoom) memorySheet.Close();
-            if (memorySheet == null || memorySheet.IsDisposed) memorySheet = new MemorySheet(this, zoom);
+            if (memorySheet == null || memorySheet.IsDisposed) memorySheet = new MemorySheet(this, SheetZoom(MemorySheet.Wide, MemorySheet.Tall));
             if (!memorySheet.Visible) memorySheet.Show(this);
             memorySheet.Activate();
         }
@@ -173,7 +173,7 @@ namespace CapriDesktop
 
         private sealed class MemorySheet : ModSheet
         {
-            private const int Wide = 760, Tall = 700, ListTop = 120, ListTall = 470;
+            internal const int Wide = 760, Tall = 700, ListTop = 120, ListTall = 470;
             private readonly Entry adding;
             private readonly Key addKey, cancelKey, undoKey, wipeKey;
             private readonly Label notice;
@@ -183,9 +183,10 @@ namespace CapriDesktop
             private MemoryLines.Line editing;
             private bool wipeArmed;
 
-            internal MemorySheet(Mainframe owner, float zoom) : base(owner, zoom, "Her memory", "HER MEMORY >", Wide, Tall)
+            internal MemorySheet(Mainframe owner, float zoom) : base(owner, zoom, "Her memory", "HER MEMORY", Wide, Tall)
             {
-                Words("What she keeps about you on this PC. Edit or forget any of it.", 28, 52, 704, 18, Small(), Faint);
+                Parts(MemoryParts, 0, delegate(int part) { Frame.ShowMemoryPart(part, this); }, "Clear memory", delegate { Frame.capri.ClearMemoryAsked(); });
+                Words("Kept on this PC.", 28, 52, 704, 18, Small(), Faint);
                 adding = new Entry { Bounds = Box(28, 78, 500, 26), Cue = "Something she should remember" };
                 adding.Box.AccessibleName = "Something she should remember about you";
                 adding.Box.KeyDown += delegate(object sender, KeyEventArgs e)
@@ -465,6 +466,7 @@ namespace CapriDesktop
             }
         }
 
+#if CHECKS
         internal void CheckMemoryWindow(List<string> checks, string output)
         {
             string aboutWas = Brain.MemoryPath, chatsWas = Brain.MemoriesPath, gamesWas = GameNotes.Folder;
@@ -516,5 +518,6 @@ namespace CapriDesktop
                 try { Directory.Delete(folder, true); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
+#endif
     }
 }

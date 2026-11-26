@@ -254,7 +254,7 @@ namespace CapriDesktop
         internal static readonly Rectangle ChairBody = Rectangle.FromLTRB(534, 205, 692, 416);
         internal const int SweepFrom = 4, ChairLeave = 280;
 
-        private readonly Beat ticks = new Beat();
+        private readonly Clock.Frames ticks = new Clock.Frames("EmoteWindow");
         private readonly System.Diagnostics.Stopwatch watch = new System.Diagnostics.Stopwatch();
         private EmoteClip clip;
         private EmoteClock clock;
@@ -806,6 +806,7 @@ namespace CapriDesktop
         // Her chair and heart: both clips whole at 30 a second; the chair at her size, keeping her black body; it holds
         // while she answers; asks and mentions set them off but look-alikes don't; a mention still gets her answer; she
         // returns to what she was doing.
+#if CHECKS
         private void SmokeEmotes(List<string> checks, string output)
         {
             EmoteClip chair = EmoteClip.Load("chair"), heart = EmoteClip.Load("heart");
@@ -1306,9 +1307,11 @@ namespace CapriDesktop
             checks.Add("PASS small brains' hearts: " + localHearts);
             checks.Add("PASS emotes played in real time on this desktop, next frames decoded ahead: " + timing);
         }
+#endif
         // Smoke only, asked for by name with CAPRI_EMOTE_FILM set to a folder: records of her real windows on this (hidden)
         // desktop, from a second before she's asked until she's back standing, for chair-real-run.mp4 and heart-real-run.mp4,
         // made from them afterwards. Her stand-in brain answers; nothing is said out loud.
+#if CHECKS
         private void SmokeEmoteFilms(List<string> checks, string output)
         {
             string folder = Environment.GetEnvironmentVariable("CAPRI_EMOTE_FILM");
@@ -1378,6 +1381,7 @@ namespace CapriDesktop
                 File.WriteAllLines(Path.Combine(folder, "film-notes.txt"), notes.ToArray());
             }
         }
+#endif
 
         private static void Pump(double seconds)
         {
@@ -1386,6 +1390,7 @@ namespace CapriDesktop
         }
         // A heart started while a game job's busy messages starve her window's timers still plays through: her emote window
         // steps on her own clock, not on a window timer.
+#if CHECKS
         private void SmokeEmoteStarved(List<string> checks)
         {
             ThrowCheck(checks, delegate(List<string> list, List<short[]> sounds)
@@ -1396,7 +1401,7 @@ namespace CapriDesktop
                 bool motionWas = preferences.Motion;
                 preferences.Motion = true;
                 Starver keeper = new Starver(true);
-                System.Windows.Forms.Timer probe = new System.Windows.Forms.Timer { Interval = 33 };
+                System.Windows.Forms.Timer probe = new System.Windows.Forms.Timer { Interval = 33 }; // not her clock: proves the stand-in starves window timers
                 int probed = 0;
                 probe.Tick += delegate { if (!keeper.Done) probed++; };
                 System.Diagnostics.Stopwatch busy = System.Diagnostics.Stopwatch.StartNew();
@@ -1433,5 +1438,6 @@ namespace CapriDesktop
                 }
             });
         }
+#endif
     }
 }

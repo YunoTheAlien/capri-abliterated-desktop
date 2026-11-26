@@ -565,6 +565,7 @@ namespace CapriDesktop
         }
 
         // Run by Plugins.Check with its own folder in Plugins.Folder; that check puts back the plug-ins in use.
+#if CHECKS
         internal static void Check(List<string> checks, string root)
         {
             Action<string> was = Plugins.OpenBrowser;
@@ -650,5 +651,6 @@ namespace CapriDesktop
                 finally { Plugins.OpenBrowser = was; McpSignIn.Folder = keysWas; }
             }
         }
+#endif
     }
 }

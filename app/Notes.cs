@@ -75,7 +75,7 @@ namespace CapriDesktop
             {
                 string list = ShippedPath(path);
                 if (list == null || !File.Exists(list)) return had;
-                foreach (string row in File.ReadAllLines(list))
+                foreach (string row in ReadLines(list))
                 {
                     int tab = row.IndexOf('\t');
                     if (tab > 0) had[row.Substring(0, tab).Trim()] = row.Substring(tab + 1).Trim();
@@ -240,6 +240,7 @@ namespace CapriDesktop
 
         // That a reset to stock leaves them a way back, that only three are kept, and that the oldest goes by
         // when it was written rather than by the number in its name.
+#if CHECKS
         internal static void SpareCheck(System.Collections.Generic.List<string> checks, string folder)
         {
             string path = Path.Combine(folder, "lines.md");
@@ -313,6 +314,7 @@ namespace CapriDesktop
             checks.Add("PASS a file she was given and nobody touched gets no spare at all, which is what keeps her folder from filling with copies of text nobody changed; line ends alone are not an edit; and a file with no record counts as theirs, so a build from before the record existed cannot lose anyone's work");
             checks.Add("PASS a reset to stock keeps their file beside it first, so an evening's work has a way back: the newest " + MostSpares + " spares are kept, numbered past the highest, the oldest goes by when it was written rather than by the number in its name, and a file nothing overwrites never gets one");
         }
+#endif
 
         // Writes one of her files only when its text differs, so passes with nothing to do leave it and its time alone.
         // Hidden or visible as it was, since Windows won't replace a hidden file outright.
@@ -387,7 +389,7 @@ namespace CapriDesktop
             try
             {
                 if (!File.Exists(path)) return;
-                string[] had = File.ReadAllLines(path);
+                string[] had = ReadLines(path);
                 // The reset line and its note go in after the fresh text is built, so a refresh keeps the note that
                 // says what the setting does. Only for a file that has the line.
                 string authority = fresh;
@@ -499,6 +501,7 @@ namespace CapriDesktop
 
         // The old marks moved over in every kind of file of hers: shared ones, both sides, packs; switched-off options, a
         // section already marked and "> you:" left as they are; line ends kept; a second run writes nothing.
+#if CHECKS
         internal static void RemarkCheck(System.Collections.Generic.List<string> checks, string folder)
         {
             string root = Path.Combine(folder, "remark-" + Guid.NewGuid().ToString("N").Substring(0, 6), "personalSettings");
@@ -535,9 +538,11 @@ namespace CapriDesktop
             checks.Add("PASS her old \">\" notes become \">!\" in every file of hers, shared ones, both sides and packs: options switched off, a section already marked and \"> you:\" stay, a bare \">\" spacer becomes \">!\" even in a marked section, line ends are kept, and a second run writes nothing; her packs and interests files with no extension too, where her own list switched off under its notes stays \">\"");
             TranslateCheck(checks, folder);
         }
+#endif
 
         // A file in another language: only ">!" note words change. Headings, settings, lists and indented examples stay byte
         // for byte, and a menu path in a note is her menu as it shows, not the translator's wording.
+#if CHECKS
         internal static void TranslateCheck(System.Collections.Generic.List<string> checks, string folder)
         {
             Func<string, string> translateWas = Translate, menuWas = MenuName;
@@ -578,6 +583,7 @@ namespace CapriDesktop
                 try { File.Delete(path); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
+#endif
 
         // Every .md and .txt of hers in her settings folder, plus the extensionless interest files, marked the new way
         // at each start; the interests list is marked once known. How many were written.
@@ -741,6 +747,7 @@ namespace CapriDesktop
 
         // personality.md, or any flagged file: a file still as shipped is written whole in their language with every heading,
         // setting and flag kept, goes back to English with no language, and is never touched once they change it.
+#if CHECKS
         internal static void WholeCheck(System.Collections.Generic.List<string> checks, string folder)
         {
             string path = Path.Combine(folder, "whole.md");
@@ -774,6 +781,7 @@ namespace CapriDesktop
                 try { if (File.Exists(path)) File.Delete(path); } catch (Exception) { }
             }
         }
+#endif
 
         internal static string[] InTheirLanguage(string[] lines)
         {
@@ -815,7 +823,7 @@ namespace CapriDesktop
         internal static bool Unexplained(string path)
         {
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) return false;
-            string[] had = File.ReadAllLines(path);
+            string[] had = ReadLines(path);
             List<string> kept = new List<string>();
             foreach (string row in had) if (!(row ?? "").TrimStart().StartsWith(SettingMark, StringComparison.Ordinal)) kept.Add(row);
             if (kept.Count == had.Length) return false;
@@ -829,7 +837,7 @@ namespace CapriDesktop
         {
             List<string> wanted = new List<string>();
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) return wanted;
-            string[] rows = File.ReadAllLines(path);
+            string[] rows = ReadLines(path);
             foreach (int at in Settings(rows, lineFile))
             {
                 string one = rows[at].Trim();
@@ -893,7 +901,7 @@ namespace CapriDesktop
         internal static int Explained(string path, Dictionary<string, string> lines, bool lineFile = false)
         {
             if (lines == null || lines.Count == 0 || !File.Exists(path)) return 0;
-            string[] rows = File.ReadAllLines(path);
+            string[] rows = ReadLines(path);
             HashSet<int> settings = new HashSet<int>(Settings(rows, lineFile));
             List<string> made = new List<string>();
             int written = 0;

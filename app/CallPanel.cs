@@ -328,7 +328,7 @@ namespace CapriDesktop
     {
         private readonly Form owner;
         private readonly float scale;
-        private readonly Timer delay = new Timer { Interval = 400 };
+        private readonly Clock.Ticker delay = new Clock.Ticker("call panel delay") { Interval = 400 };
         private Mainframe.HintCard card;
         private Func<string> words;
         private Func<Rectangle> box;
@@ -387,8 +387,8 @@ namespace CapriDesktop
         private readonly CallFonts fonts;
         private readonly CallLive live = new CallLive();
         private readonly CallCaption caption = new CallCaption();
-        private readonly Timer ticks = new Timer { Interval = 100 };
-        private readonly Timer animation = new Timer { Interval = 33 };
+        private readonly Clock.Ticker ticks = new Clock.Ticker("call panel second") { Interval = 100 };
+        private readonly Clock.Frames animation = new Clock.Frames("call panel animation") { Interval = 33 };
         private readonly CallTips tips;
         private Bitmap sheet;
         private int hover, pressed;
@@ -598,6 +598,7 @@ namespace CapriDesktop
             if (part == 4 && EndPressed != null) EndPressed();
         }
 
+#if CHECKS
         internal static void Smoke(List<string> checks, string folder, Bitmap face, CallView talking)
         {
             CallView[] states =
@@ -671,6 +672,7 @@ namespace CapriDesktop
                     }
             checks.Add("PASS call pill: four states at 100, 150 and 200 percent, with words and buttons inside, round hit areas, handlers, expired and disabled captions, stopped hidden timers and a reused bitmap; saved for review");
         }
+#endif
 
         protected override void Dispose(bool disposing)
         {
@@ -702,8 +704,8 @@ namespace CapriDesktop
         private readonly CallFonts fonts;
         private readonly CallLive live = new CallLive();
         private readonly CallCaption caption = new CallCaption();
-        private readonly Timer ticks = new Timer { Interval = 100 };
-        private readonly Timer animation = new Timer { Interval = 33 };
+        private readonly Clock.Ticker ticks = new Clock.Ticker("call panel second") { Interval = 100 };
+        private readonly Clock.Frames animation = new Clock.Frames("call panel animation") { Interval = 33 };
         private readonly CallButton hide, mic, discord, cc, end, again;
         private readonly CallTips tips;
         private string drawn;
@@ -1174,6 +1176,7 @@ namespace CapriDesktop
             if (fonts.Mono.GetHeight(graphics) > 17 * scale) throw new Exception("Call caption lines overlap.");
         }
 
+#if CHECKS
         internal static void Smoke(List<string> checks, string folder, Bitmap face)
         {
             DateTime now = DateTime.UtcNow;
@@ -1268,5 +1271,6 @@ namespace CapriDesktop
             checks.Add("PASS call panel: six states at 100, 150 and 200 percent, with tiles, ripples, words, meter, two caption lines, status and buttons inside their places; saved for review");
             checks.Add("PASS call rings grow with loudness, the dot respects Motion, captions fade and expire, button tips follow their actions, and ended summaries handle one answer, six answers and hours");
         }
+#endif
     }
 }

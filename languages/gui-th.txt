@@ -219,4 +219,5 @@ Quiet until {n}:{n}	เงียบถึง {n}:{n}
 Quiet until turned off	เงียบจนกว่าจะปิด
 Export settings	ส่งออกการตั้งค่า
 Import settings	นำเข้าการตั้งค่า
-Save Mainframe position	จำตำแหน่งแผง
+Save Mainframe position	บันทึกตำแหน่ง Mainframe
+Capri options	ตัวเลือก Capri

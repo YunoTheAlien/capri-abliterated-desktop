@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Silenci fins a les {n}:{n}
 Quiet until turned off	Silenci fins que es desactivi
 Export settings	Exporta la configuració
 Import settings	Importa la configuració
-Save Mainframe position	Recorda la posició del tauler
+Save Mainframe position	Desa la posició del Mainframe
+Capri options	Opcions de Capri

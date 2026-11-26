@@ -24,17 +24,17 @@ namespace CapriDesktop
             workspaceKey.Accent = Cyan;
             workspaceKey.AccessibleName = "Workspace: Claude Code chats in your folders";
             Explain(workspaceKey, "WORKSPACE", "WorkspaceWindow.cs", null, "Workspace");
-            logKey = Make(LogSheet.KeyText, 302, 57, 54, 18, delegate { capri.ShowLog(); });
+            logKey = Make(Mainframe.LogKeyText, 302, 57, 54, 18, delegate { capri.ShowLog(); });
             logKey.Accent = Cyan;
             logKey.AccessibleName = "Her log: the lines she builds and the faults she hits, as they happen";
-            Explain(logKey, LogSheet.KeyText, "LogSheet.cs", null, "Her log");
+            Explain(logKey, Mainframe.LogKeyText, "MainframeLog.cs", null, "Her log");
         }
 
         internal string WorkspaceKeyFits()
         {
             foreach (Control control in Controls)
             {
-                if (control == workspaceKey || !control.Visible || control.Text.Length == 0) continue;
+                if (control == workspaceKey || !control.Visible || control.Text.Length == 0 || Hidden(control)) continue;
                 if (control.Bounds.IntersectsWith(workspaceKey.Bounds)) return "Workspace key overlaps " + control.Text;
             }
             if (TextRenderer.MeasureText(workspaceKey.Text, workspaceKey.Font).Width + Scaled(12) > workspaceKey.Width) return "Workspace key text is clipped.";
@@ -77,8 +77,7 @@ namespace CapriDesktop
             workspaceWindow.Activate();
         }
 
-        // Made once, and ahead of time while she is idle: closing it only hides it, so the first open was the only
-        // slow one.
+        // Made when first opened: closing it hides it for the Mainframe's CloseGrace, then it goes (never while a job runs).
         private void MakeWorkspaceWindow()
         {
             LoadWorkspace();
@@ -87,13 +86,8 @@ namespace CapriDesktop
             float fit = Math.Max(0.75f, Math.Min(mainframe.WorkspaceScale, Math.Min(area.Width / 900f, area.Height / 600f)));
             workspaceWindow = new WorkspaceWindow(workspace, delegate { return Security.Preset == Security.Blackwall; }, fit, true);
             workspaceWindow.Icon = mainframe.Icon;
-        }
-
-        internal void WarmWorkspace()
-        {
-            if (quitting || testing) return;
-            try { MakeWorkspaceWindow(); IntPtr made = workspaceWindow.Handle; }
-            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            WorkspaceWindow made = workspaceWindow;
+            made.Disposed += delegate { if (workspaceWindow == made) workspaceWindow = null; };
         }
 
         internal void OpenWorkspace()
@@ -233,7 +227,7 @@ namespace CapriDesktop
         private readonly Action<WorkspaceChat, WorkspaceItem> changed;
         private readonly object changeGate = new object();
         private readonly HashSet<WorkspaceChat> pendingChanges = new HashSet<WorkspaceChat>();
-        private readonly System.Windows.Forms.Timer changeClock = new System.Windows.Forms.Timer { Interval = 40 };
+        private readonly Clock.Ticker changeClock = new Clock.Ticker("workspace change") { Interval = 40 };
         private bool changePosted, changeUrgent;
         private long changeCalm;
         private readonly Dictionary<WorkspaceChat, HashSet<WorkspaceItem>> pendingItems = new Dictionary<WorkspaceChat, HashSet<WorkspaceItem>>();
@@ -256,7 +250,7 @@ namespace CapriDesktop
         internal WorkspaceChat Chat { get { return chat; } }
         internal bool InFront { get { return Visible && WindowState != FormWindowState.Minimized && GetForegroundWindow() == Handle; } }
 
-        [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+        private static IntPtr GetForegroundWindow() { return Native.GetForegroundWindow(); }
 
         internal WorkspaceWindow(Workspace workspace, Func<bool> blackwall, float zoom, bool live)
         {
@@ -323,6 +317,8 @@ namespace CapriDesktop
             workspace.Changed += changed;
             HandleCreated += delegate { lock (changeGate) { if (changePosted) changeClock.Start(); } };
             FormClosing += ClosingWindow;
+            VisibleChanged += delegate { if (Visible) Clock.Stop(LetGoJob); };
+            Disposed += delegate { Clock.Stop(LetGoJob); };
             ResumeLayout(false);
             FillChats();
             List<WorkspaceChat> loaded = workspace.Chats();
@@ -1138,6 +1134,20 @@ namespace CapriDesktop
             SavePlace();
             e.Cancel = true;
             Hide();
+            LetGoLater();
+        }
+
+        private const string LetGoJob = "let go WorkspaceWindow";
+
+        // Hidden, it goes once the Mainframe's CloseGrace is up; a job still running keeps it a while longer.
+        private void LetGoLater()
+        {
+            Clock.After(LetGoJob, Mainframe.CloseGrace, delegate
+            {
+                if (IsDisposed || Visible) return;
+                if (workspace.Chats().Exists(chat => chat.Running)) { LetGoLater(); return; }
+                Dispose();
+            });
         }
 
         private void LoadPlace()
@@ -1328,7 +1338,7 @@ namespace CapriDesktop
         }
         internal string CopyText(WorkspaceItem item) { return transcript.CopyOf(item); }
         // Where copied text goes: Windows' clipboard, or the smoke's stand-in so a run never touches theirs.
-        internal static Action<string> ClipboardWrite = delegate(string text) { Clipboard.SetText(text); };
+        internal static Action<string> ClipboardWrite = delegate(string text) { if (!Recorders.CopyHeld(text)) Clipboard.SetText(text); };
         internal string CodeFont { get { return mono.Name; } }
         internal string ProseFont { get { return Font.Name; } }
         internal bool UndoOffered { get { return undo.Visible && undo.Enabled; } }
@@ -2062,7 +2072,7 @@ namespace CapriDesktop
             // Claude thinking between calls, and where its line sits.
             private bool thinking;
             private Rectangle thinkLine;
-            private readonly System.Windows.Forms.Timer thinkingClock = new System.Windows.Forms.Timer { Interval = 1000 };
+            private readonly Clock.Ticker thinkingClock = new Clock.Ticker("workspace thinking") { Interval = 1000 };
             internal Func<double> Seconds;
             internal int LayoutMeasures, LayoutPasses, ItemFills, LaidWords, PiecesDrawn;
             internal Rectangle ThinkingInvalidated;
@@ -2131,7 +2141,7 @@ namespace CapriDesktop
             private bool sawConversation;
             // The shine's clock, the one seam its frames hang on. On tryout-090 this line becomes:
             //     private readonly Beat shineClock = new Beat { Interval = 33 };
-            private readonly System.Windows.Forms.Timer shineClock = new System.Windows.Forms.Timer { Interval = 33 };
+            private readonly Clock.Frames shineClock = new Clock.Frames("workspace shine") { Interval = 33 };
             private static readonly Stopwatch shineTime = Stopwatch.StartNew();
             // Where the shine is in its pass, 0 to 1, when the smoke pictures it; below 0 it follows the clock.
             internal static double ShineFixed = -1;
@@ -4233,7 +4243,7 @@ namespace CapriDesktop
             private long lastPress = -10000;
             private Point pressedAt;
             private Point dragAt;
-            private readonly System.Windows.Forms.Timer edgeClock = new System.Windows.Forms.Timer { Interval = 40 };
+            private readonly Clock.Frames edgeClock = new Clock.Frames("workspace edge") { Interval = 40 };
             private static readonly Stopwatch pressClock = Stopwatch.StartNew();
             private static Color Chosen { get { return Color.FromArgb(78, Neon.Cyan); } }
 
@@ -4454,7 +4464,7 @@ namespace CapriDesktop
             private string copyWhat;
             private bool copyHot;
             private long tickedAt = -10000;
-            private readonly System.Windows.Forms.Timer tickClock = new System.Windows.Forms.Timer { Interval = 1000 };
+            private readonly Clock.Ticker tickClock = new Clock.Ticker("workspace second") { Interval = 1000 };
 
             private void CopyHover(Point at)
             {

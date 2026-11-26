@@ -649,7 +649,7 @@ namespace CapriDesktop
         internal string Seal()
         {
             byte[] plain = Encoding.UTF8.GetBytes(ToJson());
-            try { return Convert.ToBase64String(ProtectedData.Protect(plain, Entropy, DataProtectionScope.CurrentUser)); }
+            try { return MachineSeal.Seal(plain, Entropy); }
             finally { Array.Clear(plain, 0, plain.Length); }
         }
 
@@ -660,8 +660,8 @@ namespace CapriDesktop
             byte[] plain = null;
             try
             {
-                plain = ProtectedData.Unprotect(Convert.FromBase64String(sealedState), Entropy, DataProtectionScope.CurrentUser);
-                return FromJson(Encoding.UTF8.GetString(plain));
+                plain = sealedState.StartsWith(MachineSeal.Mark, StringComparison.Ordinal) ? MachineSeal.Unseal(sealedState, Entropy) : MachineSeal.FromWindows(sealedState, Entropy);
+                return plain == null ? null : FromJson(Encoding.UTF8.GetString(plain));
             }
             catch (CryptographicException) { return null; }
             catch (FormatException) { return null; }

@@ -51,7 +51,7 @@ namespace CapriDesktop
             {
                 List<string> kept = new List<string>();
                 bool cutting = false, cut = false;
-                foreach (string raw in File.ReadAllText(path).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+                foreach (string raw in Notes.ReadAll(path).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
                 {
                     string one = raw.Trim();
                     if (one.StartsWith("##", StringComparison.Ordinal))
@@ -81,20 +81,23 @@ namespace CapriDesktop
                     string deep = Zones.Name(Kept, Senpai(section));
                     Zones.Offers(deep);
                     string[] senpai = Zones.Claimed(deep);
-                    if (senpai != null) return senpai;
+                    if (senpai != null) return Sayings.Named(senpai, "mod: " + section.Replace(SenpaiMark, ""));
                 }
                 string zone = Zones.Name(Kept, section);
                 Zones.Offers(zone);
                 string[] theirs = Zones.Claimed(zone);
-                if (theirs != null) return theirs;
+                if (theirs != null) return Sayings.Named(theirs, "mod: " + section.Replace(SenpaiMark, ""));
             }
             Fresh();
+            string[] lines;
             lock (gate)
             {
                 string[] found;
-                if (Brain.SenpaiLive && loaded.TryGetValue(Senpai(section), out found) && found != null && found.Length > 0) return found;
-                return loaded.TryGetValue(section, out found) ? found : null;
+                if (Brain.SenpaiLive && loaded.TryGetValue(Senpai(section), out found) && found != null && found.Length > 0) lines = found;
+                else lines = loaded.TryGetValue(section, out found) ? found : null;
             }
+            // Named for her log, so a line built from these says where it came from rather than "?".
+            return Sayings.Named(lines, (string.IsNullOrEmpty(Kept) ? "code" : Path.GetFileName(Kept)) + ": " + section.Replace(SenpaiMark, ""));
         }
 
         // Every section in the file, in the order it is written, with the senpai ones left out while the switch
@@ -219,7 +222,7 @@ namespace CapriDesktop
                 }
                 // Written new from stock on each version (Renew); in between only its notes follow her language, and the
                 // switch on adds its sections to a file written without them.
-                string had = File.ReadAllText(Kept);
+                string had = Notes.ReadAll(Kept);
                 string made = SenpaiAdded(had);
                 if (made != had)
                 {

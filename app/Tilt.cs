@@ -206,6 +206,7 @@ namespace CapriDesktop
         // Driven with made-up names, so nothing here names the real ones: off without the side or the keys, twice and half
         // as likely by state, the drifting level moved by its shift, kept in mood.when across a restart, and started over
         // when the side is turned off and on.
+#if CHECKS
         internal static void Check(List<string> checks)
         {
             string extendedWas = Extended.Text, keptWas = Dynamics.MoodKept, savedWas = Kept(), chosenWas = Personalities.Chosen;
@@ -309,6 +310,7 @@ namespace CapriDesktop
                 catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
+#endif
 
         // The real keys, on the build that has them.
         static partial void LocalTilt(List<string> checks);
@@ -318,6 +320,7 @@ namespace CapriDesktop
     {
         // Pictures of her personality row with its state and the pick-by-hand row open, in both menus at 100, 150 and
         // 200. Only on a build with the keys; a stand-in pack is made for the pictures when needed, and removed after.
+#if CHECKS
         private void SmokeTiltRow(List<string> checks, string output)
         {
             string owner = CapriDesktop.Tilt.Personality, words = Extended.Get("tilt.menu");
@@ -419,5 +422,6 @@ namespace CapriDesktop
                 catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
+#endif
     }
 }

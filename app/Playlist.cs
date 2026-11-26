@@ -281,8 +281,9 @@ namespace CapriDesktop
         }
     }
 
-    // One song at a time through WPF's MediaPlayer, which plays what Windows plays (MCI's mp3 device won't load in
-    // 64-bit). It runs on its own STA thread with a message loop, since WinForms doesn't pump WPF's queue.
+    // One song at a time through WPF's MediaPlayer (MCI's mp3 device won't load in 64-bit), on its own STA thread with a
+    // message loop, since WinForms doesn't pump WPF's queue. Without Windows Media Player, which that needs, it plays
+    // through Media Foundation's engine (EngineTune).
     internal static class FolderTunes
     {
         private static readonly object gate = new object();
@@ -291,8 +292,32 @@ namespace CapriDesktop
         private static string playing;
         private static volatile bool ended;
         private static volatile bool failed;
+        private static EngineTune engine;
 
         internal static string Playing { get { lock (gate) return playing; } }
+
+        // The song playing through Media Foundation, or null when WPF's player has it.
+        private static EngineTune Engine { get { lock (gate) return engine; } }
+
+        // For the checks: which way the song playing went.
+        internal static bool ByEngine { get { return Engine != null; } }
+
+        private static bool EngineStart(string file)
+        {
+            EngineTune made;
+            try { made = EngineTune.Play(file, Loudness); }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return false; }
+            lock (gate) engine = made;
+            // It opens asynchronously too, so a file it can't read says so through Failed a moment later.
+            for (int waited = 0; waited < 40 && !made.Failed; waited++)
+            {
+                if (made.Duration > 0) break;
+                System.Threading.Thread.Sleep(50);
+            }
+            if (made.Failed) { Stop(); return false; }
+            lock (gate) playing = file;
+            return true;
+        }
 
         private static bool Ready()
         {
@@ -331,10 +356,12 @@ namespace CapriDesktop
 
         internal static bool Start(string file)
         {
-            if (!Ready()) return false;
+            if (Engine != null) Stop();
             ended = false;
             failed = false;
             lock (gate) paused = false;
+            if (EngineTune.PlayerMissing()) return EngineStart(file);
+            if (!Ready()) return false;
             double want = Loudness;
             OnLoop(delegate { try { player.Volume = want; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
             bool opened = false;
@@ -367,6 +394,8 @@ namespace CapriDesktop
         {
             get
             {
+                EngineTune own = Engine;
+                if (own != null) return own.Position;
                 double found = 0;
                 OnLoop(delegate
                 {
@@ -383,6 +412,8 @@ namespace CapriDesktop
         {
             get
             {
+                EngineTune own = Engine;
+                if (own != null) return own.Duration;
                 double found = 0;
                 OnLoop(delegate
                 {
@@ -393,13 +424,25 @@ namespace CapriDesktop
             }
         }
 
+        // To a place in the song, in seconds from its start.
+        internal static void Seek(double seconds)
+        {
+            EngineTune own = Engine;
+            if (own != null) { own.Seek(seconds); return; }
+            OnLoop(delegate { try { player.Position = TimeSpan.FromSeconds(seconds); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
+        }
+
         internal static void Stop()
         {
-            OnLoop(delegate
-            {
-                try { player.Stop(); player.Close(); }
-                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-            });
+            EngineTune own;
+            lock (gate) { own = engine; engine = null; }
+            if (own != null) own.Dispose();
+            else
+                OnLoop(delegate
+                {
+                    try { player.Stop(); player.Close(); }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                });
             lock (gate) { playing = null; paused = false; }
             ended = false;
         }
@@ -415,18 +458,33 @@ namespace CapriDesktop
             {
                 double want = value < 0 ? 0 : value > 1 ? 1 : value;
                 lock (gate) loud = want;
+                EngineTune own = Engine;
+                if (own != null) { own.Volume = want; return; }
                 OnLoop(delegate { try { player.Volume = want; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
             }
         }
 
         private static bool paused;
 
-        internal static void Pause() { OnLoop(delegate { try { player.Pause(); lock (gate) paused = true; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }); }
-        internal static void Resume() { OnLoop(delegate { try { player.Play(); lock (gate) paused = false; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }); }
+        internal static void Pause()
+        {
+            EngineTune own = Engine;
+            if (own != null) { own.Pause(); lock (gate) paused = true; return; }
+            OnLoop(delegate { try { player.Pause(); lock (gate) paused = true; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
+        }
+
+        internal static void Resume()
+        {
+            EngineTune own = Engine;
+            if (own != null) { own.Resume(); lock (gate) paused = false; return; }
+            OnLoop(delegate { try { player.Play(); lock (gate) paused = false; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } });
+        }
+
+        private static bool Finished { get { EngineTune own = Engine; return own != null ? own.Ended : ended; } }
 
         // Held, rather than stopped or finished. Mode keeps saying "playing" for a paused song on purpose: the next
         // song check reads it, and a paused song must not count as one that ended and move the playlist on.
-        internal static bool Paused { get { lock (gate) return playing != null && paused && !ended; } }
+        internal static bool Paused { get { bool done = Finished; lock (gate) return playing != null && paused && !done; } }
 
         // What the next-song check reads. Worded like MCI's answer so nothing above had to change.
         internal static string Mode
@@ -434,7 +492,7 @@ namespace CapriDesktop
             get
             {
                 lock (gate) if (playing == null) return "";
-                if (ended) return "stopped";
+                if (Finished) return "stopped";
                 return "playing";
             }
         }
@@ -475,8 +533,24 @@ namespace CapriDesktop
             }
         }
 
+        // For the checks: the sounds still held, both ways.
+        internal static int Held { get { lock (gate) return playing.Count + engines.Count; } }
+
+        private static readonly System.Collections.Generic.List<EngineTune> engines = new System.Collections.Generic.List<EngineTune>();
+
         internal static bool Play(string file, double volume)
         {
+            if (EngineTune.PlayerMissing())
+            {
+                EngineTune one;
+                try { one = EngineTune.Play(file, volume); }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return false; }
+                lock (gate) engines.Add(one);
+                one.Done += delegate { lock (gate) engines.Remove(one); one.Dispose(); };
+                // One that was over before Done was listened for.
+                if (one.Ended) { lock (gate) engines.Remove(one); one.Dispose(); return !one.Failed; }
+                return true;
+            }
             if (!Ready()) return false;
             try
             {

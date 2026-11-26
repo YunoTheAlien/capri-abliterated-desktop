@@ -1,0 +1,92 @@
+# A table's code, a tab, then a word it lacked when ci/audit-guiwords.py was written. Take a row off once filled.
+es	automatic: vb-cable, else steam's
+es	chatgpt plan · runs codex on this pc
+es	claude plan · runs claude code on this pc
+es	default (follows windows)
+es	get vb-cable (free)
+es	google ai studio (gemini) · free tier · rate limited
+es	install a local backup
+es	nvidia · free · often slow at busy times
+es	openrouter · free models only
+es	reset to her default
+es	same as her ears (voice > mic)
+es	windows default
+es	your voice (hd)
+fr	automatic: vb-cable, else steam's
+fr	chatgpt plan · runs codex on this pc
+fr	claude plan · runs claude code on this pc
+fr	default (follows windows)
+fr	get vb-cable (free)
+fr	google ai studio (gemini) · free tier · rate limited
+fr	install a local backup
+fr	nvidia · free · often slow at busy times
+fr	openrouter · free models only
+fr	reset to her default
+fr	same as her ears (voice > mic)
+fr	windows default
+fr	your voice (hd)
+hi	automatic: vb-cable, else steam's
+hi	chatgpt plan · runs codex on this pc
+hi	claude plan · runs claude code on this pc
+hi	default (follows windows)
+hi	get vb-cable (free)
+hi	google ai studio (gemini) · free tier · rate limited
+hi	install a local backup
+hi	nvidia · free · often slow at busy times
+hi	openrouter · free models only
+hi	reset to her default
+hi	same as her ears (voice > mic)
+hi	windows default
+hi	your voice (hd)
+it	automatic: vb-cable, else steam's
+it	chatgpt plan · runs codex on this pc
+it	claude plan · runs claude code on this pc
+it	default (follows windows)
+it	get vb-cable (free)
+it	google ai studio (gemini) · free tier · rate limited
+it	install a local backup
+it	nvidia · free · often slow at busy times
+it	openrouter · free models only
+it	reset to her default
+it	same as her ears (voice > mic)
+it	windows default
+it	your voice (hd)
+pl	automatic: vb-cable, else steam's
+pl	chatgpt plan · runs codex on this pc
+pl	claude plan · runs claude code on this pc
+pl	default (follows windows)
+pl	get vb-cable (free)
+pl	google ai studio (gemini) · free tier · rate limited
+pl	install a local backup
+pl	nvidia · free · often slow at busy times
+pl	openrouter · free models only
+pl	reset to her default
+pl	same as her ears (voice > mic)
+pl	windows default
+pl	your voice (hd)
+pt	automatic: vb-cable, else steam's
+pt	chatgpt plan · runs codex on this pc
+pt	claude plan · runs claude code on this pc
+pt	default (follows windows)
+pt	get vb-cable (free)
+pt	google ai studio (gemini) · free tier · rate limited
+pt	install a local backup
+pt	nvidia · free · often slow at busy times
+pt	openrouter · free models only
+pt	reset to her default
+pt	same as her ears (voice > mic)
+pt	windows default
+pt	your voice (hd)
+pt-BR	automatic: vb-cable, else steam's
+pt-BR	chatgpt plan · runs codex on this pc
+pt-BR	claude plan · runs claude code on this pc
+pt-BR	default (follows windows)
+pt-BR	get vb-cable (free)
+pt-BR	google ai studio (gemini) · free tier · rate limited
+pt-BR	install a local backup
+pt-BR	nvidia · free · often slow at busy times
+pt-BR	openrouter · free models only
+pt-BR	reset to her default
+pt-BR	same as her ears (voice > mic)
+pt-BR	windows default
+pt-BR	your voice (hd)

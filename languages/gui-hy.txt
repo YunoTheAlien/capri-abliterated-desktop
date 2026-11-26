@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Լուռ մինչև {n}:{n}
 Quiet until turned off	Լուռ մինչև անջատելը
 Export settings	Արտահանել կարգավորումները
 Import settings	Ներմուծել կարգավորումները
-Save Mainframe position	Հիշել վահանակի դիրքը
+Save Mainframe position	Պահել Mainframe-ի դիրքը
+Capri options	Capri-ի ընտրանքներ

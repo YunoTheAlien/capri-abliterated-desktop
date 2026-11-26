@@ -17,7 +17,7 @@ namespace CapriDesktop
         internal void OpenModHelper()
         {
             if (modHelper != null && !modHelper.IsDisposed && modHelper.Zoom != zoom) modHelper.Close();
-            if (modHelper == null || modHelper.IsDisposed) modHelper = new ModHelperSheet(this, zoom);
+            if (modHelper == null || modHelper.IsDisposed) modHelper = new ModHelperSheet(this, SheetZoom(ModHelperSheet.Wide, ModHelperSheet.Tall));
             if (!modHelper.Visible) modHelper.Show(this);
             modHelper.Activate();
         }
@@ -25,6 +25,7 @@ namespace CapriDesktop
         internal void CloseModHelper() { if (modHelper != null && !modHelper.IsDisposed) modHelper.Close(); }
 
         // Make a mod's helper at 100, 150 and 200, driven, with a picture of each.
+#if CHECKS
         internal void CheckModHelper(List<string> checks, string output)
         {
             float machine = Px(1000) / 1000f;
@@ -37,6 +38,22 @@ namespace CapriDesktop
             if (wrongs.Count > 0) throw new Exception("Make a mod's helper went wrong: " + string.Join(" / ", wrongs.ToArray()));
             checks.Add("PASS Make a mod opens the mod helper, fitting at 100%, 150% and 200%: a file's parts listed, a part's own text in the box, changed and added to a pack, Reload lays it on her and her lines show it, taking it off gives hers back, Save pack writes a pack that imports, and Take out empties it (pictures mod-helper-*.png)");
         }
+#endif
+
+#if CHECKS
+        // For checks: the pack Make a mod writes as an app plugging into the Planner, picked from its own list.
+        internal string ModHelperKinds()
+        {
+            using (ModHelperSheet sheet = new ModHelperSheet(this, 1f))
+            {
+                sheet.KindOf("app");
+                KeyValuePair<string, string> planner = sheet.Apps().Find(one => one.Key == "planner");
+                if (planner.Key == null) return "no Planner in Plugs into";
+                sheet.PlugInto(planner.Key, planner.Value);
+                return sheet.Json();
+            }
+        }
+#endif
 
         // For checks: the helper driven at one size; null when it all went right.
         internal string ModHelperAt(float zoomAt, string picture)
@@ -56,22 +73,25 @@ namespace CapriDesktop
 
         private sealed class ModHelperSheet : ModSheet
         {
-            internal const int Wide = 760, Tall = 590, ListWide = 266, ListTall = 330, Right = 330;
+            internal const int Wide = 760, Tall = 626, ListWide = 266, ListTall = 330, Right = 330;
             private readonly Entry packName = new Entry(), text = new Entry();
-            private readonly Key fileKey, addKey, outKey;
-            private readonly ContextMenuStrip fileMenu;
+            private readonly Key fileKey, addKey, outKey, kindKey, plugKey;
+            private readonly ContextMenuStrip fileMenu, kindMenu, plugMenu;
+            // Its kind (mod or app) and the app it plugs into, by id, written into the pack.
+            private string kind = "mod", plugsInto;
             private readonly ScrollPanel headings;
             private readonly SlimBar headingsBar = new SlimBar(), textBar = new SlimBar();
             private readonly Label slotName, slotKind, packed, notice;
-            private readonly System.Windows.Forms.Timer noticeTimer = new System.Windows.Forms.Timer();
+            private readonly Clock.Ticker noticeTimer = new Clock.Ticker("mod helper notice");
             // The pack as it is being made: each slot's text, in the order they went in.
             private readonly List<KeyValuePair<string, string>> pack = new List<KeyValuePair<string, string>>();
             private string file, slot;
 
-            internal ModHelperSheet(Mainframe owner, float zoom) : base(owner, zoom, "Make a mod", "MAKE A MOD >", Wide, Tall)
+            internal ModHelperSheet(Mainframe owner, float zoom) : base(owner, zoom, "Mod maker", "MOD MAKER >", Wide, Tall)
             {
+                Pair(false);
                 Tucks(null);
-                Words("Pick a part of her, change its text, add it to your pack, then Reload to see it on her.", 28, 52, 600, 18, Small(), Faint);
+                Words("", 28, 52, 600, 18, Small(), Faint);
                 Words("Pack name", 28, 82, 90, 26, Font, Rose);
                 packName.Bounds = Box(120, 80, 260, 26);
                 packName.Box.Text = "My pack";
@@ -79,55 +99,67 @@ namespace CapriDesktop
                 Controls.Add(packName);
                 Key guide = Make("Guide", 612, 80, 120, 26, delegate { OpenGuide(); });
                 guide.AccessibleName = "Open the modding guide, MODDING.md";
+                Words("Kind", 28, 118, 90, 26, Font, Rose);
+                kindKey = Make("Mod", 120, 118, 150, 26, delegate { ShowKinds(); });
+                kindKey.Chevron = true;
+                kindKey.AccessibleName = "Kind: mod or app";
+                kindMenu = owner.Dropdown();
+                kindMenu.AccessibleName = "Kinds";
+                Words("Plugs into", 300, 118, 80, 26, Font, Rose);
+                plugKey = Make("None", 388, 118, 192, 26, delegate { ShowApps(); });
+                plugKey.Chevron = true;
+                plugKey.AccessibleName = "The app it plugs into";
+                plugMenu = owner.Dropdown();
+                plugMenu.AccessibleName = "Apps";
 
-                fileKey = Make("Pick a file", 28, 120, ListWide, 26, delegate { ShowFiles(); });
+                fileKey = Make("Pick a file", 28, 156, ListWide, 26, delegate { ShowFiles(); });
                 fileKey.Chevron = true;
                 fileKey.AccessibleName = "Her file to pick a part of";
                 fileMenu = owner.Dropdown();
                 fileMenu.AccessibleName = "Her files";
-                headings = new ScrollPanel { Bounds = Box(28, 154, ListWide, ListTall), BackColor = Ground };
+                headings = new ScrollPanel { Bounds = Box(28, 190, ListWide, ListTall), BackColor = Ground };
                 headings.Scrolled += delegate { headingsBar.Invalidate(); };
                 Controls.Add(headings);
-                headingsBar.Bounds = new Rectangle(Z(28 + ListWide + 4), Z(154), Z(SlimBar.Thin), Z(ListTall));
+                headingsBar.Bounds = new Rectangle(Z(28 + ListWide + 4), Z(190), Z(SlimBar.Thin), Z(ListTall));
                 headingsBar.BackColor = Ground;
                 headingsBar.Watch(headings);
                 Controls.Add(headingsBar);
 
-                slotName = Words("", Right, 120, 402, 22, Type(10f * Zoom, true), Rose);
-                slotKind = Words("", Right, 144, 402, 18, Small(), Faint);
-                text.Bounds = Box(Right, 168, 392, 256);
+                slotName = Words("", Right, 156, 402, 22, Type(10f * Zoom, true), Rose);
+                slotKind = Words("", Right, 180, 402, 18, Small(), Faint);
+                text.Bounds = Box(Right, 204, 392, 256);
                 text.Box.Multiline = true;
                 text.Box.AcceptsReturn = true;
                 text.Box.ScrollBars = ScrollBars.None;
                 text.Box.AccessibleName = text.AccessibleName = "The part's text";
                 Controls.Add(text);
-                textBar.Bounds = new Rectangle(Z(Right + 396), Z(168), Z(SlimBar.Thin), Z(256));
+                textBar.Bounds = new Rectangle(Z(Right + 396), Z(204), Z(SlimBar.Thin), Z(256));
                 textBar.BackColor = Ground;
                 textBar.Watch(text.Box);
                 Controls.Add(textBar);
-                Key hers = Make("Her text", Right, 432, 96, 26, delegate { HerText(); });
+                Key hers = Make("Her text", Right, 468, 96, 26, delegate { HerText(); });
                 hers.AccessibleName = "Put her own text for this part in the box";
-                Key fromFile = Make("From a file", Right + 104, 432, 110, 26, delegate { FromFile(); });
+                Key fromFile = Make("From a file", Right + 104, 468, 110, 26, delegate { FromFile(); });
                 fromFile.AccessibleName = "Put a file's text in the box";
-                addKey = Make("Add to pack", Right + 222, 432, 104, 26, delegate { AddToPack(); });
+                addKey = Make("Add to pack", Right + 222, 468, 104, 26, delegate { AddToPack(); });
                 addKey.Accent = Cyan;
-                outKey = Make("Take out", Right + 334, 432, 68, 26, delegate { TakeOut(); });
+                outKey = Make("Take out", Right + 334, 468, 68, 26, delegate { TakeOut(); });
                 outKey.AccessibleName = "Take this part out of the pack";
-                packed = Words("", Right, 466, 402, 40, Small(), Faint);
+                packed = Words("", Right, 502, 402, 40, Small(), Faint);
 
-                notice = Words("", 28, 492, 290, 40, Small(), Cyan);
-                Key reload = Make("Reload", 28, 540, 160, 28, delegate { Reload(); });
+                notice = Words("", 28, 528, 290, 40, Small(), Cyan);
+                Key reload = Make("Reload", 28, 576, 160, 28, delegate { Reload(); });
                 reload.Accent = Cyan;
                 reload.Loud = true;
                 reload.AccessibleName = "Reload: lay the pack on her now";
-                Key off = Make("Take it off her", 196, 540, 140, 28, delegate { TakeOff(); });
+                Key off = Make("Take it off her", 196, 576, 140, 28, delegate { TakeOff(); });
                 off.AccessibleName = "Take the pack off her";
-                Key save = Make("Save pack", 572, 540, 160, 28, delegate { SavePack(); });
+                Key save = Make("Save pack", 572, 576, 160, 28, delegate { SavePack(); });
                 save.AccessibleName = "Save the pack ready to drop in";
 
                 noticeTimer.Interval = 8000;
                 noticeTimer.Tick += delegate { Says("", false); };
-                Disposed += delegate { noticeTimer.Dispose(); fileMenu.Dispose(); };
+                Disposed += delegate { noticeTimer.Dispose(); fileMenu.Dispose(); kindMenu.Dispose(); plugMenu.Dispose(); };
                 ShowPack();
                 Pick(FileSlots.Files().Count > 0 ? FileSlots.Files()[0] : null);
                 ResumeLayout(false);
@@ -151,6 +183,43 @@ namespace CapriDesktop
                 }
                 fileMenu.Show(fileKey, new Point(0, fileKey.Height));
             }
+
+            private void ShowKinds()
+            {
+                foreach (ToolStripItem old in new List<ToolStripItem>(Items(kindMenu))) { kindMenu.Items.Remove(old); old.Dispose(); }
+                kindMenu.Items.Add(Choice("Mod", kind == "mod", delegate { KindOf("mod"); }));
+                kindMenu.Items.Add(Choice("App", kind == "app", delegate { KindOf("app"); }));
+                kindMenu.Show(kindKey, new Point(0, kindKey.Height));
+            }
+
+            // None, or each app on her: her tools and the plug-ins and app mods installed, by the id a pack names.
+            private void ShowApps()
+            {
+                foreach (ToolStripItem old in new List<ToolStripItem>(Items(plugMenu))) { plugMenu.Items.Remove(old); old.Dispose(); }
+                plugMenu.Items.Add(Choice("None", plugsInto == null, delegate { PlugInto(null, "None"); }));
+                foreach (KeyValuePair<string, string> app in Apps())
+                {
+                    KeyValuePair<string, string> one = app;
+                    plugMenu.Items.Add(Choice(one.Value, plugsInto == one.Key, delegate { PlugInto(one.Key, one.Value); }));
+                }
+                plugMenu.Show(plugKey, new Point(0, plugKey.Height));
+            }
+
+            internal List<KeyValuePair<string, string>> Apps()
+            {
+                List<KeyValuePair<string, string>> all = new List<KeyValuePair<string, string>>();
+                foreach (Tool tool in Frame.Tools())
+                {
+                    if (tool.Soon) continue;
+                    string id = tool.Id.StartsWith("plugin:", StringComparison.Ordinal) ? tool.Id.Substring(7) : tool.Id.StartsWith("mod:", StringComparison.Ordinal) ? tool.Id.Substring(4) : tool.Id;
+                    all.Add(new KeyValuePair<string, string>(tool.Icon == "mail" ? "email" : id, tool.Short));
+                }
+                return all;
+            }
+
+            internal void PlugInto(string id, string named) { plugsInto = id; plugKey.Text = named; }
+
+            internal void KindOf(string to) { kind = to == "app" ? "app" : "mod"; kindKey.Text = kind == "app" ? "App" : "Mod"; }
 
             private static List<ToolStripItem> Items(ToolStrip strip)
             {
@@ -285,7 +354,10 @@ namespace CapriDesktop
                 string name = packName.Box.Text.Trim().Length == 0 ? "My pack" : packName.Box.Text.Trim();
                 StringBuilder made = new StringBuilder();
                 made.Append("{\n  \"format\": 2,\n  \"id\": ").Append(Quote(PackId)).Append(",\n  \"name\": ").Append(Quote(name));
-                made.Append(",\n  \"version\": \"1.0.0\",\n  \"author\": \"You\",\n  \"description\": ").Append(Quote("Made with Capri's mod helper.")).Append(",\n  \"overrides\": [");
+                made.Append(",\n  \"version\": \"1.0.0\",\n  \"author\": \"You\",\n  \"description\": ").Append(Quote("Made with Capri's mod helper."));
+                if (kind == "app") made.Append(",\n  \"kind\": \"app\"");
+                if (plugsInto != null) made.Append(",\n  \"plugs_into\": ").Append(Quote(plugsInto));
+                made.Append(",\n  \"overrides\": [");
                 for (int i = 0; i < pack.Count; i++)
                 {
                     bool whole = pack[i].Key.IndexOf(" > ", StringComparison.Ordinal) < 0;
@@ -327,7 +399,7 @@ namespace CapriDesktop
                 try
                 {
                     File.WriteAllText(temp, Json(), new UTF8Encoding(false));
-                    if (Frame.ImportMod(temp)) Says("Your pack is on her. Change a part and Reload again to see it.", false);
+                    if (Frame.ImportMod(temp)) Says("Your pack is on her.", false);
                     else Says(Frame.ModStatusText, true);
                 }
                 catch (IOException error) { Says("Couldn't lay the pack: " + error.Message, true); }

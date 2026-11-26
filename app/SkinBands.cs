@@ -116,6 +116,7 @@ namespace CapriDesktop
         }
 
         // A skin's bands on her own art, Talia's and the northern lights, read only from where they are kept.
+#if CHECKS
         private void SmokeSkinBands(List<string> checks)
         {
             float chin, shoulders;
@@ -134,5 +135,6 @@ namespace CapriDesktop
                 throw new Exception("The bands didn't follow the skin's chin and shoulders.");
             checks.Add("PASS a skin's head and shoulder bands come from its skin.json or are measured from its idle art, her own art measuring at her chin; a pat under a high-headed skin's chin is her shoulders there and her head on hers");
         }
+#endif
     }
 }

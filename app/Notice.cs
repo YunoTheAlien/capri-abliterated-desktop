@@ -18,6 +18,9 @@ namespace CapriDesktop
         private readonly Label title;
         private readonly Label body;
         private readonly Plate ok;
+        // A message too long for the screen scrolls in here, beside her slim bar.
+        private readonly ScrollPanel scroller;
+        private readonly SlimBar bar;
 
         // Shows a notice and waits for OK. If her own window can't show, Windows' box says it instead.
         internal static void Tell(IWin32Window owner, string message, string caption, bool error)
@@ -74,12 +77,31 @@ namespace CapriDesktop
             body.AutoSize = true;
             body.Location = new Point(inset, title.Bottom + Px(12, s));
             Controls.Add(body);
+            // Kept on the screen it opens on with OK always showing: a body taller than the room left scrolls.
+            Rectangle area = CapriDesktop.Fits.Area(Control.MousePosition);
+            // In its own pixels: a check's stand-in screen may be drawn at another scale than this one.
+            float ratio = CapriDesktop.Fits.Device(this) / s;
+            int room = (int)((area.Height - CapriDesktop.Fits.Margin) / ratio) - body.Top - Px(30 + 44, s);
+            if (body.PreferredSize.Height > room && room > Px(60, s))
+            {
+                int thin = Math.Max(4, Px(SlimBar.Thin, s));
+                Controls.Remove(body);
+                scroller = new ScrollPanel { Bounds = new Rectangle(inset, body.Top, wide - 2 * inset - thin - Px(6, s), room), BackColor = Neon.Ground };
+                body.MaximumSize = new Size(scroller.Width - Px(4, s), 0);
+                body.Location = Point.Empty;
+                scroller.Controls.Add(body);
+                Controls.Add(scroller);
+                bar = new SlimBar { Bounds = new Rectangle(scroller.Right + Px(6, s), scroller.Top, thin, room), BackColor = Neon.Ground };
+                bar.Watch(scroller);
+                scroller.Scrolled += delegate { bar.Invalidate(); };
+                Controls.Add(bar);
+            }
             ok = new Plate();
             ok.Text = "OK";
             ok.Accent = Neon.Cyan;
             ok.Font = Neon.Type(10f, true);
             ok.Size = new Size(Px(96, s), Px(30, s));
-            ok.Location = new Point(wide - inset - ok.Width, body.Bottom + Px(22, s));
+            ok.Location = new Point(wide - inset - ok.Width, (scroller != null ? scroller.Bottom : body.Bottom) + Px(22, s));
             ok.DialogResult = DialogResult.OK;
             Controls.Add(ok);
             AcceptButton = ok;
@@ -104,7 +126,7 @@ namespace CapriDesktop
         {
             if (e.Control && e.KeyCode == Keys.C)
             {
-                try { Clipboard.SetText(caption + Environment.NewLine + Environment.NewLine + message); } catch (System.Runtime.InteropServices.ExternalException) { }
+                try { string copied = caption + Environment.NewLine + Environment.NewLine + message; if (!Recorders.CopyHeld(copied)) Clipboard.SetText(copied); } catch (System.Runtime.InteropServices.ExternalException) { }
                 e.Handled = true;
             }
             base.OnKeyDown(e);
@@ -429,7 +451,7 @@ namespace CapriDesktop
         {
             if (e.Control && e.KeyCode == Keys.C)
             {
-                try { Clipboard.SetText(caption + Environment.NewLine + Environment.NewLine + Marked.Plain(message)); } catch (System.Runtime.InteropServices.ExternalException) { }
+                try { string copied = caption + Environment.NewLine + Environment.NewLine + Marked.Plain(message); if (!Recorders.CopyHeld(copied)) Clipboard.SetText(copied); } catch (System.Runtime.InteropServices.ExternalException) { }
                 e.Handled = true;
             }
             base.OnKeyDown(e);

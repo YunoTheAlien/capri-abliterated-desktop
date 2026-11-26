@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Tawel tan {n}:{n}
 Quiet until turned off	Tawel nes ei ddiffodd
 Export settings	Allforio gosodiadau
 Import settings	Mewnforio gosodiadau
-Save Mainframe position	Cofio safle'r panel
+Save Mainframe position	Cadw safle'r Mainframe
+Capri options	Dewisiadau Capri

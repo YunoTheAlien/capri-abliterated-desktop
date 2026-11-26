@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Dara jụụ ruo {n}:{n}
 Quiet until turned off	Dara jụụ ruo mgbe e gbanyụrụ ya
 Export settings	Bupụ ntọala
 Import settings	Bubata ntọala
-Save Mainframe position	Cheta ọnọdụ panel
+Save Mainframe position	Chekwaa ọnọdụ Mainframe
+Capri options	Nhọrọ Capri

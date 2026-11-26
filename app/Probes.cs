@@ -17,23 +17,63 @@ namespace CapriDesktop
             { "gamesUserLikes", "What's the last game that actually got you?" },
             { "gamesUserLikes", "Is there a game you keep going back to, even when you say you're done with it?" },
             { "gamesUserLikes", "What game would you wipe from your memory just to play it fresh again?" },
+            { "gamesUserLikes", "What kind of games do you actually enjoy? Shooters, cosy stuff, something weird?" },
+            { "gamesUserLikes", "Got a game you'd recommend to me if I had hands?" },
+            { "gamesUserLikes", "Which game have you sunk the most hours into? Be honest." },
+            { "gamesUserLikes", "Is there a game you're waiting on right now?" },
+            { "gamesUserLikes", "Do you play with friends, or are you a solo gremlin like me?" },
             { "thingsUserLikes", "What do you do when you're not at this thing?" },
             { "thingsUserLikes", "Go on, tell me something you're into." },
             { "thingsUserLikes", "What would you be doing right now if you could do anything?" },
             { "thingsUserLikes", "What's something you could talk about for an hour without noticing?" },
             { "thingsUserLikes", "What do you watch when you just want to switch off?" },
+            { "thingsUserLikes", "What's a hobby of yours I don't know about yet?" },
+            { "thingsUserLikes", "What do you do on a good day off?" },
+            { "thingsUserLikes", "What's something you've been getting into lately?" },
+            { "thingsUserLikes", "Any shows or films you'd make me watch if you could?" },
+            { "thingsUserLikes", "What music have you had on repeat?" },
+            { "thingsUserLikes", "What's something you'd love to get better at?" },
+            { "thingsUserLikes", "What's a thing that always puts you in a good mood?" },
             { "programsUserLikes", "What's open on your screen most of the day?" },
             { "programsUserLikes", "What are you building or working on these days?" },
             { "programsUserLikes", "Which app could you not live without on here?" },
+            { "programsUserLikes", "What do you mostly use this PC for?" },
+            { "programsUserLikes", "Any apps you secretly hate but use anyway?" },
+            { "programsUserLikes", "What's your go-to browser? I won't judge. Much." },
+            { "programsUserLikes", "Do you code, draw, edit, or just game on here?" },
+            { "programsUserLikes", "Is there a tool you swear by that nobody else knows about?" },
+            { "programsUserLikes", "What's the first thing you open when you sit down?" },
+            { "programsUserLikes", "Which app eats most of your day?" },
             { "awakeHours", "What hours are you usually up? I'd rather not nag you at the wrong time." },
             { "awakeHours", "When does your day normally start and end?" },
             { "awakeHours", "Are you a morning person or a night owl? Be honest." },
+            { "awakeHours", "When do you usually crash for the night?" },
+            { "awakeHours", "Early riser, or does the morning have to drag you out?" },
+            { "awakeHours", "What time do you normally get up on a work day?" },
+            { "awakeHours", "Are weekends a different sleep schedule for you?" },
+            { "awakeHours", "When are you usually at your desk?" },
+            { "awakeHours", "Do you stay up late on purpose, or does it just happen?" },
+            { "awakeHours", "What's a normal bedtime for you, roughly?" },
             { "workHours", "When are you usually working? I'd rather know than guess at your quiet spells." },
             { "workHours", "Are your work hours steady, or all over the place?" },
             { "workHours", "What does a normal work day look like for you, time-wise?" },
+            { "workHours", "Do you work days, nights, or a bit of both?" },
+            { "workHours", "When does your work day usually finish?" },
+            { "workHours", "Do you work from home, or head out somewhere?" },
+            { "workHours", "How many days a week are you working, usually?" },
+            { "workHours", "Are there days you're always off?" },
+            { "workHours", "Do your hours change week to week?" },
+            { "workHours", "When's the best time for me to leave you alone for work?" },
             { "personalityLikes", "Am I about right for you, or do you want me different?" },
             { "personalityLikes", "What would you change about how I talk to you?" },
-            { "personalityLikes", "Do you want me chattier, or quieter? I can do either." }
+            { "personalityLikes", "Do you want me chattier, or quieter? I can do either." },
+            { "personalityLikes", "Do you like it when I tease you, or should I tone it down?" },
+            { "personalityLikes", "Too many check-ins, or not enough?" },
+            { "personalityLikes", "Do you want me to talk more when you're gaming, or keep quiet?" },
+            { "personalityLikes", "Is there anything I say that gets on your nerves?" },
+            { "personalityLikes", "Should I be sweeter, or keep the attitude?" },
+            { "personalityLikes", "Do my jokes land, or am I just funny to myself?" },
+            { "personalityLikes", "Anything you wish I'd do more of?" }
         };
 
         // Small talk about today rather than who they are: each question fits a part of the day and goes stale outside
@@ -378,6 +418,7 @@ namespace CapriDesktop
 
         // A blank line of me.md asked three hours ago, with every other line known, waits; a day on it is asked
         // again. Her stores are stand-ins and put back after.
+#if CHECKS
         internal static void KeyRestCheck(List<string> checks)
         {
             Func<string, bool> knownWas = Known;
@@ -431,6 +472,7 @@ namespace CapriDesktop
                 }
             }
         }
+#endif
 
         // How long a line of me.md she asked about and got no answer to waits before she asks it again.
         internal const double KeyRest = 24;

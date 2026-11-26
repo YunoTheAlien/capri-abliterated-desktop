@@ -86,11 +86,12 @@ namespace CapriDesktop
 
         // What's playing, or null. Tests swap it out.
         internal static Func<Tune> Read = ReadSession;
-        // Every session Windows has, the one it puts first leading, or null. Tests swap it out.
-        internal static Func<List<Tune>> Sessions = ReadSessions;
+        // Every session Windows has, the one it puts first leading, or null. Tests swap it out. Windows' session broker can
+        // stall on a guest PC, so each read is bounded; a bench or shots run reads none (Recorders).
+        internal static Func<List<Tune>> Sessions = delegate { return Recorders.Hold("what's playing") ? null : Bounded.Call("Windows' media sessions", 1500, (List<Tune>)null, ReadSessions); };
         // The session Windows puts first, playing or paused, or null. Tests swap it out.
-        internal static Func<Tune> Current = ReadCurrent;
-        internal static Func<Tune> Spotify = ReadSpotify;
+        internal static Func<Tune> Current = delegate { return Recorders.Hold("what's playing") ? null : Bounded.Call("Windows' media sessions", 1500, (Tune)null, ReadCurrent); };
+        internal static Func<Tune> Spotify = delegate { return Recorders.Hold("what's playing") ? null : Bounded.Call("Windows' media sessions", 1500, (Tune)null, ReadSpotify); };
         // Sends previous, next, play, pause, seek:<seconds>, like or unlike to the app playing the tune. True when it went through.
         internal static Func<Tune, string, bool> Send = SendToSession;
         // The app's session playing now, looked up at press time. Tests swap it out, so a press never reaches a real player.
@@ -579,7 +580,7 @@ namespace CapriDesktop
         internal const float Perch = 0.1f;
         private const int TitleY = 11, ArtistY = 31, SeekY = 58, ControlsY = 88, VolumeY = 118;
         [DllImport("user32.dll")] private static extern bool SetWindowDisplayAffinity(IntPtr window, uint affinity);
-        private readonly System.Windows.Forms.Timer ticks = new System.Windows.Forms.Timer();
+        private readonly Clock.Frames ticks = new Clock.Frames("MiniPlayer");
         private readonly Random random = new Random();
         private Tune tune;
         private bool liked;

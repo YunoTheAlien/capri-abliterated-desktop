@@ -19,7 +19,8 @@ foreach ($arch in @(@{ Name = 'x64'; File = 'CapriCamera64.dll' }, @{ Name = 'x8
     $work = Join-Path $out ('obj-' + $arch.Name)
     New-Item -ItemType Directory -Path $work -Force | Out-Null
     $dll = Join-Path $out $arch.File
-    $flags = '/nologo /c /Brepro /O2 /MT /EHsc /std:c++17 /W3 /DWIN32 /DNDEBUG /D_CRT_SECURE_NO_WARNINGS /DUNICODE /D_UNICODE'
+    # MSVC names anonymous namespaces from the source's full path, so the folder is mapped away or another one builds other bytes.
+    $flags = '/nologo /c /Brepro /experimental:deterministic /pathmap:"' + $root + '"=. /O2 /MT /EHsc /std:c++17 /W3 /DWIN32 /DNDEBUG /D_CRT_SECURE_NO_WARNINGS /DUNICODE /D_UNICODE'
     $include = '/I"' + $src + '" /I"' + (Join-Path $src 'baseclasses') + '" /I"' + (Join-Path $src 'softcamcore') + '"'
     $link = 'link /nologo /Brepro /DLL /OUT:"' + $dll + '" /DEF:"' + (Join-Path $src 'softcam\softcam.def') + '" "' + $work + '\*.obj" strmiids.lib winmm.lib kernel32.lib user32.lib gdi32.lib advapi32.lib ole32.lib oleaut32.lib uuid.lib'
     $script = Join-Path $work 'build.cmd'

@@ -219,4 +219,5 @@ Quiet until {n}:{n}	{n}:{n} дейін үнсіз
 Quiet until turned off	Өшірілгенше үнсіз
 Export settings	Баптауларды экспорттау
 Import settings	Баптауларды импорттау
-Save Mainframe position	Панель орнын есте сақтау
+Save Mainframe position	Mainframe орнын сақтау
+Capri options	Capri параметрлері

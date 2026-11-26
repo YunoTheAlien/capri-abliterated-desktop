@@ -22,7 +22,7 @@ namespace CapriDesktop
         private const double FrameTime = 0.08;
         private readonly Rectangle room;
         private readonly Stopwatch clock;
-        private readonly Timer ticks = new Timer();
+        private readonly Clock.Frames ticks = new Clock.Frames("ChaosScreen");
         private readonly Func<bool> blocked;
         private readonly Clip rest, glitch, talk;
         // Made once. StringFormat.GenericTypographic builds a new one on every read, and this paints

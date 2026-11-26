@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 
+#if CHECKS
 namespace CapriDesktop
 {
     internal sealed partial class Companion
@@ -113,6 +114,7 @@ namespace CapriDesktop
                 FindBrain(false);
                 wait(3000);
                 SavePreferences();
+                FlushPreferences();
                 Preferences cloudDisk = onDisk();
                 bool cloudKept = preferences.PaidKey == sealedKey && cloudDisk.PaidKey == sealedKey && preferences.Tier == 2 && cloudDisk.Tier == 2 && brain.Remote != null && brain.Remote.Key == "AIza-keep-test";
 
@@ -127,6 +129,7 @@ namespace CapriDesktop
                 FindBrain(false);
                 wait(3000);
                 SavePreferences();
+                FlushPreferences();
                 Preferences providerDisk = onDisk();
                 string address, key;
                 brain.GetServer(out address, out key);
@@ -151,3 +154,4 @@ namespace CapriDesktop
         }
     }
 }
+#endif

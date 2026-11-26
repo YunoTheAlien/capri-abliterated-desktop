@@ -46,6 +46,7 @@ namespace CapriDesktop
 
         // commands.md and twitch.md in another language: every command and example stays in English word for word, in its
         // column or with its indent; only what each does and the notes change.
+#if CHECKS
         internal static void LanguageCheck(System.Collections.Generic.List<string> checks, string folder)
         {
             Func<string, string> translateWas = Notes.Translate, menuWas = Notes.MenuName;
@@ -122,6 +123,7 @@ namespace CapriDesktop
             }
             finally { Notes.Translate = translateWas; Notes.MenuName = menuWas; Brain.Language = languageWas; }
         }
+#endif
 
         internal static string Text
         {

@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Liniște până la {n}:{n}
 Quiet until turned off	Liniște până la oprire
 Export settings	Exportă setările
 Import settings	Importă setările
-Save Mainframe position	Ține minte poziția panoului
+Save Mainframe position	Salvează poziția Mainframe
+Capri options	Opțiuni Capri

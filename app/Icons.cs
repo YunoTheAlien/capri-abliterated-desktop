@@ -1398,8 +1398,8 @@ namespace CapriDesktop
         private IconRampage iconRampage;
         private bool rampageWaiting;
         private int rampageTicket;
-        private readonly Timer iconTimer = new Timer();
-        private readonly Timer iconRecoveryTimer = new Timer();
+        private readonly Clock.Ticker iconTimer = new Clock.Ticker("Icons iconTimer");
+        private readonly Clock.Ticker iconRecoveryTimer = new Clock.Ticker("Icons iconRecoveryTimer");
         private static readonly int[] IconRecoveryDelays = { 15000, 45000, 120000 };
         private int iconRecoveryStep;
         private double iconActAt = -1;
@@ -1430,6 +1430,7 @@ namespace CapriDesktop
             iconRecoveryTimer.Interval = IconRecoveryDelays[iconRecoveryStep];
         }
 
+#if CHECKS
         private void SmokeIconFailures(List<string> checks, IntPtr handle, FakeIcons icons, string marker)
         {
             Action<string, int, Point> callWas = icons.Call;
@@ -1613,6 +1614,7 @@ namespace CapriDesktop
                 DesktopIcons.Show(handle);
             }
         }
+#endif
 
         // Her clones' per-frame beat: they chatter to each other, and once in a while one of them goes for the desktop icons.
         private void CloneTick(double now)

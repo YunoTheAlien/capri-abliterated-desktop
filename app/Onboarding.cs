@@ -88,6 +88,7 @@ namespace CapriDesktop
             return text.Length == 0 ? null : text;
         }
 
+#if CHECKS
         internal static List<string> Check()
         {
             List<string> checks = new List<string>();
@@ -118,5 +119,6 @@ namespace CapriDesktop
             checks.Add("PASS onboarding: her vibe is her existing reply length, Chill to Chatty, with no setting of its own");
             return checks;
         }
+#endif
     }
 }

@@ -219,4 +219,5 @@ Quiet until {n}:{n}	{n}:{n} хүртэл чимээгүй
 Quiet until turned off	Унтраах хүртэл чимээгүй
 Export settings	Тохиргоог экспортлох
 Import settings	Тохиргоог импортлох
-Save Mainframe position	Самбарын байрлалыг санах
+Save Mainframe position	Mainframe-ийн байрлалыг хадгалах
+Capri options	Capri-ийн тохиргоо

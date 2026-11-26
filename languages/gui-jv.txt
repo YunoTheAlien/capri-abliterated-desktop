@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Meneng nganti {n}:{n}
 Quiet until turned off	Meneng nganti dipateni
 Export settings	Ekspor setelan
 Import settings	Impor setelan
-Save Mainframe position	Elinga posisi panel
+Save Mainframe position	Simpen posisi Mainframe
+Capri options	Pilihan Capri

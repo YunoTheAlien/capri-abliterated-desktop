@@ -1,5 +1,6 @@
 Required Notice: Copyright 2026 Lachy (https://github.com/lachydotmcg)
 Required Notice: Anyone who uses Capri's code, art, animations or any of its other assets must credit the Capri project (https://github.com/lachydotmcg/capri-desktop). Capri's art and animations are by her artist, who prefers to stay private. Parts made by others keep their own licences, listed in its README.
+Exception: planner/ (the Game / project planner's editor, StoryBoard) and the other apps the owner adds on top of Capri are the owner's own work, adapted into this project. They are outside the PolyForm Noncommercial License below, each under its own licence in its folder: planner/LICENSE, the MIT License, Copyright (c) 2026 YunoTheAlien.
 
 # PolyForm Noncommercial License 1.0.0
 

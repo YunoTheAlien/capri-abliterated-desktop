@@ -48,6 +48,8 @@ namespace CapriDesktop
             new Act("touched legs", "touch", Touch.Legs, 20, 40, -1),
             new Act("touched feet", "touch", Touch.Feet, 20, 40, -1),
             new Act("tickled", "touch", Touch.Tickled, 20, 40, 1),
+            // A ctrl click held on her head, on the plain side.
+            new Act("kissed", "touch", null, 20, 40, 2),
             new Act("uppies", "grab", null, 0, 0, 2),
             new Act("thrown", "grab", null, 12, 30, -2),
             new Act("praised", "words", null, 45, 12, 2),
@@ -69,7 +71,9 @@ namespace CapriDesktop
             new Act("plushie", "gift", null, 0, 0, 2, new Offer("Plushie", 140, "plushie")),
             new Act("gift", "gift", null, 0, 0, 3, new Offer("Gift", 180, "present")),
             // A prank gift: the ones with a sense of humour like it, the rest see straight through it.
-            new Act("pet rock", "gift", null, 0, 0, -1, new Offer("Pet rock", 30, "pet rock"))
+            new Act("pet rock", "gift", null, 0, 0, -1, new Offer("Pet rock", 30, "pet rock")),
+            // A wash from the pet game, for her cleanliness.
+            new Act("wash", "care", null, 0, 0, 1)
         };
 
         internal static Act Find(string name)
@@ -84,7 +88,7 @@ namespace CapriDesktop
         }
 
         // Acts and terms a code mod adds while it runs, by the mod's id; gone when it stops.
-        internal sealed class ModTermOf { internal string Mod, Name, Act; internal int Add; internal double Times = 1; }
+        internal sealed class ModTermOf { internal string Mod, Name, Act; internal int Add; internal double Times = 1; internal string[] Who; }
         private static readonly List<KeyValuePair<string, Act>> modActs = new List<KeyValuePair<string, Act>>();
         private static readonly List<ModTermOf> modTerms = new List<ModTermOf>();
         internal const int MostAdd = 3;
@@ -102,7 +106,40 @@ namespace CapriDesktop
             }
         }
 
-        internal static void Term(string mod, string name, string act, int add, double times)
+        // Who a term counts for, tidied: personalities and moods by name, "mood sleepy" for a mood only; none, everyone.
+        internal static string[] WhoOf(string[] named)
+        {
+            if (named == null) return null;
+            List<string> kept = new List<string>();
+            foreach (string raw in named)
+            {
+                string one = System.Text.RegularExpressions.Regex.Replace((raw ?? "").Trim(), @"\s+", " ");
+                if (one.Length == 0) continue;
+                if (one.Length > 40 || kept.Count >= 24) throw new ArgumentException("A term's who names up to 24 personalities and moods, each in up to 40 characters.");
+                if (!kept.Exists(had => string.Equals(had, one, StringComparison.OrdinalIgnoreCase))) kept.Add(one);
+            }
+            return kept.Count == 0 ? null : kept.ToArray();
+        }
+
+        // Whether a term counts now: no who is everyone; else she is one of the personalities named, or in one of the moods
+        // (a plain name counts for either, "mood <name>" for a mood only).
+        internal static bool For(string[] who, string personality, string mood)
+        {
+            if (who == null || who.Length == 0) return true;
+            foreach (string one in who)
+            {
+                if (one.StartsWith("mood ", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!string.IsNullOrEmpty(mood) && string.Equals(one.Substring(5).Trim(), mood, StringComparison.OrdinalIgnoreCase)) return true;
+                    continue;
+                }
+                if (!string.IsNullOrEmpty(personality) && string.Equals(one, personality, StringComparison.OrdinalIgnoreCase)) return true;
+                if (!string.IsNullOrEmpty(mood) && string.Equals(one, mood, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
+        }
+
+        internal static void Term(string mod, string name, string act, int add, double times, string[] who = null)
         {
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(act)) throw new ArgumentException("A term needs a name and an act.");
             if (Math.Abs(add) > MostAdd) throw new ArgumentOutOfRangeException("value", "An add is from -" + MostAdd + " to " + MostAdd + ".");
@@ -110,7 +147,7 @@ namespace CapriDesktop
             lock (packGate)
             {
                 modTerms.RemoveAll(one => one.Mod == mod && one.Name == name);
-                modTerms.Add(new ModTermOf { Mod = mod, Name = name, Act = act, Add = add, Times = times });
+                modTerms.Add(new ModTermOf { Mod = mod, Name = name, Act = act, Add = add, Times = times, Who = WhoOf(who) });
             }
         }
 
@@ -125,11 +162,13 @@ namespace CapriDesktop
             }
         }
 
-        // The multipliers on an act, by term name.
-        internal static List<KeyValuePair<string, double>> Multipliers(string act)
+        // The multipliers on an act, by term name: every one, or with a personality and mood, those that count for her now.
+        internal static List<KeyValuePair<string, double>> Multipliers(string act, bool everyone = true, string personality = null, string mood = null)
         {
             List<KeyValuePair<string, double>> found = new List<KeyValuePair<string, double>>();
-            lock (packGate) foreach (ModTermOf one in modTerms) if (one.Times != 1 && string.Equals(one.Act, act, StringComparison.OrdinalIgnoreCase)) found.Add(new KeyValuePair<string, double>(one.Name, one.Times));
+            lock (packGate)
+                foreach (ModTermOf one in modTerms)
+                    if (one.Times != 1 && string.Equals(one.Act, act, StringComparison.OrdinalIgnoreCase) && (everyone || For(one.Who, personality, mood))) found.Add(new KeyValuePair<string, double>(one.Name, one.Times));
             return found;
         }
 
@@ -170,16 +209,17 @@ namespace CapriDesktop
 
         internal static bool Added(string name) { lock (packGate) return packActs.Exists(one => string.Equals(one.Name, name, StringComparison.OrdinalIgnoreCase)); }
 
-        // The packs' terms for an act, by pack name.
-        internal static List<KeyValuePair<string, int>> Terms(string act)
+        // The packs' and code mods' terms for an act, by name: every one, or with a personality and mood, those that count for
+        // her now.
+        internal static List<KeyValuePair<string, int>> Terms(string act, bool everyone = true, string personality = null, string mood = null)
         {
             List<KeyValuePair<string, int>> found = new List<KeyValuePair<string, int>>();
             lock (packGate)
             {
                 foreach (KeyValuePair<string, ModTerm> one in packTerms)
-                    if (string.Equals(one.Value.Act, act, StringComparison.OrdinalIgnoreCase)) found.Add(new KeyValuePair<string, int>(one.Key, one.Value.Add));
+                    if (string.Equals(one.Value.Act, act, StringComparison.OrdinalIgnoreCase) && (everyone || For(one.Value.Who, personality, mood))) found.Add(new KeyValuePair<string, int>(one.Key, one.Value.Add));
                 foreach (ModTermOf one in modTerms)
-                    if (one.Add != 0 && string.Equals(one.Act, act, StringComparison.OrdinalIgnoreCase)) found.Add(new KeyValuePair<string, int>(one.Name, one.Add));
+                    if (one.Add != 0 && string.Equals(one.Act, act, StringComparison.OrdinalIgnoreCase) && (everyone || For(one.Who, personality, mood))) found.Add(new KeyValuePair<string, int>(one.Name, one.Add));
             }
             return found;
         }
@@ -203,6 +243,12 @@ namespace CapriDesktop
         {
             if (zone == null) return null;
             foreach (Act one in Stock) if (one.Zone == zone) return one.Name;
+            // A place only what attached names has its act there too, while that side is live.
+            if (Brain.SenpaiLive)
+            {
+                string attached = Extended.Get("touch.act." + Touch.Part(zone));
+                if (!string.IsNullOrEmpty(attached)) return attached;
+            }
             return null;
         }
 

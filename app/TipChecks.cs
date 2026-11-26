@@ -7,13 +7,14 @@ using System.IO;
 using System.Threading;
 using System.Windows.Forms;
 
+#if CHECKS
 namespace CapriDesktop
 {
     internal sealed partial class Mainframe
     {
         internal void SmokeTips(List<string> checks, string output)
         {
-            bool wasSettings = paged, wasAdvanced = capri.AdvancedSettings;
+            bool wasSettings = paged;
             int wasSize = capri.MainframeSize;
             Point wasAt = Spot;
             Control wasFocus = ActiveControl;
@@ -36,9 +37,7 @@ namespace CapriDesktop
                 onScreen("Sizing it");
                 int covered = 0;
                 List<string> missing = new List<string>();
-                foreach (bool advanced in new[] { false, true })
                 {
-                    if (capri.AdvancedSettings != advanced) capri.ToggleAdvancedSettings();
                     foreach (bool settings in new[] { false, true })
                     {
                         ShowSettings(settings);
@@ -64,7 +63,7 @@ namespace CapriDesktop
                     }
                 }
                 if (missing.Count > 0) throw new Exception("Mainframe tips missing (" + missing.Count + "): " + string.Join(" | ", missing.ToArray()));
-                checks.Add("PASS Mainframe tips: every switch, slider, picker, entry and button on the main page and in Simple and Advanced Settings has real SelfKnow text, including hidden variants and input children (" + covered + " shown controls checked)");
+                checks.Add("PASS Mainframe tips: every switch, slider, picker, entry and button on the main page and in Settings has real SelfKnow text, including hidden variants and input children (" + covered + " shown controls checked)");
 
                 int oldVolume = volume.Value;
                 string volumeTip = volume.AccessibleDescription;
@@ -95,7 +94,7 @@ namespace CapriDesktop
                 onScreen("Showing Settings");
                 Stopwatch delay = Stopwatch.StartNew();
                 MoveOverHint(checkIns);
-                if (waitingHint != hints[checkIns] || !hintDelay.Enabled) throw new Exception("The first Mainframe hover did not queue the check-ins tip with its delay enabled.");
+                if (waitingHint != hints[checkIns] || !hintDelay.Enabled) throw new Exception("The first Mainframe hover did not queue the check-ins tip with its delay enabled: waiting " + (waitingHint == null ? "none" : waitingHint.Title) + ", mouse " + Control.MouseButtons + ", " + WindowState + ", visible " + Visible + ", shows " + HintShows(hints[checkIns]));
                 PumpTips(250);
                 if (HintVisible) throw new Exception("A Mainframe tip appeared before the hover delay.");
                 // GitHub's Windows runner drops this tip in full runs, whatever the hover, and nothing there has shown why yet. A real desktop still fails here.
@@ -120,7 +119,12 @@ namespace CapriDesktop
                 checks.Add("PASS Mainframe tip hover: waits about 400 ms, sits beside its control inside the monitor's working area, leaves foreground and keyboard focus alone, and hides on leave");
 
                 SettingHint named = hints[volume];
+                // An earlier section can leave Settings scrolled with this row under her title bar, where the point lands on
+                // the Advanced Settings key and shows its tip; the row is brought into view first, as Tab would.
+                Reveal(volume);
+                Application.DoEvents();
                 Point labelAt = named.Label.PointToScreen(new Point(named.Label.Width / 2, named.Label.Height / 2));
+                tipPlace = "volume at " + volume.Bounds + ", its label at " + named.Label.Bounds + " (screen " + labelAt + "), Mainframe at " + Bounds + ", scroll " + pageScroll + ", paged " + paged + ", view " + pageView + " of " + PageNow + ", title " + Scaled(TitleTall + 8) + ", buttons " + Control.MouseButtons;
                 Message labelMove = Message.Create(Handle, 0x00A0, new IntPtr(2), new IntPtr((labelAt.Y << 16) | (labelAt.X & 0xFFFF)));
                 tipSent = true;
                 try { PreFilterMessage(ref labelMove); }
@@ -130,6 +134,9 @@ namespace CapriDesktop
                 CheckHintPlace(volume);
                 TipMessage(this, 0x02A2, 0);
                 if (HintVisible) throw new Exception("A setting-name tip stayed after non-client mouse leave.");
+                // In view first, as volume is: CAPRI's rows sit a row lower since Better conversations joined it.
+                Reveal(checkIns);
+                Application.DoEvents();
                 MoveOverHint(checkIns);
                 TipMessage(this, 0x02A2, 0);
                 TipMessage(volume, 0x02A3, 0);
@@ -231,7 +238,6 @@ namespace CapriDesktop
                 tipsDriven = false;
                 DismissHint();
                 overHint = dismissedHint = null;
-                if (capri.AdvancedSettings != wasAdvanced) capri.ToggleAdvancedSettings();
                 LayoutScale(0, 0);
                 SizeMainframe(wasSize);
                 ShowSettings(wasSettings);
@@ -255,14 +261,12 @@ namespace CapriDesktop
                     throw new Exception("Legacy stand's row isn't set to his line: " + row.Text);
                 if (SelfKnow.Setting("Mainframe.cs", "Legacy stand") != row.Topic || row.Topic.Facts.Contains(Words)) throw new Exception("Legacy stand's help and its tip got mixed up.");
                 if (!standWas) capri.ToggleLegacyStand();
-                capri.InSimpleSettings(delegate
                 {
                     foreach (int percent in new[] { 100, 150, 200 })
                     {
                         LayoutScale(96, 100);
                         SizeMainframe(percent);
                         ShowSettings(true);
-                        if (!simple) throw new Exception("Legacy stand's tip check didn't open Simple Settings.");
                         ScrollPage(0);
                         Reveal(legacyStand);
                         DismissHint();
@@ -278,8 +282,8 @@ namespace CapriDesktop
                         TipMessage(legacyStand, 0x02A3, 0);
                         if (HintVisible) throw new Exception("Legacy stand's tip stayed after mouse leave.");
                     }
-                });
-                checks.Add("PASS Legacy stand's tip: in Simple Settings, hovering shows exactly \"" + Words + "\" with no heading at 100%, 150% and 200%, and screen readers get the same words");
+                }
+                checks.Add("PASS Legacy stand's tip: in Settings, hovering shows exactly \"" + Words + "\" with no heading at 100%, 150% and 200%, and screen readers get the same words");
             }
             finally
             {
@@ -302,12 +306,15 @@ namespace CapriDesktop
                     throw new Exception("A tip exceeds six lines: " + hint.Title);
         }
 
+        private string tipPlace = "";
+
         private void CheckHintPlace(Control control)
         {
             SettingHint row = hints[control];
             if (!HintVisible || !Screen.FromRectangle(row.Bounds).WorkingArea.Contains(hintCard.Bounds) || hintCard.Bounds.IntersectsWith(row.Bounds))
                 throw new Exception("A Mainframe tip covers its control or leaves the screen: " + row.Title);
-            if (row.Text != hintCard.Body || control.AccessibleDescription != hintCard.Body) throw new Exception("A shown tip differs from its accessible text.");
+            if (row.Text != hintCard.Body || control.AccessibleDescription != hintCard.Body)
+                throw new Exception("A shown tip differs from its accessible text (" + tipPlace + "): " + row.Title + " (shown " + (waitingHint == null ? "none" : waitingHint.Title) + ") / text [" + row.Text + "] / card [" + hintCard.Body + "] / accessible [" + control.AccessibleDescription + "]");
         }
 
         // A settings row a hover needs on screen: the page scrolled just far enough to show it, as Tab reaching it would.
@@ -396,3 +403,4 @@ namespace CapriDesktop
         }
     }
 }
+#endif

@@ -8,13 +8,13 @@ using System.Windows.Forms;
 namespace CapriDesktop
 {
     // Custom colours' zones, presets and the last colours picked. Presets and last used are kept as text in her preferences
-    // so settings.json carries them; the colours in use stay in layout.md, and a preset is a copy of them to switch back to.
+    // so settings.json carries them; the colours in use are kept beside them, and a preset is a copy of them to switch back to.
     internal static class ColourPresets
     {
         internal const int Recent = 12;
         internal static readonly string[] Stock = { "Preset 1", "Preset 2", "Preset 3" };
 
-        // One thing on screen and the colour of layout.md it is drawn in.
+        // One thing on screen and the colour of hers it is drawn in.
         internal sealed class Part
         {
             internal readonly string Shown, Colour;
@@ -136,7 +136,7 @@ namespace CapriDesktop
             return Addon(key, out id, out name) ? AddonColours.TheirOwn(id, name) : Neon.TheirOwn(key);
         }
 
-        // Set or clear one: her art's on the skin she shows, hers in layout.md, an add-on's in its own colours.md.
+        // Set or clear one: her art's on the skin she shows, hers and an add-on's each in their own rows of her settings.
         internal static bool SetOne(string key, Color? colour)
         {
             string id, name;
@@ -327,7 +327,7 @@ namespace CapriDesktop
         {
             WireArt();
             if (colourSheet != null && !colourSheet.IsDisposed && colourSheet.Zoom != zoom) colourSheet.Close();
-            if (colourSheet == null || colourSheet.IsDisposed) colourSheet = new ColourSheet(this, zoom);
+            if (colourSheet == null || colourSheet.IsDisposed) colourSheet = new ColourSheet(this, SheetZoom(ColourSheet.Wide, ColourSheet.Tall));
             if (!colourSheet.Visible) colourSheet.Show(this);
             colourSheet.Activate();
         }
@@ -369,12 +369,13 @@ namespace CapriDesktop
         internal static bool RealInputOn { get { return ColourSheet.RealInputOn; } }
         internal const string RealInputVariable = ColourSheet.RealInputVariable;
 
-        // The window driven as they'd use it at one size, on a copy of layout.md and with their presets put back after. Null
-        // when it all went right, else what didn't, with the size.
+        // The window driven as they'd use it at one size, on a store of the check's own and with their presets put back after.
+        // Null when it all went right, else what didn't, with the size.
         internal string ColoursAt(float zoomAt, string picture)
         {
-            string kept = CapriDesktop.Layout.Kept;
-            string copy = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "capri-layout-" + Guid.NewGuid().ToString("N") + ".md");
+            Func<List<string>> loadWas = CapriDesktop.Layout.Load, addonsLoadWas = AddonColours.Load;
+            Action<List<string>> storeWas = CapriDesktop.Layout.Store, addonsStoreWas = AddonColours.Store;
+            List<string> rows = new List<string>(), addonRows = new List<string>();
             string presetsWas = capri.ColourPresetsSaved, pickedWas = capri.ColourPresetPicked, recentWas = capri.ColourRecentSaved;
             string[] artWas = capri.ModList.ColoursNow;
             Func<string, string> folderWas = AddonColours.FolderOf;
@@ -385,13 +386,15 @@ namespace CapriDesktop
                 // One made-up add-on with a colour of its own, in a folder of the check's.
                 AddonColours.FolderOf = delegate(string id) { return System.IO.Path.Combine(addons, id + "-data"); };
                 AddonColours.Installed = delegate { return new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("tint-test", "Tint Test") }; };
+                AddonColours.Load = delegate { return addonRows; };
+                AddonColours.Store = delegate(List<string> made) { addonRows = made; };
                 AddonColours.Forget();
                 AddonColours.Declare("tint-test", "Glow", Color.FromArgb(200, 30, 60));
                 WireArt();
                 capri.ModList.ResetColours();
-                CapriDesktop.Layout.Kept = copy;
+                CapriDesktop.Layout.Load = delegate { return rows; };
+                CapriDesktop.Layout.Store = delegate(List<string> made) { rows = made; };
                 CapriDesktop.Layout.Forget();
-                CapriDesktop.Layout.Write(true);
                 CapriDesktop.Layout.Fresh();
                 capri.RepaintColours();
                 capri.SaveColours(null, null, null);
@@ -411,7 +414,10 @@ namespace CapriDesktop
             }
             finally
             {
-                CapriDesktop.Layout.Kept = kept;
+                CapriDesktop.Layout.Load = loadWas;
+                CapriDesktop.Layout.Store = storeWas;
+                AddonColours.Load = addonsLoadWas;
+                AddonColours.Store = addonsStoreWas;
                 CapriDesktop.Layout.Forget();
                 CapriDesktop.Layout.Fresh();
                 capri.RepaintColours();
@@ -426,7 +432,6 @@ namespace CapriDesktop
                 }
                 catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 FillMods();
-                try { System.IO.File.Delete(copy); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
                 try { if (System.IO.Directory.Exists(addons)) System.IO.Directory.Delete(addons, true); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
@@ -729,24 +734,31 @@ namespace CapriDesktop
 
         private sealed class ColourSheet : PickerSheet
         {
-            private const int Wide = 800, Tall = 580, ListWide = 372, ListTall = 408, Right = 424;
+            // The parts in the one left column her windows share (LeftColumn); the picker on the right, the window no wider than it needs.
+            internal const int Wide = 720, Tall = 580, ListWide = LeftColumn.Wide, ListTall = 408, Right = LeftColumn.Side;
             private readonly Key presetKey, plusKey, tuckKey, setHex, hersKey;
             private readonly Entry hexBox = new Entry();
             private readonly Label pickedName, alsoNote, notice;
             private readonly ScrollPanel zones;
             private readonly SlimBar zonesBar = new SlimBar();
             private readonly ContextMenuStrip presetMenu;
-            private readonly System.Windows.Forms.Timer noticeTimer = new System.Windows.Forms.Timer();
+            private readonly Clock.Ticker noticeTimer = new Clock.Ticker("colours notice");
             private readonly HashSet<string> open = new HashSet<string>(StringComparer.Ordinal);
             private readonly Action repainted;
             private List<KeyValuePair<string, Dictionary<string, Color>>> presets;
             private string picked, selected;
 
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                base.OnPaint(e);
+                LeftColumn.Frame(e.Graphics, zones, Zoom);
+            }
+
             internal ColourSheet(Mainframe owner, float zoom) : base(owner, zoom, "Custom colours", "CUSTOM COLOURS >", Wide, Tall)
             {
                 // Tucked away until Custom colours is pressed again, as it was; a pick in hand ends first.
                 tuckKey = Tucks(DropperCancel);
-Words("Each part of her, in the colour you pick. One left as hers follows Mainframe colours.", 28, 52, 744, 18, Small(), Faint);
+Words("", 28, 52, Wide - 56, 18, Small(), Faint);
                 presetKey = Make("Preset 1", 28, 78, 220, 26, delegate { ShowPresets(); });
                 presetKey.Chevron = true;
                 presetKey.AccessibleName = "Preset: pick a saved set of colours";
@@ -759,11 +771,10 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 presetMenu = owner.Dropdown();
                 presetMenu.AccessibleName = "Custom colours presets";
                 // Her own slim bar beside the list, not Windows' grey one.
-                zones = new ScrollPanel { Bounds = Box(28, 116, ListWide, ListTall), BackColor = Ground };
+                zones = new ScrollPanel { BackColor = Ground };
+                LeftColumn.Place(zones, zonesBar, 116, ListTall, Zoom);
                 zones.Scrolled += delegate { zonesBar.Invalidate(); };
                 Controls.Add(zones);
-                zonesBar.Bounds = new Rectangle(Z(28 + ListWide + 4), Z(116), Z(SlimBar.Thin), Z(ListTall));
-                zonesBar.BackColor = Ground;
                 zonesBar.Watch(zones);
                 Controls.Add(zonesBar);
                 pickedName = Words("", Right, 114, 260, 20, Type(10f * Zoom, true), Rose);
@@ -784,18 +795,18 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 Controls.Add(dropper);
                 Controls.Add(picker.Preview);
                 // A colour typed as #rrggbb, set on the part; Reset selected colour puts the part back to its stock.
-                hexBox.Bounds = Box(Right, 428, 120, 26);
+                hexBox.Bounds = Box(Right, 428, 186, 26);
                 hexBox.Box.Font = Type(9.5f * Zoom);
                 hexBox.Cue = "#rrggbb";
                 hexBox.Box.AccessibleName = "Colour as hex, like #ff2e88";
                 hexBox.Box.KeyDown += delegate(object sender, KeyEventArgs e) { if (e.KeyCode == Keys.Enter) { e.Handled = e.SuppressKeyPress = true; SetHex(); } };
                 Controls.Add(hexBox);
-                setHex = Make("Set", Right + 126, 428, 60, 26, delegate { SetHex(); });
+                setHex = Make("Set", Right + 192, 428, 60, 26, delegate { SetHex(); });
                 setHex.AccessibleName = "Set the part to the colour typed";
                 hersKey = Make("Reset selected colour", Right, 464, 252, 26, delegate { BackToHers(); });
                 hersKey.AccessibleName = "Put the selected part back to its stock colour";
                 notice = Words("", Right, 498, 348, 40, Small(), Cyan);
-                Words("Click a part on the left, then pick its colour. A last used colour goes on it and stays in its place.", 28, 546, 744, 18, Small(), Faint);
+                Words("", 28, 546, Wide - 56, 18, Small(), Faint);
                 noticeTimer.Interval = 8000;
                 noticeTimer.Tick += delegate { Says("", false); };
                 // A new look, or a colour changed anywhere, shows here at once too.
@@ -1041,7 +1052,7 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 return all;
             }
 
-            // Every colour of layout.md set to the preset's in one write, any it doesn't name put back to hers; each
+            // Every colour of hers set to the preset's in one write, any it doesn't name put back to hers; each
             // installed add-on the same in its own file. A missing add-on is passed over, its preset colours kept for
             // when it returns.
             private void PickPreset(string name)
@@ -1051,7 +1062,7 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 Dictionary<string, Color> held = presets[at].Value;
                 Dictionary<string, Color?> all = new Dictionary<string, Color?>(StringComparer.OrdinalIgnoreCase);
                 foreach (string one in Neon.Names) { Color colour; all[one] = held.TryGetValue(one, out colour) ? colour : (Color?)null; }
-                if (!CapriDesktop.Layout.Set(all)) { Says("Couldn't save to layout.md.", true); return; }
+                if (!CapriDesktop.Layout.Set(all)) { Says("Couldn't save the colours.", true); return; }
                 foreach (KeyValuePair<string, string> mod in AddonColours.Trees())
                 {
                     Dictionary<string, Color?> theirs = new Dictionary<string, Color?>(StringComparer.Ordinal);
@@ -1302,7 +1313,7 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 return null;
             }
 
-            // Opened with amber set and nothing saved, Preset 1 holds amber; every layout.md colour is under a part;
+            // Opened with amber set and nothing saved, Preset 1 holds amber; every colour of hers is under a part;
             // picker, box, last used and presets each set colours and repaint. A fit problem is noted and the rest
             // still driven.
             private readonly List<string> unfit = new List<string>();
@@ -1369,6 +1380,9 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 BackToHers();
                 string hersWrong = Off("bubble title", null);
                 if (typedWrong != null || badWrong != null || hersWrong != null) return "The hex box or Reset selected colour went wrong: " + (typedWrong ?? badWrong ?? hersWrong);
+                // Set ends where Reset selected colour ends, its own width kept, the box taking up the rest.
+                if (Math.Abs(setHex.Right - hersKey.Right) > 1 || Math.Abs(setHex.Width - (int)Math.Round(60 * Zoom)) > 1 || hexBox.Right > setHex.Left)
+                    return "Set doesn't end where Reset selected colour ends: Set " + setHex.Left + " to " + setHex.Right + ", Reset to " + hersKey.Right + ", box to " + hexBox.Right;
                 // Reset selected colour per kind of part: her art back to the shown skin's stock, leaving My Colors when it was
                 // the last one set; an add-on's colour back to its own.
                 for (int slot = 0; slot < ArtColors.Slots; slot++)
@@ -1500,7 +1514,7 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 Commit(picker.Colour, true);
                 wrong = Off("hot", green);
                 if (wrong != null || picker.Recent.Count != 1 || picker.Recent[0].ToArgb() != green.ToArgb()) return "The picker didn't set hot and put it in last used: " + (wrong ?? ColourPresets.WriteRecent(picker.Recent));
-                if (!System.Text.RegularExpressions.Regex.IsMatch(System.IO.File.ReadAllText(CapriDesktop.Layout.Kept), @"(?m)^hot:\s+#12c85a\s+# hers: ")) return "hot didn't reach layout.md.";
+                if (CapriDesktop.Layout.Row("hot") != "#12c85a") return "hot didn't reach her settings.";
                 Choose("cyan");
                 Typed("#ff2040");
                 wrong = Off("cyan", red);
@@ -1515,9 +1529,9 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 Choose("cyan");
                 PutBack();
                 wrong = Off("cyan", null);
-                if (wrong != null || !System.Text.RegularExpressions.Regex.IsMatch(System.IO.File.ReadAllText(CapriDesktop.Layout.Kept), @"(?m)^cyan:\s+# hers: ")) return "Putting it back didn't put cyan back: " + wrong;
+                if (wrong != null || CapriDesktop.Layout.Row("cyan") != null) return "Putting it back didn't put cyan back: " + wrong;
 
-                // An add-on's colours: under a fold-down of its own below her zones, set in its own file, not in layout.md.
+                // An add-on's colours: under a fold-down of its own below her zones, kept in its own rows apart from hers.
                 string glow = ColourPresets.AddonKey("tint-test", "Glow");
                 open.Add(AddonsZone);
                 open.Add("addon:tint-test");
@@ -1547,10 +1561,10 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 }
                 if (pickedName.Text != "Glow (the mod's own)" || picker.Colour.ToArgb() != Neon.Tone(200, 30, 60).ToArgb()) return "An add-on colour didn't show as the mod's own: " + pickedName.Text;
                 Typed("#123456");
-                string layoutText = System.IO.File.ReadAllText(CapriDesktop.Layout.Kept), addonText = System.IO.File.ReadAllText(System.IO.Path.Combine(AddonColours.FolderOf("tint-test"), AddonColours.FileName));
+                string layoutText = string.Join(", ", CapriDesktop.Layout.Load().ToArray()), addonText = string.Join(" | ", AddonColours.Load().ToArray());
                 Color? glowSet = AddonColours.TheirOwn("tint-test", "Glow");
-                if (!glowSet.HasValue || glowSet.Value.ToArgb() != Color.FromArgb(0x12, 0x34, 0x56).ToArgb() || layoutText.IndexOf("#123456", StringComparison.Ordinal) >= 0 || !System.Text.RegularExpressions.Regex.IsMatch(addonText, @"(?m)^Glow:\s+#123456\s+# usual: #c81e3c"))
-                    return "An add-on colour wasn't kept in its own colours.md apart from layout.md: " + addonText;
+                if (!glowSet.HasValue || glowSet.Value.ToArgb() != Color.FromArgb(0x12, 0x34, 0x56).ToArgb() || layoutText.IndexOf("#123456", StringComparison.Ordinal) >= 0 || addonText.IndexOf("tint-test\tGlow\t#123456\t#c81e3c", StringComparison.Ordinal) < 0)
+                    return "An add-on colour wasn't kept in its own rows apart from hers: " + addonText;
                 if (!presets[ColourPresets.Find(presets, picked)].Value.ContainsKey(glow)) return "The preset picked didn't keep the add-on's colour.";
                 // An add-on colour goes to last used as hers do: from the hex box, the dropper and a click on its swatch, each once.
                 Color glowHex = Color.FromArgb(255, 0x12, 0x34, 0x56), moss = Color.FromArgb(255, 40, 120, 60);
@@ -1661,6 +1675,10 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
 
                 internal void TakeSwatch() { if (SwatchClicked != null) SwatchClicked(this, EventArgs.Empty); }
 
+                protected override void OnMouseEnter(EventArgs e) { CutWords.Enter(this, Also == null ? Text : Text + "\n" + Also); base.OnMouseEnter(e); }
+
+                protected override void OnMouseLeave(EventArgs e) { CutWords.Leave(this); base.OnMouseLeave(e); }
+
                 protected override void OnMouseUp(MouseEventArgs e)
                 {
                     base.OnMouseUp(e);
@@ -1694,11 +1712,8 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 // Null when the name and its note fit their row.
                 internal string Crowded()
                 {
-                    using (Font small = Look.Mono(8f * ScaleOf(this), FontStyle.Regular, GraphicsUnit.Point))
-                    {
-                        if (TextRenderer.MeasureText(Text, Font).Width > NameBox.Width) return "doesn't fit: " + Text;
-                        if (Also != null && TextRenderer.MeasureText(Also, small).Width > Width - NameBox.Left - (int)Math.Round(6 * ScaleOf(this))) return "note doesn't fit: " + Also;
-                    }
+                    // A name or note longer than its room stays on one line, cut with "...", and the tip gives both whole
+                    // (CutWords).
                     return null;
                 }
 
@@ -1725,11 +1740,15 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                         using (Pen rim = new Pen(Edge, line)) graphics.DrawPath(rim, chip);
                     }
                     TextFormatFlags flags = TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis;
-                    TextRenderer.DrawText(graphics, Text, Font, NameBox, Rose, flags);
+                    CutWords.Draw(graphics, this, Text, Font, NameBox, Rose, flags);
                     TextRenderer.DrawText(graphics, ColourPresets.Hex(shown), Font, new Rectangle(Width - HexWide - (int)Math.Round(8 * s), 0, HexWide, NameTall), theirs ? Cyan : Faint, flags | TextFormatFlags.Right);
                     if (Also != null)
                         using (Font small = Look.Mono(8f * s, FontStyle.Regular, GraphicsUnit.Point))
-                            TextRenderer.DrawText(graphics, Also, small, new Rectangle(NameBox.Left, NameTall - (int)Math.Round(4 * s), Width - NameBox.Left - (int)Math.Round(6 * s), Height - NameTall + (int)Math.Round(4 * s)), Faint, flags | TextFormatFlags.Top);
+                        {
+                            Rectangle noteBox = new Rectangle(NameBox.Left, NameTall - (int)Math.Round(4 * s), Width - NameBox.Left - (int)Math.Round(6 * s), Height - NameTall + (int)Math.Round(4 * s));
+                            TextRenderer.DrawText(graphics, Also, small, noteBox, Faint, (flags | TextFormatFlags.Top | TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis) & ~TextFormatFlags.WordBreak);
+                            CutWords.AlsoCut(this, TextRenderer.MeasureText(Also, small).Width > noteBox.Width);
+                        }
                 }
             }
         }
@@ -1760,6 +1779,10 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
 
             protected override void OnLostFocus(EventArgs e) { Invalidate(); base.OnLostFocus(e); }
 
+            protected override void OnMouseEnter(EventArgs e) { CutWords.Enter(this, Text); base.OnMouseEnter(e); }
+
+            protected override void OnMouseLeave(EventArgs e) { CutWords.Leave(this); base.OnMouseLeave(e); }
+
             protected override void OnPaint(PaintEventArgs e)
             {
                 float s = ScaleOf(this);
@@ -1767,7 +1790,7 @@ Words("Each part of her, in the colour you pick. One left as hers follows Mainfr
                 using (Brush back = new SolidBrush(Ground)) graphics.FillRectangle(back, ClientRectangle);
                 graphics.SmoothingMode = SmoothingMode.AntiAlias;
                 DrawBand(graphics, new RectangleF(0, 0, Width, Height), s);
-                TextRenderer.DrawText(graphics, Text, Font, new Rectangle((int)(14 * s), 0, Width - (int)(44 * s), Height), White, TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
+                CutWords.Draw(graphics, this, Text, Font, new Rectangle((int)(14 * s), 0, Width - (int)(44 * s), Height), White, TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
                 Drop(graphics, Width - 24 * s, Height / 2f, s, Cyan, Open);
                 if (Focused && ShowFocusCues) FocusMark(graphics, new RectangleF(0, 0, Width, Height), s, 0, 0, 0);
             }

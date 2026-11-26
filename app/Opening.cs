@@ -81,6 +81,7 @@ namespace CapriDesktop
             return Hands.Shown(Security.Resume(yes ? "yes" : "no", ResumeTool) ?? Security.Left);
         }
 
+#if CHECKS
         private void SmokeOpenOtherWay(List<string> checks)
         {
             List<string> launches = new List<string>();
@@ -228,5 +229,6 @@ namespace CapriDesktop
                 preferences.QuickHands = quickWas;
             }
         }
+#endif
     }
 }

@@ -35,7 +35,7 @@ namespace CapriDesktop
         private static readonly Dictionary<string, McpLink> running = new Dictionary<string, McpLink>(StringComparer.Ordinal);
         private static readonly Dictionary<string, string> troubles = new Dictionary<string, string>(StringComparer.Ordinal);
         private static readonly HashSet<string> listing = new HashSet<string>(StringComparer.Ordinal);
-        private static Timer idle;
+        private static Clock.OffTimer idle;
         private static string folder;
         // Her tool list and windows redraw when a plug-in's tools come or go.
         internal static Action ToolsChanged;
@@ -117,7 +117,7 @@ namespace CapriDesktop
                     if (cached != null) tools[plugin.Id] = cached;
                     else if (listing.Add(plugin.Id)) toList.Add(plugin);
                 }
-                if (idle == null) idle = new Timer(delegate { Rest(false); }, null, 60000, 60000);
+                if (idle == null) idle = new Clock.OffTimer("Plugins idle", delegate { Rest(false); }, null, 60000, 60000);
             }
             foreach (McpLink server in stopping) Stop(server);
             foreach (PluginInfo plugin in toList)
@@ -344,6 +344,8 @@ namespace CapriDesktop
         static Plugins()
         {
             BuiltIns["mail"] = delegate { return new McpBuiltIn("mail", MailTools.List, MailTools.Call); };
+            // Better conversations gives her brain no tools: the plug-in is its switch and its words on the Mods page.
+            BuiltIns[Keyless.PluginId] = delegate { return new McpBuiltIn(Keyless.PluginId, delegate { return new List<Dictionary<string, object>>(); }, delegate { return null; }); };
         }
 
         // A tool that asks every time, whatever its cog or SECURITY says: sending mail from her Email plug-in.
@@ -809,6 +811,7 @@ class Fake {
   }
 }";
 
+#if CHECKS
         internal static void Check(List<string> checks, string output)
         {
             string data = Path.Combine(output, "plugin-tools-" + Guid.NewGuid().ToString("N").Substring(0, 6)), root = Path.Combine(data, "fake-notes");
@@ -961,5 +964,6 @@ class Fake {
                 try { Directory.Delete(data, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
             }
         }
+#endif
     }
 }

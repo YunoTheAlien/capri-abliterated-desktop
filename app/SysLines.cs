@@ -407,37 +407,6 @@ namespace CapriDesktop
         internal const string SaverSoundKey = "screensaver sound";
         internal const string SaverVolumeKey = "screensaver volume";
 
-        // How loud the screensaver's own sound is, as a share of her sound volume. Low by default: an alarm
-        // looping at the volume her chimes are set to is far louder than anybody wants from an idle screen.
-        internal static int SaverVolume
-        {
-            get
-            {
-                int much;
-                if (!int.TryParse((Of(SaverVolumeKey) ?? "").Trim(), System.Globalization.NumberStyles.Integer,
-                    System.Globalization.CultureInfo.InvariantCulture, out much)) return 20;
-                return Math.Max(0, Math.Min(100, much));
-            }
-        }
-
-        // The .wav they named, found by whole path or name beside her files; null when none. A sound sys.md names
-        // outside her folder is copied into sounds and the line pointed at the copy, so backups carry it.
-        internal static void KeepSaverSound()
-        {
-            try
-            {
-                string said = (Of(SaverSoundKey) ?? "").Trim().Trim('"');
-                if (!Library.Loose(said)) return;
-                string kept = Library.Keep(said, Library.Sounds);
-                if (string.Equals(kept, said, StringComparison.OrdinalIgnoreCase)) return;
-                string relative = Library.Sounds + "/" + Path.GetFileName(kept);
-                string text = CapriDesktop.Notes.ReadAll(Kept);
-                string made = Regex.Replace(text, @"(?mi)^([ \t]*" + Regex.Escape(SaverSoundKey) + @"[ \t]*:[ \t]*)[^\r\n]*", "${1}" + relative.Replace("$", "$$"));
-                if (made != text) Notes.Put(Kept, made);
-            }
-            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-        }
-
         // One of her settings rewritten in place, as the Mainframe sets it. A line missing from an older file is left alone.
         internal static void SetValue(string name, string value)
         {
@@ -453,77 +422,10 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
-        internal static string SaverSound
-        {
-            get
-            {
-                string said = (Of(SaverSoundKey) ?? "").Trim().Trim('"');
-                if (said.Length == 0 || string.IsNullOrEmpty(Kept)) return null;
-                try
-                {
-                    if (Path.IsPathRooted(said)) return File.Exists(said) ? said : null;
-                    string beside = Path.GetDirectoryName(Kept);
-                    foreach (string folder in new[] { beside, Path.GetDirectoryName(beside) })
-                    {
-                        if (string.IsNullOrEmpty(folder)) continue;
-                        string full = Path.GetFullPath(Path.Combine(folder, said));
-                        if (File.Exists(full)) return full;
-                    }
-                }
-                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-                return null;
-            }
-        }
         internal const string SaverAfterKey = "screensaver after";
 
         private static readonly Dictionary<string, Color> mixed = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
 
-        // Every line in the section and what it says when nobody has touched it. One list, so the file she
-        // writes, the top up that repairs an older file, and the check for a line that is missing all read
-        // the same thing and cannot drift apart.
-        internal static readonly string[,] SaverStock =
-        {
-            { SaverSizeKey, "normal" }, { SaverSpeedKey, "normal" }, { SaverThroughKey, "0" },
-            { SaverScreensKey, "all" }, { SaverFlashKey, "on" }, { SaverSoundKey, "" },
-            { SaverVolumeKey, "20" }
-        };
-
-        internal const string SaverHeading = "## Her screensaver";
-
-        internal static string[] SaverLines() { return SaverLines(null); }
-
-        // The section as it goes into the file. Anything they had already set is kept: a line added later
-        // must never cost somebody the settings they wrote.
-        internal static string[] SaverLines(Dictionary<string, string> had)
-        {
-            List<string> made = new List<string>(SaverNotes());
-            for (int one = 0; one < SaverStock.GetLength(0); one++)
-            {
-                string said;
-                if (had == null || !had.TryGetValue(SaverStock[one, 0], out said) || said == null) said = SaverStock[one, 1];
-                made.Add(Line(SaverStock[one, 0], said.Trim()));
-            }
-            return made.ToArray();
-        }
-
-        private static string[] SaverNotes()
-        {
-            return new[]
-            {
-                SaverHeading,
-                "",
-                ">! Shows while the PC is idle, when Toggles > Screensaver is on. Space or Esc ends it. Never over games or full screen.",
-                ">! Its colours are in Mainframe > Settings > GENERAL SETTINGS > Custom colours, under ADD-ONS.",
-                ">! size:        small, normal, large, or a number. 1 is normal.",
-                ">! speed:       slow, normal, fast, or a number. 1 is normal.",
-                ">! see through: 0 to 100. 0 is solid.",
-                ">! screens:     all, or main.",
-                ">! flashing:    on, gentle or off.",
-                ">! sound:       your own .wav, for her menu and red alert only. Blank is silent.",
-                ">! volume:      0 to 100.",
-                ""
-            };
-        }
 
         // Whether they turned it on: the Screensaver switch in her Toggles, kept in her settings. Off out of the box,
         // since it covers the screen.
@@ -532,6 +434,52 @@ namespace CapriDesktop
         // Its style and how long the PC waits first, from the Screensaver group in her Toggles; sys.md held them before.
         internal static Func<string> SaverStyleSaved = delegate { return null; };
         internal static Func<double> SaverAfterSaved = delegate { return 0; };
+
+        // The section her screensaver had, left whole for the mod's sliders in Toggles: its look lines, the sound line it no
+        // longer plays, their notes, its heading and the banner over it.
+        internal const string SaverHeading = "## Her screensaver";
+        internal static readonly string[] SaverLookKeys = { SaverSizeKey, SaverSpeedKey, SaverThroughKey, SaverScreensKey, SaverFlashKey, SaverVolumeKey };
+        private static readonly string[] SaverLookNotes =
+        {
+            ">! Shows while the PC is idle", ">! Its colours are in Mainframe > Settings", ">! Its look and wait are in Toggles", ">! size:", ">! speed:",
+            ">! see through:", ">! screens:", ">! flashing:", ">! volume:", ">! sound:", SaverHeading, "############### colour settings", SaverSoundKey + ":"
+        };
+
+        // A sys.md from before hands its look over once, by key, and loses the section. Null when it had none.
+        internal static Dictionary<string, string> TakeSaverLooks(string path)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
+                string text = CapriDesktop.Notes.ReadAll(path);
+                string newline = text.Contains("\r\n") ? "\r\n" : "\n";
+                List<string> rows = new List<string>(text.Replace("\r\n", "\n").Split('\n'));
+                Dictionary<string, string> said = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                bool changed = false;
+                for (int at = 0; at < rows.Count; at++)
+                {
+                    string one = rows[at].Trim();
+                    bool gone = Array.Exists(SaverLookNotes, note => one.StartsWith(note, StringComparison.OrdinalIgnoreCase));
+                    foreach (string key in SaverLookKeys)
+                    {
+                        Match line = Regex.Match(one, @"^" + Regex.Escape(key) + @"[ \t]*:[ \t]*(.*)$", RegexOptions.IgnoreCase);
+                        if (!line.Success) continue;
+                        if (!said.ContainsKey(key)) said[key] = line.Groups[1].Value.Trim();
+                        gone = true;
+                        break;
+                    }
+                    if (!gone) continue;
+                    rows.RemoveAt(at);
+                    at--;
+                    changed = true;
+                }
+                if (!changed) return null;
+                Notes.Put(path, string.Join(newline, rows.ToArray()));
+                lock (writing) { read = DateTime.MinValue; wasLong = -1; }
+                return said;
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return null; }
+        }
 
         // A sys.md from before hands its style and wait over once, by key, and loses those lines and their notes.
         internal static Dictionary<string, string> TakeSaverPicks(string path)
@@ -669,6 +617,7 @@ namespace CapriDesktop
         // Her prompt lines in another language: the ">!=" line above "sys prompt" and "you prompt" holds "> sys:" or
         // "> you:" in its words, and must never be read as a setting, a switched-off line or a note, while the setting under
         // it keeps its value with the trailing space.
+#if CHECKS
         internal static void PromptCheck(List<string> checks, string folder)
         {
             string was = Kept;
@@ -703,6 +652,7 @@ namespace CapriDesktop
                 try { File.Delete(path); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
+#endif
 
         internal static string Of(string name)
         {
@@ -840,7 +790,6 @@ namespace CapriDesktop
         {
             { "############### app settings", "Never watch these" },
             { "############### convo settings", "What goes in front of a line" },
-            { "############### colour settings", "Her screensaver" },
             { "### EULA: default blurb ###", "End User Licence Agreement" },
         };
 
@@ -855,6 +804,7 @@ namespace CapriDesktop
         }
 
         // A fresh sys.md, and the end every sys.md keeps: the terms, then the switch.
+#if CHECKS
         internal static void FileCheck(System.Collections.Generic.List<string> checks, string folder)
         {
             string was = Kept;
@@ -874,6 +824,7 @@ namespace CapriDesktop
             }
             finally { Kept = was; }
         }
+#endif
 
         // Null when the file ends with the banner (if it has one) right above the terms, the terms once, and the switch once
         // as the last line, answered "want".
@@ -901,6 +852,7 @@ namespace CapriDesktop
 
         // Every shape a sys.md has been found in, or could be: each ends with the terms and the switch once, their answer
         // kept, and stays that way on the next start.
+#if CHECKS
         private static void EndCheck(System.Collections.Generic.List<string> checks, string folder)
         {
             string newline = Environment.NewLine, fresh = Text;
@@ -967,6 +919,7 @@ namespace CapriDesktop
             if (EndsRight(stocked, "Yes") != null) throw new Exception("Reset to stock wrote over their answer: " + EndsRight(stocked, "Yes"));
             checks.Add("PASS reset to stock writes her stock sys.md with their answer kept at the bottom");
         }
+#endif
 
         // Yes deletes the senpai side's own files when the switch goes off.
         internal const string CleanupKey = "cleanup files";
@@ -1100,6 +1053,7 @@ namespace CapriDesktop
 
         // An update over a sys.md answered Yes, and edited, writes it new still answered Yes and reads as on; one answered No
         // stays No; a new install's says No.
+#if CHECKS
         internal static void CheckOnUpdate(List<string> checks, string output)
         {
             string keptWas = Kept;
@@ -1123,6 +1077,7 @@ namespace CapriDesktop
                 try { File.Delete(file); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
+#endif
 
         // Her stock sys.md with the switch answered: a side written new while the switch it carries is on keeps the answer that
         // turned it on, or she would read No from it and switch straight back off.
@@ -1203,6 +1158,9 @@ namespace CapriDesktop
         // The intros switched on: Toggles > Intros, kept in her settings as their names. Empty means she starts the way she
         // always has.
         internal static Func<string> IntrosSaved = delegate { return null; };
+
+        // Toggles > Intros' own switch: off, no intro plays; each intro keeps its own switch.
+        internal static Func<bool> IntrosAllowed = delegate { return true; };
 
         internal static string[] Intros()
         {
@@ -1361,10 +1319,6 @@ namespace CapriDesktop
                 if (Brain.SenpaiOn && Extended.Has("click.heard")) made.AppendLine(Line(Extended.Get("click.heard"), Extended.Get("click.heard")));
                 made.AppendLine();
                 made.AppendLine(">! What she says when handled lives in the personalities folder.");
-                made.AppendLine();
-                made.AppendLine();
-                made.AppendLine("############### colour settings");
-                foreach (string row in SaverLines()) made.AppendLine(row);
                 made.AppendLine();
                 made.AppendLine();
                 made.AppendLine("### EULA: default blurb ###");

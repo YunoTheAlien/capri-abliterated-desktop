@@ -964,8 +964,8 @@ namespace CapriDesktop
             bool promised = Hands.Promised(said);
             // The wait is a timer's, so no pool thread sleeps through it. Every reply waits here now, and on GitHub's 4-core runner
             // three of them asleep at once took every free pool thread, so talking couldn't reopen her resting call in time.
-            System.Threading.Timer wait = null;
-            wait = new System.Threading.Timer(delegate
+            Clock.OffTimer wait = null;
+            wait = new Clock.OffTimer("Asides wait", delegate
             {
                 wait.Dispose();
                 lock (shortcutGate) if (toolAsked) return;

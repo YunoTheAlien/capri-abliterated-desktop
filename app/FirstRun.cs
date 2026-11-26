@@ -82,7 +82,7 @@ namespace CapriDesktop
             private readonly Companion capri;
             internal readonly float Unit;
             private readonly List<Font> fonts = new List<Font>();
-            private readonly System.Windows.Forms.Timer pulse = new System.Windows.Forms.Timer();
+            private readonly Clock.Frames pulse = new Clock.Frames("first run pulse");
             internal int Screen = FirstRun.None;
             internal int Picked = FirstRun.Local;
             internal int Brain = FirstRun.NoBrain;
@@ -150,8 +150,8 @@ namespace CapriDesktop
                 else
                 {
                     // Its tallest screen has to fit above the taskbar, so a short screen with big scaling gets it a little smaller.
-                    float device = owner.DeviceScale(), text = owner.TextScale();
-                    float fits = FitScale(device * text, System.Windows.Forms.Screen.FromRectangle(capri.Bounds).WorkingArea.Height);
+                    float device = Fits.StandInScale > 0 ? Fits.StandInScale : owner.DeviceScale(), text = owner.TextScale();
+                    float fits = FitScale(device * text, Fits.StandIn.IsEmpty ? System.Windows.Forms.Screen.FromRectangle(capri.Bounds).WorkingArea : Fits.StandIn);
                     if (fits < device * text) new Rescaler(this, fits, 1f, owner.layoutFallback);
                     else new Rescaler(this, device, text, owner.layoutFallback);
                 }
@@ -164,7 +164,13 @@ namespace CapriDesktop
             // taskbar: the extras screen with the download under it.
             internal const int Tallest = 740;
 
-            internal static float FitScale(float wanted, int roomHigh) { return Math.Min(wanted, Math.Max(0.75f, (roomHigh - 8) / (float)Tallest)); }
+            internal static float FitScale(float wanted, int roomHigh) { return Math.Min(wanted, Math.Max(Floor, (roomHigh - 8) / (float)Tallest)); }
+
+            // Against the whole work area, so a narrow screen shrinks it too.
+            internal static float FitScale(float wanted, Rectangle area) { return Fits.Scale(new Size(Wide, Tallest), wanted, area, Floor); }
+
+            // The smallest it goes, still readable: a 1024 x 600 screen at 100% fits.
+            internal const float Floor = 0.7f;
 
             private int Z(float value) { return (int)Math.Round(value * Unit); }
 
@@ -289,7 +295,7 @@ namespace CapriDesktop
             {
                 Rectangle her = capri.Bounds;
                 placedBy = her;
-                Rectangle area = System.Windows.Forms.Screen.FromRectangle(moved ? Bounds : her).WorkingArea;
+                Rectangle area = Fits.StandIn.IsEmpty ? System.Windows.Forms.Screen.FromRectangle(moved ? Bounds : her).WorkingArea : Fits.StandIn;
                 if (moved) { Location = new Point(Math.Max(area.Left, Math.Min(area.Right - Width, Left)), Math.Max(area.Top, Math.Min(area.Bottom - Height, Top))); return; }
                 int bubbleLeft, bubbleRight;
                 capri.BubbleSpan(area, out bubbleLeft, out bubbleRight);
@@ -390,7 +396,7 @@ namespace CapriDesktop
 
             private int BuildPick()
             {
-                Caption("Pick a brain so I can talk back. You can change it any time.", 28, 74, Wide - 56, 26, Body(19), Faint);
+                Caption("", 28, 74, Wide - 56, 26, Body(19), Faint);
                 string fit = capri.FitName, size = capri.FitSize;
                 string local = fit == null ? "Free and private, works offline. Downloads the best model for this PC." : "Free and private, works offline. Downloads " + fit + " (" + size + "), the best fit for this PC.";
                 picks = new Pickable[4];
@@ -475,7 +481,7 @@ namespace CapriDesktop
             // quicker, a bigger one noted as too much for this PC. Nothing comes down until Next.
             private int BuildModels()
             {
-                Caption("Free and private, works offline. Pick one; it downloads once.", 28, 74, Wide - 56, 26, Body(19), Faint);
+                Caption("Free, private, offline.", 28, 74, Wide - 56, 26, Body(19), Faint);
                 int best = capri.FitIndex;
                 if (Model < 0) Model = Math.Max(0, best);
                 picks = new Pickable[Engine.Picks.Length];
@@ -538,7 +544,7 @@ namespace CapriDesktop
                 Caption(note, 28, y + 76, Wide - 56, 20, Mono(14), Faint);
                 // A free key screen doesn't talk about paid keys; MY PLAN OR KEY does.
                 if (pageLink) Linked("Open the key page", 28, y + 106, Body(18, true), Rose, delegate { OpenKeyPage(); });
-                else Caption("A paid key goes under MAX INTELLIGENCE by itself.", 28, y + 96, Wide - 56, 20, Mono(14), Faint);
+                else Caption("", 28, y + 96, Wide - 56, 20, Mono(14), Faint);
                 heard = Caption("", 28, y + (pageLink ? 138 : 126), Wide - 56, 46, Body(18), Hot);
                 return y + (pageLink ? 184 : 172);
             }
@@ -663,7 +669,7 @@ namespace CapriDesktop
                 bool silent = capri.Silent;
                 voiceFree = Option(80, 62, "MY FREE VOICE", "Runs on your PC. No key, no credits.", capri.FreeVoiceAside, null, !silent, delegate { Voice(true); });
                 voiceText = Option(146, 62, "TEXT ONLY", "I type my replies and stay quiet.", null, null, silent, delegate { Voice(false); });
-                Caption("Fish Audio, ElevenLabs and more are under VOICE in the Mainframe.", 58, 212, Wide - 58 - 18, 24, Body(17), Faint);
+                Caption("", 58, 212, Wide - 58 - 18, 24, Body(17), Faint);
                 Caption("YOUR MIC", 28, 254, 200, 20, Mono(15), Faint);
                 micPick = MakeKey("Mic: " + capri.FirstRunMicName, 28, 278, Wide - 56 - 112, 40, Body(18, true), Rose, delegate { owner.FirstRunMics(micPick); });
                 micPick.Chevron = true;
@@ -694,7 +700,7 @@ namespace CapriDesktop
 
             private int BuildExtras()
             {
-                Caption("These start off. Each costs a little or uses your mic.", 28, 74, Wide - 56, 26, Body(19), Faint);
+                Caption("", 28, 74, Wide - 56, 26, Body(19), Faint);
                 string[] names = { "Watch my screen", "Comment on my games", "Clip my games", "Listen for Capri" };
                 string[] notes = { "I glance at your screen and comment. Costs a little on a paid brain.", "I talk about your game as you play. Costs a little on a paid brain.", "I keep your last two minutes of game. Say \"clip that\" to save it.", "I keep listening. Say my name, then just talk." };
                 extras = new Toggle[4];
@@ -720,8 +726,8 @@ namespace CapriDesktop
                     delegate { owner.FirstRunPersonalities(whoPick, this); });
                 whoPick.Chevron = true;
                 whoPick.AccessibleName = "Her personality";
-                Caption("You can change her, and everything she says, any time in her files.", 28, 500, Wide - 56, 24, Body(17), Faint);
-                Caption("Right-click me any time for the Mainframe, Help and the Discord.", 28, 534, Wide - 56, 26, Body(19), White);
+                Caption("", 28, 500, Wide - 56, 24, Body(17), Faint);
+                Caption("", 28, 534, Wide - 56, 26, Body(19), White);
                 return 562;
             }
 
@@ -754,7 +760,7 @@ namespace CapriDesktop
             // moment it changes (Lachy, 0.9.7).
             private int BuildMe()
             {
-                Caption("All of it changes any time in the Mainframe.", 28, 74, Wide - 56, 26, Body(19), Faint);
+                Caption("", 28, 74, Wide - 56, 26, Body(19), Faint);
                 Caption("CALL YOU", 28, 112, 200, 20, Mono(15), Faint);
                 nameBox = new Entry();
                 nameBox.Bounds = Box(28, 136, Wide - 56, 42);
@@ -894,11 +900,11 @@ namespace CapriDesktop
                 {
                     Note held = Caption("My brain is coming down. The second it's in, I'll do your first job: \u201C" + Queued + "\u201D", 28, 74, Wide - 56, 50, Body(19), Faint);
                     held.AutoEllipsis = true;
-                    Caption("You can hide this. It keeps going, and the Mainframe shows it too.", 28, 130, Wide - 56, 24, Body(18), Faint);
+                    Caption("", 28, 130, Wide - 56, 24, Body(18), Faint);
                     return 154;
                 }
                 Caption("My brain is coming down. I'll say hi the second it's in, and you can talk to me then.", 28, 74, Wide - 56, 50, Body(19), Faint);
-                Caption("You can hide this. It keeps going, and the Mainframe shows it too.", 28, 130, Wide - 56, 24, Body(18), Faint);
+                Caption("", 28, 130, Wide - 56, 24, Body(18), Faint);
                 return 154;
             }
 
@@ -1573,7 +1579,8 @@ namespace CapriDesktop
             ThreadPool.QueueUserWorkItem(delegate { Thread.Sleep(GreetPause); Post(delegate { OpenWhenLanded(step, pick, resumed, 0, true); }); });
         }
 
-        // Her bubble asks first, so the card doesn't fly out at them: Yes opens it, No or no answer asks again later.
+        // Her bubble asks first, so the card doesn't fly out at them: Yes opens it, No asks again later. The ask stays until
+        // Yes or No; only when something else took her bubble does she ask again after the wait.
         internal const int ReadyAgain = 300000;
         private int readyAsks;
 
@@ -1589,13 +1596,28 @@ namespace CapriDesktop
             box.Choose(delegate(bool yes)
             {
                 ++readyAsks;
-                if (yes) { OpenFirstRun(step, pick, resumed); return; }
+                if (yes) { CardOpened("Yes"); OpenFirstRun(step, pick, resumed); return; }
                 Remark("first run", FirstRun.LaterLine, true);
                 int again = readyAsks;
                 Later(ReadyAgain, delegate { if (again == readyAsks) AskReady(step, pick, resumed); });
             });
-            // Left unanswered, the Yes and No go and she asks again after the wait.
-            Later((int)(ChoiceMost * 1000) + ReadyAgain, delegate { if (ask == readyAsks) AskReady(step, pick, resumed); });
+            Later(ReadyAgain, delegate { ReadyStill(ask, step, pick, resumed); });
+        }
+
+        private void ReadyStill(int ask, int step, int pick, bool resumed)
+        {
+            if (ask != readyAsks || quitting || IsDisposed) return;
+            if (ReadyAsking) { Later(ReadyAgain, delegate { ReadyStill(ask, step, pick, resumed); }); return; }
+            AskReady(step, pick, resumed);
+        }
+
+        // How the card last opened, for her log and checks.
+        internal string CardOpenedBy;
+
+        private void CardOpened(string by)
+        {
+            CardOpenedBy = by;
+            Brain.Log("first run", -1, "Setup card opened " + clock.Elapsed.TotalSeconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s after her start, by " + by + ".");
         }
 
         internal bool ReadyAsking { get { return box.Choosing && box.Reply != null && (box.Reply.Contains(FirstRun.ReadyLine) || box.Reply.Contains(FirstRun.ReadyAgainLine)); } }
@@ -1620,7 +1642,7 @@ namespace CapriDesktop
                 return;
             }
             if (ask) { AskReady(step, pick, resumed); return; }
-            Brain.Log("first run", -1, "Setup card opened " + clock.Elapsed.TotalSeconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s after her start.");
+            CardOpened("itself");
             OpenFirstRun(step, pick, resumed);
         }
 

@@ -460,6 +460,7 @@ namespace CapriDesktop
         // Everything let go, so the file at Kept is read afresh, for her checks. The editor split: "my editor", "code
         // editor" and "text editor" each mean their kind; "my editor" opens whichever is used more, and an older answer
         // keeps its program.
+#if CHECKS
         internal static void CheckEditors(List<string> checks, string output)
         {
             string keptWas = Kept;
@@ -492,6 +493,7 @@ namespace CapriDesktop
                 try { File.Delete(kept); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
+#endif
 
         internal static void Reload()
         {

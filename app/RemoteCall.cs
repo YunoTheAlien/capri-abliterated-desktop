@@ -41,7 +41,7 @@ namespace CapriDesktop
         private readonly Action<string, string, string> said;
         private readonly object gate = new object();
         private readonly Dictionary<string, Caller> calls = new Dictionary<string, Caller>(StringComparer.Ordinal);
-        private readonly Timer flusher;
+        private readonly Clock.OffTimer flusher;
         private bool disposed;
         private long heardLines, voiceParts, voiceBytes, audioBytes;
 
@@ -54,7 +54,7 @@ namespace CapriDesktop
             this.link = link;
             this.ears = ears;
             this.said = said;
-            flusher = new Timer(Flush);
+            flusher = new Clock.OffTimer("RemoteCall flusher", Flush);
             link.Offer("call");
             link.Offer(HushFeature);
             link.Offer(ListenFeature);
@@ -564,6 +564,7 @@ namespace CapriDesktop
 
         internal static string HeardMessage(string id, string words) { return new RemoteJson.Writer().Text("type", "call.heard").Text("id", id).Text("text", RemoteMessages.Clip(words, 2000)).ToString(); }
 
+#if CHECKS
         internal static void SmokeListening(List<string> checks)
         {
             RemoteLink link = new RemoteLink(RemoteState.Fresh(), "ws://127.0.0.1:1", "Test PC", "test", null);
@@ -665,6 +666,7 @@ namespace CapriDesktop
             link.Stop();
             checks.Add("PASS Room listening skips ears, refuses audio, gets voice, stops on stop, Interrupt and lost sessions, restores ordinary calls and reports calls off, voice off and busy separately; real calls remove listeners and busy or refused retries leave none behind");
         }
+#endif
 
         private void RaiseChanged()
         {

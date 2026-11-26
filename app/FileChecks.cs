@@ -4,9 +4,11 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 
+#if CHECKS
 namespace CapriDesktop
 {
     internal sealed partial class Companion
@@ -67,6 +69,59 @@ namespace CapriDesktop
             if (panel.Guarding) panel.GuardDiscard();
         }
 
+        // Closed while it is still laying its page out, five times at 100 and 150%: its text box, going after the page, used to lay
+        // the page out again on a surface already let go and take her down with it.
+        private void SmokeEditorClose(List<string> checks)
+        {
+            int closed = 0;
+            string picture = Path.Combine(Path.GetTempPath(), "capri-editor-close-" + Guid.NewGuid().ToString("N") + ".png");
+            try
+            {
+                foreach (int percent in new[] { 100, 150 })
+                {
+                    mainframe.LayoutScale(96 * percent / 100, 100);
+                    for (int time = 0; time < 10; time++)
+                    {
+                        // Opened from her MD editor key, pictured as her gallery pictures it, then closed from its window while its
+                        // page is still being laid out.
+                        HashSet<Form> had = new HashSet<Form>();
+                        foreach (Form one in Application.OpenForms) had.Add(one);
+                        OpenFiles("me.md");
+                        for (int i = 0; i < 5 + time * 4; i++) Application.DoEvents();
+                        Form opened = null;
+                        foreach (Form one in Application.OpenForms) if (!had.Contains(one) && one.Visible) opened = one;
+                        if (opened == null) throw new Exception("The MD editor opened no window at " + percent + "%.");
+                        // Every tab turned to, as the survey walks it, then pictured.
+                        if (fileEditor != null) for (int tab = 0; tab < fileEditor.Choices.Length; tab++) { fileEditor.Turn(tab); Application.DoEvents(); }
+                        Snap(opened, picture);
+                        TextBox words = FindBox(fileEditor == null ? null : fileEditor.PageWindow);
+                        if (words != null && words.IsHandleCreated) { words.SelectionStart = words.TextLength; words.ScrollToCaret(); }
+                        opened.Close();
+                        FileEditor panel = fileEditor;
+                        if (panel != null && panel.Guarding) panel.GuardDiscard();
+                        Stopwatch waited = Stopwatch.StartNew();
+                        while (panel != null && !panel.Over && waited.ElapsedMilliseconds < 8000) { Application.DoEvents(); System.Threading.Thread.Sleep(5); }
+                        for (int i = 0; i < 10; i++) Application.DoEvents();
+                        if (panel != null && !panel.Over) FinishPanel(panel);
+                        closed++;
+                    }
+                }
+            }
+            finally { mainframe.LayoutScale(0, 0); try { File.Delete(picture); } catch (Exception caughtOne) { Brain.Caught(caughtOne); } }
+            checks.Add("PASS the MD editor pictured and closed from its window after every tab while laying its page out, " + closed + " times at 100 and 150%, and she stayed up");
+        }
+
+        private static TextBox FindBox(Control under)
+        {
+            if (under == null) return null;
+            foreach (Control one in under.Controls)
+            {
+                TextBox found = one as TextBox ?? FindBox(one);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
         private void SmokeFileEditor(List<string> checks, string output)
         {
             // Her real files stay out of this: every path below is in a folder made for it, inside her smoke test's own data folder.
@@ -86,7 +141,15 @@ namespace CapriDesktop
 
                 // Opening: from her right-click menu, and with the real clock.
                 ToolStripMenuItem item = null;
-                foreach (ToolStripItem top in optionsItem.DropDownItems) if (top.Text == "MD editor") item = top as ToolStripMenuItem;
+                // MD editor holds her two trees: Main files first, then Personality files.
+                foreach (ToolStripItem top in optionsItem.DropDownItems)
+                {
+                    ToolStripMenuItem md = top as ToolStripMenuItem;
+                    if (md == null || md.Text != "MD editor") continue;
+                    string[] trees = md.DropDownItems.Cast<ToolStripItem>().Select(one => one.Text).ToArray();
+                    if (string.Join("|", trees) != "Main files|Personality files") throw new Exception("MD editor doesn't hold Main files then Personality files: " + string.Join("|", trees));
+                    item = md.DropDownItems[0] as ToolStripMenuItem;
+                }
                 if (item == null) throw new Exception("Her right-click menu has no MD editor under Capri options.");
                 if (fileEditor != null && !fileEditor.Over) throw new Exception("A file editor was already open.");
                 Stopwatch timed = Stopwatch.StartNew();
@@ -148,6 +211,20 @@ namespace CapriDesktop
                 panel.Turn(1);
                 if (!panel.Save() || !panel.Status.StartsWith("Saved.", StringComparison.Ordinal) || !File.ReadAllText(twitch).Contains("channel: test_channel") || !File.ReadAllText(twitch).Contains("\r\n")) throw new Exception("twitch.md didn't save with its line ends: " + panel.Status);
                 if (panel.Dirty) throw new Exception("A saved file still looks unsaved.");
+                // Main files and Personality files at its top switch the list in the same panel; unsaved changes are asked about first.
+                panel.SwitchSet(true);
+                if (!panel.ForPersonalities || Array.IndexOf(panel.Choices, "personality.md") < 0 || Array.IndexOf(panel.Choices, "me.md") >= 0 || panel.FileShown == "me.md")
+                    throw new Exception("Personality files didn't take the panel's list: " + panel.FileShown + " / " + string.Join(",", panel.Choices));
+                using (Bitmap picture = panel.Picture()) picture.Save(Path.Combine(output, "file-editor-sets.png"), ImageFormat.Png);
+                panel.SwitchSet(false);
+                if (panel.ForPersonalities || panel.FileShown != "me.md" || Array.IndexOf(panel.Choices, "personality.md") >= 0) throw new Exception("Main files didn't come back: " + panel.FileShown);
+                panel.Draft = "- unsaved for the switch\r\n";
+                panel.SwitchSet(true);
+                if (panel.ForPersonalities || !panel.Guarding) throw new Exception("Switching with unsaved changes didn't ask first.");
+                panel.GuardDiscard();
+                if (!panel.ForPersonalities || panel.Guarding || !panel.PageWindow.Visible || panel.Dirty) throw new Exception("Discard didn't switch to Personality files in the same panel.");
+                panel.SwitchSet(false);
+                checks.Add("PASS file editor: Main files and Personality files at its top swap the list in the same panel, the personality files on her side; with unsaved changes it asks first, and Discard switches (file-editor-sets.png)");
                 if (File.Exists(notes + ".new") || Directory.GetFiles(folder, "*.new").Length != 0) throw new Exception("Saving left a temporary file.");
                 checks.Add("PASS file editor saves to a test data folder through her note code: Unicode survives, and each file keeps its line ends");
 
@@ -299,7 +376,7 @@ namespace CapriDesktop
                 words.Select(40, 3);
                 Native.SendMessage(panel.Handle, 0x02E0, new IntPtr(192 | 192 << 16), IntPtr.Zero);
                 Point placed = panel.PageWindow.PointToScreen(Point.Empty);
-                if (panel.UiScale != 2 || panel.ArtScale <= 1.6f || placed != new Point(panel.Left + panel.PageBox.X, panel.Top + panel.PageBox.Y) || panel.PageWindow.ClientSize != panel.PageBox.Size) throw new Exception("A 200% screen didn't redraw the panel: " + panel.UiScale + " " + panel.ArtScale + " " + panel.PageBox + " " + panel.PageWindow.ClientSize);
+                if (panel.UiScale != 2 || panel.ArtScale <= 1.6f || placed != new Point(panel.Left + panel.PageBox.X, panel.Top + panel.PageBox.Y) || panel.PageWindow.ClientSize != panel.PageBox.Size) throw new Exception("A 200% screen didn't redraw the panel: " + panel.UiScale + " " + panel.ArtScale + " " + panel.PageBox + " " + panel.PageWindow.ClientSize + ", " + panel.StageSaid + ", the DPI message " + panel.RescaleSaid + ", other thread " + panel.InvokeRequired + ", window " + panel.Handle + " subclassed by " + (System.Windows.Forms.NativeWindow.FromHandle(panel.Handle) == null ? "none" : System.Windows.Forms.NativeWindow.FromHandle(panel.Handle).GetType().Name));
                 Native.SendMessage(panel.Handle, 0x02E0, new IntPtr((int)(96 * scaleWas) | (int)(96 * scaleWas) << 16), IntPtr.Zero);
                 if (panel.UiScale != scaleWas || words.SelectionStart != 40 || words.SelectionLength != 3) throw new Exception("Coming back from a 200% screen went wrong.");
                 int lineHigh = words.GetPositionFromCharIndex(words.GetFirstCharIndexFromLine(1)).Y - words.GetPositionFromCharIndex(0).Y;
@@ -565,3 +642,4 @@ namespace CapriDesktop
         }
     }
 }
+#endif

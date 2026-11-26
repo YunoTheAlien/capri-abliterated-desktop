@@ -128,12 +128,35 @@ namespace CapriDesktop
         private const string ZipUrl = "https://github.com/ggml-org/llama.cpp/releases/download/b11669/llama-b11669-bin-win-vulkan-x64.zip";
         private const string ZipSha = "2c07574e7bde71321cb785282b20cc821e951132149eeceeea32ddebdbf0598e";
         private const long ZipSize = 32182350;
-        internal static readonly Pick[] Picks =
+        // Her own brains by name, so a new one in the list never moves which one Fit or a check means.
+        internal static readonly Pick E4B = new Pick("Gemma 4 E4B", "gemma4:e4b-it-qat", "ggml-org/gemma-4-E4B-it-GGUF", "a69f018d7678a2b9f5e705f8903d6fb29b9b25dc", "gemma-4-E4B-it-Q4_0.gguf", "a555b900214b477d8880e7832e0b8925e139b0159640036b09fe472b6f2097f2", 4590807392).Eyes("ggml-org/gemma-4-E4B-it-GGUF", "a69f018d7678a2b9f5e705f8903d6fb29b9b25dc", "mmproj-gemma-4-E4B-it-Q8_0.gguf", "197f49a93027f9843772bd24a6a9e0be2a32a788de5a3def330e9c585d86edd1", 559874816);
+        internal static readonly Pick E2B = new Pick("Gemma 4 E2B", "gemma4:e2b-it-qat", "unsloth/gemma-4-E2B-it-GGUF", "0314792d7f1f7e229411f620751375812bb9faf2", "gemma-4-E2B-it-Q4_K_M.gguf", "740185b21d22ceb83a11c3aa62ad5842ef32c70f6096d756bbee85a1e4ec34b8", 3106738272).Eyes("ggml-org/gemma-4-E2B-it-GGUF", "6938c58e698502037401a5f19f6905f2fb2f7dee", "mmproj-gemma-4-E2B-it-Q8_0.gguf", "9406f99c16d68cda4f1f0552192dcc99021ea1fc6d2fd50b1dc3ccf30d04b292", 557368064);
+        internal static readonly Pick Qwen4B = new Pick("Qwen3 4B", "qwen3:4b-instruct-2507-q4_K_M", "unsloth/Qwen3-4B-Instruct-2507-GGUF", "a06e946bb6b655725eafa393f4a9745d460374c9", "Qwen3-4B-Instruct-2507-Q4_K_M.gguf", "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597", 2497281120);
+        internal static readonly Pick[] Picks = { E4B, E2B, Qwen4B };
+        // The conversation brain, never her own brain: pinned like hers, its size and hash checked before use.
+        internal static readonly Pick Gemma3 = new Pick("Gemma 3 1B", "gemma3:1b", "ggml-org/gemma-3-1b-it-GGUF", "f9c28bcd85737ffc5aef028638d3341d49869c27", "gemma-3-1b-it-Q4_K_M.gguf", "8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135", 806058240);
+
+        // How hard a brain is held off repeats, by its row in her brain list: LIQ (1B or fewer), MIQ (to about 4B), HIQ (E4B
+        // and up) gently over a longer window. A model it doesn't know keeps its server's own.
+        internal sealed class Sampling
         {
-            new Pick("Gemma 4 E4B", "gemma4:e4b-it-qat", "ggml-org/gemma-4-E4B-it-GGUF", "a69f018d7678a2b9f5e705f8903d6fb29b9b25dc", "gemma-4-E4B-it-Q4_0.gguf", "a555b900214b477d8880e7832e0b8925e139b0159640036b09fe472b6f2097f2", 4590807392).Eyes("ggml-org/gemma-4-E4B-it-GGUF", "a69f018d7678a2b9f5e705f8903d6fb29b9b25dc", "mmproj-gemma-4-E4B-it-Q8_0.gguf", "197f49a93027f9843772bd24a6a9e0be2a32a788de5a3def330e9c585d86edd1", 559874816),
-            new Pick("Gemma 4 E2B", "gemma4:e2b-it-qat", "unsloth/gemma-4-E2B-it-GGUF", "0314792d7f1f7e229411f620751375812bb9faf2", "gemma-4-E2B-it-Q4_K_M.gguf", "740185b21d22ceb83a11c3aa62ad5842ef32c70f6096d756bbee85a1e4ec34b8", 3106738272).Eyes("ggml-org/gemma-4-E2B-it-GGUF", "6938c58e698502037401a5f19f6905f2fb2f7dee", "mmproj-gemma-4-E2B-it-Q8_0.gguf", "9406f99c16d68cda4f1f0552192dcc99021ea1fc6d2fd50b1dc3ccf30d04b292", 557368064),
-            new Pick("Qwen3 4B", "qwen3:4b-instruct-2507-q4_K_M", "unsloth/Qwen3-4B-Instruct-2507-GGUF", "a06e946bb6b655725eafa393f4a9745d460374c9", "Qwen3-4B-Instruct-2507-Q4_K_M.gguf", "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597", 2497281120)
-        };
+            internal string Tier;
+            internal double RepeatPenalty, FrequencyPenalty, PresencePenalty;
+            internal int RepeatWindow;
+        }
+
+        internal static readonly Sampling Liq = new Sampling { Tier = "LIQ", RepeatPenalty = 1.3, RepeatWindow = 256, FrequencyPenalty = 0.5, PresencePenalty = 0.4 };
+        internal static readonly Sampling Miq = new Sampling { Tier = "MIQ", RepeatPenalty = 1.15, RepeatWindow = 256, FrequencyPenalty = 0.3, PresencePenalty = 0.2 };
+        internal static readonly Sampling Hiq = new Sampling { Tier = "HIQ", RepeatPenalty = 1.05, RepeatWindow = 256, FrequencyPenalty = 0.1, PresencePenalty = 0.1 };
+
+        internal static Sampling SamplingFor(string model)
+        {
+            string named = (model ?? "").ToLowerInvariant();
+            if (Regex.IsMatch(named, @"smollm|tinyllama|granite4|\b(?:270|350|360|500)m\b|[:\-_](?:0\.[56]|1)b\b")) return Liq;
+            if (Regex.IsMatch(named, @"[:\-_](?:1\.5|1\.7|2|3|4)b\b|\be2b\b")) return Miq;
+            if (Regex.IsMatch(named, @"\be4b\b|[:\-_](?:7|8|9|12|14|27)b\b")) return Hiq;
+            return null;
+        }
         private readonly string root;
         private readonly object gate = new object();
         private Process server;
@@ -187,9 +210,17 @@ namespace CapriDesktop
         internal static Pick Fit(Machine machine)
         {
             const long Gb = 1L << 30;
-            if (machine.Vram >= 7 * Gb && machine.Ram >= 12 * Gb) return Picks[0];
-            if (machine.Ram >= 7 * Gb || machine.Vram >= 4 * Gb) return Picks[1];
-            return Picks[2];
+            if (machine.Vram >= 7 * Gb && machine.Ram >= 12 * Gb) return E4B;
+            if (machine.Ram >= 7 * Gb || machine.Vram >= 4 * Gb) return E2B;
+            return Qwen4B;
+        }
+
+        // Whether this PC carries a local model of this size: its weights on the graphics card with 1 GB to spare, or in
+        // half its memory on the CPU. A fallback never loads one that doesn't fit.
+        internal static bool Carries(Machine machine, long size)
+        {
+            const long Gb = 1L << 30;
+            return machine != null && size > 0 && (size + Gb <= machine.Vram || size * 2 <= machine.Ram);
         }
 
         internal static string Amount(long size) { return size < 1e9 ? Math.Round(size / 1e6) + " MB" : (size / 1e9).ToString("0.#") + " GB"; }
@@ -197,6 +228,8 @@ namespace CapriDesktop
         private string Folder { get { return Path.Combine(root, "engine-" + Build); } }
         private string Server { get { return Path.Combine(Folder, "llama-server.exe"); } }
         private string ModelPath(Pick pick) { return Path.Combine(Path.Combine(root, "models"), pick.File); }
+
+        internal bool Has(Pick pick) { return File.Exists(Server) && File.Exists(ModelPath(pick)); }
         private string EyesPath(Pick pick) { return pick.EyesFile == null ? null : Path.Combine(Path.Combine(root, "models"), pick.EyesFile); }
 
         internal bool HasEyes(Pick pick) { string path = EyesPath(pick); return path != null && File.Exists(path); }

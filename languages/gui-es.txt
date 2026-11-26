@@ -69,6 +69,7 @@ Jealous	Celosa
 Mood pranks	Bromas de humor
 Lets a furious or ignored mood set off her icon rampage and window mischief	Deja que un estado furioso o ignorado active su alboroto de iconos y travesuras de ventana
 Personality editor	Editor de personalidad
+Personality settings	Configuración de personalidad
 Feed her	Aliméntala
 A snack	Un aperitivo
 A proper meal	Una comida adecuada
@@ -95,6 +96,9 @@ Stream safe	Segura para transmitir
 Hides your file names, icons and window titles from anything she shows or says	Oculta tus nombres de archivo, iconos y títulos de ventana de cualquier cosa que muestre o diga
 Twitch	Twitch
 Read chat	Leer chat
+Read chat aloud	Leer chat en voz alta
+Read all chat aloud	Leer todo el chat en voz alta
+Better conversations	Mejores conversaciones
 Who's live now	Quién está en vivo ahora
 Edit twitch.md	Editar twitch.md
 Clear memory	Borrar memoria
@@ -393,4 +397,152 @@ Import settings	Importar ajustes
 GENERAL SETTINGS	CONFIGURACIÓN GENERAL
 I speak	Hablo
 She answers in	Ella responde en
-Save Mainframe position	Recordar posición del panel
+Save Mainframe position	Guardar posición del Mainframe
+Capri options	Opciones de Capri
+Default all	Restablecer todo
+Defaults	Predeterminados
+Hear her	Escúchala
+What she likes	Lo que le gusta
+How she reacts	Cómo reacciona
+Add GIFs	Añadir GIFs
+Add to pack	Añadir al paquete
+Allow	Permitir
+As set in Toggles	Como en Interruptores
+Back to stock	Volver a lo original
+BRAIN PROVIDER	PROVEEDOR DEL CEREBRO
+Browse	Examinar
+Capri only	Solo Capri
+Capri Remote	Capri Remote
+Capri resources	Recursos de Capri
+Clear	Borrar
+Deny	Denegar
+Edit as text	Editar como texto
+EXTRAS	EXTRAS
+Focus mode	Modo concentración
+Forget	Olvidar
+Forget account	Olvidar cuenta
+Forget everything about me	Olvida todo sobre mí
+Fork capri-mods	Hacer fork de capri-mods
+Free voice: Her own	Voz gratis: la suya
+From a file	Desde un archivo
+Going live	En directo
+Grows	Crece
+Guide	Guía
+Hear it	Escucharlo
+Her GIFs	Sus GIFs
+HER HANDS	SUS MANOS
+HER JOBS	SUS TAREAS
+HER MEMORY	SU MEMORIA
+HER MODS	SUS MODS
+Her personality	Su personalidad
+Her text	Su texto
+HER VOICE	SU VOZ
+Hide for now	Ocultar por ahora
+IN DISCORD	EN DISCORD
+Input: default	Entrada: predeterminada
+Install	Instalar
+Learn more	Más información
+Load untested mods	Cargar mods sin probar
+MAIN	PRINCIPAL
+Mainframe: Ctrl + Alt + M	Mainframe: Ctrl + Alt + M
+Mod rules	Reglas de mods
+Mods directory	Directorio de mods
+New mood now	Nuevo humor ahora
+No intro mod is on: open Mods	Ningún mod de intro activo: abre Mods
+None saved yet: connect one and it is kept here	Nada guardado aún: conecta uno y se guardará aquí
+Nothing listed yet. Press Refresh.	Nada en la lista aún. Pulsa Actualizar.
+Ollama	Ollama
+Open the player	Abrir el reproductor
+OTHER PROGRAMS	OTROS PROGRAMAS
+Output: none	Salida: ninguna
+Pair a phone	Vincular un teléfono
+PHONES	TELÉFONOS
+Pick a file	Elegir un archivo
+Plug-ins	Plug-ins
+Preset {n}	Ajuste {n}
+Publish mod	Publicar mod
+Push to talk: not set	Pulsar para hablar: sin asignar
+QR CODE	CÓDIGO QR
+RELAY	RELÉ
+Reload	Recargar
+Remove all phones	Quitar todos los teléfonos
+Report a problem	Informar de un problema
+Restart to update	Reiniciar para actualizar
+Revoke	Revocar
+Room	Sala
+Save log	Guardar registro
+Save pack	Guardar paquete
+Saved providers	Proveedores guardados
+Screensaver	Protector de pantalla
+SECURITY	SEGURIDAD
+Set	Asignar
+Set up Email	Configurar correo
+Short	Corto
+Show my mod file	Mostrar mi archivo del mod
+Show QR	Mostrar QR
+Take it off her	Quitárselo
+Take out	Sacar
+Tamagotchi	Tamagotchi
+The Screensaver mod is off: open Mods	El mod Protector de pantalla está apagado: abre Mods
+Transparent	Transparente
+Turn off mini player	Apagar el minirreproductor
+Undo	Deshacer
+Use saved	Usar guardado
+Use this server	Usar este servidor
+View	Ver
+View mod	Ver mod
+VOICE IN YOUR MIC	VOZ EN TU MICRO
+VOICE LAYERS	CAPAS DE VOZ
+Voice model	Modelo de voz
+WHO	QUIÉN
+Window	Ventana
+TOOLS	HERRAMIENTAS
+TAMAGOTCHI MODE	MODO TAMAGOTCHI
+Setup	Preparar
+FALLBACK	RESPALDO
+Refresh providers	Actualizar proveedores
+Conversation brain	Cerebro de conversación
+Get it	Obtener
+Advanced circuits package: a download, off until turned on, its size shown first. It comes with the designer.	Paquete de circuitos avanzados: una descarga, apagada hasta que la actives, con su tamaño mostrado antes. Llega con el diseñador.
+Show music player	Mostrar el reproductor de música
+Sections	Secciones
+Resume	Reanudar
+Keep playing when closed	Seguir sonando al cerrarlo
+App	Aplicación
+Mod	Mod
+Kind	Tipo
+Plugs into	Se conecta a
+Main files	Archivos principales
+Personality files	Archivos de personalidad
+Scan wave	Onda de escaneo
+Conflicts	Conflictos
+Copy	Copiar
+Edit in MD editor	Editar en el editor MD
+Merge	Combinar
+Mod maker	Creador de mods
+Save collection	Guardar colección
+Colours	Colores
+Security	Seguridad
+Modding	Modding
+Workspace	Espacio de trabajo
+Her memory	Su memoria
+File keeper	Guardián de archivos
+Keeps files in	Guarda archivos en
+Pick a folder	Elegir una carpeta
+Follow	Seguir
+Her topics	Sus temas
+Send it	Enviar
+What she said	Lo que dijo
+What went wrong	Lo que falló
+Remember viewers	Recordar espectadores
+Forget viewers	Olvidar espectadores
+Topics	Temas
+Growth	Crecimiento
+Moods	Estados de ánimo
+Personalities	Personalidades
+CAPRI STREAM	CAPRI STREAM
+Fold all	Plegar todo
+Folding	Plegado
+Panels	Paneles
+Chat pace	Ritmo del chat
+Increases gain rates by multiplier	Aumenta las tasas de ganancia por el multiplicador

@@ -1,0 +1,48 @@
+100%/Page/Veil:  | Microsoft Sans Serif 8.2 Regular
+100%/Page/Ink:  | Capri Mainframe 14 Bold
+100%/Page/WordBox:  | Share Tech Mono 17 Regular
+100%/Page/Bar:  | Microsoft Sans Serif 8.2 Regular
+100%/Page/Note:  | Share Tech Mono 13 Regular
+100%/Page/Ink: Keep editing | Capri Mainframe 14 Bold
+100%/Page/Ink: New | Capri Mainframe 14 Bold
+100%/Page/Ink: Reload | Capri Mainframe 14 Bold
+100%/Page/Ink: Save | Capri Mainframe 14 Bold
+100%/Page/Ink: Main files | Capri Mainframe 14 Bold
+100%/Page/Ink: Personality files | Capri Mainframe 14 Bold
+100%/Page/Ink: me.md | Capri Mainframe 14 Bold
+100%/Page/Ink: twitch.md | Capri Mainframe 14 Bold
+100%/Page/Ink: commands.md | Capri Mainframe 14 Bold
+100%/Page/Ink: playlist.json | Capri Mainframe 14 Bold
+100%/Page/Ink: sys.md | Capri Mainframe 14 Bold
+100%/Page/Ink: lines.md | Capri Mainframe 14 Bold
+100%/Page/Ink: moments.md | Capri Mainframe 14 Bold
+100%/Page/Ink: watching.md | Capri Mainframe 14 Bold
+100%/Page/Ink: topics.md | Capri Mainframe 14 Bold
+100%/Page/Ink: lore.md | Capri Mainframe 14 Bold
+100%/Page/Ink: touch.md | Capri Mainframe 14 Bold
+100%/Page/Ink: check-ins.md | Capri Mainframe 14 Bold
+100%/Page/Ink: MODDING.md | Capri Mainframe 14 Bold
+150%/Page/Veil:  | Microsoft Sans Serif 8.2 Regular
+150%/Page/Ink:  | Capri Mainframe 14 Bold
+150%/Page/WordBox:  | Share Tech Mono 17 Regular
+150%/Page/Bar:  | Microsoft Sans Serif 8.2 Regular
+150%/Page/Note:  | Share Tech Mono 13 Regular
+150%/Page/Ink: Keep editing | Capri Mainframe 14 Bold
+150%/Page/Ink: New | Capri Mainframe 14 Bold
+150%/Page/Ink: Reload | Capri Mainframe 14 Bold
+150%/Page/Ink: Save | Capri Mainframe 14 Bold
+150%/Page/Ink: Main files | Capri Mainframe 14 Bold
+150%/Page/Ink: Personality files | Capri Mainframe 14 Bold
+150%/Page/Ink: me.md | Capri Mainframe 14 Bold
+150%/Page/Ink: twitch.md | Capri Mainframe 14 Bold
+150%/Page/Ink: commands.md | Capri Mainframe 14 Bold
+150%/Page/Ink: playlist.json | Capri Mainframe 14 Bold
+150%/Page/Ink: sys.md | Capri Mainframe 14 Bold
+150%/Page/Ink: lines.md | Capri Mainframe 14 Bold
+150%/Page/Ink: moments.md | Capri Mainframe 14 Bold
+150%/Page/Ink: watching.md | Capri Mainframe 14 Bold
+150%/Page/Ink: topics.md | Capri Mainframe 14 Bold
+150%/Page/Ink: lore.md | Capri Mainframe 14 Bold
+150%/Page/Ink: touch.md | Capri Mainframe 14 Bold
+150%/Page/Ink: check-ins.md | Capri Mainframe 14 Bold
+150%/Page/Ink: MODDING.md | Capri Mainframe 14 Bold

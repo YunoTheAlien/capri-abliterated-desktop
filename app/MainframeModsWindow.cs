@@ -192,12 +192,20 @@ namespace CapriDesktop
         internal string UpdateKeyShown { get { return modUpdate.Text; } }
         internal void PressUpdateMods() { UpdateMods(); }
 
+        // A window's zoom on the screen the Mainframe is on: the Mainframe's own, or less where its design at that size
+        // would not fit the work area. A tall one (the Mods directory) on 1280 x 720 at 150% needs about half.
         private float SheetZoom(int wide, int tall)
         {
-            Rectangle area = Screen.FromControl(this).WorkingArea;
-            float dpi = DeviceScale() * TextScale();
-            return Math.Max(0.75f, Math.Min(zoom, Math.Min(area.Width / (wide * dpi), area.Height / (tall * dpi))));
+            Rectangle area = Fits.Area(this);
+            float dpi = (Fits.StandInScale > 0 ? Fits.StandInScale : DeviceScale()) * TextScale();
+            return Fits.Scale(new Size(wide, tall), zoom * dpi, area, SheetFloor * dpi) / dpi;
         }
+
+        // The least a window's zoom goes to, still readable.
+        internal const float SheetFloor = 0.5f;
+
+        // The Mainframe's own: with her setup card open on 1280 x 720 at 150% its main page needs a little under half.
+        internal const float MainframeFloor = 0.45f;
 
         // Made once and kept like her other windows. Its list is read each time it opens, as it was when every
         // close threw the window away.
@@ -263,6 +271,8 @@ namespace CapriDesktop
                 shut.AccessibleName = "Close";
                 shut.Click += delegate { Close(); };
                 Controls.Add(shut);
+                // Gone, it is let go of, so nothing of it stays reachable from the Mainframe.
+                Disposed += delegate { Frame.Forget(this); };
             }
 
             // A minimise key beside close, drawn and placed as the Mainframe's: the window is put away as it is, and opening it
@@ -276,6 +286,36 @@ namespace CapriDesktop
                 tuck.Click += delegate { if (before != null) before(); Hide(); };
                 Controls.Add(tuck);
                 return tuck;
+            }
+
+            // Windows joined into one: a key per part in each one's title bar from x 200, the part showing lit, another key
+            // opening that part in the same place; extra, when given, a key of its own 14 after them.
+            protected Key[] Parts(string[] names, int shown, Action<int> open, string extra, Action extraClick)
+            {
+                Key[] keys = new Key[names.Length];
+                int x = 200;
+                for (int i = 0; i < names.Length; i++)
+                {
+                    int part = i;
+                    keys[i] = Make(names[i], x, 17, 110, 24, delegate { if (part != shown) open(part); });
+                    keys[i].Accent = i == shown ? Cyan : Rose;
+                    keys[i].Status = i == shown ? "Shown" : null;
+                    keys[i].AccessibleName = names[i];
+                    x += 116;
+                }
+                if (extra != null)
+                {
+                    Key alone = Make(extra, x - 6 + 14, 17, 110, 24, delegate { extraClick(); });
+                    alone.AccessibleName = extra;
+                }
+                return keys;
+            }
+
+            // Mod maker and Conflicts share one window.
+            protected void Pair(bool conflicts)
+            {
+                Key[] keys = Parts(new[] { "Mod maker", "Conflicts" }, conflicts ? 1 : 0, delegate(int part) { Frame.ShowModPart(part == 1, this); }, null, null);
+                keys[1].AccessibleName = "Conflicts: collections, load order and the parts mods share";
             }
 
             protected void Run(Action work)
@@ -307,6 +347,8 @@ namespace CapriDesktop
                 label.AutoEllipsis = true;
                 label.UseMnemonic = false;
                 label.Bounds = Box(x, y, width, height);
+                // A name starts at its x with no padding, the same as a switch's name beside it.
+                if (colour == Rose) ((Note)label).Flush = true;
                 Controls.Add(label);
                 return label;
             }
@@ -338,7 +380,7 @@ namespace CapriDesktop
                     {
                         Control b = Controls[j];
                         if (!b.Visible || (b is Label && b.Text.Length == 0)) continue;
-                        if (a.Bounds.IntersectsWith(b.Bounds)) return "overlap: " + (a.Text.Length > 0 ? a.Text : a.AccessibleName) + " / " + (b.Text.Length > 0 ? b.Text : b.AccessibleName);
+                        if (a.Bounds.IntersectsWith(b.Bounds)) return "overlap: " + (a.Text.Length > 0 ? a.Text : a.AccessibleName) + " " + a.Bounds + " / " + (b.Text.Length > 0 ? b.Text : b.AccessibleName) + " " + b.Bounds + " (client " + ClientSize + ", drawn for " + designWide + " x " + designTall + " at " + Zoom + ", scale " + ScaleOf(this) + ")";
                     }
                 }
                 return null;
@@ -351,14 +393,14 @@ namespace CapriDesktop
                 using (Bitmap shot = new Bitmap(Width, Height, PixelFormat.Format24bppRgb))
                 {
                     DrawToBitmap(shot, new Rectangle(Point.Empty, Size));
-                    shot.Save(path, ImageFormat.Png);
+                    using (Bitmap cut = Outlined(shot, this)) cut.Save(path, ImageFormat.Png);
                 }
             }
 
             protected override void OnLoad(EventArgs e)
             {
                 base.OnLoad(e);
-                Rectangle area = Screen.FromControl(Frame).WorkingArea;
+                Rectangle area = Fits.Area(Frame);
                 int x = Frame.Left + (Frame.Width - Width) / 2, y = Frame.Top + (int)(48 * ScaleOf(this));
                 Location = new Point(Math.Max(area.Left, Math.Min(area.Right - Width, x)), Math.Max(area.Top, Math.Min(area.Bottom - Height, y)));
             }
@@ -425,117 +467,24 @@ namespace CapriDesktop
             }
         }
 
-        private sealed class ModStars : Control
-        {
-            internal event Action<int> Picked;
-            private double value;
-            private bool canRate;
-            private int hover;
-
-            internal ModStars()
-            {
-                SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
-                BackColor = Ground;
-                TabStop = false;
-                AccessibleRole = AccessibleRole.Slider;
-            }
-
-            internal double Value { get { return value; } set { this.value = value; Invalidate(); } }
-
-            internal bool CanRate
-            {
-                get { return canRate; }
-                set { canRate = value; TabStop = value; hover = 0; Cursor = value ? Cursors.Hand : Cursors.Default; Invalidate(); }
-            }
-
-            internal void Pick(int stars) { if (canRate && Picked != null) Picked(stars); }
-
-            private static PointF[] Shape(RectangleF box)
-            {
-                PointF[] points = new PointF[10];
-                float x = box.Left + box.Width / 2, y = box.Top + box.Height / 2, far = Math.Min(box.Width, box.Height) / 2;
-                for (int i = 0; i < 10; i++)
-                {
-                    double angle = -Math.PI / 2 + i * Math.PI / 5;
-                    float reach = i % 2 == 0 ? far : far * 0.45f;
-                    points[i] = new PointF(x + (float)Math.Cos(angle) * reach, y + (float)Math.Sin(angle) * reach);
-                }
-                return points;
-            }
-
-            protected override void OnPaint(PaintEventArgs e)
-            {
-                Graphics graphics = e.Graphics;
-                Backdrop(graphics, this, ScaleOf(this));
-                graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                double shown = hover > 0 ? hover : value;
-                float each = Width / 5f;
-                for (int i = 0; i < 5; i++)
-                {
-                    RectangleF box = new RectangleF(i * each + 1, 1, each - 2, Height - 2);
-                    PointF[] star = Shape(box);
-                    using (Brush empty = new SolidBrush(WellEdge)) graphics.FillPolygon(empty, star);
-                    double lit = Math.Max(0, Math.Min(1, shown - i));
-                    if (lit <= 0) continue;
-                    GraphicsState kept = graphics.Save();
-                    graphics.SetClip(new RectangleF(box.Left, box.Top, box.Width * (float)lit, box.Height));
-                    using (Brush full = new SolidBrush(Cyan)) graphics.FillPolygon(full, star);
-                    graphics.Restore(kept);
-                }
-                if (Focused) ControlPaint.DrawFocusRectangle(graphics, ClientRectangle);
-            }
-
-            protected override void OnMouseMove(MouseEventArgs e)
-            {
-                base.OnMouseMove(e);
-                if (!canRate) return;
-                int over = Math.Max(1, Math.Min(5, e.X * 5 / Math.Max(1, Width) + 1));
-                if (over != hover) { hover = over; Invalidate(); }
-            }
-
-            protected override void OnMouseLeave(EventArgs e)
-            {
-                base.OnMouseLeave(e);
-                if (hover != 0) { hover = 0; Invalidate(); }
-            }
-
-            protected override void OnMouseClick(MouseEventArgs e)
-            {
-                base.OnMouseClick(e);
-                if (canRate && e.Button == MouseButtons.Left) Pick(Math.Max(1, Math.Min(5, e.X * 5 / Math.Max(1, Width) + 1)));
-            }
-
-            protected override void OnGotFocus(EventArgs e) { base.OnGotFocus(e); Invalidate(); }
-
-            protected override void OnLostFocus(EventArgs e) { base.OnLostFocus(e); Invalidate(); }
-
-            protected override void OnKeyDown(KeyEventArgs e)
-            {
-                base.OnKeyDown(e);
-                if (e.KeyCode >= Keys.D1 && e.KeyCode <= Keys.D5) { Pick(e.KeyCode - Keys.D0); e.Handled = true; }
-                else if (e.KeyCode >= Keys.NumPad1 && e.KeyCode <= Keys.NumPad5) { Pick(e.KeyCode - Keys.NumPad0); e.Handled = true; }
-            }
-        }
-
         private sealed class ModsSheet : ModSheet
         {
             internal const int Wide = 744, Tall = 782, Across = 3, Down = 2, Cards = Across * Down, CardWide = 222, CardStep = 233, CardTop = 140, CardTall = 284;
             private readonly ModPreview[] previews = new ModPreview[Cards];
-            private readonly Label[] titles = new Label[Cards], authors = new Label[Cards], abouts = new Label[Cards], metas = new Label[Cards], counts = new Label[Cards], stats = new Label[Cards];
-            private readonly ToolTip details = new ToolTip();
-            private readonly ModStars[] stars = new ModStars[Cards];
+            private readonly Label[] titles = new Label[Cards], authors = new Label[Cards], abouts = new Label[Cards], metas = new Label[Cards];
+            // Each card's title, author and what it is, shown in her tip card over its preview.
+            private readonly string[] details = new string[Cards], detailTitles = new string[Cards];
             private readonly Key[] installs = new Key[Cards], views = new Key[Cards];
             private readonly Key[] filters = new Key[ModDirectory.Kinds.Length];
-            private readonly Key[] sorts = new Key[ModDirectory.Sorts.Length];
             private readonly Entry search;
             private readonly Label status, empty, page;
-            private readonly System.Windows.Forms.Timer statusTimer = new System.Windows.Forms.Timer();
+            private readonly Clock.Ticker statusTimer = new Clock.Ticker("mods window status");
             private readonly Key back, next;
             private readonly Dictionary<string, Image> pictures = new Dictionary<string, Image>();
             private readonly HashSet<string> asked = new HashSet<string>();
             private List<ModListing> listings = new List<ModListing>(), shown = new List<ModListing>();
-            private int filter, first, ticket, order;
-            private bool installing, statsLive;
+            private int filter, first, ticket;
+            private bool installing;
             private ReadmeSheet reading;
 
             internal ModsSheet(Mainframe owner, float zoom) : base(owner, zoom, "Mods directory", "MODS DIRECTORY >", Wide, Tall)
@@ -555,32 +504,20 @@ namespace CapriDesktop
                     filters[i].AccessibleName = "Show " + ModDirectory.Kinds[i].ToLowerInvariant() + " in the mods directory";
                     filters[i].AccessibleDescription = "Mod filter";
                 }
-                Words("SORT BY", 28, 109, 70, 16, Small(), Faint);
-                for (int i = 0; i < sorts.Length; i++)
-                {
-                    int pick = i;
-                    sorts[i] = Make(ModDirectory.Sorts[i], 476 + i * 82, 106, 76, 22, delegate { first = 0; order = pick; Fill(); });
-                    sorts[i].AccessibleName = "Sort the mods directory by " + ModDirectory.Sorts[i].ToLowerInvariant();
-                    sorts[i].AccessibleDescription = "Mod sort";
-                }
                 for (int i = 0; i < Cards; i++)
                 {
                     int card = i, x = 28 + CardStep * (i % Across), y = CardTop + CardTall * (i / Across);
                     previews[i] = new ModPreview();
                     previews[i].Bounds = Box(x, y, CardWide, 110);
                     previews[i].Font = Small();
+                    int shown = i;
+                    previews[i].MouseEnter += delegate { if (!string.IsNullOrEmpty(detailTitles[shown])) Frame.TipAt(previews[shown], detailTitles[shown], details[shown]); };
+                    previews[i].MouseLeave += delegate { Frame.DismissHint(); };
                     Controls.Add(previews[i]);
                     titles[i] = Words("", x, y + 114, CardWide, 20, Type(10.5f * zoom, true), White);
                     authors[i] = Words("", x, y + 136, CardWide, 16, Small(), Cyan);
                     abouts[i] = Words("", x, y + 156, CardWide, 34, Type(9f * zoom), Faint);
                     metas[i] = Words("", x, y + 194, CardWide, 16, Small(), Faint);
-                    stars[i] = new ModStars();
-                    counts[i] = Words("", x, y + 210, CardWide, 16, Small(), Faint);
-                    stars[i].Bounds = Box(x, y + 228, 78, 16);
-                    stars[i].AccessibleDescription = "Rate mod";
-                    stars[i].Picked += delegate(int picked) { Rate(card, picked); };
-                    Controls.Add(stars[i]);
-                    stats[i] = Words("", x + 84, y + 228, CardWide - 84, 16, Small(), Faint);
                     installs[i] = Make("Install", x, y + 248, 108, 24, delegate { Install(card); });
                     installs[i].AccessibleDescription = "Install mod";
                     views[i] = Make("View", x + 114, y + 248, 108, 24, delegate { View(card); });
@@ -621,7 +558,6 @@ namespace CapriDesktop
             {
                 int mine = ++ticket;
                 listings = new List<ModListing>();
-                statsLive = false;
                 first = 0;
                 Says("Looking in the mods directory...", false);
                 Fill();
@@ -653,19 +589,6 @@ namespace CapriDesktop
                 }
                 // Marks the cards of installed mods with a newer copy, without saying anything on her mods page.
                 Frame.LookForUpdates(true);
-                Run(delegate
-                {
-                    Dictionary<string, ModStats> read = null;
-                    try { read = ModDirectory.Stats(); }
-                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-                    Back(delegate
-                    {
-                        if (mine != ticket || read == null) return;
-                        statsLive = true;
-                        ModDirectory.Apply(listings, read);
-                        Fill();
-                    });
-                });
             }
 
             private void AskForPicture(ModListing listing)
@@ -684,7 +607,7 @@ namespace CapriDesktop
 
             private void Fill()
             {
-                shown = ModDirectory.Sort(ModDirectory.Filter(listings, search.Box.Text, filter), order);
+                shown = ModDirectory.Filter(listings, search.Box.Text, filter);
                 first = Math.Max(0, Math.Min(first, (Math.Max(0, shown.Count - 1) / Cards) * Cards));
                 empty.Visible = shown.Count == 0;
                 empty.Text = listings.Count == 0 ? "Nothing to show from the mods directory." : "No mods match that.";
@@ -693,11 +616,6 @@ namespace CapriDesktop
                     filters[i].Accent = i == filter ? Cyan : Faint;
                     filters[i].Invalidate();
                 }
-                for (int i = 0; i < sorts.Length; i++)
-                {
-                    sorts[i].Accent = i == order ? Cyan : Faint;
-                    sorts[i].Invalidate();
-                }
                 for (int i = 0; i < Cards; i++)
                 {
                     ModListing listing = At(i);
@@ -705,7 +623,6 @@ namespace CapriDesktop
                     previews[i].Visible = titles[i].Visible = metas[i].Visible = installs[i].Visible = views[i].Visible = on;
                     authors[i].Visible = on && listing.Author.Length > 0;
                     abouts[i].Visible = on && listing.About.Length > 0;
-                    stars[i].Visible = stats[i].Visible = counts[i].Visible = on && statsLive;
                     if (!on) continue;
                     bool have = Have(listing), update = have && Frame.HasUpdate(listing.Id);
                     AskForPicture(listing);
@@ -716,16 +633,10 @@ namespace CapriDesktop
                     authors[i].Text = listing.Author.Length > 0 ? "by " + listing.Author : "";
                     abouts[i].Text = listing.About;
                     titles[i].AccessibleDescription = listing.About;
-                    details.SetToolTip(previews[i], listing.Title + (listing.Author.Length > 0 ? "\nby " + listing.Author : "") + (listing.About.Length > 0 ? "\n" + listing.About : ""));
+                    detailTitles[i] = listing.Title;
+                    details[i] = (listing.Author.Length > 0 ? "by " + listing.Author : "") + (listing.About.Length > 0 ? (listing.Author.Length > 0 ? "\n" : "") + listing.About : "");
                     metas[i].Text = listing.Kind + " " + Math.Max(1, listing.Size / 1024) + " KB." + (update ? " Update available." : have ? " Installed." : "");
-                    // Lachy's are listed after ours and said to be his, since they may not work with this build.
-                    if (ModDirectory.Marked(listing)) { abouts[i].Text = "Lachy's. " + listing.About; abouts[i].Visible = true; titles[i].AccessibleDescription = ModDirectory.HisWarning + " " + listing.About; }
                     metas[i].ForeColor = update ? Cyan : Faint;
-                    stars[i].Value = listing.Rating;
-                    stars[i].CanRate = statsLive && have;
-                    stars[i].AccessibleName = "Rate " + listing.Title + ", " + (listing.Votes == 0 ? "no ratings yet" : listing.Rating.ToString("0.0") + " stars") + (have ? ". Press 1 to 5." : "");
-                    stats[i].Text = ModDirectory.RatingLine(listing);
-                    counts[i].Text = ModDirectory.DownloadLine(listing);
                     installs[i].Text = update ? "Update" : have ? "Reinstall" : "Install";
                     installs[i].Enabled = !installing;
                     installs[i].AccessibleName = (update ? "Update " : have ? "Reinstall " : "Install ") + listing.Title;
@@ -748,7 +659,7 @@ namespace CapriDesktop
                 bool update = waiting != null;
                 string ready = update && waiting.Fetched != null && File.Exists(waiting.Fetched) ? waiting.Fetched : null;
                 if (ready != null) waiting.Fetched = null;
-                Says((update ? "Updating " : "Downloading ") + listing.Title + "..." + (ModDirectory.Marked(listing) ? " " + ModDirectory.HisWarning : ""), false);
+                Says((update ? "Updating " : "Downloading ") + listing.Title + "...", false);
                 Fill();
                 string under = Path.Combine(Path.GetTempPath(), "capri-mod-downloads");
                 Run(delegate
@@ -778,36 +689,6 @@ namespace CapriDesktop
                 finally { ModDirectory.Clean(file); }
                 Fill();
                 Says(Frame.modStatus.Text, !done && Frame.modStatus.ForeColor == Rose);
-                // An update isn't a new download, so only installs and reinstalls are counted.
-                if (!done || update) return;
-                Run(delegate
-                {
-                    try { ModDirectory.CountDownload(listing.Folder); }
-                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-                });
-            }
-
-            private void Rate(int card, int picked)
-            {
-                ModListing listing = At(card);
-                if (listing == null) return;
-                Says("Saving your rating...", false);
-                Run(delegate
-                {
-                    ModStats saved = null;
-                    string problem = null;
-                    try { saved = ModDirectory.Rate(listing.Folder, picked); }
-                    catch (Exception error) { problem = DirectoryProblem(error, "Couldn't save your rating: "); }
-                    Back(delegate
-                    {
-                        if (saved == null) { Says(problem, true); return; }
-                        listing.Downloads = saved.Downloads;
-                        listing.Rating = saved.Rating;
-                        listing.Votes = saved.Votes;
-                        Fill();
-                        Says("You gave " + listing.Title + " " + picked + (picked == 1 ? " star." : " stars."), false);
-                    });
-                });
             }
 
             // One mod's README at a time, over the mods window. It isn't a dialog, so she and the cards stay usable while it's
@@ -817,7 +698,7 @@ namespace CapriDesktop
                 ModListing listing = At(card);
                 if (listing == null) return;
                 if (reading != null && !reading.IsDisposed) reading.Close();
-                reading = new ReadmeSheet(Frame, Zoom, listing);
+                reading = new ReadmeSheet(Frame, Frame.SheetZoom(ReadmeSheet.Wide, ReadmeSheet.Tall), listing);
                 reading.Inline = Inline;
                 reading.Show(this);
             }
@@ -831,7 +712,6 @@ namespace CapriDesktop
                     statusTimer.Dispose();
                     foreach (Image picture in pictures.Values) picture.Dispose();
                     pictures.Clear();
-                    details.Dispose();
                 }
                 base.Dispose(disposing);
             }
@@ -847,19 +727,14 @@ namespace CapriDesktop
             internal string AuthorOf(int card) { return authors[card].Visible ? authors[card].Text : null; }
             internal string AboutOf(int card) { return abouts[card].Visible ? abouts[card].Text : null; }
             internal string MetaOf(int card) { return metas[card].Text; }
-            internal string StatsOf(int card) { return stats[card].Visible ? stats[card].Text + " \u00B7 " + counts[card].Text : null; }
             internal string InstallTextOf(int card) { return installs[card].Text; }
             internal bool PictureOn(int card) { return previews[card].Image != null; }
-            internal bool CanRateCard(int card) { return stars[card].Visible && stars[card].CanRate; }
             internal bool Across3 { get { return titles[0].Top == titles[2].Top && titles[0].Left < titles[1].Left && titles[1].Left < titles[2].Left && titles[3].Top > titles[0].Top; } }
             internal bool Filtered(int kind) { return filters[kind].Accent == Cyan; }
-            internal bool Sorted(int order) { return sorts[order].Accent == Cyan; }
             internal void PressNext() { next.PerformClick(); }
             internal void PressFilter(int kind) { filters[kind].PerformClick(); }
-            internal void PressSort(int order) { sorts[order].PerformClick(); }
             internal void Type2(string text) { search.Box.Text = text; }
             internal void PressInstall(int card) { Install(card); }
-            internal void PressStars(int card, int picked) { stars[card].Pick(picked); }
         }
 
         // View on a mods window card: the mod's name, author and kind over the first few useful lines of its
@@ -920,7 +795,8 @@ namespace CapriDesktop
 
             internal string BodyShown { get { return body.Text; } }
             internal bool FromReadme { get; private set; }
-            internal string PageShown { get { return ModDirectory.Page + "/tree/HEAD/mods/" + listing.Folder; } }
+            // The release it comes from.
+            internal string PageShown { get { return (listing.Source ?? ModDirectory.Ours).TagPage(listing.Tag); } }
         }
 
         private sealed class PublishSheet : ModSheet
@@ -934,9 +810,9 @@ namespace CapriDesktop
             {
                 this.mod = mod;
                 Steps = ModDirectory.PublishSteps(mod);
-                Words("Share " + mod.File.Name + " in the mods directory with a pull request.", 28, 52, 464, 18, Font, White);
+                Words("Send " + mod.File.Name + " for the mods directory.", 28, 52, 464, 18, Font, White);
                 Words(Steps, 28, 78, 464, 216, Font, Faint);
-                Key fork = Make("Fork capri-mods", 28, 298, 150, 26, delegate { Open(ModDirectory.Page + "/fork", null); });
+                Key fork = Make("Send it", 28, 298, 150, 26, delegate { Open(ModDirectory.PublishForm, null); });
                 fork.Accent = Cyan;
                 fork.Loud = true;
                 Make("Show my mod file", 186, 298, 150, 26, delegate { Open("explorer.exe", "/select,\"" + mod.Path + "\""); });

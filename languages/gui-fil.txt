@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Tahimik hanggang {n}:{n}
 Quiet until turned off	Tahimik hanggang patayin
 Export settings	I-export ang settings
 Import settings	I-import ang settings
-Save Mainframe position	Tandaan ang puwesto ng panel
+Save Mainframe position	I-save ang posisyon ng Mainframe
+Capri options	Mga opsyon ng Capri

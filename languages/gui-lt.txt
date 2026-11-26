@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Tyla iki {n}:{n}
 Quiet until turned off	Tyla, kol išjungsiu
 Export settings	Eksportuoti nustatymus
 Import settings	Importuoti nustatymus
-Save Mainframe position	Įsiminti skydelio vietą
+Save Mainframe position	Išsaugoti Mainframe padėtį
+Capri options	Capri parinktys

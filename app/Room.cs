@@ -24,13 +24,17 @@ namespace CapriDesktop
             {
                 string page = Environment.GetEnvironmentVariable("CAPRI_REMOTE_PAGE");
                 if (page != null && (page.StartsWith("http://127.0.0.1:", StringComparison.Ordinal) || page.StartsWith("http://localhost:", StringComparison.Ordinal) || page.StartsWith("https://", StringComparison.Ordinal)) && page.EndsWith("/", StringComparison.Ordinal) && page.IndexOfAny(new[] { '"', ' ', '#', '?' }) < 0) return page;
-                return "https://capriai.app/remote/";
+                // A page of ours, none yet; with none, Room says it isn't available.
+                return "";
             }
         }
+
+        internal const string NoRoom = "Room isn't available until we have our own server.";
 
         // Room on Capri Camera. Her own picture stops feeding it first, so the two never fight over the device.
         internal void OpenRoomWindow()
         {
+            if (string.IsNullOrEmpty(RemotePage)) { Remark("", NoRoom, true); return; }
             if (VirtualCamera.On)
             {
                 VirtualCamera.Stop();
@@ -110,11 +114,34 @@ namespace CapriDesktop
 
         // RoomHost on its own: the page from the site through 127.0.0.1 with only GETs of its files, a wrong token, host or
         // path refused, the camera's state and install answered, frames handed on, and the feeds taking turns.
+#if CHECKS
         private void SmokeRoomHost(List<string> checks)
         {
-            try { new RoomHost("https://capriai.app/elsewhere/").Dispose(); throw new Exception("RoomHost took a page that isn't a Room page."); }
+            try { new RoomHost("https://room.example/elsewhere/").Dispose(); throw new Exception("RoomHost took a page that isn't a Room page."); }
             catch (ArgumentException) { }
-            if (RemotePage != "https://capriai.app/remote/" && Environment.GetEnvironmentVariable("CAPRI_REMOTE_PAGE") == null) throw new Exception("The Room page isn't Lachu's site: " + RemotePage);
+            if (RemotePage != "" && Environment.GetEnvironmentVariable("CAPRI_REMOTE_PAGE") == null) throw new Exception("The Room page still has somewhere to go with no server of ours: " + RemotePage);
+            // As shipped there's no Room page of ours: Room says so, and opens and serves nothing.
+            if (RemotePage == "")
+            {
+                Action<string> windowWas = RoomWindow;
+                string opened = null;
+                bool hostless = roomHost == null;
+                RoomWindow = delegate(string url) { opened = url; };
+                Func<bool> told = delegate
+                {
+                    List<ChatMessage> said = brain.History;
+                    return said.Count > 0 && said[said.Count - 1].Role == "assistant" && said[said.Count - 1].Content == NoRoom;
+                };
+                try
+                {
+                    OpenRoomWindow();
+                    for (int i = 0; i < 250 && !told(); i++) { System.Windows.Forms.Application.DoEvents(); System.Threading.Thread.Sleep(20); }
+                    if (!told() || opened != null || (hostless && roomHost != null) || roomFeed)
+                        throw new Exception("Room had somewhere to go with no page of ours: said it isn't available " + told() + ", opened " + (opened ?? "nothing") + ", a host made " + (hostless && roomHost != null) + ", the feed taken " + roomFeed);
+                }
+                finally { RoomWindow = windowWas; }
+                checks.Add("PASS with no Room page of ours, Room says it isn't available and opens, serves and feeds nothing");
+            }
             List<string> fetched = new List<string>();
             List<int> frames = new List<int>();
             bool feedWas = roomFeed;
@@ -174,5 +201,6 @@ namespace CapriDesktop
             finally { roomFeed = feedWas; }
             checks.Add("PASS Room and Capri only take turns on Capri Camera: a Room frame is dropped while Room isn't the feed");
         }
+#endif
     }
 }

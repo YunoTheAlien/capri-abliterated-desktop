@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Tiše do {n}:{n}
 Quiet until turned off	Tiše do vypnutí
 Export settings	Exportovat nastavení
 Import settings	Importovat nastavení
-Save Mainframe position	Pamatovat pozici panelu
+Save Mainframe position	Uložit polohu Mainframe
+Capri options	Možnosti Capri

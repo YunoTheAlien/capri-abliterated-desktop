@@ -249,6 +249,7 @@ namespace CapriDesktop
 
         // Quick runs read as written and kept to 12 steps and 8 seconds; kernel anti-cheat seen by its programs or drivers,
         // and why said once a game; right-hand Ctrl and Alt and the numpad sent as their own keys; a banned chord by any name.
+#if CHECKS
         internal static void Check(List<string> checks)
         {
             string problem;
@@ -282,5 +283,6 @@ namespace CapriDesktop
                 throw new Exception("A banned chord got past under another name.");
             checks.Add("PASS quick moves in games: a quick run reads as written up to 12 steps and 8 seconds; kernel anti-cheat is seen by its programs or drivers and stops it, with why said once a game; right Ctrl, right Alt and the numpad go as their own keys; a banned chord is banned by any name");
         }
+#endif
     }
 }

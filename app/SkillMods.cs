@@ -84,14 +84,14 @@ namespace CapriDesktop
             catch (IOException error) { throw new ModException("Couldn't read that file: " + error.Message); }
             catch (UnauthorizedAccessException error) { throw new ModException("Couldn't read that file: " + error.Message); }
             ModFile read = ReadSkill(text);
-            string home = Path.Combine(folder, read.Id + SkillExtension);
+            string home = Path.Combine(PlaceFor(read.Id, file, text), read.Id + SkillExtension);
             try
             {
-                Directory.CreateDirectory(folder);
+                Directory.CreateDirectory(Path.GetDirectoryName(home));
                 string writing = home + ".new";
                 File.WriteAllText(writing, text, new UTF8Encoding(false));
                 if (File.Exists(home)) File.Delete(home);
-                File.Move(writing, home);
+                File.Move(writing, home); LeftLoose(file, home);
                 HashSet<string> off = Off();
                 if (off.Remove(read.Id)) WriteOff(off);
             }
@@ -518,6 +518,46 @@ namespace CapriDesktop
 
     internal sealed partial class Companion
     {
+#if CHECKS
+        // The Planner's skill as she carries it: laid in once, left as they changed it, offered while the Planner is in front
+        // and nowhere else, naming no site and crediting its source.
+        private void SmokePlannerSkill(List<string> checks, string output)
+        {
+            string data = Path.Combine(output, "planner-skill");
+            if (Directory.Exists(data)) Directory.Delete(data, true);
+            Mods.Stock(data);
+            string file = Path.Combine(data, "mods", Mods.Skills, "planner-planning" + Mods.SkillExtension);
+            if (!File.Exists(file)) throw new Exception("The Planner's skill wasn't laid into her mods folder.");
+            string text = File.ReadAllText(file);
+            ModFile read = Mods.ReadSkill(text);
+            List<string> wrong = new List<string>();
+            if (Array.IndexOf(read.Apps, "Game / project planner") < 0) wrong.Add("it isn't for the Planner: " + string.Join(", ", read.Apps));
+            if (Regex.IsMatch(text, @"https?://|www\.|\.com\b", RegexOptions.IgnoreCase)) wrong.Add("it names a site");
+            if (text.IndexOf("Addy Osmani", StringComparison.Ordinal) < 0 || text.IndexOf("MIT", StringComparison.Ordinal) < 0) wrong.Add("its source and licence aren't credited");
+            File.AppendAllText(file, "\nTheir own line.");
+            Mods.Stock(data);
+            if (!File.ReadAllText(file).EndsWith("Their own line.", StringComparison.Ordinal)) wrong.Add("a second start laid her copy over theirs");
+            Mods mods = ModList;
+            Mod laid = null;
+            try
+            {
+                laid = mods.Import(file, null);
+                if (laid == null) wrong.Add("the laid skill didn't import: " + mainframe.ModStatusText);
+                else
+                {
+                    string inPlanner = mods.SkillsForApps("break this into tasks", delegate { return new[] { "Capri.exe", "Game / project planner" }; });
+                    string elsewhere = mods.SkillsForApps("open notepad", delegate { return new[] { "notepad.exe", "Untitled - Notepad" }; });
+                    string inTab = mods.SkillsForApps("plan my quest", delegate { return new[] { "firefox.exe", "StoryBoard - Mozilla Firefox" }; });
+                    if (inPlanner.IndexOf("Planning in the Planner", StringComparison.Ordinal) < 0 || inPlanner.IndexOf("A task is a card", StringComparison.Ordinal) < 0) wrong.Add("the Planner in front didn't bring the skill");
+                    if (elsewhere.IndexOf("Planning in the Planner", StringComparison.Ordinal) >= 0) wrong.Add("another app brought the Planner's skill");
+                    if (inTab.IndexOf("Planning in the Planner", StringComparison.Ordinal) < 0) wrong.Add("the Planner as a browser tab titled StoryBoard didn't bring the skill");
+                }
+            }
+            finally { if (laid != null) mods.Remove(laid); }
+            if (wrong.Count > 0) throw new Exception("The Planner's skill went wrong: " + string.Join("; ", wrong.ToArray()));
+            checks.Add("PASS the Planner's skill is laid into her mods folder once, a changed copy is left theirs, it is offered while the Planner is in front and not in another app, names no site and credits Addy Osmani's agent-skills (MIT)");
+        }
+
         private void CheckSkills(List<string> checks, string output)
         {
             Mods mods = ModList;
@@ -558,7 +598,7 @@ namespace CapriDesktop
                     try { mods.Import(write(cases[i, 0], cases[i, 1]), null); throw new Exception("A bad skill was let in: " + cases[i, 0]); }
                     catch (ModException refused) { if (refused.Message.IndexOf(cases[i, 2], StringComparison.Ordinal) < 0) throw new Exception("A bad skill gave the wrong reason: " + refused.Message); }
                 }
-                if (mods.All.FindAll(mod => mod.Skill).Count != 1 || Directory.GetFiles(mods.Folder, "*" + Mods.SkillExtension + "*").Length != 1) throw new Exception("A refused skill left something behind.");
+                if (mods.All.FindAll(mod => mod.Skill).Count != 1 || Directory.GetFiles(mods.Folder, "*" + Mods.SkillExtension + "*", SearchOption.AllDirectories).Length != 1) throw new Exception("A refused skill left something behind.");
                 checks.Add("PASS skills: no header, no format line, an open header, nothing to know, a later format, a bad id and junk lines are refused with the reason");
                 ModListing listed = new ModListing { Folder = "smoke-skill", FileName = "smoke-skill" + Mods.SkillExtension };
                 if (listed.Kind != "SKILL." || listed.KindIndex != 4 || ModDirectory.Kinds[4] != "Skills" || ModDirectory.Filter(new List<ModListing> { listed }, "", 4).Count != 1 || ModDirectory.Filter(new List<ModListing> { listed }, "", 3).Count != 0) throw new Exception("The mods directory didn't sort a skill as a skill.");
@@ -784,7 +824,9 @@ namespace CapriDesktop
                 foreach (Mod left in mods.All.ToArray()) if (left.Skill) mods.Remove(left);
             }
         }
+#endif
 
+#if CHECKS
         private void CheckOwnSkills(List<string> checks)
         {
             Mods mods = ModList;
@@ -871,6 +913,7 @@ namespace CapriDesktop
                 mods.Load();
             }
         }
+#endif
     }
 #endif
 }

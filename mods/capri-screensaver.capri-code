@@ -1,10 +1,10 @@
 // capri-mod: 1
 // id: capri-screensaver
 // name: Screensaver
-// version: 1.0.0
+// version: 1.2.0
 // author: Yuno
-// description: Her screensaver: Terminals, Hexes, Code or Rain over your screens while the PC is left alone, or picked from Test > Screensavers.
-// requires: api 8
+// description: Her screensaver: Terminals, Hexes, Code or Rain over your screens while the PC is left alone, silent, or picked from Test > Screensavers.
+// requires: api 9
 
 using System;
 using System.Collections.Generic;
@@ -27,10 +27,30 @@ public class CapriScreensaver : ICapriMod, ICapriScreensaver
     public void Start(ICapriHost host)
     {
         capri = host;
-        SaverSound.Log = delegate(string line) { capri.Log(line); };
         Tint();
         host.Ui.ColoursChanged += Tint;
+        // In Toggles > Screensaver: see through for the whole group, at the top; each look's own under its ">", only what its
+        // drawing has. She keeps what was picked and hands it back here.
+        host.Toggles.AddSlider("See through", Percents(90), 0, delegate(int at) { solid = (byte)(255 - at * 10 * 225 / 100); });
+        foreach (string style in SaverLook.Styles)
+        {
+            string look = style, row = char.ToUpperInvariant(style[0]) + style.Substring(1);
+            host.Toggles.AddSlider(row, "Size", Sizes, 1, delegate(int at) { sizes[look] = SizeValues[at]; });
+            host.Toggles.AddSlider(row, "Speed", Speeds, 1, delegate(int at) { speeds[look] = SpeedValues[at]; });
+        }
+        host.Toggles.AddSlider("Hexes", "Flashing", Flashes, 2, delegate(int at) { flash = FlashValues[at]; });
+        host.Toggles.AddSlider("Rain", "Density", Densities, 3, delegate(int at) { density = (at + 1) * 0.25f; });
     }
+
+    private static readonly string[] Sizes = { "Small", "Normal", "Large", "2x", "3x" }, Speeds = { "Slow", "Normal", "Fast" }, Flashes = { "Off", "Gentle", "On" }, Densities = { "25%", "50%", "75%", "100%" };
+    private static readonly float[] SizeValues = { 0.72f, 1f, 1.5f, 2f, 3f }, SpeedValues = { 0.45f, 1f, 2.4f }, FlashValues = { 0f, 0.3f, 1f };
+    private readonly Dictionary<string, float> sizes = new Dictionary<string, float>(), speeds = new Dictionary<string, float>();
+    private float flash = 1f, density = 1f;
+    private byte solid = 255;
+
+    private static float Of(Dictionary<string, float> each, string look) { float made; return each.TryGetValue(look, out made) ? made : 1f; }
+
+    private static string[] Percents(int most) { List<string> made = new List<string>(); for (int one = 0; one <= most; one += 10) made.Add(one + "%"); return made.ToArray(); }
 
     // Its colours by name in Custom colours, the same three it always had.
     private Color colour, alert, ground;
@@ -54,6 +74,13 @@ public class CapriScreensaver : ICapriMod, ICapriScreensaver
     {
         if (ask == null || windows.Count > 0) return windows.Count > 0;
         SaverLook look = SaverLook.From(ask, colour, alert, ground);
+        // Always every screen.
+        look.Size = Of(sizes, look.Style);
+        look.Speed = Of(speeds, look.Style);
+        look.Solid = Math.Max((byte)30, solid);
+        look.EveryScreen = true;
+        look.Flash = flash;
+        look.Density = density;
         int seed = Environment.TickCount;
         foreach (Screen screen in Screen.AllScreens)
         {
@@ -69,12 +96,11 @@ public class CapriScreensaver : ICapriMod, ICapriScreensaver
                 if (!one.Open()) { one.Dispose(); continue; }
                 windows.Add(one);
                 SaverWindow held = one;
-                // The windows take themselves down, so the last one out stops the sound, and one going takes the rest.
+                // The windows take themselves down, and one going takes the rest.
                 held.FormClosed += delegate
                 {
                     windows.Remove(held);
-                    if (windows.Count == 0) SaverSound.Off();
-                    else foreach (SaverWindow other in windows.ToArray()) { try { other.Close(); } catch (Exception) { } }
+                    if (windows.Count > 0) foreach (SaverWindow other in windows.ToArray()) { try { other.Close(); } catch (Exception) { } }
                 };
             }
             catch (Exception error)
@@ -84,13 +110,11 @@ public class CapriScreensaver : ICapriMod, ICapriScreensaver
                 return windows.Count > 0;
             }
         }
-        if (windows.Count > 0) SaverSound.On(ask.Sound, ask.Volume);
         return windows.Count > 0;
     }
 
     public void Hide()
     {
-        SaverSound.Off();
         foreach (SaverWindow one in windows.ToArray()) { try { one.Close(); } catch (Exception) { } }
         windows.Clear();
     }
@@ -110,6 +134,8 @@ public sealed class SaverLook
     internal bool EveryScreen = true;
     // How hard it may flash: 0 holds steady, 1 is fastest, and no hexagon ever passes three flashes a second.
     internal float Flash = 1f;
+    // Rain: the share of its columns falling at once.
+    internal float Density = 1f;
 
     internal static SaverLook From(CapriSaverAsk ask, Color colour, Color alert, Color ground)
     {
@@ -337,8 +363,13 @@ public sealed class SaverWindow : Form
     }
 
     internal SaverWindow(Rectangle area, SaverLook how, int seed)
-        
     {
+        // A borderless layered window over the screen, off the taskbar and never taking the focus, as her overlays are.
+        Text = "Capri screensaver";
+        FormBorderStyle = FormBorderStyle.None;
+        ShowInTaskbar = false;
+        StartPosition = FormStartPosition.Manual;
+        AutoScaleMode = AutoScaleMode.None;
         room = area;
         look = how ?? new SaverLook();
         luck = new Random(seed);
@@ -650,6 +681,9 @@ public sealed class SaverWindow : Form
         drop.Tail = 6 + luck.Next(22);
         drop.Head = -luck.Next(10, 60);
         drop.Wakes = first ? luck.NextDouble() * 50 : age + luck.NextDouble() * 2;
+        // A column sits out a fall now and then, as often as its density leaves room for.
+        double fall = (room.Height + 40) / Math.Max(1, drop.Rate);
+        for (int tries = 0; tries < 12 && luck.NextDouble() >= look.Density; tries++) drop.Wakes += fall;
         drop.Face = new char[drop.Tail + 1];
         for (int one = 0; one < drop.Face.Length; one++) drop.Face[one] = RainFace[luck.Next(RainFace.Length)];
         return drop;
@@ -872,6 +906,19 @@ public sealed class SaverWindow : Form
 
     // It never takes a click or a key: whatever is under it keeps them, and the watch on idle time is what
     // closes this. Hit testing is refused so it cannot even be the window under the pointer.
+    protected override bool ShowWithoutActivation { get { return true; } }
+
+    // Layered, a tool window, never activated, on top: without layered every frame it drew was refused as a bad parameter.
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            CreateParams value = base.CreateParams;
+            value.ExStyle |= 0x00080000 | 0x00000080 | 0x08000000 | 0x00000008;
+            return value;
+        }
+    }
+
     protected override void WndProc(ref Message message)
     {
         if (message.Msg == 0x0084) { message.Result = new IntPtr(-1); return; }
@@ -1006,86 +1053,5 @@ public static class Fake
             .Replace("{h}", luck.Next(0x100000, 0xFFFFFF).ToString("x"))
             .Replace("{n}", luck.Next(2, 4096).ToString(System.Globalization.CultureInfo.InvariantCulture))
             .Replace("{note}", Notes[luck.Next(Notes.Length)]);
-    }
-}
-
-// A .wav of theirs, looped while it is up: only the file sys.md names, none ships. Her volume, with her sound switch in
-// it, is applied to the samples, since the player has no volume of its own.
-public static class SaverSound
-{
-    private static System.Media.SoundPlayer playing;
-    private static string loaded;
-    private static int loadedAt;
-
-    internal static Action<string> Log;
-
-    internal static bool Playing { get { return playing != null; } }
-
-    internal static void On(string path, int volume)
-    {
-        if (string.IsNullOrEmpty(path)) { Off(); return; }
-        volume = Math.Max(0, Math.Min(100, volume));
-        if (volume == 0) { Off(); return; }
-        if (playing != null && loaded == path && loadedAt == volume) return;
-        Off();
-        try
-        {
-            byte[] wav = Quieter(File.ReadAllBytes(path), volume);
-            System.Media.SoundPlayer made = new System.Media.SoundPlayer(new MemoryStream(wav));
-            made.PlayLooping();
-            playing = made;
-            loaded = path;
-            loadedAt = volume;
-        }
-        catch (Exception error)
-        {
-            playing = null;
-            if (Log != null) Log("Couldn't play " + Path.GetFileName(path) + ": " + error.GetType().Name + ": " + error.Message);
-        }
-    }
-
-    internal static void Off()
-    {
-        System.Media.SoundPlayer stopping = playing;
-        playing = null;
-        loaded = null;
-        if (stopping == null) return;
-        try { stopping.Stop(); } catch (Exception) { }
-        try { stopping.Dispose(); } catch (Exception) { }
-    }
-
-    // Her volume, applied to the samples themselves. A file that is not plain 16 bit PCM is left exactly
-    // as it is and plays at whatever Windows gives it, rather than being mangled by a guess.
-    private static byte[] Quieter(byte[] wav, int volume)
-    {
-        if (volume >= 100 || wav.Length < 44) return wav;
-        int at = 12;
-        int bits = 0, kind = 0;
-        while (at + 8 <= wav.Length)
-        {
-            string tag = "" + (char)wav[at] + (char)wav[at + 1] + (char)wav[at + 2] + (char)wav[at + 3];
-            int size = BitConverter.ToInt32(wav, at + 4);
-            if (size < 0 || at + 8 + size > wav.Length) break;
-            if (tag == "fmt " && size >= 16)
-            {
-                kind = BitConverter.ToInt16(wav, at + 8);
-                bits = BitConverter.ToInt16(wav, at + 22);
-            }
-            else if (tag == "data")
-            {
-                if (kind != 1 || bits != 16) return wav;
-                byte[] made = (byte[])wav.Clone();
-                for (int one = at + 8; one + 1 < at + 8 + size; one += 2)
-                {
-                    short sample = BitConverter.ToInt16(made, one);
-                    byte[] quieter = BitConverter.GetBytes((short)(sample * volume / 100));
-                    made[one] = quieter[0];
-                    made[one + 1] = quieter[1];
-                }
-                return made;
-            }
-            at += 8 + size + (size & 1);
-        }
-        return wav;
     }
 }

@@ -219,4 +219,5 @@ Quiet until {n}:{n}	ງຽບຈົນຮອດ {n}:{n}
 Quiet until turned off	ງຽບຈົນກວ່າຈະປິດ
 Export settings	ສົ່ງອອກການຕັ້ງຄ່າ
 Import settings	ນຳເຂົ້າການຕັ້ງຄ່າ
-Save Mainframe position	ຈື່ຕຳແໜ່ງແຜງ
+Save Mainframe position	ບັນທຶກຕຳແໜ່ງ Mainframe
+Capri options	ຕົວເລືອກ Capri

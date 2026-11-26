@@ -79,7 +79,7 @@ namespace CapriDesktop
         // the ball's middle is this far from the cell's middle, in the cell's pixels, once she's turned to face right.
         internal const float FormInCell = 0.335f, FormSitX = 5.97f, FormSitY = 12.34f;
         private const int Points = 48;
-        private readonly Beat ticks = new Beat();
+        private readonly Clock.Frames ticks = new Clock.Frames("Shape");
         private readonly System.Diagnostics.Stopwatch watch = new System.Diagnostics.Stopwatch();
         private readonly Random random = new Random();
         private Trip trip;
@@ -479,6 +479,7 @@ namespace CapriDesktop
 
         // A computer job's teleport onto the task panel finishes by itself while her window's thread stays busy with
         // other work, as a full-screen game job keeps it.
+#if CHECKS
         private void SmokeJobTeleport(List<string> checks)
         {
             Func<bool> fullWas = FullScreen;
@@ -548,6 +549,7 @@ namespace CapriDesktop
                 }
             });
         }
+#endif
 
         // A message-only window whose one message does some work, so each piece is its own message on her window's thread.
         private sealed class BusyWindow : NativeWindow
@@ -590,15 +592,17 @@ namespace CapriDesktop
             }
         }
 
+#if CHECKS
         private void SmokeTimerStarve(List<string> checks)
         {
             TimerWatch watch = new TimerWatch();
-            int witnessTicks = 0, beatTicks = 0, posts = 0;
-            System.Windows.Forms.Timer witness = new System.Windows.Forms.Timer { Interval = 15 };
+            int witnessTicks = 0, beatTicks = 0, jobTicks = 0, posts = 0;
+            System.Windows.Forms.Timer witness = new System.Windows.Forms.Timer { Interval = 15 }; // not her clock: the window timer shown to starve
             witness.Tick += delegate { witnessTicks++; };
-            Beat beat = new Beat();
-            beat.Interval = 15;
+            Clock.Frames beat = new Clock.Frames("starve check") { Interval = 15 };
             beat.Tick += delegate { beatTicks++; };
+            Clock.Ticker job = new Clock.Ticker("starve check") { Interval = 15 };
+            job.Tick += delegate { jobTicks++; };
             bool witnessOn = true, done = false;
             watch.Expected = delegate { return witnessOn; };
             List<string> lines = new List<string>();
@@ -618,20 +622,21 @@ namespace CapriDesktop
             {
                 witness.Start();
                 beat.Start();
+                job.Start();
                 watcher.Start();
                 System.Diagnostics.Stopwatch since = System.Diagnostics.Stopwatch.StartNew();
                 while (since.ElapsedMilliseconds < 600) { Application.DoEvents(); System.Threading.Thread.Sleep(5); }
                 if (witnessTicks < 5 || beatTicks < 5 || lines.Count != 0) throw new Exception("Before the stall, timers didn't tick or her watch spoke up: " + witnessTicks + " and " + beatTicks + ", " + lines.Count + " lines.");
-                int witnessFrom = witnessTicks, beatFrom = beatTicks, postsFrom = posts;
+                int witnessFrom = witnessTicks, beatFrom = beatTicks, jobFrom = jobTicks, postsFrom = posts;
                 System.Diagnostics.Stopwatch stalled = System.Diagnostics.Stopwatch.StartNew();
                 loop.During = delegate { if (stalled.ElapsedMilliseconds >= 3000) loop.Endless = false; };
                 loop.Show();
                 while (loop.Endless || stalled.ElapsedMilliseconds < 3100) { Application.DoEvents(); System.Threading.Thread.Sleep(5); }
-                int witnessDuring = witnessTicks - witnessFrom, beatDuring = beatTicks - beatFrom, postsDuring = posts - postsFrom;
+                int witnessDuring = witnessTicks - witnessFrom, beatDuring = beatTicks - beatFrom, jobDuring = jobTicks - jobFrom, postsDuring = posts - postsFrom;
                 double seconds = stalled.Elapsed.TotalSeconds;
                 if (loop.Paints < 100) throw new Exception("The stand-in window wasn't asked to paint over and over on this desktop: " + loop.Paints + " paints.");
-                if (witnessDuring * 10 > (int)(seconds * 1000 / 16) || postsDuring < 8 || beatDuring < 60) throw new Exception("An endless repaint didn't starve window timers alone: window timer " + witnessDuring + ", posted work " + postsDuring + ", Beat " + beatDuring + " in " + seconds.ToString("0.0") + " s.");
-                checks.Add("PASS an endless repaint starves her window timers (" + witnessDuring + " ticks in " + seconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s, " + loop.Paints.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) + " WM_PAINTs) while her posted work keeps running (" + postsDuring + ") and her Beat clock keeps ticking (" + beatDuring + ")");
+                if (witnessDuring * 10 > (int)(seconds * 1000 / 16) || postsDuring < 8 || beatDuring < 60 || jobDuring < 60) throw new Exception("An endless repaint didn't starve window timers alone: window timer " + witnessDuring + ", posted work " + postsDuring + ", render tick " + beatDuring + ", clock job " + jobDuring + " in " + seconds.ToString("0.0") + " s.");
+                checks.Add("PASS an endless repaint starves her window timers (" + witnessDuring + " ticks in " + seconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s, " + loop.Paints.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) + " WM_PAINTs) while her posted work keeps running (" + postsDuring + ") and her clock's render tick and jobs keep ticking (" + beatDuring + ", " + jobDuring + ")");
                 string said;
                 lock (lines) said = lines.Count == 1 ? lines[0] : lines.Count + " lines: " + string.Join(" / ", lines.ToArray());
                 if (!said.StartsWith("timers starved ", StringComparison.Ordinal) || said.IndexOf("EndlessPaint got ", StringComparison.Ordinal) < 0 || said.IndexOf(" x WM_PAINT", StringComparison.Ordinal) < 0) throw new Exception("Her timer watch didn't name the window and message once: " + said);
@@ -667,12 +672,15 @@ namespace CapriDesktop
                 loop.Dispose();
                 witness.Dispose();
                 beat.Dispose();
+                job.Dispose();
                 watcher.Join(2000);
             }
         }
+#endif
 
         // Stand-ins for a starved window thread: a window never painted, so WM_PAINT never stops, and a message that
         // posts the next. A window timer of the check's own counts too, so a stand-in that starves nothing fails.
+#if CHECKS
         private void SmokeStarved(List<string> checks, bool paint)
         {
             Func<bool> fullWas = FullScreen;
@@ -710,7 +718,7 @@ namespace CapriDesktop
                     if (lastFrame >= 0) worstGap = Math.Max(worstGap, at - lastFrame);
                     lastFrame = at;
                 };
-                System.Windows.Forms.Timer probe = new System.Windows.Forms.Timer { Interval = 33 };
+                System.Windows.Forms.Timer probe = new System.Windows.Forms.Timer { Interval = 33 }; // not her clock: proves the stand-in starves window timers
                 probe.Tick += delegate { if (!keeper.Done) probed++; };
                 keeper.Work = delegate
                 {
@@ -761,9 +769,11 @@ namespace CapriDesktop
                 }
             });
         }
+#endif
 
         // What her clock costs while she only stands there: how even her frames are, her process's CPU, and the same once
         // her frames have stopped.
+#if CHECKS
         private void SmokeBeatCost(List<string> checks)
         {
             ThrowCheck(checks, delegate(List<string> list, List<short[]> sounds)
@@ -816,6 +826,7 @@ namespace CapriDesktop
                 list.Add("PASS her standing loop at interval " + interval + " ms: " + at.Count + " frames in " + (span / 1000).ToString("0.0") + " s (" + (at.Count * 1000 / span).ToString("0.0") + " a second), gaps mean " + mean.ToString("0.0") + " sd " + spread.ToString("0.0") + " min " + least.ToString("0.0") + " max " + most.ToString("0.0") + " ms [" + spreadOut + "], a frame costs " + render.ToString("0.00") + " ms to draw, process CPU " + standing.ToString("0.0") + " ms a second standing and " + rest.ToString("0.0") + " ms a second with her frames stopped");
             });
         }
+#endif
 
         private sealed class Starver : NativeWindow
         {
@@ -857,6 +868,7 @@ namespace CapriDesktop
             }
         }
 
+#if CHECKS
         private void SmokeRibbons(List<string> checks, string output)
         {
             Color hairColour = ArtColour(ArtColors.Usual[ArtColors.Hair]), accentColour = ArtColour(ArtColors.Usual[ArtColors.Accent]);
@@ -1023,5 +1035,6 @@ namespace CapriDesktop
             });
             checks.Add("PASS ribbons: a teleport turns her into her ribbons, in her hair's red with white flecks and her green; they wind into a ball where she was and stream to where she lands, drawn afresh every frame; there she forms from the transformation animation's own drawings (art: Qewiw), mirrored to the way she faces and lined up with her perch; a hop has her back in " + (Ribbons.Gather + Ribbons.TravelTime(800) + Ribbons.Handoff).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " s; her own window waits until she has formed; a hop called off clears them; hiding and quitting still shatter");
         }
+#endif
     }
 }

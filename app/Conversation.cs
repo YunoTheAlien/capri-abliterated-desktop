@@ -78,6 +78,7 @@ namespace CapriDesktop
 
         // Driven, not waited for: a back and forth starts and ends by the gaps between turns, what she does off her own bat waits
         // while it is on, a pat still lands, and when it ends each held kind starts its own wait from then.
+#if CHECKS
         private void SmokeConversation(List<string> checks)
         {
             bool wasOn = conversing, wasAwaited = replyAwaited, wasShowing = replyShowing;
@@ -122,5 +123,6 @@ namespace CapriDesktop
                 theirsAt = wasTheirs; herReplyEndedAt = wasEnded; conversationLastAt = wasLast; nextPopIn = wasPop; nextGlance = wasGlance;
             }
         }
+#endif
     }
 }

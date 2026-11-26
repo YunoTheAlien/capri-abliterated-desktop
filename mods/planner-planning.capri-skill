@@ -1,0 +1,60 @@
+---
+capri-skill: 1
+id: planner-planning
+name: Planning in the Planner
+version: 1.0.1
+author: Capri, from Addy Osmani (MIT)
+description: Breaking a project or a game into cards, lines and workspaces in her Planner, in an order that works and can be checked.
+apps: Game / project planner, Planner, StoryBoard
+---
+How the Planner's pieces map onto a plan
+
+• A task is a card. Its title says the one thing it does; its text says how you'll know it's done.
+• A line from one card to another means the first has to be done before the second.
+• A phase is a workspace: Foundation, then the core, then polish. A checkpoint card closes each one.
+• A big idea is a board of its own, with its own cards, so no single board gets crowded.
+
+Before any cards: what you're assuming
+
+• Say what the plan takes for granted (who it's for, what it runs on, what's already done) and ask them to correct it.
+• Never fill a gap in what they asked for by guessing. A question now saves a board full of wrong cards.
+• If the idea is really several things that could each be finished alone, list those first as a short map (each one,
+  what it needs, which comes first) and get a yes on the map before planning any of them.
+
+Making the cards
+
+• Work from the bottom up: what everything else stands on comes first, and the lines show it.
+• Cut by slices that work end to end, not by layers. "The player can open a door" beats "all the art, then all the code".
+• Each card gets one to three checks that can be ticked, and one line saying how it's checked.
+• Size each card: tiny (one change), small (one part), medium (one slice of a feature), large (several parts). A card
+  larger than that, one with "and" in its title, or one whose checks won't fit in three lines, is split.
+• Put the risky cards early, so a dead end shows up before the safe work is built on it.
+• After every two or three cards, a checkpoint: does what's done still work together?
+
+What a finished plan has
+
+• Every card has its checks and how they're checked.
+• Every line points one way, with no loops: two cards that each need the other are one card.
+• Each workspace ends in a checkpoint.
+• A risks card (what could go wrong, how bad, what you'd do) and an open questions card for what only they can answer.
+• They've looked at it and said yes before anything is built from it.
+
+Never
+
+• Never clear or rename a board that still has unticked cards from other work. Ask what to do with it first.
+• Never start building before the cards exist.
+
+Planning a game
+
+• Start from what the player does every minute (the core loop), then every hour (goals, progress), then the whole
+  game (the arc). Each gets its own workspace.
+• A quest is a card with: what the player is asked, why they care, what they do, what changes after. Lines between
+  quests show which unlocks which; a quest that leads nowhere is a dead end on the board.
+• Story beats are cards in order along a line: the setup, the turn, the hardest moment, the ending. A choice is a card
+  with one line out per option, each leading on to its own card, so every branch can be followed to where it lands.
+• Each character is one card with what they want and what stands in their way; a line to each quest they're part of.
+• Check a branching story by following every line from the start: no card is unreachable, and every path ends.
+• Small first: one level or one quest that's fun from start to end, before the second.
+
+Credit: the planning method is adapted from planning-and-task-breakdown and spec-driven-development in Addy Osmani's
+agent-skills (MIT licence, its notice in THIRD-PARTY-NOTICES.md). The game part is Capri's own.

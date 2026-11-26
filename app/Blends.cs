@@ -81,7 +81,9 @@ namespace CapriDesktop
                     else { sets = Parse(Notes.ReadAll(path)); read[path] = new KeyValuePair<DateTime, Dictionary<string, string[]>>(stamp, sets); }
                 }
                 string[] lines;
-                return sets.TryGetValue(set, out lines) && lines.Length > 0 ? lines : null;
+                if (!sets.TryGetValue(set, out lines)) return null;
+                lines = Array.FindAll(lines, line => !RunsOn(line));
+                return lines.Length > 0 ? lines : null;
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return null; }
         }
@@ -175,7 +177,7 @@ namespace CapriDesktop
         }
 
         // A few of their lines to show the brain: none gated, none a meme, tokens as tokens.
-        private static List<string> Sample(string[] lines)
+        internal static List<string> Sample(string[] lines)
         {
             List<string> picked = new List<string>();
             if (lines == null) return picked;
@@ -206,6 +208,15 @@ namespace CapriDesktop
             return rest.IndexOf('%') >= 0;
         }
 
+        // Two sentences run together with nothing between them: an order ("sit down", "go on then") running straight on into
+        // a new one ("i've been busy", "show me"). Her brain writes these; they read as one garbled line.
+        private static readonly Regex RunOn = new Regex(@"^\W*(?:sit down|come here|come on|go on|hold on|calm down|look|listen|wait|stop|relax|chill|hush|shush)(?:\s+then)?\s+(?:i|i'm|i've|i'd|i'll|you're|you've|we|we're|it's|that's|they|show|tell|give|let|do)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        // A question or a clause running on into the next with no stop: "Are we playing now this is the only acceptable time."
+        private static readonly Regex RunOnClause = new Regex(@"\b(?:now|then|today|again|here)\s+(?:this|that|it|there)\s+(?:is|was|'s)\b", RegexOptions.IgnoreCase);
+
+        internal static bool RunsOn(string line) { return line != null && (RunOn.IsMatch(line) || RunOnClause.IsMatch(line)); }
+
         // The lines of a reply that were asked for, read from its ```json block (or the bare object), with labels,
         // quotes and lead-ins taken off. A line too long, refused, gated or with a token lost or made up is left out.
         internal static Dictionary<string, string[]> Kept(string reply, List<string> asked)
@@ -223,7 +234,7 @@ namespace CapriDesktop
                 foreach (Match item in Regex.Matches(situation.Groups[2].Value, @"""((?:[^""\\]|\\.)*)"""))
                 {
                     string line = Tidy(Unescape(item.Groups[1].Value));
-                    if (line == null || line.Length > Longest || Refusal.IsMatch(line) || Bad(line) || good.Contains(line)) continue;
+                    if (line == null || line.Length > Longest || Refusal.IsMatch(line) || Bad(line) || RunsOn(line) || good.Contains(line)) continue;
                     good.Add(line);
                 }
                 if (good.Count > 0) kept[named] = good.ToArray();
@@ -292,6 +303,7 @@ namespace CapriDesktop
 
         // A stand-in brain: a blend made, kept and used, asked once; one with a lost token, a gated word or a refusal not
         // kept; a hand-written pairing in the mood file beating the blend.
+#if CHECKS
         internal static void Check(List<string> checks, string folder)
         {
             Func<string> folderWas = Folder;
@@ -341,7 +353,19 @@ namespace CapriDesktop
                 Ask = delegate { asks++; return "{\"petted\": [\"Plain object one.\", \"Plain object two.\", \"Plain object three.\"]} trailing words"; };
                 if (Make(PathFor("Bratty", "Moody"), "Bratty", "Moody", null, sources) != 0) throw new Exception("A reply with no fenced block and words outside its object was read.");
                 if (asks != 4) throw new Exception("The brain was asked " + asks + " times, not once a pair.");
-                checks.Add("PASS a mood blend is asked for as role-play lines in a JSON block with tokens as tokens and nothing gated or named, read only inside the block with labels, quotes and lead-ins taken off, kept per personality and mood with her memes and never asked twice; a lost token, a gated word, a refusal, chatter outside the block or fewer than three good lines is not kept");
+                // Two sentences run together aren't kept, and one already in a blend file isn't said.
+                if (!RunsOn("Sit down i've been busy being feral") || !RunsOn("Go on then show me what chu got") || RunsOn("Sit down, I've been busy.") || RunsOn("Look at you go"))
+                    throw new Exception("Two sentences run together weren't told from one line.");
+                Ask = delegate { asks++; return "```json\n{\"missed you\": [\"Sit down i've been busy being feral\", \"Good, I was getting ideas.\", \"Where were you, my time was insane.\", \"I missed the chaos.\"]}\n```"; };
+                Dictionary<string, KeyValuePair<string[], string[]>> missed = new Dictionary<string, KeyValuePair<string[], string[]>>(StringComparer.OrdinalIgnoreCase) { { "missed you", new KeyValuePair<string[], string[]>(new[] { "Sit down, I've been busy." }, new[] { "Back already?" }) } };
+                int keptMissed = Make(PathFor("Emo", "Mischievous"), "Emo", "Mischievous", null, missed);
+                string[] missedLines = Lines("Emo", "Mischievous", "missed you");
+                File.AppendAllText(PathFor("Emo", "Mischievous"), "Come here i want to see you\n");
+                lock (gate) read.Clear();
+                string[] missedAgain = Lines("Emo", "Mischievous", "missed you");
+                if (keptMissed != 1 || missedLines == null || missedLines.Length != 3 || Array.Exists(missedLines, RunsOn) || missedAgain == null || Array.Exists(missedAgain, RunsOn))
+                    throw new Exception("A run-on blend line was kept or said: " + (missedLines == null ? "none" : string.Join(" | ", missedLines)) + " / " + (missedAgain == null ? "none" : string.Join(" | ", missedAgain)));
+                checks.Add("PASS a mood blend is asked for as role-play lines in a JSON block with tokens as tokens and nothing gated or named, read only inside the block with labels, quotes and lead-ins taken off, kept per personality and mood with her memes and never asked twice; a lost token, a gated word, a refusal, chatter outside the block or fewer than three good lines is not kept, and two sentences run together (\"Sit down i've been busy being feral\") are neither kept nor said from a blend file");
             }
             finally
             {
@@ -351,9 +375,11 @@ namespace CapriDesktop
             }
             NoBrainCheck(checks);
         }
+#endif
 
         // With no blend: the mood's lines and their personality's in one pool at mood share, the same pool each time, and a
         // mood's openers and tails never taken for a reaction to blend.
+#if CHECKS
         private static void NoBrainCheck(List<string> checks)
         {
             string[] mood = { "m1", "m2" }, own = { "o1", "o2", "o3", "o4", "o5", "o6" };
@@ -374,5 +400,6 @@ namespace CapriDesktop
                 throw new Exception("A mood opener came with nothing to pick it.");
             checks.Add("PASS with no blend, a mood's lines and their personality's share one pool at mood share (25, 50 and 75 in a hundred), the same pool each call; share 0 or 100 gives one side alone; a mood's openers and tails are pieces, not reactions");
         }
+#endif
     }
 }

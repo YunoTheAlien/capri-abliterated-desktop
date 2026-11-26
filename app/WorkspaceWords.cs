@@ -1317,7 +1317,7 @@ namespace CapriDesktop
                 if (cuts[i] != wanted[i]) failed.Add("selection " + i + " pasted " + Quoted(cuts[i]) + ", wanted " + Quoted(wanted[i]));
         }
 
-        internal static readonly string AwkwardStream = "**Bold** and *italic*, [a link](https://capriai.app/docs).\n\n"
+        internal static readonly string AwkwardStream = "**Bold** and *italic*, [a link](https://example.com/docs).\n\n"
             + "1. Parent\n   - Child **words**\n     - Deeper *words*\n\n"
             + "| Name | Value |\n|:---|---:|\n| alpha | **one** |\n| beta | `two` |\n\n"
             + "```csharp\nvar text = \"still arriving\";\n```\n\n"
@@ -1328,7 +1328,7 @@ namespace CapriDesktop
         {
             "## Plan\n\nI'll fix the reader in three steps:\n\n1. **Find the slow path** in `WorkspaceWords.cs`:\n   - the backtick lookup re-reads the line\n   - `Escaped()` walks back over every backslash\n2. Rewrite the pairing:\n   - keep the *delimiter stack* linear\n     - with a floor per mark kind\n3. Re-run the checks.\n\nThat's it \u2014 see [the brief](C:/briefs/workspace-markdown.md) for details.\n",
             "Here's the change:\n\n```csharp\ninternal static List<WordBlock> Read(string text)\n{\n    return new BlockReader(text ?? \"\").Read();\n}\n```\n\nAnd the build line:\n\n```powershell\n$sources = @('Capri', 'WorkspaceWords')\n```\n\n| File | Lines | Change |\n|:-----|------:|:------:|\n| `app\\WorkspaceWords.cs` | 900 | new |\n| `ci\\build-windows.ps1` | 1 | edited \\| list |\n\nDone.",
-            "Yes \u2014 it lives in `%APPDATA%\\Capri\\prefs.ini` under `voice.quiet`. See https://capriai.app/help for the full list, or [the docs](https://capriai.app/docs#voice)."
+            "Yes \u2014 it lives in `%APPDATA%\\Capri\\prefs.ini` under `voice.quiet`. See https://example.com/help for the full list, or [the docs](https://example.com/docs#voice)."
         };
 
         // The replies read whole come out in the shape a browser would show them.
@@ -1338,7 +1338,7 @@ namespace CapriDesktop
             {
                 "head2(\"Plan\") | para(\"I'll fix the reader in three steps:\") | number0[1.](b:\"Find the slow path\",\" in \",c:\"WorkspaceWords.cs\",\":\") | bullet1(\"the backtick lookup re-reads the line\") | bullet1(c:\"Escaped()\",\" walks back over every backslash\") | number0[2.](\"Rewrite the pairing:\") | bullet1(\"keep the \",i:\"delimiter stack\",\" linear\") | bullet2(\"with a floor per mark kind\") | number0[3.](\"Re-run the checks.\") | para(\"That's it \u2014 see \",\"the brief\"@\"C:/briefs/workspace-markdown.md\",\" for details.\")",
                 "para(\"Here's the change:\") | code[csharp](c:\"internal static List<WordBlock> Read(string text)\\n{\\n    return new BlockReader(text ?? \\\"\\\").Read();\\n}\") | para(\"And the build line:\") | code[powershell](c:\"$sources = @('Capri', 'WorkspaceWords')\") | table[l,r,c]{(\"File\"),(\"Lines\"),(\"Change\");(c:\"app\\\\WorkspaceWords.cs\"),(\"900\"),(\"new\");(c:\"ci\\\\build-windows.ps1\"),(\"1\"),(\"edited | list\")} | para(\"Done.\")",
-                "para(\"Yes \u2014 it lives in \",c:\"%APPDATA%\\\\Capri\\\\prefs.ini\",\" under \",c:\"voice.quiet\",\". See \",\"https://capriai.app/help\"@\"https://capriai.app/help\",\" for the full list, or \",\"the docs\"@\"https://capriai.app/docs#voice\",\".\")"
+                "para(\"Yes \u2014 it lives in \",c:\"%APPDATA%\\\\Capri\\\\prefs.ini\",\" under \",c:\"voice.quiet\",\". See \",\"https://example.com/help\"@\"https://example.com/help\",\" for the full list, or \",\"the docs\"@\"https://example.com/docs#voice\",\".\")"
             };
             for (int i = 0; i < shapes.Length; i++)
             {
@@ -1480,6 +1480,7 @@ namespace CapriDesktop
     internal sealed partial class Companion
     {
         // The Workspace transcript's Markdown reader: its exact cases, pastes, streaming cuts, random strings and big inputs.
+#if CHECKS
         private static void SmokeWorkspaceWords(List<string> checks)
         {
             Stopwatch took = Stopwatch.StartNew();
@@ -1496,5 +1497,6 @@ namespace CapriDesktop
             finally { try { System.IO.Directory.Delete(data, true); } catch (System.IO.IOException) { } }
             checks.Add("PASS Workspace refuses Claude Code writing, editing, deleting or naming in a command her security files (approved.txt, guard.txt, plugins-on.txt, the overrides, sign-ins and her settings.json), in every mode, and leaves other projects' files and reading alone");
         }
+#endif
     }
 }

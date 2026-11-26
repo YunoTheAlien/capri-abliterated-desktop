@@ -585,6 +585,18 @@ namespace CapriDesktop
         private static extern int ActivateAudioInterfaceAsync([MarshalAs(UnmanagedType.LPWStr)] string path, ref Guid iid, IntPtr parameters, IActivated done, out IActivation operation);
 
         // Windows' per-app capture of one process and the ones it started, converted by Windows to her ears' 16 kHz mono 16-bit PCM.
+#if CHECKS
+        // For the bench inputs check: a call app's sound held while Recorders is on.
+        internal static bool TapHeld()
+        {
+            string failed;
+            Tap tap = Tap.Open(System.Diagnostics.Process.GetCurrentProcess().Id, "a test", out failed);
+            if (tap == null) return failed != null;
+            tap.Dispose();
+            return false;
+        }
+#endif
+
         private sealed class Tap : IDisposable
         {
             private ISoundClient client;
@@ -596,6 +608,7 @@ namespace CapriDesktop
             internal static Tap Open(int pid, string app, out string failed)
             {
                 failed = null;
+                if (Recorders.Hold("a call app's sound")) { failed = "a test run reads no app's sound"; return null; }
                 IntPtr parameters = Marshal.AllocHGlobal(12), blob = Marshal.AllocHGlobal(8 + 2 * IntPtr.Size), format = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(WaveFormat)));
                 ISoundClient client = null;
                 AutoResetEvent ready = new AutoResetEvent(false);
@@ -714,6 +727,7 @@ namespace CapriDesktop
             }
         }
 
+#if CHECKS
         internal static void CheckWaits(List<string> checks)
         {
             using (ManualResetEvent stop = new ManualResetEvent(false))
@@ -735,7 +749,9 @@ namespace CapriDesktop
             }
             checks.Add("PASS call ears wake on audio or stop, keep the 10 ms timeout and give each capture its own events");
         }
+#endif
 
+#if CHECKS
         private static void SmokeApps(List<string> checks)
         {
             string[][] names = {
@@ -891,6 +907,7 @@ namespace CapriDesktop
             finally { Find = findWas; CallApps.Processes = processesWas; CallApps.Sounds = soundsWas; CallApps.Last = lastWas; CallApps.Left(90, owner); CallApps.Left(91, owner); CallApps.Left(90, nextOwner); CallApps.Left(91, nextOwner); CallApps.Choose(was); }
             checks.Add("PASS call capture keeps its swappable finder, names the chosen app when it isn't open and rejects a lookup from an old setting");
         }
+#endif
 
         private static bool ChoicesWrong(string[][] names)
         {
@@ -899,6 +916,7 @@ namespace CapriDesktop
             return false;
         }
 
+#if CHECKS
         internal static void Smoke(List<string> checks)
         {
             SmokeApps(checks);
@@ -1000,6 +1018,7 @@ namespace CapriDesktop
             if (laughed || stoppedAt != TalkOver.CallNeeds - 1 || offEarly || !offStopped) throw new Exception("Your mic talking over her on a call came out wrong: laugh " + laughed + ", stopped at chunk " + stoppedAt + ", off a call " + offStopped + (offEarly ? " too soon" : "") + ".");
             checks.Add("PASS your mic on a call: a laugh lets her finish and about a second of you talking over her stops her; off a call three tenths of a second still does and two chunks don't");
         }
+#endif
 
         internal static short[] Pattern(int length, int seed)
         {
@@ -1010,6 +1029,7 @@ namespace CapriDesktop
             return samples;
         }
 
+#if CHECKS
         private static void SmokeSources(List<string> checks)
         {
             CallEars ears = new CallEars();
@@ -1083,6 +1103,7 @@ namespace CapriDesktop
             }
             checks.Add("PASS call leaks: normalized delayed fits at 0, 120, 237 and 400 ms remove a 0.3 Discord copy with room noise, while user speech over it keeps its own source");
         }
+#endif
     }
 
     internal enum CallSource { Quiet, User, Discord, Both }

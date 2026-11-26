@@ -198,6 +198,7 @@ namespace CapriDesktop
 
         // Music: what's playing reaches a mod with its album, cover, heart and shuffle, presses go back to the right app, Follow
         // switches apps, a mod can keep her plate away, and a mod without the permission is refused.
+#if CHECKS
         private void CheckMusicHooks(List<string> checks, Func<string, string, string, string> write, Func<Func<bool>, bool> until)
         {
             Func<List<Tune>> sessionsWas = Tunes.Sessions;
@@ -224,7 +225,7 @@ namespace CapriDesktop
                     + "h.Music.Updated += t => Mark(\"updated\", t == null ? \"null\" : t.App + \" \" + t.Playing + \" \" + (t.At() >= 30) + \" \" + h.Music.Sessions.Length); }\n"
                     + "public bool Heard(string w) { return false; } public void Stop() { } }";
                 if (!mainframe.ImportMod(write("music3", "music", body))) throw new Exception("A mod using Music was refused: " + mainframe.ModStatusText);
-                string data = Path.Combine(ModList.Folder, "music3-data");
+                string data = Path.Combine(ModList.HomeOf("music3"), "music3-data");
                 Func<string, string> mark = delegate(string name) { string file = Path.Combine(data, name); return File.Exists(file) ? File.ReadAllText(file) : null; };
                 ModHost host = Array.Find(LiveHosts(), each => each.Id == "music3");
                 if (host == null || !PlayerReplaced || PlayerAllowed) throw new Exception("A mod that keeps her mini player away didn't.");
@@ -257,7 +258,7 @@ namespace CapriDesktop
                     throw new Exception("Following another app didn't switch a mod to it: " + mark("changed"));
                 if (!mainframe.ImportMod(write("music-nosy", null, "public class M : ICapriMod { public void Start(ICapriHost h) { try { object x = h.Music.Now; File.WriteAllText(Path.Combine(h.Folder, \"nosy\"), \"read\"); } catch (CapriPermissionException) { File.WriteAllText(Path.Combine(h.Folder, \"nosy\"), \"refused\"); } } public bool Heard(string w) { return false; } public void Stop() { } }")))
                     throw new Exception("A mod without permissions was refused: " + mainframe.ModStatusText);
-                string nosy = Path.Combine(ModList.Folder, "music-nosy-data", "nosy");
+                string nosy = Path.Combine(ModList.HomeOf("music-nosy"), "music-nosy-data", "nosy");
                 if (!until(() => File.Exists(nosy)) || File.ReadAllText(nosy) != "refused") throw new Exception("A mod without the music permission read what's playing.");
                 ModList.Remove(ModList.All.Find(mod => mod.File.Id == "music3"));
                 ModList.Remove(ModList.All.Find(mod => mod.File.Id == "music-nosy"));
@@ -275,6 +276,7 @@ namespace CapriDesktop
                 Tunes.Forget();
             }
         }
+#endif
 
         private sealed partial class ModHost
         {

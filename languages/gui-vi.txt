@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Im lặng đến {n}:{n}
 Quiet until turned off	Im lặng đến khi tắt
 Export settings	Xuất cài đặt
 Import settings	Nhập cài đặt
-Save Mainframe position	Ghi nhớ vị trí bảng
+Save Mainframe position	Lưu vị trí Mainframe
+Capri options	Tùy chọn Capri

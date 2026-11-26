@@ -16,14 +16,14 @@ namespace CapriDesktop
     internal sealed class Presence : IDisposable
     {
         // The Discord application's id. Empty keeps her off Discord.
-        internal static string AppId = "1564889759157850182";
+        // Off until there's a Discord application of ours.
+        internal static string AppId = "";
         internal static string PipeName = "discord-ipc-";
         internal const string Picture = "capri";
-        private const string Site = "https://capriai.app/";
-        private const string Server = "https://discord.gg/capridesktop";
-        // Discord only animates pictures at a public link, so her moving art sits on her site. Until it's there, or while the
-        // site's down, her still picture shows.
-        private const string Art = Site + "assets/presence/";
+        private const string Site = "https://github.com/YunoTheAlien/capri-abliterated-desktop";
+        // Discord only animates pictures at a public link, so her moving art is read from her public repository. Until
+        // it's there, her still picture shows.
+        private const string Art = "https://raw.githubusercontent.com/YunoTheAlien/capri-abliterated-desktop/main/site/assets/presence/";
         private const int Wait = 5000;
         private const int Retry = 30000;
         private const int Refused = 600000;
@@ -240,7 +240,7 @@ namespace CapriDesktop
                 Details = doing,
                 Times = new DiscordTimes { Start = started },
                 Assets = new DiscordAssets { Image = Picture, Text = "Capri " + version },
-                Buttons = new[] { new DiscordButton { Label = "Get Capri", Url = Site }, new DiscordButton { Label = "Join her Discord", Url = Server } }
+                Buttons = new[] { new DiscordButton { Label = "Get Capri", Url = Site } }
             };
             // If Discord turns any of the extras down, she goes back to the plain line for the rest of this run.
             if (!plain)

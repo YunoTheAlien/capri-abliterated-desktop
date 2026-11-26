@@ -280,6 +280,7 @@ namespace CapriDesktop
         private const string From = ".from";
         // Copies with a stand-in translator: made from the English, kept for a switch back, an edit folded into the
         // English, and personality's copy read by her brain, kept once theirs and made again when the English changes.
+#if CHECKS
         internal static void Check(List<string> checks, string folder)
         {
             Directory.CreateDirectory(folder);
@@ -355,5 +356,6 @@ namespace CapriDesktop
                 lock (gate) known.Remove(path);
             }
         }
+#endif
     }
 }

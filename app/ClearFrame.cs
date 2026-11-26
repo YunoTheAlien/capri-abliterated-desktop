@@ -131,6 +131,7 @@ namespace CapriDesktop
     {
         // Transparent: first in the colours, it opens the capture window held, drawn through Direct3D with her alpha (a
         // clear corner stays clear, she stays solid), a colour picked puts her back on it, and closing lets her go.
+#if CHECKS
         private void SmokeTransparent(System.Collections.Generic.List<string> checks)
         {
             bool clearWas = streamClear, lockedWas = streamLocked;
@@ -170,7 +171,7 @@ namespace CapriDesktop
                 bool letGo = !streamLocked;
                 if (!opened || !alpha || !coloured || !letGo)
                     throw new Exception("Transparent went wrong: opened held and clear " + opened + ", alpha kept (corner " + corner + ", middle " + middle + ") " + alpha + ", a colour puts her back on it " + coloured + ", closing lets her go " + letGo);
-                checks.Add("PASS Transparent sits first in Streaming > Window's colours; picked, it opens the capture window held and draws her through Direct3D with her alpha (a clear corner reads alpha 0, she reads solid); a colour puts her back on it, and closing the window lets her go");
+                checks.Add("PASS Transparent sits first in the Streaming window's colours; picked, it opens the capture window held and draws her through Direct3D with her alpha (a clear corner reads alpha 0, she reads solid); a colour puts her back on it, and closing the window lets her go");
             }
             finally
             {
@@ -181,5 +182,6 @@ namespace CapriDesktop
                 StreamLabel();
             }
         }
+#endif
     }
 }

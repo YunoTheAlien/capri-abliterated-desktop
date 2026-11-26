@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Heshtje deri në {n}:{n}
 Quiet until turned off	Heshtje deri në fikje
 Export settings	Eksporto cilësimet
 Import settings	Importo cilësimet
-Save Mainframe position	Mbaj mend pozicionin e panelit
+Save Mainframe position	Ruaj pozicionin e Mainframe
+Capri options	Opsionet e Capri

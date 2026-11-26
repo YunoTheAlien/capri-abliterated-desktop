@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 
+#if CHECKS
 namespace CapriDesktop
 {
     internal sealed partial class Companion
@@ -313,3 +314,4 @@ namespace CapriDesktop
         }
     }
 }
+#endif

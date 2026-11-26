@@ -219,4 +219,5 @@ Quiet until {n}:{n}	{n}:{n}'e kadar sessiz
 Quiet until turned off	Kapatılana kadar sessiz
 Export settings	Ayarları dışa aktar
 Import settings	Ayarları içe aktar
-Save Mainframe position	Panel konumunu hatırla
+Save Mainframe position	Mainframe konumunu kaydet
+Capri options	Capri seçenekleri

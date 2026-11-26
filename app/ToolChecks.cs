@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Windows.Forms;
 
+#if CHECKS
 namespace CapriDesktop
 {
     internal partial class Companion
@@ -2498,3 +2499,43 @@ namespace CapriDesktop
         }
     }
 }
+
+namespace CapriDesktop
+{
+    internal sealed partial class Companion
+    {
+        // A plain look-up: the browser's own search started with the words (Chromium "? words", Firefox -search), else Google;
+        // no engine is picked and nothing of the browser's settings is read on the way.
+        private void SmokeBrowserSearch(List<string> checks)
+        {
+            Func<string, string> pathWas = Hands.BrowserPath, openedWas = Hands.Opened;
+            Action<string, string> browseWas = Hands.Browse, searchWas = Hands.BrowseSearch;
+            Action<string> runWas = Hands.Run;
+            List<string> searched = new List<string>(), browsed = new List<string>(), ran = new List<string>();
+            try
+            {
+                Hands.BrowserPath = delegate(string named) { return named == "Firefox" ? @"C:\fx\firefox.exe" : @"C:\b\brave.exe"; };
+                Hands.BrowseSearch = delegate(string path, string words) { searched.Add(path + "|" + words); };
+                Hands.Browse = delegate(string path, string address) { browsed.Add(path + " " + address); };
+                Hands.Run = delegate(string address) { ran.Add(address); };
+                Hands.Opened = delegate { return ""; };
+                string said = Hands.Do("open_website", new ToolArguments { Site = "google", Search = "hollow knight", Browser = "brave", AnyEngine = true });
+                bool own = searched.Count == 1 && searched[0] == @"C:\b\brave.exe|hollow knight" && said == "Searched for hollow knight with Brave's own search." && browsed.Count == 0;
+                string chromium = Hands.SearchLaunch(@"C:\b\brave.exe", " cat \"videos\" ").Arguments, fox = Hands.SearchLaunch(@"C:\fx\firefox.exe", "cats").Arguments;
+                bool shaped = chromium == "\"? cat videos\"" && fox == "-search \"cats\"";
+                Hands.BrowserPath = delegate { return null; };
+                Hands.Do("open_website", new ToolArguments { Site = "google", Search = "hollow knight", Browser = "brave", AnyEngine = true });
+                bool google = ran.Count == 1 && ran[0] == "https://www.google.com/search?q=hollow%20knight";
+                if (!own || !shaped || !google)
+                    throw new Exception("A plain look-up went wrong: the browser's own search " + own + " (" + said + "), its arguments " + shaped + " (" + chromium + " / " + fox + "), Google with no browser " + google);
+                checks.Add("PASS a plain look-up goes to the browser's own search started with the words (Chromium \"? words\", Firefox -search), else Google, picking no engine and reading none of the browser's files");
+            }
+            finally
+            {
+                Hands.BrowserPath = pathWas; Hands.Opened = openedWas;
+                Hands.Browse = browseWas; Hands.BrowseSearch = searchWas; Hands.Run = runWas;
+            }
+        }
+    }
+}
+#endif

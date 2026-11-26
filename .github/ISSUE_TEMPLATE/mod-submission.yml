@@ -1,0 +1,53 @@
+name: Mod submission
+description: Send a mod for Capri's mods directory. It is checked first; nothing is added without our yes.
+title: "[Mod] "
+labels: ["mod submission"]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Mod name
+      placeholder: Far Names
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - Settings (.capri-mod)
+        - Code (.capri-code)
+        - Skin (.capri-skin)
+        - Skill (.capri-skill)
+    validations:
+      required: true
+  - type: textarea
+    id: about
+    attributes:
+      label: What it does
+      description: A few lines, as people will see them in her mods window.
+    validations:
+      required: true
+  - type: input
+    id: author
+    attributes:
+      label: Made by
+      description: The name to credit, and anyone whose work it builds on.
+    validations:
+      required: true
+  - type: textarea
+    id: file
+    attributes:
+      label: The mod
+      description: Zip the mod file (and a preview.png if you have one) and drop the zip here.
+    validations:
+      required: true
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Before sending
+      options:
+        - label: It's my own work, or I credit whose it builds on, and it may be shared under this repository's licence.
+          required: true
+        - label: It's fine for everyone, and nothing in it calls home, unmasks anyone or sends private data online.
+          required: true

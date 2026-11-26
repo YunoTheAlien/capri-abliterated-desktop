@@ -5,13 +5,14 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Windows.Forms;
 
+#if CHECKS
 namespace CapriDesktop
 {
     internal sealed partial class Mainframe
     {
         internal void CheckFreeKeys(List<string> checks, string output, Action<int> picked)
         {
-            bool wasSettings = paged, wasAdvanced = capri.AdvancedSettings, wasShown = Visible, wasMenu = freeKeyMenu.Visible;
+            bool wasSettings = paged, wasShown = Visible, wasMenu = freeKeyMenu.Visible;
             bool wasFallback = layoutFallback;
             int wasSize = capri.MainframeSize, wasDpi = layoutDpi, wasText = layoutText, wasScroll = pageScroll, wasChoice = -1;
             // A minimized Mainframe's Location is -32000, so its normal place is kept instead and put back before it minimizes again.
@@ -24,15 +25,13 @@ namespace CapriDesktop
                 Restore();
                 freeKeyMenu.Close();
                 Directory.CreateDirectory(output);
-                foreach (bool advanced in new[] { false, true })
                 {
-                    if (capri.AdvancedSettings != advanced) capri.ToggleAdvancedSettings();
                     foreach (int percent in new[] { 100, 150, 200 })
                     {
                         LayoutScale(96, 100);
                         SizeMainframe(percent);
                         ShowSettings(true);
-                        ShowSettings(false);
+                        ShowSetupPage(true);
                         Location = new Point(Screen.FromControl(this).WorkingArea.Left + 16, Screen.FromControl(this).WorkingArea.Top + 16);
                         string crowded = TextFits() ?? Overlap();
                         if (!TiersFit || crowded != null) throw new Exception("Free key's BRAIN panel does not fit at " + percent + "%: " + crowded + " / its note says: " + Status);
@@ -42,7 +41,7 @@ namespace CapriDesktop
                             if (!freeKey.AccessibleDescription.Contains(provider)) throw new Exception("Free key's tip missed " + provider + ".");
                         freeKey.PerformClick();
                         CheckFreeKeyRows();
-                        if (!advanced && percent != 200) SaveFreeKeyPreview(output, percent);
+                        if (percent != 200) SaveFreeKeyPreview(output, percent);
                         FreeKeyPress(freeKeyMenu, Keys.Escape);
                         if (freeKeyMenu.Visible) throw new Exception("Esc did not close the Free key menu." + " " + WindowPicture.Focus());
                         foreach (Keys opening in new[] { Keys.Enter, Keys.Space })
@@ -64,7 +63,7 @@ namespace CapriDesktop
                             }
                     }
                 }
-                checks.Add("PASS Free key menu: three accessible provider rows share the Mainframe menu style and fit with their notes at 100%, 150% and 200%, after Simple and Advanced Settings; 100% and 150% BRAIN previews saved");
+                checks.Add("PASS Free key menu: three accessible provider rows share the Mainframe menu style and fit with their notes at 100%, 150% and 200%, on Settings; 100% and 150% BRAIN previews saved");
                 checks.Add("PASS Free key keyboard: Enter and Space open, Down and Up move between providers, Enter picks each row and Esc closes without opening a page");
             }
             finally
@@ -72,7 +71,7 @@ namespace CapriDesktop
                 freeKeyMenu.Close();
                 DismissHint();
                 overHint = dismissedHint = null;
-                if (capri.AdvancedSettings != wasAdvanced) capri.ToggleAdvancedSettings();
+                ShowSetupPage(false);
                 LayoutScale(wasDpi, wasText, wasFallback);
                 SizeMainframe(wasSize);
                 ShowSettings(wasSettings);
@@ -132,7 +131,7 @@ namespace CapriDesktop
             try
             {
                 Restore();
-                ShowSettings(false);
+                ShowSetupPage(true);
                 Directory.CreateDirectory(output);
                 foreach (int percent in new[] { 100, 125, 150 })
                 {
@@ -151,7 +150,8 @@ namespace CapriDesktop
                     {
                         Rectangle was;
                         // Only what shows on BRAIN's page counts: Settings' rows wait off to the side, and the setup steps are folded away.
-                        if (control == offRung || !control.Visible || control.Left >= ClientSize.Width || !without.TryGetValue(control, out was)) continue;
+                        // BRAIN's own column: VOICE has a column of its own on SETUP.
+                        if (control == offRung || !control.Visible || control.Left >= ClientSize.Width || control.Left >= Scaled(Column) || !without.TryGetValue(control, out was)) continue;
                         int moved = control.Top - was.Top, should = was.Top >= rowAt ? row : 0;
                         // Each row reaches down to the next row's top, so a row moved by a part-pixel step can be a pixel
                         // taller or shorter than before; the same pixel the move is allowed.
@@ -250,7 +250,7 @@ namespace CapriDesktop
                     if (reply != lines[provider] || heard != "free key") throw new Exception("Free key did not say its line for provider " + provider + ": " + reply);
                     CloseTalk();
                 });
-                if (picked != 36 || browsed.Count != picked) throw new Exception("Free key did not check every provider with both opening keys at every size and Settings mode.");
+                if (picked != 18 || browsed.Count != picked) throw new Exception("Free key did not check every provider with both opening keys at every size.");
                 OpenPage("https://example.invalid/free-key");
                 if (browsed.Count != picked) throw new Exception("OpenPage allowed an unrecognised key page.");
                 checks.Add("PASS Free key pages: NVIDIA, Google AI Studio and OpenRouter each use OpenPage with their own URL and say their own line; browser opening is stubbed and unrecognised pages stay blocked");
@@ -272,3 +272,4 @@ namespace CapriDesktop
         }
     }
 }
+#endif

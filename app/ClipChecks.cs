@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
+#if CHECKS
 namespace CapriDesktop
 {
     internal partial class Companion
@@ -447,12 +448,11 @@ namespace CapriDesktop
             int seconds = preferences.ClipSeconds, fps = preferences.ClipFps, resolution = preferences.ClipResolution, mbps = preferences.ClipMbps;
             string folder = preferences.ClipFolder;
             int scale = preferences.MainframeSize;
-            bool page = mainframe.SettingsShown, simpleWas = simpleTest, visible = mainframe.Visible;
+            bool page = mainframe.SettingsShown, visible = mainframe.Visible;
             // The step checks after this expect Mainframe back in the taskbar the way it was, minimized.
             System.Windows.Forms.FormWindowState state = mainframe.WindowState;
             try
             {
-                simpleTest = false;
                 mainframe.Restore();
                 mainframe.ShowSettings(true);
                 bool through = fullThrough;
@@ -487,19 +487,17 @@ namespace CapriDesktop
                 finally { ClipSettings.CheckFolder = checkFolderWas; }
                 checks.Add("PASS clips folders pass a real create-and-delete probe before saving; fake create and delete failures explain the problem and preserve the old preference and recorder folder");
                 OpenClips();
-                foreach (bool basic in new[] { false, true })
                 foreach (int zoom in new[] { 100, 150, 200 })
                 {
-                    simpleTest = basic;
                     mainframe.ShowSettings(true);
                     mainframe.SizeMainframe(zoom);
                     string problem = mainframe.Overlap() ?? (mainframe.PageClamped ? null : mainframe.Outside()) ?? mainframe.TextFits();
-                    if (!mainframe.ClipsSectionShown || !mainframe.SimpleGameControls || problem != null) throw new Exception("The clips panel does not fit at " + zoom + "% (simple " + basic + "): " + problem);
+                    if (!mainframe.ClipsSectionShown || problem != null) throw new Exception("The clips panel does not fit at " + zoom + "%: " + problem);
                     mainframe.ShowClipSection();
                     using (Bitmap image = Shot(mainframe, "Mainframe"))
                     {
                         mainframe.DrawToBitmap(image, new Rectangle(Point.Empty, image.Size));
-                        image.Save(Path.Combine(output, "clips-" + (basic ? "simple-" : "advanced-") + zoom + ".png"), System.Drawing.Imaging.ImageFormat.Png);
+                        image.Save(Path.Combine(output, "clips-" + zoom + ".png"), System.Drawing.Imaging.ImageFormat.Png);
                     }
                 }
             }
@@ -508,14 +506,13 @@ namespace CapriDesktop
                 preferences.ClipSeconds = seconds; preferences.ClipFps = fps; preferences.ClipResolution = resolution; preferences.ClipMbps = mbps; preferences.ClipFolder = folder;
                 clips.Configure(ClipOptions);
                 SavePreferences();
-                simpleTest = simpleWas;
                 mainframe.SizeMainframe(scale);
                 mainframe.Sync();
                 mainframe.ShowSettings(page);
                 if (!visible) mainframe.Hide();
                 else mainframe.WindowState = state;
             }
-            checks.Add("PASS CLIPS has its own Mainframe section in Simple and Advanced Settings at 100, 150 and 200%; recording controls and folder changes save and apply without overlaps");
+            checks.Add("PASS CLIPS has its own Mainframe section on Settings at 100, 150 and 200%; recording controls and folder changes save and apply without overlaps");
             checks.Add("PASS fullscreen Mainframe reuses cached panel scaling or defers a cold driver query, including after display-cache invalidation and a focus change during restore");
             checks.Add("LIMIT live clips: verify the chosen FPS, resolution, bitrate, sound and fullscreen transitions in a real game; no real desktop or audio devices changed by these fixtures");
         }
@@ -1116,3 +1113,4 @@ namespace CapriDesktop
         }
     }
 }
+#endif

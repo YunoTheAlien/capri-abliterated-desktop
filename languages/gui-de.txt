@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Stille bis {n}:{n}
 Quiet until turned off	Stille bis ausgeschaltet
 Export settings	Einstellungen exportieren
 Import settings	Einstellungen importieren
-Save Mainframe position	Panelposition merken
+Save Mainframe position	Mainframe-Position speichern
+Capri options	Capri-Optionen

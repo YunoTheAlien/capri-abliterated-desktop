@@ -138,6 +138,7 @@ namespace CapriDesktop
 
         // A game in front hiding its cursor over its own window: she lets every click through and takes no focus, and a
         // right click never opens her menu; the cursor showing again, or no game in front, gives her clicks back.
+#if CHECKS
         private void SmokeGameAim(List<string> checks)
         {
             Func<IntPtr> foregroundWas = Hands.Foreground;
@@ -186,5 +187,6 @@ namespace CapriDesktop
                 menu.Hide();
             }
         }
+#endif
     }
 }

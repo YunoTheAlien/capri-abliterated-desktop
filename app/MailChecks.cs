@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 
+#if CHECKS
 namespace CapriDesktop
 {
     // Her mail tools against a fake mail server on this PC (IMAP and SMTP on 127.0.0.1), and what keeps them hers: only her
@@ -462,11 +463,7 @@ namespace CapriDesktop
                 Need(McpSignIn.Gated(Path.GetDirectoryName(dir)), "the account's folder lets in only this Windows user and the system");
                 MailAccount back = MailAccount.Load(dir);
                 Need(back != null && back.Address == "me@example.com" && back.ImapPort == imap.Port, "account loads back");
-#if !CROSS
-                Need(back.Password == "Sup3r-secret-pw", "password comes back through DPAPI");
-#else
-                Need(back.Password.Length == 0, "password isn't saved on this system");
-#endif
+                Need(back.Password == "Sup3r-secret-pw", "password comes back, sealed to this PC");
                 MailAccount.Delete(dir);
                 checks.Add("PASS mail: no account asks for setup, Outlook is refused plainly, and the account is sealed whole for this Windows user, address, servers and app password, in a folder only they and the system can open");
             }
@@ -480,3 +477,4 @@ namespace CapriDesktop
         }
     }
 }
+#endif

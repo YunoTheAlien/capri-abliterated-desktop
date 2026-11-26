@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Text;
 
+#if CHECKS
 namespace CapriDesktop
 {
     // Smoke checks for how her error lines read: what she says, what the Mainframe shows, and what only errors.txt keeps.
@@ -1176,11 +1177,12 @@ namespace CapriDesktop
                 Hear("empty reply");
                 System.Diagnostics.Stopwatch emptyWait = System.Diagnostics.Stopwatch.StartNew();
                 while (reply == null && emptyWait.ElapsedMilliseconds < 3000) { System.Windows.Forms.Application.DoEvents(); System.Threading.Thread.Sleep(10); }
-                if (reply != Brain.Wordless || talkState != TalkState.Dormant || !mainframe.Status.EndsWith(" | " + emptyShort, StringComparison.Ordinal))
+                // Blank words are no answer: she says a line of her own, and the notice goes to her log only.
+                if (reply == null || Array.IndexOf(Personalities.Lines("brain empty", BrainEmptyLines), reply) < 0 || mainframe.Status.EndsWith(" | " + emptyShort, StringComparison.Ordinal))
                     throw new Exception("Blank words from her brain said \"" + reply + "\" and showed \"" + mainframe.Status + "\".");
             }
             finally { Think = thinkWas; asking++; CloseTalk(); mainframe.ShowProblem(noteWas); }
-            checks.Add("PASS an empty reply says one line with its fix, \"Try again or pick another model in Capri Mainframe\", whether her brain threw it or sent blank words, and the BRAIN note keeps the fix");
+            checks.Add("PASS an empty reply's BRAIN line keeps its fix, \"Try again or pick another model in Capri Mainframe\", and blank words from her brain get her brain-empty line, the notice in her log only");
 
             // A11: her voice being off reads one way with one fix, in the VOICE note, a preview she's asked for and the style sliders.
             bool silentWas = preferences.Silent;
@@ -1211,3 +1213,4 @@ namespace CapriDesktop
         }
     }
 }
+#endif

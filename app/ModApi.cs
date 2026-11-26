@@ -47,6 +47,9 @@ namespace CapriDesktop
         ICapriMood Mood { get; }
         ICapriSlots Slots { get; }
         ICapriToggles Toggles { get; }
+#if !CROSS
+        ICapriPetHost Pet { get; }
+#endif
     }
 
     // Her acts: a new one the mod defines, one done, and each as it lands with what it was worth. API 6, "mood".
@@ -56,6 +59,11 @@ namespace CapriDesktop
         void Did(string name);
         event Action<string, int> Happened;
         string[] List { get; }
+        // What an act is worth to her now, -5 to 5, and her line for it, liked or not; a line from one of her pools by its
+        // heading, like "gift remembered". API 9.
+        int Worth(string name);
+        string Line(string name, bool liked);
+        string Pool(string heading);
     }
 
     // Her act maths: a term added to an act's worth (-3 to 3) or a multiplier on it (0.25 to 2), each named, gone with
@@ -64,6 +72,9 @@ namespace CapriDesktop
     {
         void Add(string term, string act, int value);
         void Multiply(string term, string act, double value);
+        // The same, counted only while she is one of the personalities or moods named ("Emo", "mood sleepy"). API 11.
+        void Add(string term, string act, int value, string[] who);
+        void Multiply(string term, string act, double value, string[] who);
         void Remove(string term);
         int Warmth { get; }
         int Upset { get; }
@@ -80,10 +91,17 @@ namespace CapriDesktop
         string Holder(string slot);
     }
 
-    // A switch of the mod's own in her Toggles window. API 6.
+    // Toggles: a setting for the whole group (no item) sits at the top of the mod's group; one for an item lives only in
+    // that item's side area. Her settings keep each and hand it back. Switches API 6, the rest 9.
     public interface ICapriToggles
     {
         void Add(string name, bool on, Action<bool> changed);
+        void AddSlider(string name, string[] steps, int at, Action<int> changed);
+        void Add(string item, string name, bool on, Action<bool> changed);
+        void AddSlider(string item, string name, string[] steps, int at, Action<int> changed);
+        // Called before the first switch: they go in her group of that title (Intros, Screensaver, Pranks) instead of one
+        // of their own, or, with a section's name, the mod sits in that section. API 10.
+        void Join(string title);
     }
 
 #if !CROSS
@@ -113,9 +131,43 @@ namespace CapriDesktop
         // Every screen, or only the one she is on.
         public bool EveryScreen = true;
         public Rectangle Hers;
-        // A .wav of theirs to loop while it is up, and its volume 0 to 100 with her sound switch already in it.
+        // A .wav of theirs to loop while it is up, and her sound volume 0 to 100 with her sound switch already in it; a
+        // mod's own volume slider scales it.
         public string Sound;
         public int Volume;
+    }
+
+    // A pet game mod: what her food costs and paying for it, its line at the top of her Tamagotchi menu, and whether
+    // feeding is on. She keeps feeding and hunger; it keeps the game. API 9.
+    public interface ICapriPet
+    {
+        // Shown first in her Tamagotchi menu, like "Points: 412", in its colour; empty for none.
+        string Heading { get; }
+        Color HeadingColour { get; }
+        // A food's price by its label in Feed her, 0 for free; paid just before she is fed, false when it can't be.
+        int Cost(string food);
+        bool Pay(string food);
+        // Whether Pay would go through now; a food it can't pay for is greyed in her menu.
+        bool CanPay(string food);
+        // Its Feeding part: off, Feed her is gone and she never says she's hungry.
+        bool Feeding { get; }
+    }
+
+    // Her side of a pet game: how fed she is, each feed as it lands, and her Tamagotchi menu. API 9, "pet".
+    public interface ICapriPetHost
+    {
+        // Hours since she was fed, time at a desk counting for less, or -1 when she never has been; and "fed", "peckish"
+        // or "hungry".
+        double SinceFed { get; }
+        string Hunger { get; }
+        // The food's act name, as she is fed.
+        event Action<string> Fed;
+        // Her Tamagotchi menu: what the mod puts in goes when it stops.
+        ICapriMenu Menu { get; }
+        // One of her six needs, 0 to 100: energy, fullness, stimulation, social, comfort, cleanliness; and told as they move.
+        // API 10.
+        int Stat(string need);
+        event Action StatsChanged;
     }
 
     public interface ICapriIntro
@@ -234,6 +286,8 @@ namespace CapriDesktop
         ICapriMenuItem Add(string text, Action clicked);
         // An item with a tick, ticked or not to start with; changed gets the new state on each click.
         ICapriMenuItem AddCheck(string text, bool on, Action<bool> changed);
+        // A list inside it, dressed as her own the moment it is made. API 9.
+        ICapriMenu AddMenu(string text);
         void AddLine();
         void Clear();
         void Remove();
@@ -244,6 +298,9 @@ namespace CapriDesktop
         string Text { get; set; }
         bool Checked { get; set; }
         bool Enabled { get; set; }
+        // Words in the right-hand column, like a price, and the colour it draws in. API 9.
+        string Note { get; set; }
+        Color Colour { get; set; }
         void Remove();
     }
 #endif
@@ -257,6 +314,8 @@ namespace CapriDesktop
         void AddMenuItem(string text, Action clicked);
 #if !CROSS
         void SetOptions(string title, Func<Control> make);
+        // Opens the mod's own options window, as its Options key on the Mods page does. API 9.
+        void ShowOptions();
         // A menu of the mod's own under Mods in her right-click menu, with items, ticks and lines it can change later.
         // It goes when the mod stops. API 4.
         ICapriMenu AddMenu(string text);
@@ -296,7 +355,7 @@ namespace CapriDesktop
 #if !CROSS
         void ShowPage(string title, Func<Control> make);
         // A panel of the mod's own on her Settings page: its title and control, at slot (1 is the top) in the "left" or
-        // "right" column; the first loaded keeps a shared slot. simple shows it in Simple Settings too. API 4.
+        // "right" column; the first loaded keeps a shared slot. simple is taken and ignored: Settings has one view. API 4.
         void AddPanel(string title, string column, int slot, Func<Control> make, bool simple = false);
         // The same, inside a panel shared by every mod naming this group ("Yuno Mods"): title is its sub-heading there.
         // The first part placed sets the group's column and slot. API 7.
@@ -532,7 +591,7 @@ namespace CapriDesktop
 
     internal sealed partial class Mods
     {
-        internal const int Api = 8;
+        internal const int Api = 11;
 
         // What each permission lets a code mod do, as her approve box says it.
         internal static readonly string[,] PermissionWords =
@@ -551,7 +610,8 @@ namespace CapriDesktop
             { "hotkeys", "add keyboard shortcuts that work in any app" },
             { "music", "see what's playing, control your music apps and their volume, and hear how loud your PC's sound is" },
             { "mood", "add acts and change how much she likes them, and read how she feels" },
-            { "slots", "take over parts of her files, the same as a drop-in pack" }
+            { "slots", "take over parts of her files, the same as a drop-in pack" },
+            { "pet", "charge for her food, add to her Tamagotchi menu, and see when she was fed" }
         };
 
         internal static bool KnownPermission(string name)
@@ -621,9 +681,9 @@ namespace CapriDesktop
         internal static char GroupOf(string row)
         {
             string one = (row ?? "").Trim();
-            foreach (string high in new[] { "chat", "transcripts", "screen", "voice", "tools", "hotkeys", Loads, Packs, "unlocks saved secrets", "reads plug-in sign-ins", ChangesSecurity, "calls Windows directly", "starts programs", "reads the keyboard", "makes itself start with Windows" })
+            foreach (string high in new[] { "chat", "transcripts", "screen", "voice", "tools", "hotkeys", Loads, Packs, "unlocks saved secrets", "reads plug-in sign-ins", ChangesSecurity, "calls Windows directly", "starts programs", "reads the keyboard", "makes itself start with Windows", PrivateCode, ChatHistory, NotesMemories, BrainDirect, OtherMods, FindsAddress, UntrustedSite, SendsPrivate })
                 if (one == high) return 'H';
-            foreach (string low in new[] { "skins", "music", "changes what her brain is told", "adds a Settings panel" })
+            foreach (string low in new[] { "skins", "music", "pet", "changes what her brain is told", "adds a Settings panel" })
                 if (one == low) return 'L';
             return 'M';
         }
@@ -636,12 +696,12 @@ namespace CapriDesktop
             foreach (string permission in mod.Permissions ?? new string[0]) rows.Add(new KeyValuePair<char, string>(GroupOf(permission), "asks to " + PermissionMeaning(permission)));
             int asked = rows.Count;
             string[] reaches = mod.Reaches ?? new string[0], places = mod.Places ?? new string[0];
-            bool contacts = Array.Exists(reaches, one => one.StartsWith(Contacts, StringComparison.Ordinal));
+            bool contacts = Array.Exists(reaches, one => IsContacts(one));
             foreach (string one in reaches)
             {
                 // Addresses sit under the one network row, never as rows of their own.
                 if (one == "uses the network" && contacts) continue;
-                if (!one.StartsWith(Contacts, StringComparison.Ordinal)) { rows.Add(new KeyValuePair<char, string>(GroupOf(one), one)); continue; }
+                if (!IsContacts(one)) { rows.Add(new KeyValuePair<char, string>(GroupOf(one), one)); continue; }
                 List<string> sites = new List<string>();
                 foreach (string place in places) { string site = Site(place); if (site.Length > 0 && !sites.Contains(site)) sites.Add(site); }
                 int shown = 0;

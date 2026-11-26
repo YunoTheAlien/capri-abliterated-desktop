@@ -46,7 +46,7 @@ namespace CapriDesktop
         // Sections run inside another, so --only can name a child and its parent still runs to reach it.
         private static readonly Dictionary<string, string[]> Children = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
         {
-            { "SmokeReactions", new[] { "SmokeReactQuick", "SmokeReactFeed", "SmokeReactFade", "SmokeReactMoods", "SmokeReactWritten", "SmokeReactBrain", "SmokeReactVoice", "SmokeReactMotion", "SmokeReactSwitch", "SmokeReactBanners" } },
+            { "SmokeReactions", new[] { "SmokeReactQuick", "SmokeReactFeed", "SmokeReactFade", "SmokeReactMoods", "SmokeReactMemes", "SmokeReactWritten", "SmokeReactBrain", "SmokeReactVoice", "SmokeReactMotion", "SmokeReactSwitch", "SmokeReactBanners" } },
             { "SmokeThrows", new[] { "SmokeThrowReads", "SmokeThrowSlow", "SmokeThrowFast", "SmokeThrowUp", "SmokeThrowSlam", "SmokeThrowStanding", "SmokeThrowCatch", "SmokeThrowCalm", "SmokeThrowGrudge", "SmokeThrowDodges", "SmokeThrowSorry", "SmokeThrowPat", "SmokeThrowAlone" } },
             { "SmokeCloudPicker", new[] { "SmokePickerRejectedKeys", "SmokePickerGemini", "SmokePickerClears", "SmokePickerSavedGemini", "SmokePickerQueuedChoices", "SmokePickerLegacyKeys", "SmokePickerPending-new-key", "SmokePickerPending-unrecognised-key", "SmokePickerPending-tier", "SmokePickerPending-forget", "SmokePickerPending-local", "SmokePickerRefresh", "SmokePickerOldRefresh" } }
         };
@@ -152,10 +152,57 @@ namespace CapriDesktop
                 lock (progressLock) { phase = kind; name = current; start = began.Ticks; seconds = limit; }
                 if (phase != "step" && phase != "section" || start == noted || seconds < 30 || DateTime.UtcNow.Ticks - start < TimeSpan.FromSeconds(seconds - 10).Ticks) continue;
                 noted = start;
+                // Written first: a worker stuck under a lock can stop the stack read from ever starting, and the timeout
+                // still names the last thing her log said.
+                try { File.AppendAllText(Path.Combine(folder, "hangs.txt"), phase + " " + name + ": Stuck at: stack not read; last in her log: " + LastLogged() + Environment.NewLine); }
+                catch (IOException) { }
                 string where = Heartbeat.Where(watched);
                 try { File.AppendAllText(Path.Combine(folder, "hangs.txt"), phase + " " + name + ":" + (where.Length == 0 ? " Stuck at: (couldn't read it)" : where) + Environment.NewLine); }
                 catch (IOException) { }
             }
+        }
+
+        // A stuck worker seen from this side, needing nothing from it: the CPU it used over two seconds, its threads' states
+        // and waits, and the last line of its log. A worker frozen whole writes no hangs.txt, and this still says so.
+        private static string Outside(Process child, string room)
+        {
+            try
+            {
+                child.Refresh();
+                TimeSpan before = child.TotalProcessorTime;
+                Thread.Sleep(2000);
+                child.Refresh();
+                double busy = (child.TotalProcessorTime - before).TotalMilliseconds;
+                SortedDictionary<string, int> states = new SortedDictionary<string, int>(StringComparer.Ordinal);
+                foreach (ProcessThread thread in child.Threads)
+                {
+                    string state = thread.ThreadState == System.Diagnostics.ThreadState.Wait ? "waiting on " + thread.WaitReason : thread.ThreadState.ToString();
+                    int count;
+                    states.TryGetValue(state, out count);
+                    states[state] = count + 1;
+                }
+                List<string> parts = new List<string>();
+                foreach (KeyValuePair<string, int> one in states) parts.Add(one.Value + " " + one.Key);
+                return ". Seen from outside: " + busy.ToString("0", CultureInfo.InvariantCulture) + " ms of CPU in 2 s; threads " + string.Join(", ", parts.ToArray()) + "; last in her log: " + LastLogged(File.Exists(Path.Combine(room, "errors.txt")) ? Path.Combine(room, "errors.txt") : Path.Combine(folder, "errors.txt"));
+            }
+            catch (Exception error) { return ". Seen from outside: unread (" + error.Message + ")"; }
+        }
+
+        // The last line of the worker's own log, read from the file so nothing on the stuck thread is needed.
+        private static string LastLogged() { return LastLogged(Brain.LogPath); }
+
+        private static string LastLogged(string path)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return "(no log)";
+                string last = null;
+                using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                using (StreamReader reader = new StreamReader(stream))
+                    for (string line = reader.ReadLine(); line != null; line = reader.ReadLine()) if (line.Trim().Length > 0) last = line;
+                return last == null ? "(empty)" : last.Length > 200 ? last.Substring(0, 200) + "..." : last;
+            }
+            catch (Exception) { return "(unread)"; }
         }
 
         // What the worker noted in hangs.txt for the step or section that just timed out, if anything.
@@ -220,6 +267,7 @@ namespace CapriDesktop
             return true;
         }
 
+#if CHECKS
         internal static void LeaveSection(string name, List<string> checks)
         {
             RecordTime(name);
@@ -231,6 +279,7 @@ namespace CapriDesktop
             if (back[0] == "section" || back[0] == "step") { kind = null; Begin(back[0], back[1], int.Parse(back[2], CultureInfo.InvariantCulture)); }
             else Begin("startup", "between sections", 60);
         }
+#endif
 
         private static List<string> SavedTimes()
         {
@@ -288,12 +337,14 @@ namespace CapriDesktop
             catch (UnauthorizedAccessException) { }
         }
 
+#if CHECKS
         internal static void ValidateSelection(List<string> checks)
         {
             foreach (string item in options.Only)
                 if (!matched.Contains(item)) checks.Add("FAIL --only: no section matches " + item.Trim());
             Flush(checks);
         }
+#endif
 
         internal static void Begin(string phase, string name, int seconds)
         {
@@ -313,10 +364,12 @@ namespace CapriDesktop
             });
         }
 
+#if CHECKS
         internal static void Flush(List<string> checks)
         {
             AtomicLines(Path.Combine(folder, "smoke-test.txt"), checks.ToArray());
         }
+#endif
 
         private static void AtomicLines(string path, string[] lines)
         {
@@ -357,6 +410,7 @@ namespace CapriDesktop
             return stepsDone.TryGetValue(step - 1, out passed) && passed ? -1 : step - 1;
         }
 
+#if CHECKS
         internal static void StepDone(int step, bool passed, List<string> checks)
         {
             Flush(checks);
@@ -364,10 +418,29 @@ namespace CapriDesktop
             File.AppendAllText(Path.Combine(folder, "steps-done.txt"), (passed ? "PASS " : "FAIL ") + step + Environment.NewLine);
             Begin("startup", "between steps", 60);
         }
+#endif
+
+#if CHECKS
+        // The innermost method of hers on the fault's stack that isn't a check's own lambda.
+        private static string Where(Exception error)
+        {
+            System.Diagnostics.StackTrace trace = new System.Diagnostics.StackTrace(error, false);
+            foreach (System.Diagnostics.StackFrame frame in trace.GetFrames() ?? new System.Diagnostics.StackFrame[0])
+            {
+                System.Reflection.MethodBase method = frame.GetMethod();
+                if (method == null || method.DeclaringType == null) continue;
+                string name = method.DeclaringType.Name + "." + method.Name;
+                if (name.IndexOf('<') < 0) return name + " +" + frame.GetILOffset();
+            }
+            return "a check's own code";
+        }
 
         internal static void StepFailed(int step, Exception error, List<string> checks)
         {
-            checks.Add("FAIL step " + step + ": " + error.Message);
+            // Where it got to: the step's last pass, and for a fault in her code rather than a check of hers, where it happened.
+            string after = checks.FindLast(line => line.StartsWith("PASS ", StringComparison.Ordinal));
+            string where = error.GetType() == typeof(Exception) ? "" : " (" + error.GetType().Name + " in " + Where(error) + ")";
+            checks.Add("FAIL step " + step + ": " + error.Message + where + (after == null ? "" : " [after: " + (after.Length > 90 ? after.Substring(0, 87) + "..." : after) + "]"));
             File.AppendAllText(Path.Combine(folder, "failure.txt"), "step " + step + ": " + error + Environment.NewLine);
             StepDone(step, false, checks);
             Begin("recover", step.ToString(CultureInfo.InvariantCulture), 10);
@@ -375,6 +448,7 @@ namespace CapriDesktop
             // starts a fresh Companion on the same desktop; no failed step's hooks or pending replies survive.
             Environment.Exit(2);
         }
+#endif
 
         internal static void Inject(int step)
         {
@@ -387,11 +461,13 @@ namespace CapriDesktop
             return Environment.GetEnvironmentVariable("CAPRI_SMOKE_TEST_" + name) == step.ToString(CultureInfo.InvariantCulture);
         }
 
+#if CHECKS
         internal static void Complete(List<string> checks)
         {
             Flush(checks);
             Begin("done", "closing", 10);
         }
+#endif
 
         internal static int Child(string[] args)
         {
@@ -445,6 +521,7 @@ namespace CapriDesktop
             catch (Exception error) { Console.Error.WriteLine(error.Message); return 1; }
         }
 
+#if CHECKS
         internal static int Run(string[] args)
         {
             string output = Path.GetFullPath(args[1]);
@@ -463,7 +540,9 @@ namespace CapriDesktop
                 finally { mutex.ReleaseMutex(); }
             }
         }
+#endif
 
+#if CHECKS
         private static int RunLocked(string[] args, string output)
         {
             folder = output;
@@ -503,6 +582,7 @@ namespace CapriDesktop
                         Stopwatch deadline = Stopwatch.StartNew();
                         int seconds = 60;
                         bool timedOut = false, escaped = false;
+                        string seenOutside = "";
                         while (!child.WaitForExit(100))
                         {
                             if (EscPressed(child.Id, Process.GetCurrentProcess().Id))
@@ -521,6 +601,7 @@ namespace CapriDesktop
                             }
                             if (deadline.Elapsed.TotalSeconds < seconds) continue;
                             timedOut = true;
+                            seenOutside = Outside(child, room);
                             job.Stop();
                             if (!child.WaitForExit(5000)) throw new Exception("The smoke worker did not stop.");
                             break;
@@ -551,7 +632,7 @@ namespace CapriDesktop
                         }
                         string reason = timedOut ? "timed out after " + seconds + " s" : "worker exited " + child.ExitCode;
                         if (active == null || active[0] == "startup") { checks.Add("FAIL smoke startup: " + reason); break; }
-                        if (timedOut) reason += Stuck(active);
+                        if (timedOut) reason += Stuck(active) + seenOutside;
                         if (active[0] == "section")
                         {
                             checks.Add("FAIL section " + active[1] + ": " + reason);
@@ -587,6 +668,7 @@ namespace CapriDesktop
             Begin("finished", failed ? "failed" : "passed", 0);
             return failed ? 1 : 0;
         }
+#endif
 
         private static bool IsFailure(string line) { return line.StartsWith("FAIL ", StringComparison.Ordinal); }
 
@@ -618,6 +700,7 @@ namespace CapriDesktop
 
         // Esc stops a run with one of its windows in front and never with their own app in front; a press from before the run
         // never counts.
+#if CHECKS
         internal static void EscCheck(List<string> checks)
         {
             Func<bool> keyWas = EscKey;
@@ -640,6 +723,7 @@ namespace CapriDesktop
             }
             finally { EscKey = keyWas; InFront = frontWas; escCleared = clearedWas; }
         }
+#endif
 
         internal static void EscStops(System.Windows.Forms.Form app, Action quit)
         {
@@ -734,6 +818,36 @@ namespace CapriDesktop
         }
         internal void Stop() { if (!TerminateJobObject(handle, 99)) throw new System.ComponentModel.Win32Exception(); }
         public void Dispose() { if (handle != IntPtr.Zero) { CloseHandle(handle); handle = IntPtr.Zero; } }
+    }
+
+    // A bench or shots run: every input is a recorder. Her mic, the PC's sound, a call app's sound, the screen and any
+    // window but her own are stand-ins that read nothing; each is written in her log once and kept in Tried.
+    internal static class Recorders
+    {
+        internal static volatile bool On;
+        internal static readonly List<string> Tried = new List<string>();
+
+        internal static bool Hold(string what)
+        {
+            if (!On) return false;
+            lock (Tried)
+            {
+                if (Tried.Contains(what)) return true;
+                Tried.Add(what);
+            }
+            Brain.Log("test run", -1, "A stand-in for " + what + ": nothing of this PC was read.");
+            return true;
+        }
+
+        // The clipboard in a run: what she copies stays here and is what she reads back; the real one is never touched.
+        internal static string Clip;
+
+        internal static bool CopyHeld(string text)
+        {
+            if (!Hold("the clipboard")) return false;
+            Clip = text;
+            return true;
+        }
     }
 
     // The screen she treats as home: the primary for her own runs. A test run takes CAPRI_TEST_SCREEN (0 is the first

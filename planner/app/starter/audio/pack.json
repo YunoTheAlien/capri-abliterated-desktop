@@ -1,0 +1,77 @@
+{
+  "name": "Starter sounds",
+  "files": [
+    {
+      "name": "Chiptune loop",
+      "folder": "Music",
+      "file": "chiptune_loop.mp3",
+      "author": "iamoneabe",
+      "licence": "CC0",
+      "source": "https://opengameart.org/content/chiploop"
+    },
+    {
+      "name": "Calm loop",
+      "folder": "Music",
+      "file": "calm_loop.mp3",
+      "author": "wipics",
+      "licence": "CC0",
+      "source": "https://opengameart.org/content/calm-loop"
+    },
+    {
+      "name": "Tension loop",
+      "folder": "Music",
+      "file": "tension_loop.mp3",
+      "author": "tapatilorenzo",
+      "licence": "CC0",
+      "source": "https://opengameart.org/content/midi-2-tension-songs"
+    },
+    {
+      "name": "Crash_001",
+      "folder": "Sound effects",
+      "file": "crash_001.mp3",
+      "author": "Logicogonist",
+      "licence": "CC0",
+      "source": "https://freesound.org/people/Logicogonist/sounds/807437/"
+    },
+    {
+      "name": "Footsteps_001",
+      "folder": "Sound effects",
+      "file": "footsteps_001.mp3",
+      "author": "RutgerMuller",
+      "licence": "CC0",
+      "source": "https://freesound.org/people/RutgerMuller/sounds/365412/"
+    },
+    {
+      "name": "GlassShards_001",
+      "folder": "Sound effects",
+      "file": "glassshards_001.mp3",
+      "author": "SpliceSound",
+      "licence": "CC0",
+      "source": "https://freesound.org/people/SpliceSound/sounds/156579/"
+    },
+    {
+      "name": "Gunshot_001",
+      "folder": "Sound effects",
+      "file": "gunshot_001.mp3",
+      "author": "unfa",
+      "licence": "CC0",
+      "source": "https://freesound.org/people/unfa/sounds/609588/"
+    },
+    {
+      "name": "Scream_001",
+      "folder": "Sound effects",
+      "file": "scream_001.mp3",
+      "author": "Beetlemuse",
+      "licence": "CC0",
+      "source": "https://freesound.org/people/Beetlemuse/sounds/703317/"
+    },
+    {
+      "name": "Siren_001",
+      "folder": "Sound effects",
+      "file": "siren_001.mp3",
+      "author": "se2001",
+      "licence": "CC0",
+      "source": "https://freesound.org/people/se2001/sounds/521779/"
+    }
+  ]
+}

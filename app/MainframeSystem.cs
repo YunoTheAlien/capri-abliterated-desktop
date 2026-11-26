@@ -13,7 +13,7 @@ namespace CapriDesktop
         private Label resourcesLine;
         private ResourcesSheet resourcesSheet;
         private readonly SystemUse lineUse = new SystemUse();
-        private readonly System.Windows.Forms.Timer resourcesClock = new System.Windows.Forms.Timer { Interval = 2000 };
+        private readonly Clock.Ticker resourcesClock = new Clock.Ticker("resources line") { Interval = 2000 };
 
         private void MakeResourcesKey(int y)
         {
@@ -87,7 +87,8 @@ namespace CapriDesktop
         {
             bool wasShown = Visible;
             FormWindowState wasState = WindowState;
-            Point wasAt = Location;
+            // Minimized, Location reads -32000; its normal place is in RestoreBounds.
+            Point wasAt = WindowState == FormWindowState.Normal ? Location : RestoreBounds.Location;
             try
             {
                 Restore();
@@ -163,9 +164,9 @@ namespace CapriDesktop
             private readonly UseBar[] bars = new UseBar[3];
             private readonly Label[] amounts = new Label[3];
             private readonly Label[][] mine = new Label[Mine][], theirs = new Label[Theirs][];
-            private readonly Label summary, capriTotal, othersTotal, gpuNote;
+            private readonly Label summary, capriTotal, othersTotal, gpuNote, clockNote;
             private readonly Slider brainVram;
-            private readonly System.Windows.Forms.Timer clock = new System.Windows.Forms.Timer { Interval = 2000 };
+            private readonly Clock.Ticker clock = new Clock.Ticker("resources window") { Interval = 2000 };
             private readonly SystemUse use = new SystemUse();
             private long vram = -1;
             private string gpuName;
@@ -197,7 +198,7 @@ namespace CapriDesktop
                 brainVram.Value = Math.Max(0, Array.IndexOf(Brain.GpuLimits, Frame.capri.GpuLimit));
                 brainVram.Changed += delegate { Frame.capri.SetGpuLimit(Brain.GpuLimits[brainVram.Value]); };
                 Controls.Add(brainVram);
-                Words("The rest of her brain runs in RAM: slower replies, more room for your games.", 28, 208, 328, 30, Small(), Faint);
+                clockNote = Words("", 28, 208, 328, 30, Small(), Faint);
                 Font band = Type(10f * zoom, true);
                 Heading(this, "CAPRI >", new Point(Z(28), Z(250)), band, White, 352);
                 capriTotal = Words("", 150, 249, 206, 18, Small(), Cyan);
@@ -285,6 +286,14 @@ namespace CapriDesktop
                 Put(mine, view.Capri);
                 Put(theirs, view.Others);
                 summary.Text = Summary(view);
+                clockNote.Text = ClockWords();
+            }
+
+            // Her own clock under the meters: her frame time and wakes a second, then what cost her most of late.
+            internal static string ClockWords()
+            {
+                string first = "Her frames " + (Clock.FrameMsNow > 0 ? Clock.FrameMsNow.ToString("0.0") + " ms" : "-") + " · clock " + (Clock.WakesNow > 0 ? Clock.WakesNow.ToString("0.0") + " a second" : "-");
+                return Clock.DearestNow.Length == 0 ? first : first + "\nCostliest: " + string.Join(", ", Clock.DearestNow);
             }
 
             private static string Shorter(string gpu) { return gpu.Replace("NVIDIA GeForce ", "").Replace("AMD Radeon ", "Radeon ").Replace("(R)", "").Replace("(TM)", ""); }

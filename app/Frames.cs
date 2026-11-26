@@ -264,6 +264,7 @@ namespace CapriDesktop
 
         private void OpenDuplication()
         {
+            if (Recorders.Hold("the screen")) return;
             IntPtr factory = IntPtr.Zero;
             IntPtr chosenAdapter = IntPtr.Zero;
             IntPtr chosenOutput = IntPtr.Zero;
@@ -388,6 +389,7 @@ namespace CapriDesktop
 
         private bool CopyDesktop()
         {
+            if (Recorders.Hold("the screen")) return false;
             if (fallback == null) fallback = new Bitmap(area.Width, area.Height, PixelFormat.Format32bppRgb);
             using (Graphics graphics = Graphics.FromImage(fallback)) graphics.CopyFromScreen(area.Location, Point.Empty, area.Size, CopyPixelOperation.SourceCopy);
             return true;

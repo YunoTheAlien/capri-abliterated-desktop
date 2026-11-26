@@ -1,0 +1,22 @@
+{
+  "format": 2,
+  "id": "my-menu-layout",
+  "name": "My menu layout",
+  "version": "1.0.0",
+  "author": "You",
+  "description": "Her right-click menu laid out your way. Copy this into her mods folder, change the lines, and turn it on in Mods. One item a line, a dash per level, in her English words; move a line to move its item, end one with -= to hide it. pluginsApps gathers apps' items into one folder.",
+  "menu": [
+    "menu",
+    "-Open Capri Mainframe",
+    "-Play",
+    "-pluginsApps",
+    "--Feed her",
+    "-Capri options",
+    "--Display",
+    "--Move",
+    "-Personality",
+    "-Streaming",
+    "-Toggles",
+    "-Help"
+  ]
+}

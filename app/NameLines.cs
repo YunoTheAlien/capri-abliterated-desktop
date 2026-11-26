@@ -8,6 +8,7 @@ namespace CapriDesktop
     internal sealed partial class Companion
     {
         // A meme in parts: split at its pauses, each part a meme, the pauses timed, and the rest dropped once they talk to her.
+#if CHECKS
         private void SmokePausedMeme(List<string> checks)
         {
             const string npc = Sayings.MemeMark + "NPC Capri brain, will... remember that #wait20s# NPC Capri brain, will..... remember that #wait5s# NPC Capri brain, will......... remember that";
@@ -68,9 +69,11 @@ namespace CapriDesktop
             finally { partSaid = saidWas; typer.Visible = false; }
             checks.Add("PASS a line in parts: \"NPC Capri brain, will... remember that\" is in her funny pool, said in three parts 20 s and then 5 s apart, each said as written and never translated; a plain line's parts carry no pause into a translation, and #wait 2,5s# reads as 2.5 s; a part waits its pause, and the rest is dropped once they're typing or talking to her");
         }
+#endif
 
         // A meme part with a voice cue: the cue acts in her voice as pitch, pace and loudness, or as Fish Audio's nearest
         // cue, and never shows or is kept; the words stay as written, and each part takes its own cue.
+#if CHECKS
         private void SmokeCuedMeme(List<string> checks)
         {
             string line = Sayings.MemeMark + "I went to the store to buy a croissant. #wait0.5s# (squeaky) QUASSO!";
@@ -97,9 +100,11 @@ namespace CapriDesktop
             finally { preferences.Silent = silentWas; CloseTalk(); }
             checks.Add("PASS a meme part's voice cue: \"(squeaky)\" and \"(high pitch voice)\" are cues, three semitones up with pace and loudness a little up, Fish Audio's s1 hears its nearest, \"(excited)\"; each part of a line in parts takes its own, the words stay as written, and the cue never shows or is kept");
         }
+#endif
 
         // A question asked again gets "I just told you" at most once in four hours, kept across a restart; a request,
         // undo or redo is never counted.
+#if CHECKS
         private void SmokeJustTold(List<string> checks)
         {
             Func<long> savedWas = Brain.ToldSaved;
@@ -138,9 +143,11 @@ namespace CapriDesktop
                 SimTime.Advance(offsetWas);
             }
         }
+#endif
 
         // She answers in: apart from I speak, saved on its own; Auto follows the language of each message, worked out here;
         // her voice follows the language a reply is in; the settings tool and VOICE's menu set it.
+#if CHECKS
         private void SmokeAnswerLanguage(List<string> checks)
         {
             const string french = "Bonjour, comment \u00e7a va aujourd'hui ? Je suis tr\u00e8s contente.", spanish = "Hola, \u00bfc\u00f3mo est\u00e1s hoy? Estoy muy contenta.";
@@ -185,9 +192,11 @@ namespace CapriDesktop
                 mainframe.Sync();
             }
         }
+#endif
 
         // Text faces show in her bubble and no voice reads them; **silent** parts show without their marks and are never
         // said, on every voice path, and a translation can't drop the marks.
+#if CHECKS
         private void SmokeTextFaces(List<string> checks)
         {
             string[,] faceless =
@@ -238,7 +247,226 @@ namespace CapriDesktop
                 CloseTalk();
             }
         }
+#endif
 
+        // Her replies in another language: she speaks of herself as a woman where the grammar shows it, and a reply in
+        // English or half English while she is held to a language is asked again once, in it.
+#if CHECKS
+        private void SmokeHeldLanguage(List<string> checks)
+        {
+            string answersWas = preferences.AnswerLanguage, languageWas = Brain.Language, matchedWas = Brain.Matched, openAiWas = Brain.OpenAi;
+            System.Net.Sockets.TcpListener server = null;
+            try
+            {
+                const string french = "Je suis pr\u00eate. On y va tout de suite, tu vas adorer.", english = "I'm ready. Let's go right now, you're going to love it.";
+                bool lines = LanguagePair.AsHerself("French").Contains("pr\u00eate") && LanguagePair.AsHerself("Polish").Contains("zm\u0119czona") && LanguagePair.AsHerself("Hindi").Length > 0
+                    && LanguagePair.AsHerself("English") == "" && LanguagePair.AsHerself("German") == "";
+                const string onlyHer = "That is about you only: speak of them as your notes about them say, and where your notes don't say, in ";
+                bool them = LanguagePair.AsHerself("French").Contains(onlyHer + "French's usual forms for someone whose gender you don't know")
+                    && LanguagePair.AsHerself("Brazilian Portuguese").Contains(onlyHer + "Brazilian Portuguese's") && !System.Text.RegularExpressions.Regex.IsMatch(LanguagePair.AsHerself("French"), @"\b(tu es|t'es) \w+");
+                Brain.Language = "French";
+                SetAnswerLanguage(null);
+                bool firm = Brain.Speech().Contains("feminine forms") && Brain.Speech().Contains(onlyHer) && Brain.HeldTo() == "French";
+                SetAnswerLanguage(LanguagePair.Auto);
+                Brain.MatchLanguage("Cze\u015b\u0107, jak si\u0119 dzisiaj masz? Co robisz?");
+                bool auto = Brain.Speech().Contains("in Polish, use the feminine forms") && Brain.Speech().Contains(onlyHer + "Polish's") && Brain.HeldTo() == "Polish";
+                SetAnswerLanguage(null);
+                if (!lines || !them || !firm || !auto) throw new Exception("Her prompt doesn't say she speaks as a woman, of herself only: lines " + lines + ", them " + them + ", French " + firm + ", Auto " + auto + " (" + Brain.Speech().Trim() + ")");
+                bool told = !LanguagePair.EnglishIn(french, "French") && LanguagePair.EnglishIn(english, "French") && LanguagePair.EnglishIn(french + " But honestly that is what I wanted to say.", "French")
+                    && !LanguagePair.EnglishIn("Salut choom, preem ! On joue ?", "French") && !LanguagePair.EnglishIn(english, "English");
+                if (!told) throw new Exception("A reply in English or half English wasn't told from one in French.");
+                checks.Add("PASS her prompt tells a language that shows who is speaking that she is a woman, with its own feminine forms (French, Polish, Hindi and the rest), on She answers in and on Auto, and that it is about her only: them as her notes say, else the language's usual forms for someone whose gender isn't known; English and German get no line");
+                string[][] scripts = { new[] { english, french }, new[] { english, english }, new[] { french }, new[] { english } };
+                string[] languages = { "French", "French", "French", null };
+                string[] expected = { french, english, french, english };
+                int[] calls = { 2, 2, 1, 1 };
+                for (int run = 0; run < scripts.Length; run++)
+                {
+                    List<string> asked = new List<string>();
+                    string[] replies = Array.ConvertAll(scripts[run], one => LocalReply(one));
+                    Brain.OpenAi = FakeServer(replies, asked, out server);
+                    Brain.Language = languages[run];
+                    Brain talker = new Brain { Remote = new Cloud("sk-proj-test", "gpt-5-mini"), Model = "gpt-5-mini" };
+                    string said = talker.Ask("on y va ?");
+                    int count;
+                    lock (asked) count = asked.Count;
+                    bool redoAsked = false;
+                    lock (asked) if (count > 1) redoAsked = asked[1].Contains("all in French");
+                    server.Stop();
+                    server = null;
+                    if (said != expected[run] || count != calls[run] || (calls[run] > 1 && !redoAsked))
+                        throw new Exception("Run " + run + ": a reply held to " + (languages[run] ?? "English") + " wasn't asked again once: " + said + ", " + count + " calls");
+                }
+                checks.Add("PASS a reply in English while she is held to French is asked again once, all in French: the French retry is kept, an English retry leaves the first reply and asks no third time, a French reply is never asked again, and with English picked nothing is");
+            }
+            finally
+            {
+                if (server != null) server.Stop();
+                Brain.OpenAi = openAiWas;
+                preferences.AnswerLanguage = answersWas;
+                Brain.Answers = LanguagePair.Answers(answersWas);
+                Brain.Language = languageWas;
+                Brain.Matched = matchedWas;
+                SavePreferences();
+            }
+        }
+#endif
+
+        // A meme names its source at the top of her bubble while she says it, and one comes in context (a gift while she's
+        // hungry) once her funny timer is half way to its next time and that line hasn't been said for three days.
+#if CHECKS
+        private void SmokeMemeSources(List<string> checks)
+        {
+            const string tagged = Sayings.MemeMark + "{SAO Ab} We must save my family!!";
+            List<KeyValuePair<double, string>> parts = Sayings.Parts(Sayings.MemeMark + "{SAO Ab} one #wait1s# two");
+            bool read = Sayings.MemeSource(tagged) == "SAO Ab" && Sayings.Unmeme(tagged) == "We must save my family!!" && Sayings.MemeSource(Sayings.MemeMark + "no u") == null
+                && Sayings.MemeSource("{SAO Ab} not a meme") == null && parts.Count == 2 && parts.TrueForAll(one => Sayings.MemeSource(one.Value) == "SAO Ab")
+                && Sayings.Unmeme(parts[0].Value) == "one" && Sayings.Unmeme(parts[1].Value) == "two";
+            if (!read) throw new Exception("A meme's source wasn't read, taken off or kept on each part.");
+            CloseTalk();
+            Remark("", tagged, true, null, false, "> sys: ");
+            string shown = box.Prompt;
+            CloseTalk();
+            Remark("", Sayings.MemeMark + "no u", true, null, false, "> sys: ");
+            string plain = box.Prompt;
+            CloseTalk();
+            if (shown != "> SAO Ab: " || plain != "> sys: ") throw new Exception("Her bubble's top line didn't name the meme's source: " + shown + " / " + plain);
+            checks.Add("PASS a meme names its source in braces after the mark (~{SAO Ab}); her bubble's top line shows it while she says it, on every part of a line in parts, and an untagged meme keeps the line it had");
+
+            const string moment = "you give her a gift while hungry";
+            TimeSpan offsetWas = SimTime.Offset;
+            long fedWas = preferences.FedAt;
+            Action unsay = Sayings.HeldSaid();
+            try
+            {
+                double half = Sayings.FunnyRest / 2;
+                Sayings.Rested("sys:funny", 0);
+                string early = Sayings.InContext(moment, 1);
+                SimTime.Advance(TimeSpan.FromHours(half + 0.05));
+                string due = Sayings.InContext(moment, 1);
+                string straightAfter = Sayings.InContext(moment, 1);
+                SimTime.Advance(TimeSpan.FromHours(half + 0.05));
+                string sameLine = Sayings.InContext(moment, 1);
+                SimTime.Advance(TimeSpan.FromDays(3));
+                string later = Sayings.InContext(moment, 1);
+                if (early != null || due == null || Sayings.MemeSource(due) != "SAO Ab" || Sayings.Unmeme(due) != "HOW DO I EAT YOU!!!" || straightAfter != null || sameLine != null || later != due)
+                    throw new Exception("A meme in context came at the wrong time: before half way " + early + ", half way " + due + ", straight after " + straightAfter + ", the same line within three days " + sameLine + ", three days on " + later);
+                preferences.FedAt = (SimTime.UtcNow - TimeSpan.FromHours(30)).Ticks;
+                bool hungry = HungerWord == "hungry";
+                preferences.FedAt = SimTime.UtcNow.Ticks;
+                if (!hungry || HungerWord == "hungry") throw new Exception("Hungry wasn't read as her Feed her menu reads it.");
+                checks.Add("PASS a meme in context: \"HOW DO I EAT YOU!!!\" (SAO Ab) for a gift while she's hungry comes only once her funny timer is half way to its next time, starts that timer again, and isn't said twice within three days");
+            }
+            finally
+            {
+                SimTime.Reset();
+                SimTime.Advance(offsetWas);
+                preferences.FedAt = fedWas;
+                unsay();
+                Sayings.Rested("sys:funny", 0);
+            }
+        }
+#endif
+
+#if CHECKS
+        // A line from outside her pools, like her interests file's check-in openers, keeps the same said-lately rest.
+        private void SmokeNotLately(List<string> checks)
+        {
+            string[] openers = { "You are very distracting from over here, you know. zq1", "Every time you lean back like that I lose my train of thought. zq2", "Come and keep me company for a bit. zq3" };
+            Action unsay = Sayings.HeldSaid();
+            Func<double> paceWas = Sayings.RestPace;
+            try
+            {
+                Sayings.Remember(openers[0]);
+                Sayings.Remember(openers[1]);
+                int at = 0;
+                List<string> picked = new List<string>();
+                for (int i = 0; i < 6; i++) picked.Add(Sayings.NotLately(delegate { return openers[at++ % openers.Length]; }));
+                if (picked[0] != openers[2] || !Sayings.SaidLately(openers[2]))
+                    throw new Exception("A check-in opener said lately came up again: " + string.Join(" / ", picked.ToArray()));
+                // The rest follows her pace: twice as slow a pace rests a line twice as long, half as slow half as long.
+                double stock = Sayings.RestHours;
+                Sayings.RestPace = delegate { return 2; };
+                double slow = Sayings.RestHours;
+                Sayings.RestPace = delegate { return 0.5; };
+                double quick = Sayings.RestHours;
+                Sayings.RestPace = paceWas;
+                if (Math.Abs(slow - Sayings.RecentHours * 2) > 0.01 || Math.Abs(quick - Sayings.RecentHours * 0.5) > 0.01)
+                    throw new Exception("The said-lately rest didn't follow her pace: stock " + stock + " h, slow " + slow + " h, quick " + quick + " h");
+                checks.Add("PASS her check-in openers keep a said-lately rest: one said within it is passed over while another comes up, the one picked is remembered, and the rest is RecentHours at her personality's and mood's paces (twice as slow a pace, twice as long)");
+            }
+            finally { Sayings.RestPace = paceWas; unsay(); }
+        }
+#endif
+
+#if CHECKS
+        // Each moment a meme waits for has its section, and each section's memes come only at their moment.
+        private void SmokeMemeMoments(List<string> checks)
+        {
+            string[][] moments =
+            {
+                new[] { "you pat her", "awa awa" }, new[] { "you tickle her", "rawr xD" }, new[] { "you pick her up", "smol bean protocol activated" },
+                new[] { "you throw her", "RIDONCULOUS!!!" }, new[] { "she is dizzy", "sksksk and i oop" }, new[] { "you praise her", ">:3" },
+                new[] { "you insult her", "no u" }, new[] { "you talk to her", "ehe? ehe what? ehe nothing" },
+                new[] { "you say her name", "i could be your oshi. just saying. the position is open" }, new[] { "she wakes to her name", "omg hiiii bestie" },
+                new[] { "you ignore her", "not me getting attached to a taskbar" }, new[] { "you come back", "ara ara. someone's been busy" },
+                new[] { "it is bedtime", "bonk. go to bed" }, new[] { "you feed her a treat", "QUASSO!" }, new[] { "you ask her to remember", "NPC Capri brain" },
+                new[] { "you die in a game", "You were so close!" }, new[] { "you die again in a game", "We must save my family!!" }, new[] { "you win a game", "ngl that went hard" }
+            };
+            TimeSpan offsetWas = SimTime.Offset;
+            string wordsWas = wordsMoment;
+            double wordsAtWas = wordsMomentAt;
+            int ticketWas = brainTicket;
+            double nameWas = nameCalledAt;
+            Action unsay = Sayings.HeldSaid();
+            try
+            {
+                double half = Sayings.FunnyRest / 2;
+                string wrong = null;
+                // Past anything said earlier in the run, so each meme is due.
+                SimTime.Advance(TimeSpan.FromDays(3.1));
+                foreach (string[] moment in moments)
+                {
+                    Sayings.Rested("sys:funny", 0);
+                    SimTime.Advance(TimeSpan.FromHours(half + 0.05));
+                    string meme = Sayings.InContext(moment[0], 1);
+                    string[] section = Sayings.Pool(Sayings.InContextPrefix + moment[0]) ?? new string[0];
+                    bool held = Array.Exists(section, line => Sayings.Unmeme(line).IndexOf(moment[1], StringComparison.Ordinal) >= 0);
+                    if (meme == null || !Sayings.IsMeme(meme) || Array.IndexOf(section, meme) < 0 || !held) wrong = wrong ?? moment[0] + " gave " + (meme ?? "nothing");
+                }
+                if (wrong != null) throw new Exception("A moment had no meme of its own: " + wrong);
+                string[] funnies = Sayings.Pool("funny") ?? new string[0];
+                foreach (string[] moment in moments)
+                    foreach (string line in Sayings.Pool(Sayings.InContextPrefix + moment[0]))
+                        if (Array.IndexOf(funnies, line) >= 0) throw new Exception("A meme with its moment is still among her funny lines: " + line);
+                // An insult while she is furious falls back to an insult's meme when the furious one has none on this side.
+                SimTime.Advance(TimeSpan.FromDays(3.1));
+                Sayings.Rested("sys:funny", 0);
+                SimTime.Advance(TimeSpan.FromHours(Sayings.FunnyRest * Math.Max(1, ChatterStretch)));
+                brainTicket = 7;
+                nameCalledAt = -1;
+                wordsMoment = "you insult her while she is furious";
+                wordsMomentAt = clock.Elapsed.TotalSeconds;
+                string reply = NameLine(7, "rude.");
+                string[] furious = Sayings.Pool(Sayings.InContextPrefix + "you insult her while she is furious" + LineFile.SenpaiMark) ?? new string[0];
+                if (reply != "no u rude." && !Array.Exists(furious, line => reply == Sayings.Unmeme(line) + " rude.")) throw new Exception("An insult's meme didn't open her reply: " + reply);
+                checks.Add("PASS memes in context: each of the 18 moments a meme waits for has its own section and its meme comes there, none of them is left among her funny lines, and an insult's meme opens her reply to it, a furious insult falling back to it");
+            }
+            finally
+            {
+                SimTime.Reset();
+                SimTime.Advance(offsetWas);
+                wordsMoment = wordsWas;
+                wordsMomentAt = wordsAtWas;
+                brainTicket = ticketWas;
+                nameCalledAt = nameWas;
+                unsay();
+                Sayings.Rested("sys:funny", 0);
+            }
+        }
+#endif
+
+#if CHECKS
         private void SmokeNameLines(List<string> checks)
         {
             Dictionary<string, List<string>> stock = new Dictionary<string, List<string>>(StringComparer.Ordinal);
@@ -258,7 +486,7 @@ namespace CapriDesktop
             bool plainPraised = false;
             for (int i = 0; i < 120 && !plainPraised; i++)
             {
-                string said = Sayings.Plainly("come back to me", true) ?? "";
+                string said = Sayings.Plainly("come back to me", true, Sayings.Kind.Own) ?? "";
                 foreach (string one in praising) if (said.IndexOf(one, StringComparison.OrdinalIgnoreCase) >= 0) plainPraised = true;
             }
             if (plainPraised) throw new Exception("A warm line she brought up herself took a praise tail.");
@@ -371,6 +599,7 @@ namespace CapriDesktop
                 SavePreferences();
             }
         }
+#endif
 
         // The lines under one heading of check-ins.md as it ships.
         private static List<string> StockCare(string heading)

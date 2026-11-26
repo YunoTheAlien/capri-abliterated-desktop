@@ -54,7 +54,7 @@ namespace CapriDesktop
                     {
                         bool good = false;
                         foreach (string ok in Tokens) if (string.Equals(ok, mark.Value, StringComparison.OrdinalIgnoreCase)) { good = true; break; }
-                        // Her favourite gift's name, filled in as she says a line from this pool (Tamagotchi GiftMemoryLine).
+                        // Her favourite gift's name, filled in as she says a line from this pool (the Tamagotchi mod).
                         if (!good && string.Equals(mark.Value, "%gift%", StringComparison.OrdinalIgnoreCase) && string.Equals(name, "gift remembered", StringComparison.OrdinalIgnoreCase)) good = true;
                         if (!good) found.Add(name + ": unknown token " + mark.Value + " in \"" + one + "\"");
                     }

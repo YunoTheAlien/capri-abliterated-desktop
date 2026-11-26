@@ -219,4 +219,5 @@ Quiet until {n}:{n}	{n}:{n} পর্যন্ত চুপ
 Quiet until turned off	বন্ধ না করা পর্যন্ত চুপ
 Export settings	সেটিংস রপ্তানি
 Import settings	সেটিংস আমদানি
-Save Mainframe position	প্যানেলের অবস্থান মনে রাখো
+Save Mainframe position	Mainframe-এর অবস্থান সংরক্ষণ
+Capri options	Capri বিকল্প

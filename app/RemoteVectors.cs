@@ -124,7 +124,9 @@ namespace CapriDesktop
                 Expect(RemoteCrypto.FromB64u(room.Substring(0, room.Length - 1) + "x", 16) == null, "non-canonical trailing bits are refused");
                 Expect(RemoteCrypto.FromB64u(room, 32) == null, "a wrong length is refused");
 
-                Same(RemoteCrypto.QrUrl(InputB64u("room"), InputB64u("code"), InputB64u("pairingKey")), v.Text("qrUrl"), "QR URL");
+                // From the # on: the page in front is whichever one is ours.
+                string made = RemoteCrypto.QrUrl(InputB64u("room"), InputB64u("code"), InputB64u("pairingKey")), want = v.Text("qrUrl") ?? "";
+                Same(made.Substring(made.IndexOf('#')), want.IndexOf('#') < 0 ? want : want.Substring(want.IndexOf('#')), "QR URL");
                 RemoteJson.Map hashes = v.Child("hashes");
                 Same(RemoteCrypto.Hash(Input("code")), hashes.Text("codeHashB64u"), "SHA-256 of the code");
                 Same(RemoteCrypto.Hash(Input("pcToken")), hashes.Text("pcTokenHashB64u"), "SHA-256 of the PC token");

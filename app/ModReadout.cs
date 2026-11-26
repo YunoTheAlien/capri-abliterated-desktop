@@ -170,6 +170,7 @@ namespace CapriDesktop
 
         // With a stand-in brain: a minified mod and a packed one each get a copy, packed text is decoded and a Windows program
         // is only described, nothing is loaded, and the reach list is the same before and after.
+#if CHECKS
         internal static void Check(List<string> checks)
         {
             Func<string, string, string> askWas = Ask;
@@ -227,5 +228,6 @@ namespace CapriDesktop
                 Open = openWas;
             }
         }
+#endif
     }
 }

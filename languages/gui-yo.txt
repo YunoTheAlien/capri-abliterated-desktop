@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Ìdákẹ́jẹ́ẹ́ títí di {n}:{n}
 Quiet until turned off	Ìdákẹ́jẹ́ẹ́ títí a ó fi pa á
 Export settings	Gbé ètò jáde
 Import settings	Gbé ètò wọlé
-Save Mainframe position	Rántí ipò pánẹ́ẹ̀lì
+Save Mainframe position	Fi ipo Mainframe pamọ
+Capri options	Àwọn àṣàyàn Capri

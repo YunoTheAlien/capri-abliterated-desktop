@@ -10,6 +10,7 @@ using System.Runtime.Serialization.Json;
 using System.Threading;
 using System.Windows.Forms;
 
+#if CHECKS
 namespace CapriDesktop
 {
     // A picture of one of her windows as Windows draws it, cut to the window's own outline over a light backdrop, so a frame
@@ -294,7 +295,7 @@ namespace CapriDesktop
                 Said.Ready = delegate { return false; };
                 FirstRunPaste = delegate { return "  AIza-firstrun-test  "; };
                 FirstRunUsePlan = delegate(string kind) { planned = kind; };
-                fit = Engine.Picks[1];
+                fit = Engine.E2B;
                 // Her brain's download as SetUpBrain shows it: FindBrain has already put up the setup steps, then the progress.
                 Machine setupMachine = Machine.Read();
                 FirstRunSetUp = delegate { setups++; SettingUp = true; mainframe.ShowSetup(setupMachine, fit, false, null); mainframe.ShowProgress(1, "Downloading " + fit.Name, 0, fit.Size); };
@@ -560,6 +561,11 @@ namespace CapriDesktop
                         AskReady(FirstRun.Pick, FirstRun.Local, false);
                         pump();
                         bool asked = ReadyAsking && !FirstRunShowing;
+                        // Past the ten seconds every other Yes and No gives up after, the ready ask stays.
+                        box.ChoiceSince = DateTime.UtcNow.AddSeconds(-(ChoiceMost + 0.5));
+                        ChoiceLapsed();
+                        pump();
+                        bool stays = ReadyAsking && !FirstRunShowing;
                         ReadyAnswer(false);
                         pump();
                         bool waited = !FirstRunShowing && !box.Choosing && box.Reply != null && box.Reply.Contains(FirstRun.LaterLine);
@@ -568,13 +574,13 @@ namespace CapriDesktop
                         bool again = ReadyAsking && box.Reply.Contains(FirstRun.ReadyAgainLine);
                         ReadyAnswer(true);
                         wait(delegate { return FirstRunShowing; }, "Yes in her bubble didn't open the card.");
-                        if (!asked || !waited || !again) throw new Exception("Her bubble didn't ask before the card: asked " + asked + ", No waited " + waited + ", asked again " + again);
+                        if (!asked || !stays || !waited || !again || CardOpenedBy != "Yes") throw new Exception("Her bubble didn't ask before the card: asked " + asked + ", stayed past " + ChoiceMost + " s " + stays + ", No waited " + waited + ", asked again " + again + ", opened by " + CardOpenedBy);
                         firstRun.SkipAll();
                         pump();
                         double now = clock.Elapsed.TotalSeconds;
                         bool resting = setupDoneAt >= now - 5 && MeetRest >= 20;
                         if (!resting) throw new Exception("The card ending didn't start her rest before asking their name: " + setupDoneAt + " / " + now);
-                        passed("PASS a new install's card waits for her bubble's \"" + FirstRun.ReadyLine + "\": No keeps it shut with \"" + FirstRun.LaterLine + "\", a later ask says \"" + FirstRun.ReadyAgainLine + "\", Yes opens it; her name question waits " + MeetRest + " s after the card is done");
+                        passed("PASS a new install's card waits for her bubble's \"" + FirstRun.ReadyLine + "\", which stays past " + ChoiceMost + " s until Yes or No: No keeps it shut with \"" + FirstRun.LaterLine + "\", a later ask says \"" + FirstRun.ReadyAgainLine + "\", Yes opens it and is logged; her name question waits " + MeetRest + " s after the card is done");
                     }
                     finally
                     {
@@ -1354,6 +1360,8 @@ namespace CapriDesktop
                 CloseTalk();
                 foreach (System.Net.Sockets.TcpListener server in servers) server.Stop();
                 preferences = wasPreferences;
+                // Her Mainframe's size comes from them, so it is fitted again, or later checks see first run's zoom.
+                mainframe.Refit();
                 Brain.Nickname = wasNickname;
                 namedOnCard = false;
                 firstJob = null;
@@ -1392,3 +1400,4 @@ namespace CapriDesktop
         }
     }
 }
+#endif

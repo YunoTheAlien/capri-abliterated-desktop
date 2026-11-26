@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Isilik {n}:{n} arte
 Quiet until turned off	Isilik itzali arte
 Export settings	Esportatu ezarpenak
 Import settings	Inportatu ezarpenak
-Save Mainframe position	Gogoratu panelaren kokapena
+Save Mainframe position	Gorde Mainframe-ren kokapena
+Capri options	Capri aukerak

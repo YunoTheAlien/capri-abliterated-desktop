@@ -60,6 +60,7 @@ namespace CapriDesktop
         }
 
         // A link to one folder, noted, then pointed at another: she sees it moved; the plain folder stays the same.
+#if CHECKS
         internal static void Check(List<string> checks, string folder)
         {
             string root = Path.Combine(folder, "hold-" + Guid.NewGuid().ToString("N").Substring(0, 6));
@@ -87,6 +88,7 @@ namespace CapriDesktop
                 try { Directory.Delete(root, true); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
+#endif
 
         private static bool Link(string link, string target)
         {

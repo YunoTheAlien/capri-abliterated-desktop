@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Kwiet sal-{n}:{n}
 Quiet until turned off	Kwiet sakemm jintefa
 Export settings	Esporta s-settings
 Import settings	Importa s-settings
-Save Mainframe position	Ftakar il-pożizzjoni tal-pannell
+Save Mainframe position	Issejvja l-pożizzjoni tal-Mainframe
+Capri options	Għażliet ta' Capri

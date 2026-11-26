@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Kluss līdz {n}:{n}
 Quiet until turned off	Kluss līdz izslēgšanai
 Export settings	Eksportēt iestatījumus
 Import settings	Importēt iestatījumus
-Save Mainframe position	Atcerēties paneļa novietojumu
+Save Mainframe position	Saglabāt Mainframe atrašanās vietu
+Capri options	Capri opcijas

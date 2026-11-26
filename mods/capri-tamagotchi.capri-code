@@ -1,0 +1,236 @@
+// capri-mod: 1
+// id: capri-tamagotchi
+// name: Tamagotchi
+// version: 1.3.0
+// author: Capri
+// description: Her pet game: points she earns buy food and gifts, and she remembers what you gave her.
+// permissions: pet, mood
+// requires: api 10
+// kind: app
+// section: fun
+
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Globalization;
+using System.Windows.Forms;
+using CapriDesktop;
+
+// Points, prices, gifts and what she remembers of them. She keeps feeding and hunger; this asks her for both through
+// capri.Pet, and its switches are in its Toggles row.
+public class Tamagotchi : ICapriMod, ICapriPet
+{
+    // A point a minute while she runs, to 999: about 420 on a working day open, so 999 takes two or three of those.
+    private const int Most = 999;
+    private const double PointSeconds = 60;
+
+    // Food by its label in Feed her, and what each costs.
+    private static readonly string[] Foods = { "A snack", "Something to drink", "chimpken nuggies", "A treat", "Something sweet", "A proper meal" };
+    private static readonly int[] FoodCosts = { 10, 10, 15, 20, 20, 25 };
+
+    // Gifts top to bottom: her act, its label, its price and what she calls it.
+    private static readonly string[] GiftActs = { "trinket", "flowers", "plushie", "gift", "pet rock" };
+    private static readonly string[] GiftLabels = { "Trinket", "Flowers", "Plushie", "Gift", "Pet rock" };
+    private static readonly int[] GiftCosts = { 60, 100, 140, 180, 30 };
+    private static readonly string[] GiftSaid = { "trinket", "bunch of flowers", "plushie", "present", "pet rock" };
+
+    private static readonly Color Gold = Color.FromArgb(242, 201, 76);
+
+    private ICapriHost capri;
+    private Color gold = Gold;
+    private readonly Random chance = new Random();
+    private readonly List<ICapriMenuItem> giftItems = new List<ICapriMenuItem>();
+
+    public void Start(ICapriHost host)
+    {
+        capri = host;
+        gold = host.Ui.Colour("Points", Gold);
+        host.Ui.ColoursChanged += delegate { gold = capri.Ui.Colour("Points", Gold); };
+        host.Timers.Every(PointSeconds, Earn);
+        host.Timers.Every(1800, Remember);
+        host.Ui.MenuOpening += Priced;
+        Part("Feeding", Feeding, "no feeding");
+        Part("Gift giving", GiftsOn, "no gifts");
+        Part("Points", PointsOn, "no points");
+        Lay();
+    }
+
+    public bool Heard(string words) { return false; }
+
+    public void Stop() { }
+
+    // ---------- Its parts, each with its own switch ----------
+
+    private bool PointsOn { get { return !capri.Store.Flag("no points", false); } }
+    private bool GiftsOn { get { return !capri.Store.Flag("no gifts", false); } }
+    public bool Feeding { get { return !capri.Store.Flag("no feeding", false); } }
+
+    private int Points
+    {
+        get { return Math.Max(0, Math.Min(Most, (int)capri.Store.Number("points", 0))); }
+        set { capri.Store.Set("points", (double)Math.Max(0, Math.Min(Most, value))); }
+    }
+
+    // ---------- What her menu asks ----------
+
+    public string Heading { get { return PointsOn ? "Points: " + Points : ""; } }
+
+    public Color HeadingColour { get { return gold; } }
+
+    public int Cost(string food)
+    {
+        if (!PointsOn) return 0;
+        int at = Array.IndexOf(Foods, food);
+        return at < 0 ? 10 : FoodCosts[at];
+    }
+
+    public bool Pay(string food) { return Spend(Cost(food)); }
+
+    public bool CanPay(string food) { int cost = Cost(food); return !PointsOn || cost <= 0 || Points >= cost; }
+
+    // ---------- Points ----------
+
+    // A point a minute, and a point more for every half of the way her six needs are kept up, so caring for her pays.
+    private void Earn()
+    {
+        if (!PointsOn || Points >= Most) return;
+        Points = Math.Min(Most, Points + 1 + (int)(Kept() / 50));
+    }
+
+    // Her six needs on average, 0 to 100.
+    private double Kept()
+    {
+        string[] needs = { "energy", "fullness", "stimulation", "social", "comfort", "cleanliness" };
+        double sum = 0;
+        foreach (string need in needs) sum += capri.Pet.Stat(need);
+        return sum / needs.Length;
+    }
+
+    // Paid when points are on and there are enough; free with them off.
+    private bool Spend(int cost)
+    {
+        if (!PointsOn || cost <= 0) return true;
+        if (Points < cost) return false;
+        Points = Points - cost;
+        return true;
+    }
+
+    // ---------- Washing ----------
+
+    private const int WashCost = 15;
+
+    // A wash, paid like food: her cleanliness comes back through her own act, liked as her personality likes it.
+    private void Wash()
+    {
+        if (!Spend(WashCost)) return;
+        capri.Acts.Did("wash");
+    }
+
+    // ---------- Gifts ----------
+
+    // Give gift in her Tamagotchi menu while gifts are on; she puts this window's item at the bottom herself.
+    private void Lay()
+    {
+        ICapriMenu menu = capri.Pet.Menu;
+        menu.Clear();
+        giftItems.Clear();
+        if (!GiftsOn) return;
+        menu.Add("Wash her", Wash);
+        ICapriMenu gifts = menu.AddMenu("Give gift");
+        for (int i = 0; i < GiftActs.Length; i++)
+        {
+            int at = i;
+            giftItems.Add(gifts.Add(GiftLabels[i], delegate { Give(at); }));
+        }
+        Priced();
+    }
+
+    // Each gift's price on the right, greyed when it can't be afforded.
+    private void Priced()
+    {
+        for (int i = 0; i < giftItems.Count; i++)
+        {
+            giftItems[i].Note = PointsOn ? GiftCosts[i].ToString(CultureInfo.InvariantCulture) : "";
+            giftItems[i].Colour = gold;
+            giftItems[i].Enabled = !PointsOn || Points >= GiftCosts[i];
+        }
+    }
+
+    // Given something: paid for, counted, scored by her personality and mood (one she dislikes counts against you), and
+    // her line for it.
+    private void Give(int at)
+    {
+        if (!GiftsOn || !Spend(GiftCosts[at])) return;
+        string act = GiftActs[at];
+        Counted(act, Count(act) + 1);
+        capri.Store.Set("gift given at", DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture));
+        capri.Acts.Did(act);
+        bool liked = capri.Acts.Worth(act) > 0;
+        string line = capri.Acts.Line(act, liked);
+        capri.Log(act + " | " + (string.IsNullOrEmpty(line) ? "no line" : "\"" + line + "\"") + " | given " + Count(act));
+        if (!string.IsNullOrEmpty(line)) capri.Say(line);
+    }
+
+    // What she has been given, as "trinket:2;flowers:1".
+    private int Count(string act)
+    {
+        foreach (string part in capri.Store.Get("gifts", "").Split(';'))
+        {
+            int colon = part.IndexOf(':'), much;
+            if (colon > 0 && part.Substring(0, colon) == act && int.TryParse(part.Substring(colon + 1), NumberStyles.Integer, CultureInfo.InvariantCulture, out much)) return much;
+        }
+        return 0;
+    }
+
+    private void Counted(string act, int much)
+    {
+        List<string> kept = new List<string>();
+        foreach (string one in GiftActs)
+        {
+            int have = one == act ? much : Count(one);
+            if (have > 0) kept.Add(one + ":" + have.ToString(CultureInfo.InvariantCulture));
+        }
+        capri.Store.Set("gifts", string.Join(";", kept.ToArray()));
+    }
+
+    // Her favourite of what she has been given: the one she likes most, then the one given most; never one she doesn't
+    // like.
+    private int Favourite()
+    {
+        int best = -1, bestWorth = int.MinValue, bestCount = 0;
+        for (int i = 0; i < GiftActs.Length; i++)
+        {
+            int count = Count(GiftActs[i]);
+            if (count == 0) continue;
+            int worth = capri.Acts.Worth(GiftActs[i]);
+            if (worth <= 0) continue;
+            if (worth > bestWorth || worth == bestWorth && count > bestCount) { best = i; bestWorth = worth; bestCount = count; }
+        }
+        return best;
+    }
+
+    // Now and then, at most once a day and not within six hours of a gift, she mentions her favourite thing they gave her.
+    private void Remember()
+    {
+        if (!GiftsOn || chance.Next(12) != 0) return;
+        int favourite = Favourite();
+        if (favourite < 0 || HoursSince("gift given at") < 6 || HoursSince("gift remembered at") < 24) return;
+        string line = capri.Acts.Pool("gift remembered");
+        if (string.IsNullOrEmpty(line)) return;
+        capri.Store.Set("gift remembered at", DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture));
+        capri.Say(line.Replace("%gift%", GiftSaid[favourite]));
+    }
+
+    private double HoursSince(string key)
+    {
+        long ticks;
+        if (!long.TryParse(capri.Store.Get(key, ""), NumberStyles.Integer, CultureInfo.InvariantCulture, out ticks) || ticks <= 0) return double.MaxValue;
+        return (DateTime.UtcNow - new DateTime(ticks, DateTimeKind.Utc)).TotalHours;
+    }
+
+    // A part's switch in its Toggles row, over the key the part reads.
+    private void Part(string name, bool on, string key)
+    {
+        capri.Toggles.Add(name, on, delegate(bool now) { capri.Store.Set(key, !now); Lay(); });
+    }
+}

@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Vaikne kuni {n}:{n}
 Quiet until turned off	Vaikne kuni väljalülitamiseni
 Export settings	Ekspordi seaded
 Import settings	Impordi seaded
-Save Mainframe position	Jäta paneeli asukoht meelde
+Save Mainframe position	Salvesta Mainframe'i asukoht
+Capri options	Capri valikud

@@ -2,19 +2,153 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Windows.Forms;
 
+#if CHECKS
 namespace CapriDesktop
 {
     internal sealed partial class Companion
     {
-        // Custom colours' window: the player's own colours, layout.md as an update writes it naming every colour, presets
-        // and last used read back as written, and the window driven at 100, 150 and 200%.
+        // A light Mainframe colours look reaches her newer windows: Toggles with every fold open, the Streaming window's
+        // side and the Clear memory question. Any of the stock red look's own colours filling an area fails it.
+        private void SmokeColoursFollow(List<string> checks, string output)
+        {
+            int lookWas = MainframeColours;
+            int light = Array.IndexOf(Neon.LookNames, "White");
+            if (light < 0) throw new Exception("There is no White look to try.");
+            Directory.CreateDirectory(output);
+            // The red look's colours that the White look doesn't share; finding one in a window means it kept the old.
+            Color[] red = Neon.LookColours(0), white = Neon.LookColours(light);
+            HashSet<int> stale = new HashSet<int>();
+            foreach (Color one in red) stale.Add(one.ToArgb() | unchecked((int)0xFF000000));
+            foreach (Color one in white) stale.Remove(one.ToArgb() | unchecked((int)0xFF000000));
+            List<string> wrong = new List<string>();
+            Action<Bitmap, string> look = delegate(Bitmap shot, string name)
+            {
+                shot.Save(Path.Combine(output, "white-" + name + ".png"), System.Drawing.Imaging.ImageFormat.Png);
+                Dictionary<int, int> found = new Dictionary<int, int>();
+                for (int y = 0; y < shot.Height; y++)
+                    for (int x = 0; x < shot.Width; x++)
+                    {
+                        int argb = shot.GetPixel(x, y).ToArgb() | unchecked((int)0xFF000000);
+                        if (stale.Contains(argb)) { int had; found.TryGetValue(argb, out had); found[argb] = had + 1; }
+                    }
+                foreach (KeyValuePair<int, int> one in found)
+                    if (one.Value > 20) wrong.Add(name + " has " + one.Value + " pixels of the red look's " + Color.FromArgb(one.Key).Name);
+            };
+            try
+            {
+                // Her screensaver mod's own sliders (See through and the rest) come in as it starts; the picture waits for them
+                // a few seconds, so it shows every setting the window has rather than whichever arrived first.
+                for (int waited = 0; waited < 8000 && saverMenu != null; waited += 100)
+                {
+                    bool through = false;
+                    foreach (ToolStripItem one in saverMenu.DropDownItems) { string tag = one.Tag as string; if (tag != null && tag.StartsWith(Mainframe.StepTag + "See through", StringComparison.Ordinal)) through = true; }
+                    if (through) break;
+                    Application.DoEvents();
+                    System.Threading.Thread.Sleep(100);
+                }
+                // Her own look first, as a picture to compare with the White one.
+                using (Bitmap own = mainframe.PictureToggles()) own.Save(Path.Combine(output, "own-toggles.png"), System.Drawing.Imaging.ImageFormat.Png);
+                // A General row with settings open on the right: its words and its status box.
+                mainframe.PickToggleRow("Better conversations");
+                using (Bitmap talk = mainframe.PictureToggles()) talk.Save(Path.Combine(output, "own-toggles-conversations.png"), System.Drawing.Imaging.ImageFormat.Png);
+                mainframe.CloseToggles();
+                SetMainframeColours(light);
+                using (Bitmap toggles = mainframe.PictureToggles()) look(toggles, "toggles");
+                mainframe.CloseToggles();
+                streamOpenItem.PerformClick();
+                Form side = mainframe.StreamingSide;
+                if (side == null) throw new Exception("The Streaming window didn't open.");
+                Application.DoEvents();
+                using (Bitmap shot = new Bitmap(side.Width, side.Height))
+                {
+                    side.DrawToBitmap(shot, new Rectangle(Point.Empty, shot.Size));
+                    look(shot, "streaming");
+                }
+                if (streamWindow != null && !streamWindow.IsDisposed) SetStreamWindow();
+                using (Question question = new Question("Forget this conversation, her transcripts and her memories of you. me.md stays.", "Clear memory", 0, "Clear memory", "Cancel"))
+                {
+                    question.Show();
+                    Application.DoEvents();
+                    using (Bitmap shot = new Bitmap(question.Width, question.Height))
+                    {
+                        question.DrawToBitmap(shot, new Rectangle(Point.Empty, shot.Size));
+                        look(shot, "clear-memory");
+                    }
+                    question.Close();
+                }
+            }
+            finally
+            {
+                mainframe.CloseToggles();
+                if (streamWindow != null && !streamWindow.IsDisposed) SetStreamWindow();
+                SetMainframeColours(lookWas);
+            }
+            if (wrong.Count > 0) throw new Exception("A window kept the red look under White: " + string.Join("; ", wrong.ToArray()));
+            checks.Add("PASS under the White Mainframe colours, Toggles with every fold open, the Streaming window's side and the Clear memory question show none of the red look's own colours (pictures white-*.png)");
+        }
+
+        // Custom colours' window: every colour of hers settable by name, presets and last used read back, at 100 to 200%.
+        // Old layout.md and colours.md are carried into her settings once and kept as .bak; nothing writes an .md after.
+        private void SmokeColoursOut(List<string> checks, string output)
+        {
+            string folder = Path.Combine(output, "colours-out-" + Guid.NewGuid().ToString("N").Substring(0, 6));
+            string keptWas = CapriDesktop.Layout.Kept;
+            Func<List<string>> loadWas = CapriDesktop.Layout.Load, addonLoadWas = AddonColours.Load;
+            Action<List<string>> storeWas = CapriDesktop.Layout.Store, addonStoreWas = AddonColours.Store;
+            Func<string, string> folderWas = AddonColours.FolderOf;
+            List<string> rows = new List<string>(), addonRows = new List<string>();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(folder, "tint-test-data"));
+                CapriDesktop.Layout.Load = delegate { return rows; };
+                CapriDesktop.Layout.Store = delegate(List<string> made) { rows = made; };
+                AddonColours.Load = delegate { return addonRows; };
+                AddonColours.Store = delegate(List<string> made) { addonRows = made; };
+                AddonColours.FolderOf = delegate(string id) { return Path.Combine(folder, id + "-data"); };
+                AddonColours.Forget();
+                string layout = Path.Combine(folder, CapriDesktop.Layout.FileName);
+                File.WriteAllText(layout, "# Her colours\n\n## What stands out\n\nhot:               #12c85a    # hers: #e84246\ncyan:                  # hers: #5ef0f6\n");
+                CapriDesktop.Layout.Kept = layout;
+                int carried = CapriDesktop.Layout.CarryOld();
+                if (carried != 1 || CapriDesktop.Layout.Row("hot") != "#12c85a" || CapriDesktop.Layout.Row("cyan") != null || File.Exists(layout) || !File.Exists(layout + ".bak"))
+                    throw new Exception("layout.md wasn't carried in once and kept as .bak: " + carried + ", " + string.Join(", ", rows.ToArray()));
+                if (CapriDesktop.Layout.CarryOld() != 0) throw new Exception("layout.md was carried in twice.");
+                // A layout.md.bak already there is theirs and stays: the next one is kept as a timed spare beside it.
+                File.WriteAllText(layout, "hot:               #000001\n");
+                CapriDesktop.Layout.CarryOld();
+                if (File.Exists(layout) || File.ReadAllText(layout + ".bak").IndexOf("#12c85a", StringComparison.Ordinal) < 0 || SpareFiles.Of(layout).Count != 2)
+                    throw new Exception("A layout.md.bak already there wasn't kept: " + string.Join(", ", SpareFiles.Of(layout).ToArray()));
+                string mine = Path.Combine(folder, "tint-test-data", AddonColours.FileName);
+                File.WriteAllText(mine, "# Tint Test's colours\n\nGlow:              #123456    # usual: #c81e3c\n");
+                Color? glow = AddonColours.TheirOwn("tint-test", "Glow");
+                if (!glow.HasValue || glow.Value.ToArgb() != Color.FromArgb(0x12, 0x34, 0x56).ToArgb() || File.Exists(mine) || !File.Exists(mine + ".bak") || addonRows.Count != 1)
+                    throw new Exception("A mod's colours.md wasn't carried in once and kept as .bak: " + string.Join(" | ", addonRows.ToArray()));
+                CapriDesktop.Layout.Set("amber", Color.FromArgb(200, 140, 20));
+                AddonColours.Set("tint-test", new Dictionary<string, Color?> { { "Glow", Color.FromArgb(10, 20, 30) } });
+                if (Directory.GetFiles(folder, "*.md", SearchOption.AllDirectories).Length != 0) throw new Exception("Setting a colour wrote an .md file.");
+                checks.Add("PASS her colours out of the .md files: layout.md and a mod's colours.md carried into her settings once, each kept as .bak and not read again, and a colour set after writes no .md");
+            }
+            finally
+            {
+                CapriDesktop.Layout.Kept = keptWas;
+                CapriDesktop.Layout.Load = loadWas;
+                CapriDesktop.Layout.Store = storeWas;
+                AddonColours.Load = addonLoadWas;
+                AddonColours.Store = addonStoreWas;
+                AddonColours.FolderOf = folderWas;
+                AddonColours.Forget();
+                CapriDesktop.Layout.Forget();
+                CapriDesktop.Layout.Fresh();
+            }
+        }
+
         private void SmokeColourWindow(List<string> checks, string output)
         {
             // The player has colours of its own, starting a shade off the bubble's and the two it draws fixed.
-            string text = CapriDesktop.Layout.Text;
             foreach (string name in Neon.Names)
-                if (!System.Text.RegularExpressions.Regex.IsMatch(text, @"(?m)^" + System.Text.RegularExpressions.Regex.Escape(name) + @":\s+# hers: #")) throw new Exception("layout.md as an update writes it has no line for " + name + ".");
+                if (Neon.Stock(name).IsEmpty) throw new Exception("Her colour " + name + " has no stock colour to set it against.");
             for (int look = 0; look < Neon.LookNames.Length; look++)
             {
                 Color[] colours = Neon.LookColours(look);
@@ -33,7 +167,7 @@ namespace CapriDesktop
                 if (!changed || Look.PlayerEdge.ToArgb() != Color.FromArgb(1, 2, 3).ToArgb() || Look.Cyan.ToArgb() == Color.FromArgb(1, 2, 3).ToArgb()) throw new Exception("Setting player edge didn't change the player alone.");
             }
             finally { Neon.Theirs("player edge", null); }
-            checks.Add("PASS her player has colours of its own in layout.md (player edge, accent, title, rail, ground), stocked to exactly how it looked in every look, each look still has no two colours a control keeps the same, and setting one leaves her bubble as it was");
+            checks.Add("PASS her player has colours of its own (player edge, accent, title, rail, ground), stocked to exactly how it looked in every look, each look still has no two colours a control keeps the same, and setting one leaves her bubble as it was");
 
             // Her zones are the six named for them and hold only her own colours; an add-on's never mix into them.
             List<string> hers = new List<string>(Neon.Names);
@@ -101,7 +235,8 @@ namespace CapriDesktop
             if (Mainframe.RealInputOn)
                 checks.Add("PASS the dropper with the real mouse at 100, 150 and 200: with no part chosen its key says to choose one; with a part, a click on the key starts it, a click on the screen takes the colour there onto the part, and a right click cancels with nothing changed");
             else checks.Add("LIMIT the dropper with the real mouse: it moves the real cursor, so it runs only on Sapphire (" + Mainframe.RealInputVariable + "=1); its stubbed parts ran here");
-            checks.Add("PASS Custom colours opens CUSTOM COLOURS in her Mainframe's sub-window look: Preset 1 takes the colours set and 2 and 3 start as hers, the parts of her (Speech bubble, Mainframe, Player) fold down with every colour of layout.md under a part named for what it is and a shared one saying what else it colours, a colour picked repaints her Mainframe at once and again when changed a second time, a new Mainframe colours look shows under the colours they set, the picker puts a colour first of twelve last used, a last used colour goes on the selected part without moving, an add-on's colour goes into last used from the hex box, the dropper and its swatch as hers does, + makes Preset 4 and picking a preset sets every colour, all saved in her preferences and fitting at 100%, 150% and 200% (pictures colours-window-*.png)");
+            checks.Add("PASS Custom colours opens CUSTOM COLOURS in her Mainframe's sub-window look: Preset 1 takes the colours set and 2 and 3 start as hers, the parts of her (Speech bubble, Mainframe, Player) fold down with every colour of hers under a part named for what it is and a shared one saying what else it colours, a colour picked repaints her Mainframe at once and again when changed a second time, a new Mainframe colours look shows under the colours they set, the picker puts a colour first of twelve last used, a last used colour goes on the selected part without moving, an add-on's colour goes into last used from the hex box, the dropper and its swatch as hers does, + makes Preset 4 and picking a preset sets every colour, all saved in her preferences and fitting at 100%, 150% and 200% (pictures colours-window-*.png)");
         }
     }
 }
+#endif

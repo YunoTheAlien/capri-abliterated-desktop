@@ -29,7 +29,7 @@ namespace CapriDesktop
         // A spot dragged to, or 0 for Auto on a double-click.
         internal event Action<int> Picked;
 
-        private readonly Timer ticks = new Timer { Interval = 66 };
+        private readonly Clock.Frames ticks = new Clock.Frames("mic meter") { Interval = 66 };
         private MicReading shown;
         private bool dragging;
         private double peak;
@@ -40,18 +40,60 @@ namespace CapriDesktop
             Cursor = Cursors.SizeWE;
             TabStop = true;
             AccessibleRole = AccessibleRole.Slider;
-            ticks.Tick += delegate { Refresh(false); };
+            ticks.Tick += delegate { if (Showing) Refresh(false); else ticks.Stop(); };
         }
+
+        // On the screen: shown, in a window that is shown and not minimised, and not moved off its page.
+        private bool Showing
+        {
+            get
+            {
+                Form form = FindForm();
+                return Visible && form != null && form.Visible && form.WindowState != FormWindowState.Minimized && Parent != null && Right > 0 && Left < Parent.ClientSize.Width;
+            }
+        }
+
+        // Reads only while it can be seen: a window hidden, minimised or on another page stops it, and coming back wakes it.
+        private void Wake()
+        {
+            if (!Showing) { ticks.Stop(); return; }
+            if (ticks.Enabled) return;
+            Refresh(true);
+            ticks.Start();
+        }
+
+        private Form watched;
+
+        protected override void OnParentChanged(EventArgs e)
+        {
+            base.OnParentChanged(e);
+            if (watched != null) { watched.Resize -= Woken; watched.VisibleChanged -= Woken; }
+            watched = FindForm();
+            if (watched != null) { watched.Resize += Woken; watched.VisibleChanged += Woken; }
+            Wake();
+        }
+
+        private void Woken(object sender, EventArgs e) { Wake(); }
 
         protected override void OnVisibleChanged(EventArgs e)
         {
             base.OnVisibleChanged(e);
-            if (Visible) { Refresh(true); ticks.Start(); } else ticks.Stop();
+            Wake();
+        }
+
+        protected override void OnLocationChanged(EventArgs e)
+        {
+            base.OnLocationChanged(e);
+            Wake();
         }
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing) ticks.Dispose();
+            if (disposing)
+            {
+                ticks.Dispose();
+                if (watched != null) { watched.Resize -= Woken; watched.VisibleChanged -= Woken; }
+            }
             base.Dispose(disposing);
         }
 

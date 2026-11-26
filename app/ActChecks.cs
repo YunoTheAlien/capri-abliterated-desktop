@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 
+#if CHECKS
 namespace CapriDesktop
 {
     internal sealed partial class Companion
@@ -15,10 +16,11 @@ namespace CapriDesktop
         // warmth, every stock personality in two moods and at willing 1, 5 and 9, a disliked gift and food, and hunger.
         private void SmokeActMaths(List<string> checks)
         {
-            string chosenWas = Personalities.Chosen, moodWas = Personalities.Attitude, giftsWas = preferences.Gifts;
+            string chosenWas = Personalities.Chosen, moodWas = Personalities.Attitude;
             bool plainWas = Personalities.HeldPlain;
             long fedWas = preferences.FedAt;
-            int upsetWas = upset;
+            ICapriPet petWas = petStandIn;
+            double upsetWas = upset;
             string trial = Dynamics.PlainPathOf(ActTrial);
             List<string> packs = new List<string>(Personalities.Softest);
             packs.Insert(0, Personalities.Stock);
@@ -63,26 +65,27 @@ namespace CapriDesktop
                 upset = 0;
                 Did("trinket");
                 bool sulks = upset == 2;
-                preferences.Gifts = "trinket:3";
-                bool notFavourite = Favourite() == null;
                 bool dislikeLine = GiftLine("trinket", false) != null;
                 // Did can ease her back to the personality they picked, so the snack is scored as her own again.
                 Personalities.Chosen = Personalities.Stock;
                 Acts.Sum snack = Scored("snack", int.MinValue, int.MinValue);
                 bool fedShift = snack.Line.Contains("Her own 2 + " + ActTrial + " -2 = worth 0;");
-                if (!lower || !sulks || !notFavourite || !dislikeLine || !fedShift)
-                    throw new Exception("A disliked gift went wrong: lowers warmth " + lower + " (" + disliked.Line + "), counts to a sulk " + sulks + ", never the favourite " + notFavourite + ", her dislike line " + dislikeLine + ", a mood's fed on a snack " + fedShift + " (" + snack.Line + ")");
+                if (!lower || !sulks || !dislikeLine || !fedShift)
+                    throw new Exception("A disliked gift went wrong: lowers warmth " + lower + " (" + disliked.Line + "), counts to a sulk " + sulks + ", her dislike line " + dislikeLine + ", a mood's fed on a snack " + fedShift + " (" + snack.Line + ")");
 
                 Personalities.Chosen = "Bratty";
                 Personalities.Attitude = "";
                 Mood.Forget();
                 preferences.FedAt = SimTime.UtcNow.AddHours(-30).Ticks;
+                Acts.Sum plain = Scored("meal", int.MinValue, int.MinValue);
+                petStandIn = new StandInPet();
                 Acts.Sum hungry = Scored("meal", int.MinValue, int.MinValue);
                 preferences.FedAt = SimTime.UtcNow.Ticks;
                 Acts.Sum full = Scored("drink", int.MinValue, int.MinValue);
-                if (!hungry.Line.Contains(": Bratty -1 + hungry +2 = worth 1;") || !full.Line.Contains(": Bratty 1 = worth 1;"))
-                    throw new Exception("Hunger didn't add to a food: " + hungry.Line + " / " + full.Line);
-                checks.Add("PASS a disliked gift counts against her: no floor of 1, warmth goes down and upset up, it counts toward a sulk, it is never her favourite, and she says a dislike line; a mood's fed reaches each food; hunger adds to a food (Bratty's meal, -1, lands as +1 when she is hungry)");
+                petStandIn = petWas;
+                if (!hungry.Line.Contains(": Bratty -1 + hungry +2 = worth 1;") || !full.Line.Contains(": Bratty 1 = worth 1;") || !plain.Line.Contains(": Bratty -1 = worth -1;"))
+                    throw new Exception("Hunger didn't add to a food with a pet game, or added without one: " + hungry.Line + " / " + full.Line + " / " + plain.Line);
+                checks.Add("PASS a disliked gift counts against her: no floor of 1, warmth goes down and upset up, it counts toward a sulk, and she says a dislike line; a mood's fed reaches each food; hunger adds to a food only with a pet game (Bratty's meal, -1, lands as +1 when she is hungry, and as -1 without one)");
 
                 // Limited out over and over, as being ignored is each tick: one line in her log a window.
                 Acts.Sum.ForgetLimited();
@@ -100,8 +103,8 @@ namespace CapriDesktop
                 Personalities.Chosen = chosenWas;
                 Personalities.Attitude = moodWas;
                 Personalities.HeldPlain = plainWas;
-                preferences.Gifts = giftsWas;
                 preferences.FedAt = fedWas;
+                petStandIn = petWas;
                 upset = upsetWas;
                 try { if (trial != null) File.Delete(trial); } catch (IOException) { }
                 Mood.Forget();
@@ -249,12 +252,13 @@ namespace CapriDesktop
             string[] want =
             {
                 "petted 20/40 2", "touched shoulders 20/40 1", "touched middle 20/40 0", "touched legs 20/40 -1", "touched feet 20/40 -1",
-                "tickled 20/40 1", "uppies 0/0 2", "thrown 12/30 -2", "praised 45/12 2", "insulted 20/20 -2", "called on 30/30 0",
+                "tickled 20/40 1", "kissed 20/40 2", "uppies 0/0 2", "thrown 12/30 -2", "praised 45/12 2", "insulted 20/20 -2", "called on 30/30 0",
                 "ignored 240/8 -1", "snack 0/0 2 A snack 10", "meal 0/0 2 A proper meal 25", "drink 0/0 2 Something to drink 10",
                 "treat 0/0 3 A treat 20", "sweet 0/0 3 Something sweet 20", "nuggies 0/0 2 chimpken nuggies 15",
                 "trinket 0/0 2 Trinket 60 trinket", "flowers 0/0 3 Flowers 100 bunch of flowers", "plushie 0/0 2 Plushie 140 plushie",
                 "gift 0/0 3 Gift 180 present",
-                "pet rock 0/0 -1 Pet rock 30 pet rock"
+                "pet rock 0/0 -1 Pet rock 30 pet rock",
+                "wash 0/0 1"
             };
             List<string> now = new List<string>();
             foreach (Acts.Act one in Acts.Stock)
@@ -291,3 +295,4 @@ namespace CapriDesktop
         }
     }
 }
+#endif

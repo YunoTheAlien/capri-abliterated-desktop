@@ -259,6 +259,8 @@ namespace CapriDesktop
         private void ChoiceLapsed()
         {
             if (!box.Choosing || (DateTime.UtcNow - box.ChoiceSince).TotalSeconds < ChoiceMost) return;
+            // Her setup card's ready ask waits for Yes or No.
+            if (ReadyAsking) return;
             bool site = siteChoice, jealousAsk = jealousOffer != null;
             string asked = box.Reply ?? "";
             box.Choose(null);
@@ -277,6 +279,7 @@ namespace CapriDesktop
         // Her menu at the test screen's right and bottom edges at three sizes: kept on the screen, submenus opening
         // left at the right edge, never over their parent. With another window in front hers comes forward; a Yes and
         // No gives up after ten seconds.
+#if CHECKS
         private void SmokeMenuEdges(List<string> checks)
         {
             Rectangle area = Displays.Home.WorkingArea;
@@ -308,6 +311,7 @@ namespace CapriDesktop
             }
             finally { MenuFont(fontWas); }
         }
+#endif
 
         // Her menu and every list dressed in it at one size, as a change of the screen's scale gives them; changing the
         // menu's alone left its lists at the old size, and a list refilled as it opened grew past the side chosen.
@@ -423,6 +427,7 @@ namespace CapriDesktop
 
         // Her real menu at every screen's left and right edge, Capri options > Test's Intros, Screensavers and Pranks opened
         // five times each: where each lands, beside Test's list and on a screen.
+#if CHECKS
         private void SmokeMenuSeams(List<string> checks)
         {
             ToolStripMenuItem test = null;
@@ -471,6 +476,7 @@ namespace CapriDesktop
             if (dressedLate != null) throw new Exception(DressedLateSays());
             checks.Add("PASS Test's Intros, Screensavers and Pranks open beside Test's list and on a screen, where Windows itself has them and not inside another window, five times each from every screen's left and right edge (" + opened + " opened), and no list was dressed only as her menu opened");
         }
+#endif
 
         // A chain of her menu's items opened in turn by code, from the middle of the main screen: null when the last
         // one's list lands beside its parent's list, on a screen, where Windows has it and not inside another window.
@@ -590,7 +596,7 @@ namespace CapriDesktop
             return null;
         }
 
-        [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+        private static IntPtr GetForegroundWindow() { return Native.GetForegroundWindow(); }
         [DllImport("user32.dll")] private static extern int GetWindowThreadProcessId(IntPtr window, out int process);
         [DllImport("user32.dll")] private static extern bool MoveWindow(IntPtr window, int x, int y, int width, int height, bool paint);
 
@@ -622,6 +628,7 @@ namespace CapriDesktop
 
         // Another program's window in front (a console on the test screen): her menu shown from there brings her window to
         // the front, and the other window coming back to the front closes the menu, as a click on it would.
+#if CHECKS
         private void MenuCloses(List<string> checks)
         {
             Rectangle area = Displays.Home.WorkingArea;
@@ -660,9 +667,11 @@ namespace CapriDesktop
                 try { if (other != null && !other.HasExited) other.Kill(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
+#endif
 
         // Every kind of ask she has: a plain Yes and No (her mods after a crash, "is this your editor?"), the proofread fix,
         // the site-or-app choice and the jealous offer. Each stays up to ten seconds, then goes with nothing done.
+#if CHECKS
         private void ChoiceTimes(List<string> checks)
         {
             List<string> wrong = new List<string>();
@@ -688,5 +697,6 @@ namespace CapriDesktop
             if (wrong.Count > 0) throw new Exception("A Yes and No didn't give up after " + ChoiceMost + " s with nothing done: " + string.Join("; ", wrong.ToArray()));
             checks.Add("PASS every Yes and No in her bubble (a plain ask such as \"is this your editor?\", the proofread fix, the site-or-app choice and the jealous offer) stays up to " + ChoiceMost + " s, then goes with nothing done");
         }
+#endif
     }
 }

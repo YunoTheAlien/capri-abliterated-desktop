@@ -31,7 +31,7 @@ namespace CapriDesktop
         internal void OpenGifs()
         {
             if (gifSheet != null && !gifSheet.IsDisposed && gifSheet.Zoom != zoom) gifSheet.Close();
-            if (gifSheet == null || gifSheet.IsDisposed) gifSheet = new GifSheet(this, zoom);
+            if (gifSheet == null || gifSheet.IsDisposed) gifSheet = new GifSheet(this, SheetZoom(GifSheet.Wide, GifSheet.Tall));
             if (!gifSheet.Visible) gifSheet.Show(this);
             gifSheet.Activate();
         }
@@ -66,23 +66,25 @@ namespace CapriDesktop
 
         private sealed class GifSheet : ModSheet
         {
-            private const int Wide = 560, Tall = 520, ListTop = 148, ListTall = 296;
+            // The size of the Memory window's other parts, so its key row stays put when a part is picked.
+            internal const int Wide = 760, Tall = 700, ListTop = 148, ListTall = 450;
             private readonly Key addKey, saveKey, cancelKey;
             private readonly Entry naming;
             private readonly Label count, notice;
             private readonly ScrollPanel list;
             private readonly SlimBar bar = new SlimBar();
-            private readonly System.Windows.Forms.Timer noticeTimer = new System.Windows.Forms.Timer(), armTimer = new System.Windows.Forms.Timer();
+            private readonly Clock.Ticker noticeTimer = new Clock.Ticker("gifs notice"), armTimer = new Clock.Ticker("gifs arm");
             private List<string> names = new List<string>();
             private string editing, armed;
             private int ticket;
 
-            internal GifSheet(Mainframe owner, float zoom) : base(owner, zoom, "Her GIFs", "HER GIFS >", Wide, Tall)
+            internal GifSheet(Mainframe owner, float zoom) : base(owner, zoom, "Her GIFs", "HER GIFS", Wide, Tall)
             {
-                Words("GIFs you save for her. She sends one when you ask, or now and then.", 28, 52, 504, 18, Small(), Faint);
+                Parts(MemoryParts, 1, delegate(int part) { Frame.ShowMemoryPart(part, this); }, "Clear memory", delegate { Frame.capri.ClearMemoryAsked(); });
+                Words("", 28, 52, 704, 18, Small(), Faint);
                 addKey = Make("Add GIFs...", 28, 78, 124, 26, delegate { Adding(); });
                 addKey.AccessibleName = "Add GIFs: pick .gif files for her to send";
-                count = Words("", 164, 82, 368, 18, Small(), Faint);
+                count = Words("", 164, 82, 568, 18, Small(), Faint);
                 naming = new Entry { Bounds = Box(28, 112, 300, 26) };
                 naming.Box.MaxLength = GifShelf.Longest;
                 naming.Box.KeyDown += delegate(object sender, KeyEventArgs e)
@@ -98,15 +100,16 @@ namespace CapriDesktop
                 cancelKey.Accent = Rose;
                 naming.Visible = saveKey.Visible = cancelKey.Visible = false;
                 // Her own slim bar beside the list, not Windows' one.
-                list = new ScrollPanel { Bounds = Box(28, ListTop, 494, ListTall), BackColor = Ground };
+                list = new ScrollPanel { Bounds = Box(28, ListTop, 694, ListTall), BackColor = Ground };
                 list.Scrolled += delegate { bar.Invalidate(); };
                 Controls.Add(list);
-                bar.Bounds = new Rectangle(Z(526), Z(ListTop), Z(SlimBar.Thin), Z(ListTall));
+                bar.Bounds = new Rectangle(Z(726), Z(ListTop), Z(SlimBar.Thin), Z(ListTall));
                 bar.BackColor = Ground;
                 bar.Watch(list);
                 Controls.Add(bar);
-                notice = Words("", 28, 452, 504, 22, Small(), Cyan);
-                Words("Up to " + GifShelf.Most + " GIFs, each under 8 MB and " + GifShelf.MostFrames + " frames.", 28, 482, 504, 18, Small(), Faint);
+                notice = Words("", 28, 606, 704, 22, Small(), Cyan);
+                // On the line of Her memory's bottom key.
+                Words("Up to " + GifShelf.Most + " GIFs, each under 8 MB and " + GifShelf.MostFrames + " frames.", 28, 641, 704, 18, Small(), Faint);
                 noticeTimer.Interval = 8000;
                 noticeTimer.Tick += delegate { Says("", false); };
                 armTimer.Interval = 6000;

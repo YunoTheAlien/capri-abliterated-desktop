@@ -152,6 +152,8 @@ namespace CapriDesktop
         internal volatile string Settings;
         internal static int Patience = 20000;
         private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("Capri.ElevenLabs");
+
+        internal static byte[] EntropyForChecks { get { return Entropy; } }
         internal volatile string Key;
         internal volatile string VoiceId;
         internal volatile string Model;
@@ -207,20 +209,29 @@ namespace CapriDesktop
 
         internal static string Unprotect(string saved) { return null; }
 #else
+        // Sealed to this PC (MachineSeal), so a Windows reinstall keeps it.
         internal static string Protect(string key)
         {
-            string sealedKey = Convert.ToBase64String(ProtectedData.Protect(Encoding.UTF8.GetBytes(key), Entropy, DataProtectionScope.CurrentUser));
-            KeyPrints.Note(sealedKey, key);
-            return sealedKey;
+            byte[] plain = Encoding.UTF8.GetBytes(key);
+            try
+            {
+                string sealedKey = MachineSeal.Seal(plain, Entropy);
+                KeyPrints.Note(sealedKey, key);
+                return sealedKey;
+            }
+            finally { Array.Clear(plain, 0, plain.Length); }
         }
 
+        // One sealed to this PC, or one from Windows' own store from before, which is moved the next time it's saved.
         internal static string Unprotect(string saved)
         {
             if (string.IsNullOrEmpty(saved)) return null;
-            try { return Encoding.UTF8.GetString(ProtectedData.Unprotect(Convert.FromBase64String(saved), Entropy, DataProtectionScope.CurrentUser)); }
-            catch (CryptographicException) { return null; }
-            catch (FormatException) { return null; }
+            byte[] plain = saved.StartsWith(MachineSeal.Mark, StringComparison.Ordinal) ? MachineSeal.Unseal(saved, Entropy) : MachineSeal.FromWindows(saved, Entropy);
+            return plain == null ? null : Encoding.UTF8.GetString(plain);
         }
+
+        // Still in Windows' own store, from before.
+        internal static bool Unmoved(string saved) { return !string.IsNullOrEmpty(saved) && !saved.StartsWith(MachineSeal.Mark, StringComparison.Ordinal); }
 #endif
 
         internal static string Tail(string key) { return key == null || key.Length < 4 ? "" : key.Substring(key.Length - 4); }
@@ -294,7 +305,8 @@ namespace CapriDesktop
             return string.Join("|", made.ToArray());
         }
 
-        internal static readonly Regex Cue = new Regex(@"\[\s*(?<cue>(?:(?:very|slightly|extremely|really|super|so|quite|a bit|a little|kind of|kinda)\s+)?(?:" + Feelings + "|" + Sounds + "|" + Tones + "|" + Adverbs + @")(?:[\s-]+[a-z']+){0,3})\s*\](?!\()|\(\s*(?<cue>(?!moved\b)(?:(?:very|slightly|extremely|really|super|so|quite|a bit|a little|kind of|kinda)\s+)?(?:" + Feelings + "|" + Tones + "|" + Adverbs + @"))\s*\)|\(\s*(?<cue>(?!(?:only|early|daily|weekly|monthly|yearly|hourly|nightly|family|reply|apply|supply|ugly|holy|july|italy|bully|belly|jelly|rally|ally|lily|assembly|anomaly|monopoly|homily|comply|imply|multiply)\s*\))[a-z]+ly)\s*\)|(?<=^|[.!?\u2026]\s+)\(\s*(?<cue>(?!(?:nothing|something|anything|everything|morning|evening|darling|feeling|wedding|ending|beginning|thing|king|ring|spring|string|wing|ceiling|pudding|meaning|saying|setting|warning|heading|reading|writing|loading|pending|trending|working|gaming|streaming)\b)[a-z]+ing(?:\s+[a-z']+){0,2})\s*\)", RegexOptions.IgnoreCase);
+        // Last, a lone lowercase word in round brackets opening her reply, "(annoyed) Seriously?": a feeling, whatever the word.
+        internal static readonly Regex Cue = new Regex(@"\[\s*(?<cue>(?:(?:very|slightly|extremely|really|super|so|quite|a bit|a little|kind of|kinda)\s+)?(?:" + Feelings + "|" + Sounds + "|" + Tones + "|" + Adverbs + @")(?:[\s-]+[a-z']+){0,3})\s*\](?!\()|\(\s*(?<cue>(?!moved\b)(?:(?:very|slightly|extremely|really|super|so|quite|a bit|a little|kind of|kinda)\s+)?(?:" + Feelings + "|" + Tones + "|" + Adverbs + @"))\s*\)|\(\s*(?<cue>(?!(?:only|early|daily|weekly|monthly|yearly|hourly|nightly|family|reply|apply|supply|ugly|holy|july|italy|bully|belly|jelly|rally|ally|lily|assembly|anomaly|monopoly|homily|comply|imply|multiply)\s*\))[a-z]+ly)\s*\)|(?<=^|[.!?\u2026]\s+)\(\s*(?<cue>(?!(?:nothing|something|anything|everything|morning|evening|darling|feeling|wedding|ending|beginning|thing|king|ring|spring|string|wing|ceiling|pudding|meaning|saying|setting|warning|heading|reading|writing|loading|pending|trending|working|gaming|streaming)\b)[a-z]+ing(?:\s+[a-z']+){0,2})\s*\)|(?<=\A\s*)\(\s*(?<cue>(?-i:[a-z]+))\s*\)(?=\s)", RegexOptions.IgnoreCase);
 
         // The first cue in a line: Fish Audio acts it out, and VoiceFeel turns it into pitch and pace for her other
         // voices. Whether a word is a known cue, so a mood can be offered as one without inventing it.
@@ -3029,6 +3041,7 @@ namespace CapriDesktop
 
         // Each quality opens its own model when it's here and HQ's when it isn't; only Mixed and LQ are cleaned; the clean-up
         // takes the hiss down without taking her down with it; the choice is one of her settings, so settings.json carries it.
+#if CHECKS
         internal static void Check(List<string> checks, string root)
         {
             string folder = Path.Combine(root, "quality-" + Guid.NewGuid().ToString("N").Substring(0, 6));
@@ -3061,6 +3074,7 @@ namespace CapriDesktop
                 throw new Exception("Her voice's qualities went wrong: HQ when missing " + fallsBack + ", own file " + ownFile + ", filter only on Mixed and LQ " + filtered + ", clean-up " + cleans + " (hiss " + hissBefore.ToString("0") + " to " + hissAfter.ToString("0") + ", voice " + voiceBefore.ToString("0") + " to " + voiceAfter.ToString("0") + "), kept in her settings " + saved + ", cleaned once and only by the clean-up " + once);
             checks.Add("PASS her voice's three qualities: each opens its own model when it's here and HQ's when it isn't, only Mixed and LQ are cleaned and HQ never is, even standing in for them, nothing else cleans a line, the clean-up takes hiss from " + hissBefore.ToString("0") + " to " + hissAfter.ToString("0") + " and leaves her voice within 15%, and the choice is one of her settings");
         }
+#endif
 
         internal static void Fetch(string folder, string quality, Action<string, long, long> progress, Func<bool> stopped)
         {
@@ -3651,6 +3665,52 @@ namespace CapriDesktop
             return name.Length == 0 ? "Voice model" : name;
         }
 
+        // Windows' tar; a check points it at a file that isn't there.
+        internal static string TarPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "tar.exe");
+
+        // True when Windows' tar unpacked it; false when it couldn't, so her own readers try.
+        private static bool SystemUntar(string archive, string staging)
+        {
+            ProcessStartInfo start = new ProcessStartInfo(TarPath, "-xf \"" + archive + "\" -C \"" + staging + "\"") { UseShellExecute = false, CreateNoWindow = true };
+            Process child;
+            try { child = Process.Start(start); }
+            catch (System.ComponentModel.Win32Exception) { return false; }
+            using (Process unpacking = child)
+            {
+                if (unpacking == null) return false;
+                if (!unpacking.WaitForExit(600000))
+                {
+                    try { unpacking.Kill(); unpacking.WaitForExit(5000); }
+                    catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                    throw new VoiceException("Windows took too long to unpack " + Path.GetFileName(archive) + ".");
+                }
+                if (unpacking.ExitCode == 0) return true;
+            }
+            if (Directory.Exists(staging)) Directory.Delete(staging, true);
+            Directory.CreateDirectory(staging);
+            return false;
+        }
+
+        // Her own bzip2 or gzip reader, then her tar reader, the same ones her ears fall back on.
+        private static void OwnUntar(string archive, string staging)
+        {
+            try
+            {
+                using (FileStream packed = new FileStream(archive, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20))
+                {
+                    Stream plain = archive.EndsWith(".bz2", StringComparison.OrdinalIgnoreCase) ? Bunzip.Open(packed)
+                        : Regex.IsMatch(archive, @"\.(tar\.gz|tgz)$", RegexOptions.IgnoreCase) ? (Stream)new GZipStream(packed, CompressionMode.Decompress, true) : packed;
+                    using (plain) TarReader.Unpack(plain, staging, true);
+                }
+            }
+            catch (VoiceException) { throw; }
+            catch (Exception error)
+            {
+                if (error is UnauthorizedAccessException || error is PathTooLongException) throw;
+                throw new VoiceException("Couldn't unpack " + Path.GetFileName(archive) + ": it looks damaged.");
+            }
+        }
+
         // A .tar.bz2 or .zip they picked, unpacked into her models folder. Returns the model's folder.
         internal static string Unpack(string archive)
         {
@@ -3667,20 +3727,9 @@ namespace CapriDesktop
                 if (archive.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) ZipFile.ExtractToDirectory(archive, staging);
                 else
                 {
-                    // Windows' own tar unpacks .tar.bz2, as sherpa-onnx ships its models.
-                    ProcessStartInfo start = new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "tar.exe"), "-xf \"" + archive + "\" -C \"" + staging + "\"");
-                    start.UseShellExecute = false;
-                    start.CreateNoWindow = true;
-                    using (Process unpacking = Process.Start(start))
-                    {
-                        if (!unpacking.WaitForExit(600000))
-                        {
-                            try { unpacking.Kill(); unpacking.WaitForExit(5000); }
-                            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
-                            throw new VoiceException("Windows took too long to unpack " + Path.GetFileName(archive) + ".");
-                        }
-                        if (unpacking.ExitCode != 0) throw new VoiceException("Windows couldn't unpack " + Path.GetFileName(archive) + ".");
-                    }
+                    // Windows' own tar unpacks .tar.bz2, as sherpa-onnx ships its models. A Windows without it, or one whose tar
+                    // can't read the archive, gets her own readers, as her ears do.
+                    if (!File.Exists(TarPath) || !SystemUntar(archive, staging)) OwnUntar(archive, staging);
                 }
             }
             catch (Exception)
@@ -3915,7 +3964,7 @@ namespace CapriDesktop
     {
         internal const string Style = "HD";
         internal const string Build = "qwentts-5916bf7-ctx";
-        private const string Hosted = "https://github.com/lachydotmcg/capri-desktop/releases/download/hd-voice-1/";
+        private const string Hosted = "https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/download/hd-voice-1/";
         internal static string EngineUrl = Hosted + Build + "-win-vulkan-x64.zip";
         internal static string EngineSha = "6d9042bc6af4b8c8e9bc31e85166a81c0baea8c83ff9e647f452ce61f7134a22";
         internal static long EngineSize = 16547183;
@@ -4401,6 +4450,7 @@ namespace CapriDesktop
         // Whether her cues reach a server, which decides whether it is handed "[excited] We won!" or
         // "We won!". Nothing checked this, and it is the gate between a server performing a feeling and a
         // server reading the word "excited" out loud to somebody.
+#if CHECKS
         internal static void CueGate(System.Collections.Generic.List<string> checks)
         {
             string[,] cases =
@@ -4434,6 +4484,7 @@ namespace CapriDesktop
             if (wrong.Count > 0) throw new Exception("Her cues would reach the wrong servers: " + string.Join(" | ", wrong.ToArray()));
             checks.Add("PASS her cues only reach a voice that asked for them: Fish Audio anywhere, and a server on this PC whose model names her in any letters, on v4, v6 or localhost. Not another local server, not one naming no model, and not a cloud or network address however it names itself, since a server not written for them reads \"excited\" out loud");
         }
+#endif
 
         // Her own machine, however the address is written.
         internal static bool Loopback(string url)

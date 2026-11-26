@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Shiru har zuwa {n}:{n}
 Quiet until turned off	Shiru har sai an kashe
 Export settings	Fitar da saituna
 Import settings	Shigo da saituna
-Save Mainframe position	Tuna wurin allon
+Save Mainframe position	Ajiye matsayin Mainframe
+Capri options	Zaɓuɓɓukan Capri

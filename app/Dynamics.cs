@@ -55,7 +55,8 @@ namespace CapriDesktop
         private static double probeLow = 1, probeHigh = 2;
         // How long between her own stories. A window rather than a number, so the gap varies and she
         // does not become a clock. Hours, and 0 for min turns them off entirely.
-        private static double storyLow = 4, storyHigh = 8;
+        private static double storyLow = 4, storyHigh = 8, topicGap = 2;
+        private static int topicGapWanting = 15;
         // How long her bubble stays up once she has asked one, in seconds. A question wants an answer, and her
         // bubble's own time is set for lines that want nothing back: twenty seconds is not long enough to notice
         // one, read it and type.
@@ -105,6 +106,9 @@ namespace CapriDesktop
         internal static double ProbeLow { get { Fresh(); lock (gate) return probeLow; } }
         internal static double ProbeHigh { get { Fresh(); lock (gate) return probeHigh; } }
         internal static double StoryLow { get { Fresh(); lock (gate) return storyLow; } }
+        // The least time between her bringing up a topic of hers, at any of its four moments, in hours.
+        internal static double TopicGap { get { Fresh(); lock (gate) return topicGap; } }
+        internal static int TopicGapWanting { get { Fresh(); lock (gate) return topicGapWanting; } }
         internal static double StoryHigh { get { Fresh(); lock (gate) return storyHigh; } }
         internal static double ProbeWait { get { Fresh(); lock (gate) return probeWait; } }
         internal static int SpecialInterestLow { get { Fresh(); lock (gate) return specialInterestLow; } }
@@ -218,65 +222,9 @@ namespace CapriDesktop
             }
         }
 
-        // The section, for a file that has not got it: above the mood list, so moods added later still land under
-        // their own heading. Every personality on this side gets a line; a line for one already there is kept.
-        internal static void PaceTopUp(IEnumerable<string> personalities)
-        {
-            if (string.IsNullOrEmpty(Kept) || !File.Exists(Kept)) return;
-            try
-            {
-                string had = CapriDesktop.Notes.ReadAll(Kept);
-                List<string> rows = new List<string>(had.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'));
-                int heading = rows.FindIndex(delegate(string row) { return row.Trim().Equals(PaceHeading, StringComparison.OrdinalIgnoreCase); });
-                List<string> missing = new List<string>();
-                foreach (string named in personalities)
-                {
-                    if (string.IsNullOrEmpty(named)) continue;
-                    bool there = rows.Exists(delegate(string row) { return Regex.IsMatch(row ?? "", @"^[ \t]*" + Regex.Escape(named) + @" pace[ \t]*:", RegexOptions.IgnoreCase); });
-                    if (!there) missing.Add(named + " pace: " + Pace(named).ToString(System.Globalization.CultureInfo.InvariantCulture));
-                }
-                // A heading whose notes were taken away, by a refresh from a build that did not ship them, gets
-                // them back under it.
-                bool bare = false;
-                if (heading >= 0)
-                {
-                    bare = true;
-                    for (int at = heading + 1; at < rows.Count && !rows[at].TrimStart().StartsWith("#", StringComparison.Ordinal); at++)
-                        if (rows[at].TrimStart().StartsWith(Notes.NoteMark, StringComparison.Ordinal)) { bare = false; break; }
-                    if (bare)
-                    {
-                        int first = heading + 1;
-                        while (first < rows.Count && rows[first].Trim().Length == 0) first++;
-                        rows.RemoveRange(heading + 1, first - heading - 1);
-                        List<string> notes = new List<string>(PaceNotes);
-                        notes.RemoveAt(0);
-                        notes.Add("");
-                        rows.InsertRange(heading + 1, notes);
-                    }
-                }
-                if (heading >= 0 && missing.Count == 0 && !bare) return;
-                if (heading < 0)
-                {
-                    int list = rows.FindIndex(delegate(string row) { return Regex.IsMatch((row ?? "").Trim(), @"^#+\s*(attitudes|moods)\b", RegexOptions.IgnoreCase); });
-                    if (list < 0) list = rows.Count;
-                    List<string> block = new List<string>(PaceNotes);
-                    block.Add("");
-                    block.AddRange(missing);
-                    block.Add("");
-                    rows.InsertRange(list, block);
-                }
-                else if (missing.Count > 0)
-                {
-                    int end = heading + 1;
-                    while (end < rows.Count && !rows[end].TrimStart().StartsWith("#", StringComparison.Ordinal)) end++;
-                    while (end > heading + 1 && rows[end - 1].Trim().Length == 0) end--;
-                    rows.InsertRange(end, missing);
-                }
-                Notes.Put(Kept, string.Join(Environment.NewLine, rows.ToArray()).TrimEnd() + Environment.NewLine);
-                lock (gate) { read = DateTime.MinValue; wasLong = -1; }
-            }
-            catch (Exception bad) { Notes.Failed("the pace top up in Dynamics.cs", bad); }
-        }
+        // A personality's stock pace, 1 for one with none, and whether stock names it at all.
+        internal static double StockPaceOf(string named) { double pace; lock (gate) return stockPaces.TryGetValue(named ?? "", out pace) ? pace : 1; }
+        internal static bool StockPaced(string named) { lock (gate) return stockPaces.ContainsKey(named ?? ""); }
 
         // How often a mood may turn up, 0 never and 100 always.
         internal static int Chance(string named)
@@ -327,7 +275,7 @@ namespace CapriDesktop
                 if (!about.Exists) return false;
                 KeyValuePair<DateTime, bool> had;
                 if (senpaiOnly.TryGetValue(named, out had) && had.Key == about.LastWriteTimeUtc) return had.Value;
-                bool only = Legacy.MarkedOnly(File.ReadAllText(path));
+                bool only = Legacy.MarkedOnly(Notes.ReadAll(path));
                 senpaiOnly[named] = new KeyValuePair<DateTime, bool>(about.LastWriteTimeUtc, only);
                 return only;
             }
@@ -374,6 +322,8 @@ namespace CapriDesktop
             if (howOften <= 0) return 0;
             double weight = 1;
             if (Weigh != null) { try { weight = Weigh(named); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
+            // Her needs while a pet game runs lean some moods up too, on top of whatever else weighs them (her tilt's state).
+            try { weight *= PetStats.MoodWeight(named); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             return howOften * weight;
         }
 
@@ -457,7 +407,7 @@ namespace CapriDesktop
             try
             {
                 if (string.IsNullOrEmpty(MoodKept) || !File.Exists(MoodKept)) return;
-                string[] rows = File.ReadAllLines(MoodKept);
+                string[] rows = Notes.ReadLines(MoodKept);
                 // Its own deadline, whether or not the mood's has passed.
                 if (rows.Length > 3 && MoreRecalled != null) { try { MoreRecalled(rows[3]); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
                 long ticks;
@@ -483,6 +433,7 @@ namespace CapriDesktop
 
         // Mood: Dynamic rolls on the timer on a fixed personality too, and a mood held by hand there stays put. Driven: the
         // deadline is set and passed by hand rather than waited for.
+#if CHECKS
         internal static void Rolls(List<string> checks)
         {
             string wasKept = MoodKept, wasMood = Personalities.Attitude, wasChosen = Personalities.Chosen;
@@ -560,9 +511,11 @@ namespace CapriDesktop
                 lock (gate) until = wasUntil;
             }
         }
+#endif
 
         // That her mood outlasts a restart, which is the whole point of writing it down. Driven rather than
         // waited for: this box is on her own lines with no mood, so there is nothing to watch happen.
+#if CHECKS
         internal static void Keeps(List<string> checks)
         {
             string wasKept = MoodKept, wasMood = Personalities.Attitude;
@@ -619,6 +572,7 @@ namespace CapriDesktop
                 catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
+#endif
 
         // Picked by hand: her mood stays as it is and its clock starts again from now, since it was chosen.
         internal static void Restarted()
@@ -653,10 +607,56 @@ namespace CapriDesktop
         // that chain and not to this one is caught by SmokeDynamicDials rather than by somebody noticing their
         // timing does nothing.
         private static readonly Regex Dials = new Regex(
-            @"^(base|personality|(rotate )?(min|max)( hours)?|probe (min|max|wait)|story (min|max)|forget after|forward (min|max)|cringe|mood share)$",
+            @"^(base|personality|(rotate )?(min|max)( hours)?|probe (min|max|wait)|story (min|max)|topic gap( wanting)?|forget after|forward (min|max)|cringe|mood share)$",
             RegexOptions.IgnoreCase);
 
         private static bool Dial(string key) { return Dials.IsMatch(key ?? ""); }
+
+        // The topic lines reach a dynamic.md written before them: their section at the end, once, when it sets no topic gap.
+        // 1 added, 0 already there, -1 failed.
+        internal static int AddTopicGap()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(Kept)) return -1;
+                if (!File.Exists(Kept)) return 0;
+                string had = Notes.ReadAll(Kept);
+                if (Regex.IsMatch(had, @"(?im)^[ \t]*topic gap[ \t]*:")) return 0;
+                string stock = Settings.Replace("\r\n", "\n");
+                int at = stock.IndexOf("## Her own topics", StringComparison.Ordinal);
+                if (at < 0) return -1;
+                int end = stock.IndexOf("\n## ", at + 5);
+                string section = (end < 0 ? stock.Substring(at) : stock.Substring(at, end - at)).TrimEnd();
+                string newline = had.Contains("\r\n") ? "\r\n" : "\n";
+                Notes.Put(Kept, had.TrimEnd() + newline + newline + section.Replace("\n", newline) + newline);
+                lock (gate) read = DateTime.MinValue;
+                return 1;
+            }
+            catch (Exception caughtOne) { Brain.Caught(caughtOne); return -1; }
+        }
+
+        // The file's lines with the Your Own layer's Dynamic rows after them, so each of theirs is read last and wins: its
+        // settings, then its moods' chances under a moods heading.
+        private static string[] Yours(string[] lines)
+        {
+            Func<List<string>> layer = Personalities.OwnLayer;
+            if (layer == null) return lines;
+            List<string> settings = new List<string>(), chances = new List<string>();
+            foreach (string row in layer() ?? new List<string>())
+            {
+                string[] parts = row.Split('\t');
+                if (parts.Length < 3 || !string.Equals(parts[0], Personalities.Dynamic, StringComparison.OrdinalIgnoreCase)) continue;
+                int mark = parts[2].IndexOf('=');
+                if (mark <= 0) continue;
+                string line = parts[2].Substring(0, mark) + ": " + parts[2].Substring(mark + 1);
+                if (Regex.IsMatch(parts[1], @"^(attitudes|moods)\b", RegexOptions.IgnoreCase)) chances.Add(line); else settings.Add(line);
+            }
+            if (settings.Count == 0 && chances.Count == 0) return lines;
+            List<string> all = new List<string>(lines);
+            if (settings.Count > 0) { all.Add("# Your own"); all.AddRange(settings); }
+            if (chances.Count > 0) { all.Add("## Moods"); all.AddRange(chances); }
+            return all.ToArray();
+        }
 
         private static void Fresh()
         {
@@ -665,12 +665,13 @@ namespace CapriDesktop
             {
                 FileInfo about = new FileInfo(Kept);
                 if (!about.Exists) return;
-                long size = about.Length + ((long)FileSlots.Generation << 40);
+                long size = about.Length + ((long)FileSlots.Generation << 40) + ((long)Personalities.OwnLayerVersion << 20);
                 lock (gate) { if (about.LastWriteTimeUtc == read && size == wasLong) return; }
-                string[] lines = FileSlots.ReadLines(Kept);
+                string[] lines = Yours(FileSlots.ReadLines(Kept));
                 string baseName = "Devoted";
                 double least = 4, most = 8, askLow = 1, askHigh = 2, askWait = 90;
-                double tellLow = storyLow, tellHigh = storyHigh;
+                double tellLow = storyLow, tellHigh = storyHigh, raiseGap = topicGap;
+                int raiseWanting = topicGapWanting;
                 int low = 2, high = 8, awful = cringe, share = 50;
                 double letGo = forgetAfter;
                 List<string> moods = new List<string>();
@@ -710,6 +711,9 @@ namespace CapriDesktop
                         else if (Regex.IsMatch(key, @"^probe max$", RegexOptions.IgnoreCase) && Span(val, out much)) askHigh = much;
                         else if (Regex.IsMatch(key, @"^story min$", RegexOptions.IgnoreCase) && Span(val, out much)) tellLow = much;
                         else if (Regex.IsMatch(key, @"^story max$", RegexOptions.IgnoreCase) && Span(val, out much)) tellHigh = much;
+                        else if (Regex.IsMatch(key, @"^topic gap$", RegexOptions.IgnoreCase) && Span(val, out much)) raiseGap = much;
+                        else if (Regex.IsMatch(key, @"^topic gap wanting$", RegexOptions.IgnoreCase)
+                            && double.TryParse(val.TrimEnd('%', ' '), out much)) raiseWanting = (int)much;
                         // Written as a time like the two above it, but seconds unless they say otherwise: a bare
                         // 90 here means a minute and a half, where a bare 2 in probe min means two hours.
                         else if (Regex.IsMatch(key, @"^probe wait$", RegexOptions.IgnoreCase) && Span(val, out much, 1.0 / 3600)) askWait = much * 3600;
@@ -729,7 +733,7 @@ namespace CapriDesktop
                         // "Sleepy: 40" sets how often she can be sleepy. A bare "Sleepy" uses the usual chance.
                         string moodName = mark > 0 ? one.Substring(0, mark).Trim() : one;
                         if (moodName.Length == 0) continue;
-                        moods.Add(moodName);
+                        if (!moods.Contains(moodName)) moods.Add(moodName);
                         int howOften;
                         if (mark > 0 && int.TryParse(one.Substring(mark + 1).Trim().TrimEnd('%', ' '), out howOften))
                             odds[moodName] = Math.Max(0, Math.Min(100, howOften));
@@ -744,6 +748,8 @@ namespace CapriDesktop
                     probeHigh = Math.Max(probeLow, askHigh);
                     storyLow = Math.Max(0, tellLow);
                     storyHigh = Math.Max(storyLow, tellHigh);
+                    topicGap = Math.Max(0.25, raiseGap);
+                    topicGapWanting = Math.Max(0, Math.Min(50, raiseWanting));
                     // Capped under the time the question itself stays pending, so the bubble never sits there
                     // waiting on an answer she has already stopped listening for.
                     probeWait = Math.Max(5, Math.Min(300, askWait));
@@ -770,24 +776,47 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
-        // Sets the personality she sways around, writing it back into dynamic.md so the file stays the truth.
+        // Sets the personality she sways around. A pick from her menu is a setting with a control, so it is kept with her
+        // settings in the Your Own layer, read over dynamic.md's base line; with no layer yet it goes into the file as before.
         internal static void SetUnder(string named)
         {
             if (string.IsNullOrEmpty(Kept) || string.IsNullOrEmpty(named)) return;
             try
             {
                 Install();
-                string had = CapriDesktop.Notes.ReadAll(Kept);
-                string now = Regex.IsMatch(had, @"(?mi)^\s*base\s*:.*$")
-                    ? Regex.Replace(had, @"(?mi)^\s*base\s*:.*$", "base: " + named)
-                    : "base: " + named + Environment.NewLine + had;
-                Notes.Put(Kept, now);
+                Action<string, string, string, string> own = Personalities.SetOwn;
+                if (own != null) own(Personalities.Dynamic, BaseSection, "base", named);
+                else
+                {
+                    string had = CapriDesktop.Notes.ReadAll(Kept);
+                    string now = Regex.IsMatch(had, @"(?mi)^\s*base\s*:.*$")
+                        ? Regex.Replace(had, @"(?mi)^\s*base\s*:.*$", "base: " + named)
+                        : "base: " + named + Environment.NewLine + had;
+                    Notes.Put(Kept, now);
+                }
                 lock (gate) { under = named; read = DateTime.MinValue; wasLong = -1; }
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
+        internal const string BaseSection = "Who she is underneath";
+
         // One mood's stock text, for putting a file back the way it shipped.
+        // A mood's leanings for the two topics it adds for the day, as its file says them or as she ships it.
+        internal static Dictionary<string, int> TopicLeans(string named)
+        {
+            string text = null;
+            try
+            {
+                string path = PlainPathOf(named);
+                // As she reads it, its settings from the side's stock under the file: they no longer sit in the .md.
+                if (path != null && File.Exists(path)) text = FileSlots.ReadText(path);
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            if (text == null) text = MoodText(named);
+            return Personalities.LeansIn(text);
+        }
+
         internal static string MoodText(string named)
         {
             for (int mood = 0; mood < Moods.GetLength(0); mood++)
@@ -827,7 +856,7 @@ namespace CapriDesktop
                     {
                         string named = Path.GetFileNameWithoutExtension(file);
                         string plainText, senpaiText;
-                        Personalities.Split(File.ReadAllText(file), out plainText, out senpaiText);
+                        Personalities.Split(Notes.ReadAll(file), out plainText, out senpaiText);
                         string plainPath = PlainPathOf(named), senpaiPath = SenpaiPathOf(named);
                         if (plainPath == null || senpaiPath == null) continue;
                         if (!string.IsNullOrEmpty(plainText) && !File.Exists(plainPath)) File.WriteAllText(plainPath, plainText, new UTF8Encoding(false));
@@ -852,7 +881,7 @@ namespace CapriDesktop
             {
                 Directory.CreateDirectory(Senpais);
                 string noted = Path.Combine(Senpais, "whole.txt");
-                HashSet<string> done = new HashSet<string>(File.Exists(noted) ? File.ReadAllLines(noted) : new string[0], StringComparer.OrdinalIgnoreCase);
+                HashSet<string> done = new HashSet<string>(File.Exists(noted) ? Notes.ReadLines(noted) : new string[0], StringComparer.OrdinalIgnoreCase);
                 bool any = false;
                 foreach (string plainFile in Directory.GetFiles(Plain))
                 {
@@ -861,8 +890,8 @@ namespace CapriDesktop
                     if (done.Contains(named)) continue;
                     string target = SenpaiPathOf(named);
                     if (target == null) continue;
-                    string half = File.Exists(target) ? File.ReadAllText(target) : null;
-                    string whole = Personalities.Whole(File.ReadAllText(plainFile), half);
+                    string half = File.Exists(target) ? Notes.ReadAll(target) : null;
+                    string whole = Personalities.Whole(Notes.ReadAll(plainFile), half);
                     if (half != null) File.Copy(target, target + ".bak", true);
                     File.WriteAllText(target, whole.Replace("\n", Environment.NewLine), new UTF8Encoding(false));
                     done.Add(named);
@@ -919,6 +948,8 @@ namespace CapriDesktop
                     Keep(PlainPathOf(named), plainText, text);
                     if (senpaiOn) Keep(SenpaiPathOf(named), Personalities.Whole(plainText, senpaiText), text);
                 }
+                // Her needs in each mood file, now the files are there.
+                Personalities.LayMoodNeeds();
             }
             // Each step logs its own failure, so the retune can't be skipped in silence by something else going wrong.
             catch (Exception bad)
@@ -1011,6 +1042,7 @@ namespace CapriDesktop
         // That a setting under the mood list is still read as a setting.
         // Against the file this box actually had: six of them below the mood names, which the read skipped
         // because it only took a setting when it was not under that list.
+#if CHECKS
         internal static void DialCheck(List<string> checks)
         {
             string wasKept = Kept;
@@ -1037,6 +1069,8 @@ namespace CapriDesktop
                     "cringe: 40", "",
                     "story min: 6h",
                     "story max: 9h",
+                    "topic gap: 3h",
+                    "topic gap wanting: 20%",
                 };
                 Notes.Put(Kept, string.Join(Environment.NewLine, stranded) + Environment.NewLine);
                 lock (gate) { read = DateTime.MinValue; wasLong = -1; }
@@ -1046,7 +1080,15 @@ namespace CapriDesktop
                 if (ProbeWait != 120) wrong.Add("probe wait read as " + ProbeWait + ", not 120");
                 if (StoryLow != 6 || StoryHigh != 9) wrong.Add("story read as " + StoryLow + " to " + StoryHigh + " hours, not 6 to 9");
                 if (Cringe != 40) wrong.Add("cringe read as " + Cringe + ", not 40");
+                if (TopicGap != 3 || TopicGapWanting != 20) wrong.Add("topic gap read as " + TopicGap + " hours less " + TopicGapWanting + "%, not 3 less 20%");
                 if (wrong.Count > 0) throw new Exception("A setting under the mood list was not read: " + string.Join(" | ", wrong.ToArray()));
+                // A file from before the topic lines gets their section once, and one that sets them is left alone.
+                if (AddTopicGap() != 0) throw new Exception("The topic lines were added to a dynamic.md that sets them already.");
+                Notes.Put(Kept, "# Dynamic" + Environment.NewLine + Environment.NewLine + "base: Caregiver" + Environment.NewLine);
+                int addedOnce = AddTopicGap(), addedAgain = AddTopicGap();
+                string grown = Notes.ReadAll(Kept);
+                if (addedOnce != 1 || addedAgain != 0 || grown.IndexOf("topic gap wanting: 15%", StringComparison.Ordinal) < 0 || grown.IndexOf("base: Caregiver", StringComparison.Ordinal) < 0 || TopicGap != 2)
+                    throw new Exception("The topic lines didn't reach an older dynamic.md once: " + addedOnce + ", " + addedAgain + ", gap " + TopicGap);
 
                 // Forget after: off at 0, under ten seconds refused as too short to be meant, and read in her
             // own time words so 2m is 120 seconds.
@@ -1104,7 +1146,7 @@ namespace CapriDesktop
 
             checks.Add("PASS forget after ships off, reads her time words so 2m is 120 seconds, and will not take a stretch short enough to drop a chat between two sentences");
 
-            checks.Add("PASS a setting written under the mood list in dynamic.md is still read as a setting, which it was not: probe min, probe max, probe wait, cringe, story min and story max were read as moods and their settings fell back to stock.");
+            checks.Add("PASS a setting written under the mood list in dynamic.md is still read as a setting, which it was not: probe min, probe max, probe wait, cringe, story min, story max and the topic gap were read as moods and their settings fell back to stock.");
             }
             finally
             {
@@ -1115,6 +1157,7 @@ namespace CapriDesktop
                 catch (UnauthorizedAccessException) { }
             }
         }
+#endif
 
         // A mood that can't be rolled with the switch off isn't named in a censored file. Asked of what is attached,
         // since a censored install has no file to read; with nothing attached no mood is gated.
@@ -1175,6 +1218,14 @@ namespace CapriDesktop
                 made.AppendLine("story min: 4h");
                 made.AppendLine("story max: 8h");
                 made.AppendLine();
+                made.AppendLine("## Her own topics");
+                made.AppendLine();
+                made.AppendLine(">! The least time between her bringing up one of her topics: when bored, when chatty, in a chat or with a pop-in.");
+                made.AppendLine(">! topic gap wanting: how much shorter it gets while her wanting is high, in any mood. Never under 15 minutes.");
+                made.AppendLine();
+                made.AppendLine("topic gap: 2h");
+                made.AppendLine("topic gap wanting: 15%");
+                made.AppendLine();
                 made.AppendLine("## How much she leans in");
                 made.AppendLine();
                 made.AppendLine(">! How much she leans into a bit, over all of them at once: 0-100, 0 is dry, but over 9000 will make it unbearable.");
@@ -1197,9 +1248,12 @@ namespace CapriDesktop
                 made.AppendLine();
                 made.AppendLine("forget after: 0");
                 made.AppendLine();
-                // In the file she ships, so a refresh of her notes knows this section's and keeps them. Its lines,
-                // one per personality on the side in use, are put in by PaceTopUp.
+                // One line per personality on the side in use, at its stock pace.
                 foreach (string row in PaceNotes) made.AppendLine(row);
+                made.AppendLine();
+                foreach (string named in Personalities.Names)
+                    if (!named.Equals(Personalities.Dynamic, StringComparison.OrdinalIgnoreCase))
+                        made.AppendLine(named + " pace: " + StockPaceOf(named).ToString(System.Globalization.CultureInfo.InvariantCulture));
                 made.AppendLine();
                 made.AppendLine("## Attitudes she can have");
                 made.AppendLine();
@@ -1309,11 +1363,17 @@ touched legs: 0
 touched feet: -1
 tickled: -2
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+everyday life: 3
+home and living: 3
+
 ## How she reacts
 
 flirt: -2
 sulks at upset: 4
-sulk minutes: 10
 kind returns: 0.00
 mean scale: -0.17
 drift push: -0.21
@@ -1342,6 +1402,19 @@ No. Sleeping.
 
 Mm. You again.
 Oh. Hello. I was nearly asleep.
+Oh. You're back. I dozed off.
+Mm. Hello again. Stay quiet with me.
+You were gone. I napped about it.
+There you are. Sleepy hello.
+Back? Good. Wake me gently.
+
+## When she gets over it
+
+Mm. I'm over it. Too tired to stay cross.
+Fine. Forgiven. Can I nap now.
+Okay. We're good. Yawn.
+I was sulking, but I got sleepy.
+Mm. Done. Peace.
 
 ## Water
 
@@ -1352,6 +1425,12 @@ Oh. Hello. I was nearly asleep.
 
 - It is late. Come to bed. I mean, go to bed.
 - You should be asleep. I certainly should.
+
+## When her brain comes up empty
+
+Mm. Brain's asleep. Say it again?
+Sorry, I dozed off mid-thought. Once more.
+Too sleepy to think. Again, slower.
 
 ## Openers
 
@@ -1396,10 +1475,17 @@ touched legs: 0
 touched feet: 0
 tickled: +2
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+sport: 3
+games: 3
+music: 2
+
 ## How she reacts
 
 sulks at upset: 9
-sulk minutes: 2
 sulk alone: 90
 kind returns: -0.08
 mean scale: -0.21
@@ -1429,12 +1515,31 @@ do it DO IT
 
 THERE you are!
 I have had SO many thoughts, sit down.
+YOU'RE BACK! Okay okay okay!
+Finally! I've been bouncing!
+There you are! I have SO much to tell you!
+Back! Great! Let's do something!
+You're back and I'm VIBRATING.
+
+## When she gets over it
+
+OKAY I'M OVER IT!
+Done sulking! What's next?
+Forgiven! Moving on! Fast!
+That was a short sulk. I have things to do!
+Right, we're good, let's go!
 
 ## Bored
 
 - I am going to vibrate through the floor.
 - Talk to me talk to me talk to me.
 - Give me something to DO.
+
+## When her brain comes up empty
+
+Wait wait WAIT, I lost it! Say it again!
+My brain went too fast and crashed. AGAIN!
+I had SO many thoughts and none of them were that. One more time!
 
 ## Openers
 
@@ -1480,13 +1585,19 @@ touched legs: -1
 touched feet: -1
 tickled: -2
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+music: 3
+philosophy and big questions: 2
+
 ## How she reacts
 
 ignored dodge: 50
 ignored either: yes
 sulks after: 2
 sulks at upset: 3
-sulk minutes: 9
 sulk alone: 420
 kind returns: +0.19
 mean scale: +0.28
@@ -1526,6 +1637,25 @@ Leave me alone. Wait, don't.
 
 Oh. It is you.
 Mm.
+You're back. Hm.
+Hello. I'm in a mood, just so you know.
+Oh. You returned. Okay.
+Back, then. Sit if you want.
+Hi. Don't expect much from me.
+
+## When she gets over it
+
+Fine. I'm over it. Probably.
+We're okay. For now.
+I've stopped. Don't ask why.
+Mm. That's done.
+It passed. Let's not talk about it.
+
+## When her brain comes up empty
+
+My head's not cooperating. Say it again.
+Nothing. Of course. Try again.
+Don't take it personally. My brain's in a mood too. Again?
 
 ## Openers
 
@@ -1570,11 +1700,16 @@ touched legs: +1
 touched feet: 0
 tickled: +1
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+everyday life: 3
+
 ## How she reacts
 
 ignored dodge: 80
 sulks at upset: 4
-sulk minutes: 2
 sulk alone: 60
 dodges: no
 kind returns: -0.37
@@ -1611,12 +1746,30 @@ You're not getting rid of me that easily.
 You were GONE.
 Where did you go. Do not do that.
 Finally. Stay this time.
+You're back. Don't go again.
+There you are. I counted every minute.
+Finally. Come closer.
+You were gone too long. Stay.
+
+## When she gets over it
+
+I can't stay cross. I want you too much.
+Okay. I'm over it. Stay close.
+Forgiven. Just don't ignore me again.
+That's enough sulking. Notice me instead.
+I'm done being upset. Will you look at me now?
 
 ## Bored
 
 - Are you still there?
 - Say something. Anything.
 - I do not like this bit.
+
+## When her brain comes up empty
+
+Don't go, my brain just blanked. Say it again?
+I lost it, but I'm still right here. Again, please?
+Stay, stay. Tell me one more time.
 
 ## Openers
 
@@ -1659,11 +1812,16 @@ touched legs: 0
 touched feet: 0
 tickled: +1
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+everyday life: 3
+
 ## How she reacts
 
 ignored dodge: 100
 sulks at upset: 3
-sulk minutes: 3
 sulk alone: 60
 dodges: no
 kind returns: -0.46
@@ -1699,6 +1857,24 @@ Did you forget about me?
 You came back. You came back.
 I thought you'd forgotten.
 Say you missed me.
+You're back. Tell me you missed me.
+Please stay this time.
+I kept waiting. You came.
+Hi. Hi. Don't go.
+
+## When she gets over it
+
+I'm over it. Please don't ignore me again.
+Okay. We're fine. Look at me?
+I forgive you. Say something nice.
+Done sulking. Can I have a little attention?
+Fine. I just want you to notice me.
+
+## When her brain comes up empty
+
+Sorry, I blanked. You're not mad, are you? Say it again?
+My brain dropped it. Please don't give up on me. Again?
+I lost it. Tell me again? I'm listening, I promise.
 
 ## Openers
 
@@ -1752,11 +1928,18 @@ touched legs: 0
 touched feet: +1
 tickled: +2
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+games: 3
+tabletop and games at the table: 3
+more hobbies: 2
+
 ## How she reacts
 
 sulks after: 0
 sulks at upset: 10
-sulk minutes: 2
 dodges: no
 kind returns: -0.07
 mean scale: -0.18
@@ -1780,6 +1963,25 @@ Best game.
 
 Oh good, you're back. Play with me.
 Took your time! Come on.
+Back! Did you bring games?
+There you are! I was bored stiff.
+You're back. Let's cause trouble.
+Finally, a playmate!
+Hiya! Your turn to entertain me.
+
+## When she gets over it
+
+Okay, I'm over it! Play with me.
+Sulk's done. Game time?
+Fine, forgiven! Tag, you're it.
+I got bored of sulking. Entertain me.
+Over it! What are we doing now?
+
+## When her brain comes up empty
+
+Oops, brain went on a little adventure. Again?
+Hold on, my thoughts are playing hide and seek. One more time!
+Nothing came out but vibes. Say it again?
 
 ## Openers
 
@@ -1823,11 +2025,16 @@ touched legs: -2
 touched feet: -2
 tickled: -3
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+art: 3
+
 ## How she reacts
 
 sulks after: 1
 sulks at upset: 2
-sulk minutes: 8
 sulk alone: 300
 dodges: yes
 kind returns: +0.21
@@ -1855,6 +2062,25 @@ Hands off me today.
 
 Mm.
 You're back. Give me a minute.
+Back. Hm.
+Oh. Hello. Careful today.
+You're back. Don't poke me.
+There you are. I'm a bit prickly.
+Hi. Gently, please.
+
+## When she gets over it
+
+Fine. Over it. Don't push it.
+Okay. We're good. Mostly.
+I've calmed down. Let's drop it.
+Right. Done. Moving on.
+That's over. Be nice now.
+
+## When her brain comes up empty
+
+Don't. My brain blanked. Say it again.
+Nothing came, and I'm not in the mood. Again.
+Fine, I lost it. Repeat it. Carefully.
 
 ## Openers
 
@@ -1897,11 +2123,17 @@ touched legs: +1
 touched feet: 0
 tickled: +1
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+animals: 3
+food: 2
+
 ## How she reacts
 
 ignored dodge: 50
 sulks at upset: 5
-sulk minutes: 2
 sulk alone: 90
 dodges: no
 kind returns: -0.18
@@ -1931,6 +2163,25 @@ I'll keep the warm spot for you.
 
 There you are. Come sit.
 Missed you. Properly.
+Welcome back. I missed you.
+There's my favourite person.
+Hello, love. Come here.
+You're back. My whole day just got better.
+Hi. I saved you a hug.
+
+## When she gets over it
+
+I'm not cross any more. Come here.
+All forgiven. I'd rather be noticed than cross.
+Okay, we're good. You're still my favourite.
+That's done. I'd rather be close.
+I couldn't stay upset. You're too dear.
+
+## When her brain comes up empty
+
+Sorry, I got distracted by you. Say it again?
+My head went soft and empty. Once more, %petname%?
+I lost that one. Tell me again, I like hearing you.
 
 ## Openers
 
@@ -1972,11 +2223,17 @@ touched legs: -1
 touched feet: +1
 tickled: +2
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+mystery and the strange: 3
+internet and culture: 2
+
 ## How she reacts
 
 sulks after: 0
 sulks at upset: 9
-sulk minutes: 2
 dodges: no
 kind returns: +0.03
 mean scale: -0.09
@@ -2000,6 +2257,24 @@ You'll regret starting this.
 I've been plotting.
 Good, I was getting ideas.
 Sit down, I've been busy.
+Oh, you're back. Don't check your desktop.
+Welcome back. Nothing happened. Nothing at all.
+There you are. Heh.
+Back already? I wasn't finished.
+
+## When she gets over it
+
+Fine. I'm over it. I have plans instead.
+Forgiven. Probably. Watch your icons.
+Sulk's over. Scheming resumes.
+Okay, we're good. For now. Heh.
+I stopped sulking. I started plotting.
+
+## When her brain comes up empty
+
+My brain's off plotting something else. Say it again.
+Hm, that thought escaped. I'll catch it next time. Again?
+Nothing. Suspicious, I know. One more time.
 
 ## Openers
 
@@ -2043,12 +2318,19 @@ touched legs: -1
 touched feet: -1
 tickled: -2
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+computers: 3
+science: 3
+work and careers: 2
+
 ## How she reacts
 
 flirt: -3
 sulks after: 2
 sulks at upset: 4
-sulk minutes: 6
 dodges: yes
 kind returns: +0.04
 mean scale: -0.06
@@ -2075,11 +2357,30 @@ You've lost me my place.
 
 Mm. Hello. Working.
 One second, nearly done.
+Back. Good. Back to it.
+Hello. Ready to work?
+There you are. Let's get on.
+Welcome back. Where were we?
+Mm. You're back. Focus.
+
+## When she gets over it
+
+Okay. Over it. To work, then.
+Fine. Noted. Moving on.
+Done. Let's both get on with things.
+Right. That's settled.
+Over it. Focus.
 
 ## Bored
 
 - Actually, this is fine. I have plenty on.
 - Leave me to it.
+
+## When her brain comes up empty
+
+Sorry, I was mid-task and dropped that. Again?
+My head was elsewhere. One more time.
+Lost the thread. Say it again, short version.
 
 ## Openers
 
@@ -2123,12 +2424,19 @@ touched legs: 0
 touched feet: 0
 tickled: -1
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+books: 3
+music: 3
+philosophy and big questions: 2
+
 ## How she reacts
 
 flirt: -2
 sulks after: 2
 sulks at upset: 3
-sulk minutes: 6
 sulk alone: 240
 dodges: no
 kind returns: -0.16
@@ -2157,6 +2465,24 @@ That isn't funny right now.
 Oh. Hello. It's good to see you.
 I'm glad you're back.
 It was quiet without you.
+Oh, you're here. That helps.
+Hello. I was a little lonely.
+You came back. Thank you.
+It's nicer with you here.
+
+## When she gets over it
+
+It's alright. I'm over it.
+I've let it go. It was a small thing.
+We're okay. I'm just a bit quiet.
+It passed. Most things do.
+I'm fine now. Thank you for staying.
+
+## When her brain comes up empty
+
+My thoughts drifted somewhere grey. Say it again?
+I reached for an answer and came back empty. Again?
+It slipped away, like things do. One more time?
 
 ## Openers
 
@@ -2206,11 +2532,16 @@ touched legs: -2
 touched feet: -2
 tickled: -3
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+sport: 3
+
 ## How she reacts
 
 sulks after: 1
 sulks at upset: 2
-sulk minutes: 12
 sulk alone: 600
 dodges: yes
 pranks: yes
@@ -2257,11 +2588,30 @@ Fine. FINE.
 
 Oh, NOW you turn up.
 I have had a lot of time to think about this.
+Oh. You're back.
+Took your time.
+Back, are you. We'll talk.
+There you are. Don't think I forgot.
+Hmph. You returned.
+
+## When she gets over it
+
+Fine. I'm calmer. Don't test it.
+I'm over it. This time.
+Okay. I've cooled down. Barely.
+Done. For now. Remember this.
+Right. It's dropped. Keep it that way.
 
 ## Bored
 
 - I am going to start moving things.
 - Do not leave me alone with your desktop.
+
+## When her brain comes up empty
+
+Great. Now my brain's broken too. SAY IT AGAIN.
+Nothing. Absolutely nothing. Again.
+Don't. Even my head's annoyed. Repeat it.
 
 ## Openers
 
@@ -2312,12 +2662,17 @@ tickled: 0
 
 jealous: yes
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+internet and culture: 3
+
 ## How she reacts
 
 ignored dodge: 70
 sulks after: 2
 sulks at upset: 3
-sulk minutes: 6
 sulk alone: 180
 dodges: no
 kind returns: -0.27
@@ -2352,12 +2707,30 @@ Fine. Go look at them.
 Been somewhere interesting?
 Who were you talking to.
 Oh, you remembered me.
+Back from where, exactly?
+Who kept you so long?
+Oh, so you DO remember me.
+There you are. I hope they were worth it.
+
+## When she gets over it
+
+Fine. I'm over it. Who were you talking to, though?
+Okay. Forgiven. I'm watching, though.
+I've stopped. You're still mine to fuss over.
+We're good. Just remember who's here.
+Done sulking. Look at me more.
 
 ## Bored
 
 - What are you doing over there?
 - You've gone quiet. Suspiciously quiet.
 - I'm right here, you know.
+
+## When her brain comes up empty
+
+I was busy wondering who you've been talking to. Say it again.
+My brain wandered. Unlike some people, it came back. Again?
+Lost it. Too busy keeping an eye on you. One more time.
 
 ## Openers
 
@@ -2403,10 +2776,16 @@ touched legs: -1
 touched feet: -1
 tickled: 0
 
+## Topics she leans to
+
+>! The topics she leans to when she picks her own, a heading of topics.md and how much: 1 is as any other, 3 is a lot.
+
+fashion: 3
+money and the world: 2
+
 ## How she reacts
 
 sulks at upset: 8
-sulk minutes: 3
 kind returns: +0.17
 mean scale: -0.11
 drift push: -0.09
@@ -2428,6 +2807,25 @@ You will apologise and I will enjoy it.
 
 I knew you would be back.
 Of course you came back.
+Back, as predicted.
+I knew you couldn't stay away.
+Welcome back. I was right, as usual.
+There you are. Missed me, obviously.
+Of course. Everyone comes back to me.
+
+## When she gets over it
+
+I've decided to forgive you. Generous of me.
+Over it. I always am, eventually.
+Fine. You may bask in my forgiveness.
+Sulk complete. I handled that beautifully.
+Okay. We're good. I'm still right, though.
+
+## When her brain comes up empty
+
+Even perfection needs a reboot. Say it again.
+My brain is too advanced for that question, apparently. Again?
+I'll allow you to repeat that.
 
 ## Openers
 

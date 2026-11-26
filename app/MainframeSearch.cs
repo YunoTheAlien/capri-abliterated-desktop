@@ -5,7 +5,7 @@ using System.Windows.Forms;
 
 namespace CapriDesktop
 {
-    // The search box beside Mods in Advanced Settings: typing lists settings whose name, translated name, panel or tip
+    // The search box beside Mods on Settings: typing lists settings whose name, translated name, panel or tip
     // match; picking one scrolls to it, marks it and flashes a line under it. The list sits inside her window, so
     // typing never loses the box.
     internal sealed partial class Mainframe
@@ -15,14 +15,14 @@ namespace CapriDesktop
         private Font searchFont;
         private readonly List<Control> searchFound = new List<Control>();
         private Label searchMark;
-        private Timer searchFade;
+        private Clock.Ticker searchFade;
         private const int SearchMost = 8;
 
         private void BuildSearch()
         {
             settingsSearch = Input(446, 20, 200, 22);
             settingsSearch.Cue = "Search settings";
-            settingsSearch.Box.AccessibleName = "Search Advanced Settings";
+            settingsSearch.Box.AccessibleName = "Search settings";
             settingsSearch.Box.AccessibleDescription = "Type part of a setting's name; Enter goes to the first";
             settingsSearch.Visible = false;
             Explain(settingsSearch, "Search settings");
@@ -34,11 +34,11 @@ namespace CapriDesktop
             };
         }
 
-        // The box shows on the Settings page in Advanced Settings only, right of Mods.
+        // The box shows on the Settings page, right of Mods.
         private void PlaceSearch()
         {
             if (settingsSearch == null) return;
-            bool show = paged && !simple;
+            bool show = paged;
             settingsSearch.Left = Scaled(446);
             settingsSearch.Visible = show;
             if (!show) HideSearch();
@@ -145,14 +145,14 @@ namespace CapriDesktop
             if (control == null || !panelOf.ContainsKey(control)) return;
             HideSearch();
             if (!paged) ShowSettings(true);
-            int top = StackTop(control, simple);
+            int top = StackTop(control);
             ScrollPage(Math.Max(0, top - pageView / 3));
             if (Steerable(control)) Hold(control);
             if (searchMark == null)
             {
                 searchMark = new Label { AutoSize = false, Visible = false };
                 Controls.Add(searchMark);
-                searchFade = new Timer { Interval = 1500 };
+                searchFade = new Clock.Ticker("search fade") { Interval = 1500 };
                 searchFade.Tick += delegate { searchFade.Stop(); searchMark.Visible = false; };
             }
             Panel panel = panelOf[control];
@@ -164,6 +164,7 @@ namespace CapriDesktop
             searchFade.Start();
         }
 
+#if CHECKS
         internal void CheckSettingsSearch(List<string> checks)
         {
             bool pagedWas = paged;
@@ -171,12 +172,9 @@ namespace CapriDesktop
             Control perchLabel = null;
             try
             {
-                bool simpleShown = true;
-                capri.InSimpleSettings(delegate { ShowSettings(true); simpleShown = settingsSearch.Visible; });
-                if (simpleShown) throw new Exception("The settings search showed in Simple Settings");
                 ShowSettings(true);
                 if (!settingsSearch.Visible || settingsSearch.Left < modsKey.Right || settingsSearch.Right > lockKey.Left)
-                    throw new Exception("The settings search isn't between Mods and the lock in Advanced Settings: " + settingsSearch.Bounds + ", Mods " + modsKey.Bounds + ", lock " + lockKey.Bounds);
+                    throw new Exception("The settings search isn't between Mods and the lock on Settings: " + settingsSearch.Bounds + ", Mods " + modsKey.Bounds + ", lock " + lockKey.Bounds);
                 settingsSearch.Box.Text = "perch";
                 if (searchFound.Count == 0 || searchFound[0] != perchFps || searchList == null || !searchList.Visible || !SearchLine(perchFps).EndsWith("GENERAL SETTINGS", StringComparison.Ordinal))
                     throw new Exception("\"perch\" didn't list Perch under GENERAL SETTINGS first: " + (searchFound.Count > 0 ? SearchLine(searchFound[0]) : "nothing"));
@@ -199,7 +197,7 @@ namespace CapriDesktop
                 }
                 settingsSearch.Box.Text = "zzqx";
                 if (searchList.Visible) throw new Exception("A search that finds nothing left its list up");
-                checks.Add("PASS the settings search sits between Mods and the lock in Advanced Settings only; \"perch\" lists Perch under GENERAL SETTINGS first, picking it scrolls the page to it with her mark and a line under it, a name in her language is found, and nothing found shows no list");
+                checks.Add("PASS the settings search sits between Mods and the lock on Settings only; \"perch\" lists Perch under GENERAL SETTINGS first, picking it scrolls the page to it with her mark and a line under it, a name in her language is found, and nothing found shows no list");
             }
             finally
             {
@@ -209,5 +207,6 @@ namespace CapriDesktop
                 ShowSettings(pagedWas);
             }
         }
+#endif
     }
 }

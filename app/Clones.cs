@@ -358,7 +358,7 @@ namespace CapriDesktop
         private const int Fades = 6, SlowTick = 110, CardWidth = 250;
         private readonly Rectangle room;
         private readonly Stopwatch clock;
-        private readonly Timer ticks = new Timer();
+        private readonly Clock.Frames ticks = new Clock.Frames("CloneWindow");
         private readonly Clip idle, walk, grin, glitch;
         private readonly int size, canvas;
         private readonly Dictionary<long, Bitmap> cells = new Dictionary<long, Bitmap>();

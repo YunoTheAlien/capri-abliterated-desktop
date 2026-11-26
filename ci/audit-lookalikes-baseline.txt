@@ -1,0 +1,23 @@
+AlertScreen.cs | class\s+\w+\s*:\s*(?:System\.Windows\.Forms\.)?Form\b(?![^\n{]*LookWindow) | internal sealed class AlertWindow : Form
+Capri.cs | class\s+\w+\s*:\s*(?:System\.Windows\.Forms\.)?Form\b(?![^\n{]*LookWindow) | internal sealed class Shelf : Form
+Capri.cs | class\s+\w+\s*:\s*(?:System\.Windows\.Forms\.)?Form\b(?![^\n{]*LookWindow) | internal sealed partial class Companion : Form
+Capri.cs | class\s+\w+\s*:\s*(?:System\.Windows\.Forms\.)?Form\b(?![^\n{]*LookWindow) | private sealed class Backdrop : Form
+Capri.cs | class\s+\w+\s*:\s*(?:System\.Windows\.Forms\.)?Form\b(?![^\n{]*LookWindow) | private sealed class StreamWindow : Form
+Capri.cs | new\s+(?:System\.Windows\.Forms\.)?ContextMenuStrip\s*\( | menu = new ContextMenuStrip();
+Capri.cs | new\s+(?:System\.Windows\.Forms\.)?ContextMenuStrip\s*\( | playerMenu = new ContextMenuStrip();
+CodeMods.cs | class\s+\w+\s*:\s*(?:System\.Windows\.Forms\.)?Form\b(?![^\n{]*LookWindow) | private sealed class IntroScreen : Form
+FileEditor.cs | class\s+\w+\s*:\s*(?:System\.Windows\.Forms\.)?Form\b(?![^\n{]*LookWindow) | internal sealed class FileEditor : Form
+FileEditor.cs | class\s+\w+\s*:\s*(?:System\.Windows\.Forms\.)?Form\b(?![^\n{]*LookWindow) | private sealed class Frost : Form
+FileEditor.cs | class\s+\w+\s*:\s*(?:System\.Windows\.Forms\.)?Form\b(?![^\n{]*LookWindow) | private sealed class Page : Form
+FileEditor.cs | class\s+\w+\s*:\s*(?:System\.Windows\.Forms\.)?Form\b(?![^\n{]*LookWindow) | private sealed class SkillAsk : Form
+Glow.cs | class\s+\w+\s*:\s*(?:System\.Windows\.Forms\.)?Form\b(?![^\n{]*LookWindow) | private sealed class Halo : Form
+Mainframe.cs | new\s+(?:System\.Windows\.Forms\.)?ContextMenuStrip\s*\( | ContextMenuStrip strip = new ContextMenuStrip();
+MainframeColours.cs | class\s+\w+\s*:\s*(?:System\.Windows\.Forms\.)?Form\b(?![^\n{]*LookWindow) | protected sealed class DropperVeil : Form
+Notice.cs | \bMessageBox\.Show\s*\( | else MessageBox.Show(owner, message, caption, MessageBoxButtons.OK, icon);
+Notice.cs | \bMessageBox\.Show\s*\( | else answer = MessageBox.Show(owner, message, caption, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+Notice.cs | \bMessageBox\.Show\s*\( | if (owner == null) MessageBox.Show(message, caption, MessageBoxButtons.OK, icon);
+Notice.cs | \bMessageBox\.Show\s*\( | if (owner == null) answer = MessageBox.Show(message, caption, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+Ribbons.cs | class\s+\w+\s*:\s*(?:System\.Windows\.Forms\.)?Form\b(?![^\n{]*LookWindow) | private sealed class EndlessPaint : Form
+Setup.cs | class\s+\w+\s*:\s*(?:System\.Windows\.Forms\.)?Form\b(?![^\n{]*LookWindow) | internal sealed class SetupWindow : Form
+Streak.cs | class\s+\w+\s*:\s*(?:System\.Windows\.Forms\.)?Form\b(?![^\n{]*LookWindow) | internal sealed class StreakScreen : Form
+Talk.cs | class\s+\w+\s*:\s*(?:System\.Windows\.Forms\.)?Form\b(?![^\n{]*LookWindow) | internal class Overlay : Form

@@ -287,16 +287,69 @@ namespace CapriDesktop
             }
         }
 
+        private static bool reworded;
+
+        // Frames grown since her file was first written: its section, the frame and the kinds it reads with. Attached.
+        internal static readonly List<string[]> GrownFrames = new List<string[]>();
+
+        // The grown frames reach a file written before them: each missing one at the end of its section, one switched off
+        // with ">" counted as had. The count added, or -1 when there is no file to take them yet.
+        internal const string GrownMark = ">! grown frames given:";
+
+        internal static int TopUpFrames()
+        {
+            if (string.IsNullOrEmpty(Kept) || !Brain.SenpaiOn || !File.Exists(Kept)) return -1;
+            try
+            {
+                string had = File.ReadAllText(Kept);
+                Match given = Regex.Match(had, "(?m)^" + Regex.Escape(GrownMark) + @"[ \t]*(\d+)");
+                int was;
+                if (given.Success && int.TryParse(given.Groups[1].Value, out was) && was >= GrownFrames.Count) return 0;
+                string newline = had.Contains("\r\n") ? "\r\n" : "\n";
+                List<string> rows = new List<string>(had.Replace("\r\n", "\n").Split('\n'));
+                int added = 0;
+                foreach (string section in new[] { "how she brings it up, pleased", "how she brings it up, cross", OpenerPool })
+                {
+                    string named = section;
+                    List<string> stock = GrownFrames.FindAll(one => one[0] == named).ConvertAll(one => one[1]);
+                    int at = rows.FindIndex(row => string.Equals(row.Trim(), "## " + named, StringComparison.OrdinalIgnoreCase));
+                    if (stock.Count == 0 || at < 0) continue;
+                    int end = at + 1;
+                    while (end < rows.Count && !rows[end].TrimStart().StartsWith("#", StringComparison.Ordinal)) end++;
+                    HashSet<string> theirs = new HashSet<string>(StringComparer.Ordinal);
+                    int last = at;
+                    for (int i = at + 1; i < end; i++)
+                    {
+                        string line = rows[i].Trim().TrimStart('>').Trim();
+                        if (line.Length > 0 && !line.StartsWith("!", StringComparison.Ordinal)) { theirs.Add(line); last = i; }
+                    }
+                    List<string> missing = stock.FindAll(one => !theirs.Contains(one));
+                    rows.InsertRange(last + 1, missing);
+                    added += missing.Count;
+                }
+                // How many grown frames the file has been given, so one they delete stays deleted until more are grown.
+                rows.RemoveAll(row => row.Trim().StartsWith(GrownMark, StringComparison.Ordinal));
+                int head = rows.FindIndex(row => string.Equals(row.Trim(), "## how she brings it up, pleased", StringComparison.OrdinalIgnoreCase));
+                if (head >= 0) rows.Insert(head + 1, GrownMark + " " + GrownFrames.Count);
+                Tucked.Write(Kept, string.Join(newline, rows.ToArray()), new UTF8Encoding(false));
+                return added;
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return -1; }
+        }
+
         internal static void Write(bool over)
         {
             // Only written with the switch on.
             if (string.IsNullOrEmpty(Kept) || !Brain.SenpaiOn) return;
             try
             {
+                // A stock frame reworded since it shipped reaches a file written before, once a run, unless they edited it.
+                if (!reworded && File.Exists(Kept)) { reworded = true; Tucked.Free(Kept); Sayings.Reword(Kept); Tucked.Away(Kept); TopUpFrames(); }
                 if (!over && File.Exists(Kept)) return;
                 string folder = Path.GetDirectoryName(Kept);
                 if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder)) Directory.CreateDirectory(folder);
                 Tucked.Write(Kept, Text, new UTF8Encoding(false));
+                TopUpFrames();
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
@@ -324,10 +377,16 @@ namespace CapriDesktop
 
         internal static string Packed(bool liked) { return Packed(liked, Item()); }
 
+        // Where the tail built last came from, and the one said last, for her line log: the pool, the frame and the list.
+        [ThreadStatic] private static string madeFrom;
+        [ThreadStatic] internal static string TailFrom;
+
         private static string Packed(bool liked, string named)
         {
             if (!Brain.SenpaiOn || string.IsNullOrEmpty(named)) return null;
-            return For(Head + " " + named, liked ? "liked" : "cross");
+            string said = For(Head + " " + named, liked ? "liked" : "cross");
+            if (said != null) madeFrom = "interests: " + Head + " " + named;
+            return said;
         }
 
         internal static string Woven(bool liked) { return Woven(liked, Item()); }
@@ -335,16 +394,93 @@ namespace CapriDesktop
         private static string Woven(bool liked, string what)
         {
             if (!Brain.SenpaiOn) return null;
+            // Only a frame that reads with what the thing is: "You are doing well. %it% is on the table." takes a thing or
+            // an act, never a wish of hers.
+            string kind = KindOf(what);
+            Func<string, bool> reads = frame => Fits(frame, kind) && Misfit(frame, what, kind) == null;
+            // A frame she used lately waits until the others that fit have had their turn, as her other pools do.
+            Func<string, bool> fits = frame => reads(frame) && Last(FrameKey(frame)) == DateTime.MinValue;
             // Matched to how she feels about what just happened. An older file with the single combined section
             // still works, it simply does not know the difference.
-            string how = For(liked ? "how she brings it up, pleased" : "how she brings it up, cross")
-                ?? For("how she brings it up");
+            string pool = liked ? "how she brings it up, pleased" : "how she brings it up, cross";
+            string how = For(pool, null, fits) ?? For(pool, null, reads);
+            if (how == null) { pool = "how she brings it up"; how = For(pool, null, fits) ?? For(pool, null, reads); }
             if (string.IsNullOrEmpty(how) || string.IsNullOrEmpty(what)) return null;
             string said = how.Replace("%it%", what).Replace("%IT%", what);
-            return said == how ? null : said;
+            if (said == how) return null;
+            madeFrom = "interests: " + pool + " \"" + how + "\" with " + (itemFrom ?? "an item");
+            madeFrame = how;
+            return said;
         }
 
-        private static string Item() { return Hers() ?? Named(For("what she is into")); }
+        // A frame used, kept by its own key beside her lines.
+        private static string FrameKey(string frame) { return "sys:tail frame " + frame; }
+
+        [ThreadStatic] private static string madeFrame;
+
+        [ThreadStatic] private static string itemFrom;
+
+        private static string Item()
+        {
+            string hers = Hers();
+            itemFrom = hers != null ? Personalities.Chosen + ": into" : "interests: what she is into";
+            return hers ?? Named(For("what she is into"));
+        }
+
+        // A thing off her list is a "thing" (a noun), an "act" (done to them) or a "wish" (hers). Unnamed: "being ..." or
+        // naming her is a wish, else an act on a pack's list and a thing on the shared one, as its header asks.
+        internal static Dictionary<string, string> ItemKinds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        // The kinds each frame reads with, space separated. One not named takes a thing or an act, which is what the
+        // list's header promises every line will finish.
+        internal static Dictionary<string, string> FrameKinds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        internal static string KindOf(string item)
+        {
+            string named = Named(item), kind;
+            if (named.Length == 0) return "thing";
+            if (ItemKinds.TryGetValue(named, out kind)) return kind;
+            if (Regex.IsMatch(named, @"^being\b|\b(?:me|my|myself)\b", RegexOptions.IgnoreCase)) return "wish";
+            return InPack(named) ? "act" : "thing";
+        }
+
+        internal static bool Fits(string frame, string kind)
+        {
+            string kinds;
+            if (!FrameKinds.TryGetValue((frame ?? "").Trim(), out kinds)) kinds = "thing act";
+            return Array.IndexOf(kinds.Split(' '), kind) >= 0;
+        }
+
+        // Why a frame and a thing off her list read wrong together, each seen in her line log: a time of day, a noun word
+        // before an -ing phrase, her wish handed to them, a doubled word. Null when the pair reads right.
+        private static readonly Regex TimeWords = new Regex(@"\b(all (day|night|evening|morning|week)|today|tonight|tomorrow|yesterday|this (morning|evening|afternoon|week)|every (day|night))\b", RegexOptions.IgnoreCase);
+        private static readonly Regex NounAhead = new Regex(@"\b(a|an|the|your|my|his|her|some|this|that)\s+%it%", RegexOptions.IgnoreCase);
+        private static readonly Regex TakesIng = new Regex(@"(?:^|[.!?]\s+)%it%|\b(about|of|for|from|into|on|at|by|with|without|after|before|like|enjoy|love|miss|imagine|imagining|fancy|mind|risk|keep|consider|stop|start|try|practise|(closer|forward|straight|skip|back|down|comes|come|up|leads|lead|used|right|get|got|go|move|on) to)\s+%it%", RegexOptions.IgnoreCase);
+        private static readonly Regex HandedOver = new Regex(@"\b(give|giving|earn|earned|deserve|deserves|reward|rewarded|owe|treat)\s+(you|yourself)\b[^.!?]*%it%|%it%\s+(is|are)\s+yours", RegexOptions.IgnoreCase);
+
+        internal static string Misfit(string frame, string item, string kind)
+        {
+            frame = frame ?? "";
+            if (TimeWords.IsMatch(frame)) return "a time of day in the frame";
+            if (NounAhead.IsMatch(frame) && kind != "thing") return "a word before the slot that wants a noun";
+            if ((kind == "act" || kind == "wish") && !TakesIng.IsMatch(frame)) return "the slot after a word that takes no -ing phrase";
+            if (kind == "wish" && HandedOver.IsMatch(frame)) return "her wish handed to them";
+            string said = frame.Replace("%it%", item ?? "");
+            if (Regex.IsMatch(said, @"\b(\w+)\s+\1\b", RegexOptions.IgnoreCase)) return "a doubled word";
+            if (Regex.IsMatch(said, @"\b(is|are|was|be|been|being)\s+being\b", RegexOptions.IgnoreCase)) return "two passives together";
+            return null;
+        }
+
+        private static bool InPack(string item)
+        {
+            if (!Brain.SenpaiLive) return false;
+            try
+            {
+                string[] mine = Personalities.Lines("into", null);
+                return mine != null && Array.Exists(mine, one => string.Equals(Named(one), item, StringComparison.OrdinalIgnoreCase));
+            }
+            catch (Exception) { return false; }
+        }
 
         // Her senpai tail on a line: her pack's own, else a frame filled with one thing off her list. Each thing goes round
         // before one comes back, and words she said lately are built again; both kept in her lines' memory across restarts.
@@ -361,21 +497,25 @@ namespace CapriDesktop
         // named longest ago, then the words said longest ago.
         internal static string Tail(Func<KeyValuePair<string, string>> make)
         {
-            string best = null, bestItem = null;
+            string best = null, bestItem = null, bestFrom = null, bestFrame = null;
             DateTime bestItemAt = DateTime.MaxValue, bestWordsAt = DateTime.MaxValue;
+            TailFrom = null;
             // A fresh one ends it at once; only with every one recent does it look long, so the oldest isn't missed.
             for (int tries = 0; tries < 100; tries++)
             {
+                madeFrom = null; madeFrame = null;
                 KeyValuePair<string, string> built = make();
                 if (string.IsNullOrEmpty(built.Key)) break;
                 DateTime itemAt = Last(built.Value == null ? null : ItemKey(built.Value)), wordsAt = Last(built.Key);
-                if (itemAt == DateTime.MinValue && wordsAt == DateTime.MinValue) { best = built.Key; bestItem = built.Value; break; }
+                if (itemAt == DateTime.MinValue && wordsAt == DateTime.MinValue) { best = built.Key; bestItem = built.Value; bestFrom = madeFrom; bestFrame = madeFrame; break; }
                 if (itemAt < bestItemAt || itemAt == bestItemAt && wordsAt < bestWordsAt)
                 {
-                    best = built.Key; bestItem = built.Value; bestItemAt = itemAt; bestWordsAt = wordsAt;
+                    best = built.Key; bestItem = built.Value; bestItemAt = itemAt; bestWordsAt = wordsAt; bestFrom = madeFrom; bestFrame = madeFrame;
                 }
             }
             if (best == null) return null;
+            TailFrom = bestFrom;
+            if (bestFrame != null) Sayings.Remember(FrameKey(bestFrame));
             Sayings.Remember(best);
             if (bestItem != null) Sayings.Remember(ItemKey(bestItem));
             return best;
@@ -430,6 +570,7 @@ namespace CapriDesktop
         // One line from a named pool, dressed the way her other lines are.
         // That her list holds what she is into and nothing else. The fault this pins was visible on screen:
         // she said "Oh, we're going somewhere. You are doing well. Reset to stock: 0 is on the table."
+#if CHECKS
         internal static void ListCheck(System.Collections.Generic.List<string> checks)
         {
             string keptWas = Kept, hersWas = HersKept, yoursWas = YoursKept;
@@ -489,10 +630,143 @@ namespace CapriDesktop
             }
         }
 
+        // Every shipped frame with every thing it is tagged for, each personality's list included, read by the pairing
+        // rules; the rules are tried on the faults from her log first.
+        private static void PairCheck(System.Collections.Generic.List<string> checks)
+        {
+            System.Collections.Generic.List<string> wrong = new System.Collections.Generic.List<string>();
+            if (Misfit("I have been thinking about %it% all day.", "staying up late", "wish") == null || Misfit("I want %it%.", "being kept close", "wish") == null
+                || Misfit("You deserve %it%.", "being kept close", "wish") == null || Misfit("Carry on and we are closer to %it%.", "being kept close", "wish") != null)
+                wrong.Add("the rules read her log's faults wrongly");
+            Dictionary<string, string> things = new Dictionary<string, string>(ItemKinds, StringComparer.OrdinalIgnoreCase);
+            // Each personality's list as it ships, from the attached half of its pack.
+            int lists = 0;
+            Func<string, string> senpaiFor = Personalities.SenpaiFor;
+            foreach (string named in Personalities.Names)
+            {
+                string pack = senpaiFor == null ? null : senpaiFor(named);
+                if (string.IsNullOrEmpty(pack)) continue;
+                bool under = false, any = false;
+                foreach (string raw in pack.Replace("\r\n", "\n").Split('\n'))
+                {
+                    string one = raw.Trim();
+                    if (one.StartsWith("#", StringComparison.Ordinal)) { under = one.StartsWith("## What she is into", StringComparison.OrdinalIgnoreCase); continue; }
+                    if (!under || one.Length == 0 || one.StartsWith(">", StringComparison.Ordinal)) continue;
+                    string item = Named(one);
+                    if (item.Length == 0) continue;
+                    any = true;
+                    // Read as her pack would be, where an unnamed thing on a pack's list is an act unless its words make it a wish.
+                    if (!things.ContainsKey(item)) things[item] = ItemKinds.ContainsKey(item) ? ItemKinds[item] : Regex.IsMatch(item, @"^being\b|\b(?:me|my|myself)\b", RegexOptions.IgnoreCase) ? "wish" : "act";
+                }
+                if (any) lists++;
+            }
+            int pairs = 0;
+            foreach (KeyValuePair<string, string> frame in FrameKinds)
+                foreach (KeyValuePair<string, string> thing in things)
+                {
+                    if (!Fits(frame.Key, thing.Value)) continue;
+                    pairs++;
+                    string why = Misfit(frame.Key, thing.Key, thing.Value);
+                    if (why != null && wrong.Count < 8) wrong.Add(why + ": " + frame.Key.Replace("%it%", thing.Key));
+                }
+            if (wrong.Count > 0) throw new Exception("A shipped frame reads wrongly with a thing it is tagged for: " + string.Join(" | ", wrong.ToArray()));
+            checks.Add("PASS every shipped frame read with every thing it is tagged for, " + pairs + " pairs from " + FrameKinds.Count + " frames and " + things.Count + " things over " + lists + " personalities' lists: no time of day, no noun word before an -ing phrase, no wish handed over, no doubled word");
+        }
+
+        // A thing off her list only in a frame of its kind: a wish of hers is never on the table nor a threat, and a thing
+        // still takes them all.
+        internal static void KindCheck(System.Collections.Generic.List<string> checks)
+        {
+            string keptWas = Kept, hersWas = HersKept, yoursWas = YoursKept;
+            bool senpaiWas = Brain.SenpaiOn;
+            string folder = Path.Combine(Path.GetTempPath(), "capri-kinds-" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            try
+            {
+                Directory.CreateDirectory(folder);
+                string hers = Path.Combine(folder, "her_interests");
+                File.WriteAllText(hers, string.Join(Environment.NewLine, new[]
+                {
+                    "# What she is into", "",
+                    "## how she brings it up, pleased", "", "You are doing well. %it% is on the table.", "I keep thinking about %it%.", "I have been thinking about %it% all day.", "",
+                    "## how she brings it up, cross", "", "That is going to end with %it%.", "",
+                }), new UTF8Encoding(false));
+                Kept = Path.Combine(folder, WasFileName ?? FileName);
+                HersKept = hers;
+                YoursKept = Path.Combine(folder, "your_interests");
+                Brain.SenpaiOn = true;
+                System.Collections.Generic.List<string> wrong = new System.Collections.Generic.List<string>();
+                if (KindOf("being Zz") != "wish" || KindOf("Zz for me") != "wish" || KindOf("Zz") != "thing") wrong.Add("kinds read by their words: " + KindOf("being Zz") + ", " + KindOf("Zz for me") + ", " + KindOf("Zz"));
+                int wished = 0, thingTabled = 0;
+                for (int go = 0; go < 200; go++)
+                {
+                    string pleased = Woven(true, "being Zz"), cross = Woven(false, "being Zz"), thing = Woven(true, "Zz");
+                    if (pleased != null && (pleased.IndexOf("on the table", StringComparison.Ordinal) >= 0 || pleased.IndexOf("all day", StringComparison.Ordinal) >= 0)) wrong.Add(pleased);
+                    if (pleased != null) wished++;
+                    if (cross != null) wrong.Add(cross);
+                    if (thing != null && thing.IndexOf("Zz is on the table", StringComparison.Ordinal) >= 0) thingTabled++;
+                }
+                if (wished == 0) wrong.Add("a wish was never woven into a frame it reads with");
+                if (thingTabled == 0) wrong.Add("a thing never took the frame a wish can't");
+                if (wrong.Count > 0) throw new Exception("A frame took a thing of a kind it doesn't read with: " + string.Join(" | ", wrong.GetRange(0, Math.Min(5, wrong.Count)).ToArray()));
+                checks.Add("PASS a thing off her list goes only into a frame of its kind in 200 weaves: a wish of hers is thought about (" + wished + "), never on the table, never all day and never a threat; a thing still is on the table (" + thingTabled + ")");
+                PairCheck(checks);
+                // Four frames a thing reads with: four tails use all four before any comes back.
+                File.WriteAllText(hers, string.Join(Environment.NewLine, new[]
+                {
+                    "# What she is into", "",
+                    "## how she brings it up, pleased", "", "I keep thinking about %it%.", "We are one step closer to %it%.", "Careful, this ends with %it%.", "Do not talk me into %it%.", "",
+                }), new UTF8Encoding(false));
+                Action putBack = Sayings.HeldSaid();
+                try
+                {
+                    System.Collections.Generic.HashSet<string> frames = new System.Collections.Generic.HashSet<string>();
+                    for (int one = 0; one < 4; one++)
+                    {
+                        string thing = "Zq" + one;
+                        if (Tail(delegate { madeFrame = null; string woven = Woven(true, thing); return new KeyValuePair<string, string>(woven, thing); }) == null || madeFrame == null) break;
+                        frames.Add(madeFrame);
+                    }
+                    if (frames.Count != 4) throw new Exception("A frame came back before the others had their turn: " + frames.Count + " different in four tails");
+                }
+                finally { putBack(); }
+                checks.Add("PASS four tails use four different frames before any comes back");
+                // Grown frames reach an older file once; one they delete afterwards stays deleted.
+                List<string[]> grownWas = new List<string[]>(GrownFrames);
+                try
+                {
+                    GrownFrames.Clear();
+                    GrownFrames.Add(new[] { "how she brings it up, pleased", "Zz frame one %it%.", "thing" });
+                    GrownFrames.Add(new[] { "how she brings it up, cross", "Zz frame two %it%.", "thing" });
+                    Kept = hers;
+                    int first = TopUpFrames(), again = TopUpFrames();
+                    Tucked.Write(hers, File.ReadAllText(hers).Replace("Zz frame one %it%.", ""), new UTF8Encoding(false));
+                    int afterDelete = TopUpFrames();
+                    string now = File.ReadAllText(hers);
+                    if (first != 1 || again != 0 || afterDelete != 0 || now.Contains("Zz frame one") || now.IndexOf(GrownMark + " 2", StringComparison.Ordinal) < 0)
+                        throw new Exception("Grown frames didn't reach an older file once: " + first + ", " + again + ", " + afterDelete);
+                }
+                finally { GrownFrames.Clear(); GrownFrames.AddRange(grownWas); }
+                checks.Add("PASS grown frames reach an older interests file once, where it has the section, and one deleted afterwards stays deleted");
+            }
+            finally
+            {
+                Kept = keptWas;
+                HersKept = hersWas;
+                YoursKept = yoursWas;
+                Brain.SenpaiOn = senpaiWas;
+                try { if (Directory.Exists(folder)) Directory.Delete(folder, true); }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            }
+        }
+#endif
+
         internal static string For(string pool) { return For(pool, null); }
 
         // tone picks between the "+" and "-" lines inside a pack. A pack with neither marker is used for both.
-        internal static string For(string pool, string tone)
+        internal static string For(string pool, string tone) { return For(pool, tone, null); }
+
+        // fits, when given, keeps only the lines it passes, read before her tokens are filled.
+        internal static string For(string pool, string tone, Func<string, bool> fits)
         {
             if (!Brain.SenpaiOn) return null;
             try
@@ -527,7 +801,10 @@ namespace CapriDesktop
                 }
                 // A line naming a part of the day only in that part, as everywhere else she talks.
                 found.RemoveAll(one => !Sayings.FitsHour(one));
+                if (fits != null) found.RemoveAll(one => !fits(one));
                 if (found.Count == 0) return null;
+                // A line of hers straight from this file names the pool in her log; inside a built line the core's name stands.
+                Sayings.NamedFrom("interests: " + pool);
                 // One shared Random, not a new one each call: Random is seeded from the clock, which only ticks
                 // every 15ms or so, so two calls in the same breath picked the same line every time.
                 lock (writing) return Them.Fill(found[dice.Next(found.Count)]);
@@ -593,6 +870,7 @@ namespace CapriDesktop
     {
         // A senpai tail from four things and three frames, twenty in a row: no words again within the last eight, never
         // the same thing twice running, and the first four name all four across a restart. Stand-in words only.
+#if CHECKS
         private void SmokeTailRepeats(List<string> checks)
         {
             string token = Guid.NewGuid().ToString("N").Substring(0, 8);
@@ -625,5 +903,6 @@ namespace CapriDesktop
             if (wrong.Count > 0) throw new Exception("Her senpai tails repeated: " + string.Join("; ", wrong.ToArray()));
             checks.Add("PASS her senpai tails: from four things and three frames, the first four name all four across a restart, and twenty in a row never repeat words within the last eight or name the same thing twice running, kept in her lines' own memory");
         }
+#endif
     }
 }

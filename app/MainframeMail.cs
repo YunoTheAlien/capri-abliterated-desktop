@@ -40,6 +40,7 @@ namespace CapriDesktop
         }
 
         // The setup at 100, 150 and 200%: for an address she knows (no server rows) and one she doesn't (both shown).
+#if CHECKS
         internal void CheckMailSetup(System.Collections.Generic.List<string> checks, string folder)
         {
             System.Collections.Generic.List<string> shots = new System.Collections.Generic.List<string>();
@@ -53,19 +54,23 @@ namespace CapriDesktop
                 }
             checks.Add("PASS Set up Email fits at 100, 150 and 200%, with and without the server rows (pictures: " + string.Join(", ", shots.ToArray()) + ")");
         }
+#endif
 
         // Her starters laid in as on a fresh install: Email's row off with what turning it on asks, its cog with Set up email, and
         // pictures of both. They are taken out again after.
+#if CHECKS
         internal void CheckStarterRows(System.Collections.Generic.List<string> checks, string folder)
         {
             Mods mods = capri.ModList;
             FormWindowState wasState = WindowState;
             mods.AddStarters();
+            // The starters are plug-ins, so they are listed under Plug-ins.
+            bool pickWas = capri.ModsPlugins;
             try
             {
                 Restore();
                 ShowMods(true);
-                FillMods();
+                PickPlugins(true);
                 int at = modShown == null ? -1 : modShown.FindIndex(one => one.Plugin != null && one.Plugin.Id == Mods.MailStarter);
                 if (at < 0) throw new Exception("Her Email starter isn't in Mods after it was laid in.");
                 modFirst = at / ModRows * ModRows;
@@ -97,10 +102,12 @@ namespace CapriDesktop
             finally
             {
                 foreach (string id in new[] { Mods.MailStarter, "notion", "linear" }) mods.RemovePlugin(id);
+                capri.ModsPlugins = pickWas;
                 ShowMods(false);
                 if (WindowState != wasState) WindowState = wasState;
             }
         }
+#endif
 
         private sealed class MailSheet : ModSheet
         {

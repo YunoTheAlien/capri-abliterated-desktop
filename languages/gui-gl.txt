@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Silencio ata as {n}:{n}
 Quiet until turned off	Silencio ata desactivalo
 Export settings	Exportar axustes
 Import settings	Importar axustes
-Save Mainframe position	Lembrar a posición do panel
+Save Mainframe position	Gardar a posición do Mainframe
+Capri options	Opcións de Capri

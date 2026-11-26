@@ -47,7 +47,7 @@ namespace CapriDesktop
             new[] { Gray(92), Gray(108), Gray(84), Gray(170), Gray(255), Gray(250), Gray(222), Gray(78), Gray(104), Gray(118), Gray(140), Gray(246), Gray(236), Gray(72), Gray(190), Gray(30), Gray(130), Gray(252), Gray(160), Gray(40), Gray(150), Gray(244), Gray(88), Gray(248), Gray(216), Gray(80), Gray(226), Gray(251), Gray(238), Gray(245) , Gray(89), Gray(226), Gray(245), Gray(251), Color.FromArgb(58, 63, 74), Color.FromArgb(5, 6, 9), Gray(200), Gray(157), Color.FromArgb(199, Gray(96)), Color.FromArgb(220, Gray(157)), Gray(157), Gray(186) }
         };
         private static Color[] now = Looks[0];
-        // Theirs, out of layout.md, over whichever look is picked. An entry nobody has set is null and the
+        // Theirs, as Custom colours keeps them, over whichever look is picked. An entry nobody has set is null and the
         // look's own colour shows through, so a file naming one colour changes one colour.
         private static readonly Color?[] theirs = new Color?[42];
 
@@ -64,7 +64,7 @@ namespace CapriDesktop
         // Where the file editor's own entries start.
         internal const int EditorFirst = 37;
 
-        // What each entry is called in layout.md. The names are what people type, so they say what the thing
+        // What each entry is called. The names are what people type, so they say what the thing
         // is rather than what the code calls it, and the order is the order the file lists them in.
         private static readonly string[] Named =
         {
@@ -111,7 +111,7 @@ namespace CapriDesktop
             return true;
         }
 
-        // The colour they set for this entry in layout.md, or null while it follows the look.
+        // The colour they set for this entry, or null while it follows the look.
         internal static Color? TheirOwn(string name)
         {
             int one = Which(name);

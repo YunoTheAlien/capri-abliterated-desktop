@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
@@ -41,6 +42,8 @@ namespace CapriDesktop
                 watching.ControlAdded -= Added;
                 watching.ControlRemoved -= Added;
                 watching.MouseWheel -= Wheeled;
+                ScrollPanel was = watching as ScrollPanel;
+                if (was != null) was.Scrolled -= Followed;
             }
             watching = panel;
             if (watching == null) return;
@@ -49,6 +52,9 @@ namespace CapriDesktop
             watching.ControlAdded += Added;
             watching.ControlRemoved += Added;
             watching.MouseWheel += Wheeled;
+            // Her own panel glides without Windows' scroll events, so the bar follows it frame by frame.
+            ScrollPanel gliding = watching as ScrollPanel;
+            if (gliding != null) gliding.Scrolled += Followed;
             Sync();
         }
 
@@ -108,6 +114,7 @@ namespace CapriDesktop
         private void Changed(object sender, EventArgs e) { Sync(); }
         private void Added(object sender, ControlEventArgs e) { Sync(); }
         private void Wheeled(object sender, MouseEventArgs e) { Invalidate(); }
+        private void Followed() { Invalidate(); }
 
         // How far it can scroll, how far it has, and whether there is anything to show.
         // In pixels for a panel and in lines for a text box. The bar does not care which: it is a share of
@@ -229,6 +236,8 @@ namespace CapriDesktop
                 return;
             }
             if (watching == null) return;
+            ScrollPanel gliding = watching as ScrollPanel;
+            if (gliding != null && SystemInformation.UIEffectsEnabled) { gliding.GlideBy(-e.Delta); return; }
             watching.AutoScrollPosition = new Point(0, Math.Max(0, Math.Min(Reach, At - e.Delta)));
             Invalidate();
         }
@@ -293,10 +302,99 @@ namespace CapriDesktop
             if (Scrolled != null) Scrolled();
         }
 
+        // The wheel glides: each notch adds to where it is heading and it eases there over a few frames, instead of
+        // Windows' own jump of a whole notch at once. With Windows' animations off it jumps as before.
+        private readonly Clock.Frames glide = new Clock.Frames("slim bar glide") { Interval = 15 };
+        private int heading = -1;
+
+        // Whether a glide is still easing to where it was sent.
+        internal bool Gliding { get { return glide.Enabled; } }
+
         protected override void OnMouseWheel(MouseEventArgs e)
         {
-            base.OnMouseWheel(e);
+            if (!SystemInformation.UIEffectsEnabled) { base.OnMouseWheel(e); if (Scrolled != null) Scrolled(); return; }
+            int notch = Math.Max(1, SystemInformation.MouseWheelScrollLines) * Math.Max(16, VerticalScroll.SmallChange);
+            GlideBy(-e.Delta * notch / 120);
+            HandledMouseEventArgs handled = e as HandledMouseEventArgs;
+            if (handled != null) handled.Handled = true;
+        }
+
+        // Ease towards a point that many pixels further on; a notch while it moves adds to where it is heading.
+        internal void GlideBy(int pixels)
+        {
+            int reach = Math.Max(0, DisplayRectangle.Height - ClientSize.Height);
+            int from = heading >= 0 ? heading : -AutoScrollPosition.Y;
+            heading = Math.Max(0, Math.Min(reach, from + pixels));
+            if (!glide.Enabled)
+            {
+                glide.Tick -= Glided;
+                glide.Tick += Glided;
+                glide.Start();
+            }
+        }
+
+        private void Glided(object sender, EventArgs e)
+        {
+            int now = -AutoScrollPosition.Y, gap = heading - now;
+            if (heading < 0 || Math.Abs(gap) <= 1 || IsDisposed)
+            {
+                if (heading >= 0 && !IsDisposed) AutoScrollPosition = new Point(-AutoScrollPosition.X, heading);
+                heading = -1;
+                glide.Stop();
+            }
+            else
+            {
+                // A third of the way each frame: quick at first, settling softly.
+                int step = gap / 3;
+                if (step == 0) step = Math.Sign(gap);
+                AutoScrollPosition = new Point(-AutoScrollPosition.X, now + step);
+            }
             if (Scrolled != null) Scrolled();
+        }
+
+        // A panel turned by code glides there over several frames and stops exactly where it was sent, at both ends.
+#if CHECKS
+        internal static void CheckGlide(List<string> checks)
+        {
+            if (!SystemInformation.UIEffectsEnabled) { checks.Add("LIMIT the wheel's glide: Windows' animations are off on this PC, so her lists jump as Windows' do"); return; }
+            using (Form holder = new Form { StartPosition = FormStartPosition.Manual, Location = new Point(-6000, -6000), Size = new Size(300, 200), ShowInTaskbar = false, FormBorderStyle = FormBorderStyle.None })
+            {
+                ScrollPanel list = new ScrollPanel { Dock = DockStyle.Fill };
+                list.Controls.Add(new Panel { Bounds = new Rectangle(0, 0, 200, 3000) });
+                holder.Controls.Add(list);
+                holder.Show();
+                List<int> seen = new List<int>();
+                Func<int, int, List<int>> go = delegate(int pixels, int want)
+                {
+                    List<int> stops = new List<int>();
+                    list.GlideBy(pixels);
+                    DateTime until = DateTime.UtcNow.AddSeconds(2);
+                    while (DateTime.UtcNow < until && (list.glide.Enabled || -list.AutoScrollPosition.Y != want))
+                    {
+                        Application.DoEvents();
+                        int at = -list.AutoScrollPosition.Y;
+                        if (stops.Count == 0 || stops[stops.Count - 1] != at) stops.Add(at);
+                        System.Threading.Thread.Sleep(4);
+                    }
+                    return stops;
+                };
+                List<int> down = go(360, 360);
+                if (-list.AutoScrollPosition.Y != 360) throw new Exception("A glide of 360 ended at " + (-list.AutoScrollPosition.Y) + ".");
+                if (down.Count < 4 || down[0] >= 360) throw new Exception("The wheel jumped rather than glided: " + string.Join(", ", down.ConvertAll(x => x.ToString()).ToArray()));
+                int reach = list.DisplayRectangle.Height - list.ClientSize.Height;
+                go(100000, reach);
+                if (-list.AutoScrollPosition.Y != reach) throw new Exception("A glide past the end stopped at " + (-list.AutoScrollPosition.Y) + ", not the end " + reach + ".");
+                go(-100000, 0);
+                if (-list.AutoScrollPosition.Y != 0) throw new Exception("A glide past the top stopped at " + (-list.AutoScrollPosition.Y) + ".");
+                checks.Add("PASS her lists glide on the wheel: " + down.Count + " frames to 360 px, and they stop exactly at the end and the top");
+            }
+        }
+#endif
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) glide.Dispose();
+            base.Dispose(disposing);
         }
     }
 }

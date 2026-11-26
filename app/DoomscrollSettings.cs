@@ -200,12 +200,9 @@ namespace CapriDesktop
 
         private void BuildDoomscroll(int y)
         {
-            Section("DOOMSCROLL >", 0, y);
-            doomLimit = Setting("Scroll limit", ScrollNames, 0, y + 24, "Doomscroll guard: how long TikTok, YouTube Shorts, Instagram, Reddit or X can stay in front before she reacts. Off by default, and Off turns the guard off");
-            doomLimit.Changed += delegate { if (!syncing) capri.SetDoomscrollStep(doomLimit.Value == 0 ? 0 : Doomscroll.Limits[doomLimit.Value - 1]); };
-            Label hint = Caption("Sites are in personalSettings\\sys.md. Say\n\"5 more minutes\" and she gives you five.", 28, y + 56, Look.Mono(8.5f, FontStyle.Regular, GraphicsUnit.Point), Faint);
-            hint.AutoSize = false;
-            hint.Bounds = new Rectangle(28, y + 56, 328, 36);
+            // From its tree (DoomscrollTree).
+            doomLimit = (Slider)HerPanel(DoomscrollTree, 0, y, Font)["Scroll limit"];
+            doomLimit.AccessibleName = "Doomscroll guard: how long TikTok, YouTube Shorts, Instagram, Reddit or X can stay in front before she reacts. Off by default, and Off turns the guard off";
         }
 
         private void SyncDoomscroll()

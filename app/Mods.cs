@@ -34,6 +34,23 @@ namespace CapriDesktop
         [DataMember(Name = "overrides")] public ModOverride[] Overrides;
         [DataMember(Name = "adds")] public ModAdds Adds;
         [DataMember(Name = "names")] public ModNames Names;
+        // "// kind: app" ("kind": "app" in a pack): software, an app or plug-in, with a tile on TOOLS and a row in its section.
+        // Anything else is a mod.
+        [DataMember(Name = "kind")] public string Kind;
+        // "// plugs into: email": the app it needs, by id or name. Its switches sit in that app's row in Toggles, and it waits
+        // off while that app is missing or off.
+        [DataMember(Name = "plugs_into")] public string PlugsInto;
+        // "// load after: night-owl" / "// load before: x": where it goes in the order when it is first added; their drag
+        // moves it after that.
+        [DataMember(Name = "load_after")] public string[] LoadAfter;
+        [DataMember(Name = "load_before")] public string[] LoadBefore;
+        // Numbers and switches for her personalities and moods, by name, laid over her stock and their own while it is on.
+        [DataMember(Name = "personality_settings")] public ModSetting[] PersonalitySettings;
+        // Her right-click menu laid out, one tree line each, root "menu" (moddingLogic 8.3).
+        [DataMember(Name = "menu")] public string[] Menu;
+        // Its Settings panels as tree lines, read as a .capri-tree file's are (plan-panel-trees 9.1).
+        [DataMember(Name = "tree")] public string[] TreeLines;
+        internal bool App { get { return Kind == "app"; } }
         internal bool Intro;
         internal string[] Permissions = new string[0];
         // A code mod's // requires: line: the mod API it needs, and other mods that must be installed and on.
@@ -41,6 +58,8 @@ namespace CapriDesktop
         // A code mod that names colours of its own through Ui.Colour, said on its approval and its Mods row so people know.
         internal bool Colours;
         internal string[] Requires = new string[0];
+        // "// section: fun": the section its switches sit in, by id; none or an unknown one, Uncategorised.
+        internal string Section;
         internal string[] Games;
         // The programs a skill is for, so it is offered when one of them is in front.
         internal string[] Apps = new string[0];
@@ -51,6 +70,8 @@ namespace CapriDesktop
         internal bool Checked;
         // Every outside address in its code, whole. Reaches names only each site; these go under it.
         internal string[] Places = new string[0];
+        // Reads the clipboard or captures the screen, which have no row of their own but count as private data.
+        internal bool Gathers;
         // Why its source cannot be read, or null; that source laid back out when it can be; and whether that
         // is worth a second question before it runs.
         internal string Unreadable;
@@ -106,6 +127,8 @@ namespace CapriDesktop
     {
         [DataMember(Name = "act")] public string Act;
         [DataMember(Name = "add")] public int Add;
+        // The personalities and moods it counts for ("Emo", "mood sleepy"); none, everyone.
+        [DataMember(Name = "who")] public string[] Who;
     }
 
     [DataContract]
@@ -132,9 +155,7 @@ namespace CapriDesktop
         internal string Path;
         internal bool On;
         // Own: a skill she was taught here, kept in her own skills folder rather than installed as a mod.
-        internal bool Code, Changed, Skin, Skill, Own;
-        // One of her own items listed as a mod, like her screensaver: its switch is hers, and it has no file to remove.
-        internal bool Hers;
+        internal bool Code, Changed, Skin, Skill, Own, Tree;
         internal string Hash;
         // A skill a plug-in carries: the plug-in's id and name, the skill's folder, and the other files in it read_skill opens.
         internal string Owner, From, Folder;
@@ -192,6 +213,7 @@ namespace CapriDesktop
                 Func<string> context = ModContext;
                 return note + ModNotes + (context == null ? "" : context());
             };
+            Settle();
             Load();
         }
 
@@ -216,6 +238,7 @@ namespace CapriDesktop
         {
             All.Clear();
             Problems.Clear();
+            Problems.AddRange(sortProblems);
             HashSet<string> off;
             string[] files, own = new string[0];
             try
@@ -225,12 +248,7 @@ namespace CapriDesktop
                 own = OwnFiles();
                 if (Directory.Exists(folder))
                 {
-                    List<string> found = new List<string>(Directory.GetFiles(folder, "*" + Extension));
-                    found.AddRange(Directory.GetFiles(folder, "*" + CodeExtension));
-                    found.AddRange(Directory.GetFiles(folder, "*" + SkinExtension));
-                    found.AddRange(Directory.GetFiles(folder, "*" + SkillExtension));
-                    found.Sort(StringComparer.OrdinalIgnoreCase);
-                    files = found.ToArray();
+                    files = ModFiles().ToArray();
                 }
             }
             catch (Exception error)
@@ -242,7 +260,6 @@ namespace CapriDesktop
                 files = new string[0];
             }
             {
-                Array.Sort(files, StringComparer.OrdinalIgnoreCase);
                 foreach (string file in files)
                 {
                     try
@@ -250,6 +267,7 @@ namespace CapriDesktop
                         if (string.Equals(Path.GetExtension(file), CodeExtension, StringComparison.OrdinalIgnoreCase)) { All.Add(LoadCode(file, off)); continue; }
                         if (string.Equals(Path.GetExtension(file), SkinExtension, StringComparison.OrdinalIgnoreCase)) { All.Add(LoadSkin(file, off)); continue; }
                         if (string.Equals(Path.GetExtension(file), SkillExtension, StringComparison.OrdinalIgnoreCase)) { All.Add(LoadSkill(file, off)); continue; }
+                        if (string.Equals(Path.GetExtension(file), TreeExtension, StringComparison.OrdinalIgnoreCase)) { All.Add(LoadTree(file, off)); continue; }
                         ModFile read = Read(File.ReadAllText(file));
                         if (!string.Equals(read.Id, Path.GetFileNameWithoutExtension(file), StringComparison.OrdinalIgnoreCase)) throw new ModException("its file name doesn't match its id, " + read.Id + ".");
                         All.Add(new Mod { File = read, Path = file, On = !off.Contains(read.Id) });
@@ -283,11 +301,28 @@ namespace CapriDesktop
             Apply();
         }
 
+        // How the last import came in, when it was one of upstream's store mods: translated, or untested on this build.
+        internal string LastMark;
+
         internal Mod Import(string file, Func<ModFile, string, bool> ask, HashSet<string> keepOff = null)
+        {
+            LastMark = null;
+            ModFixes.Outcome fixedUp = ModFixes.Apply(file);
+            try
+            {
+                Mod made = Importing(fixedUp.File, ask, keepOff);
+                if (made != null) LastMark = fixedUp.Mark;
+                return made;
+            }
+            finally { ModFixes.Done(fixedUp); }
+        }
+
+        private Mod Importing(string file, Func<ModFile, string, bool> ask, HashSet<string> keepOff)
         {
             if (string.Equals(Path.GetExtension(file), CodeExtension, StringComparison.OrdinalIgnoreCase)) return ImportCode(file, ask, keepOff);
             if (string.Equals(Path.GetExtension(file), SkinExtension, StringComparison.OrdinalIgnoreCase)) return ImportSkin(file, keepOff == null);
             if (string.Equals(Path.GetExtension(file), SkillExtension, StringComparison.OrdinalIgnoreCase)) return ImportSkill(file);
+            if (string.Equals(Path.GetExtension(file), TreeExtension, StringComparison.OrdinalIgnoreCase)) return ImportTree(file);
             string text;
             try
             {
@@ -298,14 +333,14 @@ namespace CapriDesktop
             catch (IOException error) { throw new ModException("Couldn't read that file: " + error.Message); }
             catch (UnauthorizedAccessException error) { throw new ModException("Couldn't read that file: " + error.Message); }
             ModFile read = Read(text);
-            string home = Path.Combine(folder, read.Id + Extension);
+            string home = Path.Combine(PlaceFor(read.Id, file, text), read.Id + Extension);
             try
             {
-                Directory.CreateDirectory(folder);
+                Directory.CreateDirectory(Path.GetDirectoryName(home));
                 string writing = home + ".new";
                 File.WriteAllText(writing, text, new UTF8Encoding(false));
                 if (File.Exists(home)) File.Delete(home);
-                File.Move(writing, home);
+                File.Move(writing, home); LeftLoose(file, home);
                 HashSet<string> off = Off();
                 bool changed = off.Remove(read.Id);
                 if (read.Colors != null) { OnlyColours(read.Id, off); changed = true; }
@@ -356,7 +391,7 @@ namespace CapriDesktop
 
         // A mod's own saved data, the "<id>-data" folder a code mod keeps between runs. Removing the mod asks about it;
         // turning one off never does, so turning it back on finds everything as it was.
-        internal string DataOf(Mod mod) { return System.IO.Path.Combine(folder, mod.File.Id + "-data"); }
+        internal string DataOf(Mod mod) { return System.IO.Path.Combine(string.IsNullOrEmpty(mod.Path) ? HomeOf(mod.File.Id) : System.IO.Path.GetDirectoryName(mod.Path), mod.File.Id + "-data"); }
 
         internal bool HasData(Mod mod) { return Directory.Exists(DataOf(mod)); }
 
@@ -426,8 +461,10 @@ namespace CapriDesktop
             CheckPack(read);
             if (read.WakeNames.Length == 0 && read.HeardAs.Length == 0 && !read.SoundsLike && !read.HearingLog && read.Colors == null && (read.Zones == null || read.Zones.Count == 0)
                 && (read.Personalities == null || read.Personalities.Length == 0) && (read.Moods == null || read.Moods.Length == 0)
-                && read.Overrides.Length == 0 && read.Adds.Acts.Length == 0 && read.Adds.Mood.Length == 0)
-                throw new ModException("That mod doesn't change anything. It needs wake_names, heard_as, sounds_like, hearing_log, colors, zones, personalities, moods, overrides or adds.");
+                && read.Overrides.Length == 0 && read.Adds.Acts.Length == 0 && read.Adds.Mood.Length == 0 && (read.PersonalitySettings == null || read.PersonalitySettings.Length == 0)
+                && (read.Menu == null || read.Menu.Length == 0))
+                throw new ModException("That mod doesn't change anything. It needs wake_names, heard_as, sounds_like, hearing_log, colors, zones, personalities, moods, overrides, adds or menu.");
+            if (read.Menu != null && read.Menu.Length > MostMenuLines) throw new ModException("A menu layout can have " + MostMenuLines + " lines at most.");
             if (read.Colors != null) CheckColours(read.Colors);
             if (read.WakeNames.Length > MostNames) throw new ModException("A mod can add up to " + MostNames + " names.");
             if (read.HeardAs.Length > MostSpellings) throw new ModException("A mod can add up to " + MostSpellings + " spellings.");
@@ -482,7 +519,11 @@ namespace CapriDesktop
                 one.Kind = string.IsNullOrWhiteSpace(one.Kind) ? "other" : one.Kind.Trim().ToLowerInvariant();
             }
             foreach (ModTerm one in read.Adds.Mood)
+            {
                 if (one == null || string.IsNullOrWhiteSpace(one.Act) || Math.Abs(one.Add) > MostTerm) throw new ModException("A mood term needs an act and an add from -" + MostTerm + " to " + MostTerm + ".");
+                try { one.Who = CapriDesktop.Acts.WhoOf(one.Who); }
+                catch (ArgumentException error) { throw new ModException(error.Message); }
+            }
             if (read.Names != null && read.Names.Wake != null)
             {
                 List<string> wake = new List<string>(read.WakeNames ?? new string[0]);
@@ -508,6 +549,10 @@ namespace CapriDesktop
             if (string.IsNullOrWhiteSpace(read.Name) || read.Name.Length > 40) throw new ModException("A mod needs a name of up to 40 characters.");
             if (read.Version != null && read.Version.Length > 20) throw new ModException("A mod's version can be up to 20 characters.");
             if (read.Author != null && read.Author.Length > 40) throw new ModException("A mod's author can be up to 40 characters.");
+            read.Kind = string.IsNullOrWhiteSpace(read.Kind) ? null : read.Kind.Trim().ToLowerInvariant();
+            if (read.Kind != null && read.Kind != "app" && read.Kind != "mod") throw new ModException("A mod's kind is app or mod.");
+            read.PlugsInto = string.IsNullOrWhiteSpace(read.PlugsInto) ? null : read.PlugsInto.Trim().ToLowerInvariant();
+            if (read.PlugsInto != null && (read.PlugsInto.Length > 40 || read.PlugsInto == read.Id)) throw new ModException("A mod plugs into one app other than itself, named in up to 40 characters.");
             // A description past 200 characters is cut at a word to fit where it shows, rather than the mod refused.
             if (read.Description != null && read.Description.Length > 200)
             {
@@ -527,8 +572,50 @@ namespace CapriDesktop
         // Laid again after a choice in the conflict box.
         internal void Reapply() { Apply(); }
 
+        internal const int MostMenuLines = 400;
+
+        // Each pack's menu layout that is on, by its name, in the collection's order: the later lays over the earlier. None
+        // with Stock in use.
+        internal List<KeyValuePair<string, string>> MenuLayouts()
+        {
+            List<KeyValuePair<string, string>> made = new List<KeyValuePair<string, string>>();
+            bool core = false;
+            try { core = CoreOnly != null && CoreOnly(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            if (core || All == null) return made;
+            foreach (Mod mod in Layered()) if (mod.File.Menu != null && mod.File.Menu.Length > 0) made.Add(new KeyValuePair<string, string>(mod.File.Name ?? mod.File.Id, string.Join("\n", mod.File.Menu)));
+            return made;
+        }
+
+        // The collection in use: its mods' order (ids, first laid first), and whether it is Stock, her core with no pack laid
+        // over it. Null leaves the order they were installed in.
+        internal Func<List<string>> Order;
+        internal Func<bool> CoreOnly;
+
+        // The packs that take over parts of her, on, in the collection's order: listed ones first as it lists them, the rest after
+        // in the order they were installed.
+        internal List<Mod> Layered()
+        {
+            List<Mod> packs = All.FindAll(mod => mod.On && (!mod.Code || mod.File.Overrides != null && mod.File.Overrides.Length > 0));
+            List<string> order = null;
+            try { order = Order == null ? null : Order(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            if (order == null || order.Count == 0) return packs;
+            List<Mod> made = new List<Mod>(packs);
+            made.Sort(delegate(Mod one, Mod other)
+            {
+                int a = order.IndexOf(one.File.Id), b = order.IndexOf(other.File.Id);
+                if (a < 0) a = int.MaxValue;
+                if (b < 0) b = int.MaxValue;
+                return a != b ? a.CompareTo(b) : packs.IndexOf(one).CompareTo(packs.IndexOf(other));
+            });
+            return made;
+        }
+
+        // Told after the mods on and off change, for what lays them as a whole (tree mods' panels).
+        internal Action Applied;
+
         private void Apply()
         {
+            try { if (Applied != null) Applied(); } catch (Exception caughtOne) { Brain.Caught(caughtOne); }
             string[] names = WakeNames;
             List<string> exact = new List<string>(names);
             List<string> soundsLike = new List<string>(names);
@@ -546,11 +633,13 @@ namespace CapriDesktop
             Zones.DropAll();
             foreach (Mod mod in All) if (mod.On && mod.File.Zones != null && mod.File.Zones.Count > 0) Zones.Claim(mod.File.Name ?? mod.File.Id, mod.File.Zones);
             Zones.Write();
-            // Packs' slots, acts and mood terms, rebuilt whole from the packs that are on, in the order they're listed.
+            // Packs' slots, acts and mood terms, rebuilt whole from the packs that are on, in the collection's order; with Stock
+            // in use, none, so she is her core alone.
             List<KeyValuePair<string, ModFile>> packs = new List<KeyValuePair<string, ModFile>>();
-            List<Mod> packMods = new List<Mod>();
-            foreach (Mod mod in All)
-                if (mod.On && (!mod.Code || mod.File.Overrides != null && mod.File.Overrides.Length > 0)) { packs.Add(new KeyValuePair<string, ModFile>(mod.File.Name ?? mod.File.Id, mod.File)); packMods.Add(mod); }
+            bool core = false;
+            try { core = CoreOnly != null && CoreOnly(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            List<Mod> packMods = core ? new List<Mod>() : Layered();
+            foreach (Mod mod in packMods) packs.Add(new KeyValuePair<string, ModFile>(mod.File.Name ?? mod.File.Id, mod.File));
             FileSlots.Hold(packMods);
             CapriDesktop.Acts.Hold(packs);
             FileSlots.Write();
@@ -701,6 +790,41 @@ namespace CapriDesktop
         {
             string file = Path.Combine(folder, OffFile);
             return new HashSet<string>(File.Exists(file) ? File.ReadAllLines(file) : new string[0]);
+        }
+
+        // Earlier builds laid both doors in on. // No forced door intros until the new intro is done. Once, each door goes off unless its intro
+        // is picked in Toggles > Intros; after that its switch is theirs. Returns the doors turned off.
+        internal const string DoorsOffMark = "doors-off-once.txt";
+
+        internal static List<string> DoorsOffOnce(string data, string intros)
+        {
+            List<string> turned = new List<string>();
+            string folder = Path.Combine(data, "mods"), mark = Path.Combine(folder, DoorsOffMark);
+            try
+            {
+                if (!Directory.Exists(folder) || File.Exists(mark)) return turned;
+                List<string> picked = new List<string>((intros ?? "").ToLowerInvariant().Split(','));
+                string file = Path.Combine(folder, OffFile);
+                List<string> off = new List<string>(File.Exists(file) ? File.ReadAllLines(file) : new string[0]);
+                foreach (string[] door in new[] { new[] { DoorId, "door" }, new[] { FrontId, "door2" } })
+                    if (!off.Contains(door[0]) && !picked.Contains(door[1])) { off.Add(door[0]); turned.Add(door[0]); }
+                File.WriteAllLines(file, off.ToArray());
+                File.WriteAllText(mark, "Both doors were turned off once here; picked in Toggles > Intros, a door stays on." + Environment.NewLine);
+                if (turned.Count > 0) Brain.Log("mods", -1, "Turned off " + string.Join(" and ", turned.ToArray()) + ": no door intro starts by itself.");
+            }
+            catch (IOException caughtOne) { Brain.Caught(caughtOne); }
+            catch (UnauthorizedAccessException caughtOne) { Brain.Caught(caughtOne); }
+            return turned;
+        }
+
+        // A mod laid in off, turned on once from outside, like an old setting that had its game on.
+        internal static void TurnOnLaid(string data, string id)
+        {
+            string file = Path.Combine(data, "mods", OffFile);
+            if (!File.Exists(file)) return;
+            List<string> off = new List<string>(File.ReadAllLines(file));
+            if (off.RemoveAll(delegate(string one) { return one == id; }) == 0) return;
+            File.WriteAllLines(file, off.ToArray());
         }
 
         private void WriteOff(HashSet<string> off)

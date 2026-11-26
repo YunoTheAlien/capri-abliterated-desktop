@@ -165,6 +165,7 @@ namespace CapriDesktop
         // Her tick and her reactions ask from memory: after the first look, three hundred rounds of asking whether me.md,
         // a pack and a folder changed make no disk call on her window's thread, and a save, a new pack and a deleted file
         // are still seen within a few seconds.
+#if CHECKS
         internal static void Check(List<string> checks, string output, Action round)
         {
             string place = Path.Combine(output, "stamps-" + Guid.NewGuid().ToString("N").Substring(0, 6)), packs = Path.Combine(place, "packs"), me = Path.Combine(place, "me.md");
@@ -210,6 +211,7 @@ namespace CapriDesktop
                 catch (UnauthorizedAccessException) { }
             }
         }
+#endif
 
         // Up to ten seconds for a background pass to see it, pumping her window meanwhile.
         private static bool Wait(Func<bool> done)

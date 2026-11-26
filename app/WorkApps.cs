@@ -74,14 +74,14 @@ namespace CapriDesktop
             private readonly Key addKey, offKey, allOffKey, browseKey;
             private readonly Label notice;
             private readonly ContextMenuStrip holdMenu;
-            private readonly System.Windows.Forms.Timer noticeTimer = new System.Windows.Forms.Timer();
+            private readonly Clock.Ticker noticeTimer = new Clock.Ticker("WorkApps noticeTimer");
             private readonly HashSet<string> open = new HashSet<string>(StringComparer.Ordinal);
             private string pickedSeen, pickedAdded;
 
             internal WorkSheet(Mainframe owner, float zoom) : base(owner, zoom, FocusLabel, FocusLabel.ToUpperInvariant() + " >", Wide, Tall)
             {
                 BuildSettings();
-                Words("Focus slows her while an Added app is in front. At \u221E it's on whatever is in front.", 28, 238, 824, 18, Small(), Faint);
+                Words("", 28, 238, 824, 18, Small(), Faint);
                 // The one search sits over the first list, and the three lists' titles line up under it.
                 search.Bounds = Box(28, 260, 252, 26);
                 Words("Apps she has seen", 28, 292, 252, 18, Type(10f * Zoom, true), Rose);
@@ -329,7 +329,8 @@ namespace CapriDesktop
                 Clear(slows);
                 int y = 0;
                 y = Slow(Working.Chatter, "Her chatter", "Pop-ins, jokes, feeling ignored", y);
-                y = Slow(Working.Pet, "Tamagotchi", "Hunger and points", y);
+                // Only while a pet game runs with its feeding on: without one there is no hunger to slow.
+                if (Frame.capri.HungerOn) y = Slow(Working.Pet, "Tamagotchi", "Hunger and points", y);
                 y = Slow(Working.CheckIns, "Check-ins", "Water, stretch, eyes", y);
                 y = Slow(Working.Wandering, "Her wandering", "Walks, perches, screen hops", y);
                 List<string> mods = Working.Mods();
@@ -528,12 +529,19 @@ namespace CapriDesktop
                         at = at.Step(1);
                     }
                     added.AutoScrollPosition = Point.Empty;
+                    // As many notches a turn as keep each move under half the list's height, so no row is passed over and
+                    // a 200-row list takes tens of turns rather than hundreds.
+                    int notch = Math.Max(1, SystemInformation.MouseWheelScrollLines) * Math.Max(16, added.VerticalScroll.SmallChange);
+                    int notches = Math.Max(1, Math.Min(10, added.ClientSize.Height / 2 / Math.Max(1, notch)));
                     for (int i = 0; i < 400; i++)
                     {
                         foreach (AppRow row in rows) if (shown(row)) wheeled.Add(row.Text);
                         int before = -added.AutoScrollPosition.Y;
-                        Native.SendMessage(added.Handle, 0x020A, new IntPtr(-120 << 16), IntPtr.Zero);
-                        Application.DoEvents();
+                        Native.SendMessage(added.Handle, 0x020A, new IntPtr((-120 * notches) << 16), IntPtr.Zero);
+                        // The wheel glides over a few frames, so each turn is waited out until the glide ends.
+                        DateTime until = DateTime.UtcNow.AddSeconds(1);
+                        do { Application.DoEvents(); System.Threading.Thread.Sleep(5); }
+                        while (added.Gliding && DateTime.UtcNow < until);
                         if (-added.AutoScrollPosition.Y == before) break;
                     }
                     added.AutoScrollPosition = Point.Empty;
@@ -694,6 +702,7 @@ namespace CapriDesktop
 
         // While working's app list and what it slows: each row's clock at Extend, Pause and Leave, her hunger by the
         // Tamagotchi row, every row stopped at infinity, the window at three sizes, and a mod's timer by its row.
+#if CHECKS
         private void SmokeWorkApps(List<string> checks, string output)
         {
             string keptWas = Favourites.Kept, appsWas = preferences.WorkApps, holdsWas = Working.HoldsSaid;
@@ -701,6 +710,7 @@ namespace CapriDesktop
             Func<DateTime> realWas = Working.Real;
             int timesWas = preferences.WhileWorking;
             long fedWas = preferences.FedAt;
+            ICapriPet petWas = petStandIn;
             string kept = Path.Combine(output, "work-apps-used.txt");
             Sight work = new Sight { Program = "Code.exe" }, play = new Sight { Program = "SpaceGame.exe" };
             Action<Sight> front = delegate(Sight sight) { Working.Ahead = delegate { return sight; }; Working.Forget(); Working.Now(SimTime.UtcNow); };
@@ -743,6 +753,7 @@ namespace CapriDesktop
                 bool held = Working.Rate(Working.Chatter, true) == 0 && double.IsInfinity(ChatterStretch) && Working.Rate(Working.CheckIns, true) == 0 && Working.Rate(Working.Wandering, true) == 1
                     && (preferences.WorkHolds ?? "").IndexOf("check-ins=Pause", StringComparison.Ordinal) >= 0;
                 int add;
+                petStandIn = new StandInPet();
                 preferences.FedAt = SimTime.UtcNow.AddHours(-4).Ticks;
                 string extended = Hunger("snack", out add);
                 SetWorkHold(Working.Pet, Working.Hold.Leave);
@@ -763,6 +774,7 @@ namespace CapriDesktop
             {
                 Working.Real = realWas;
                 preferences.FedAt = fedWas;
+                petStandIn = petWas;
             }
 
             try
@@ -806,9 +818,11 @@ namespace CapriDesktop
                 SavePreferences();
             }
         }
+#endif
 
         // A code mod's Every timer: listed at Extend, paused and left by its row while a work app is in front, slower at
         // x10, at its pace with nothing of work in front, and its row gone with the mod.
+#if CHECKS
         private void SmokeWorkTimer(List<string> checks, string output, Sight work, Sight play, Action<Sight> front)
         {
             Mods mods = ModList;
@@ -816,8 +830,8 @@ namespace CapriDesktop
             mainframe.ModAsk = delegate { return true; };
             const string id = "work-timer";
             string row = Working.ModMark + id;
-            string ticks = Path.Combine(Path.Combine(mods.Folder, id + "-data"), "ticks");
-            Func<int> count = delegate { try { return File.Exists(ticks) ? File.ReadAllText(ticks).Length : 0; } catch (IOException) { return 0; } };
+            Func<string> ticksAt = delegate { return Path.Combine(Path.Combine(mods.HomeOf(id), id + "-data"), "ticks"); };
+            Func<int> count = delegate { try { return File.Exists(ticksAt()) ? File.ReadAllText(ticksAt()).Length : 0; } catch (IOException) { return 0; } };
             Action<double> wait = delegate(double seconds)
             {
                 System.Diagnostics.Stopwatch took = System.Diagnostics.Stopwatch.StartNew();
@@ -871,5 +885,6 @@ namespace CapriDesktop
                 KeepWorkMods();
             }
         }
+#endif
     }
 }

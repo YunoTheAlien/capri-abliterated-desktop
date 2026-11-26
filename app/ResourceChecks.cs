@@ -5,6 +5,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
 
+#if CHECKS
 namespace CapriDesktop
 {
     internal sealed partial class Companion
@@ -14,7 +15,7 @@ namespace CapriDesktop
             Directory.CreateDirectory(output);
             string data = Path.Combine(output, "rest-data");
             Engine resting = new Engine(data);
-            ProcessStartInfo launch = resting.StartInfo(Engine.Picks[2], false, false, 1);
+            ProcessStartInfo launch = resting.StartInfo(Engine.Qwen4B, false, false, 1);
             string model = Regex.Match(launch.Arguments, "-m \"([^\"]+)\"").Groups[1].Value;
             Directory.CreateDirectory(Path.GetDirectoryName(launch.FileName));
             Directory.CreateDirectory(Path.GetDirectoryName(model));
@@ -33,7 +34,7 @@ namespace CapriDesktop
             };
             try
             {
-                resting.Ensure(Engine.Picks[2]);
+                resting.Ensure(Engine.Qwen4B);
                 int id = resting.ServerId;
                 if (!resting.Running || id == 0) throw new Exception("The fake brain didn't start.");
                 if (resting.Rest(60)) throw new Exception("A brain used a moment ago stopped.");
@@ -78,7 +79,7 @@ namespace CapriDesktop
                 try { using (Process left = Process.GetProcessById(id)) gone = left.HasExited; }
                 catch (ArgumentException) { gone = true; }
                 if (!gone) throw new Exception("The stopped brain's process kept running.");
-                resting.Ensure(Engine.Picks[2]);
+                resting.Ensure(Engine.Qwen4B);
                 if (!resting.Running || spawned != 2) throw new Exception("A rested brain didn't start again when asked.");
                 Engine was = brain.Local;
                 try
@@ -128,3 +129,4 @@ namespace CapriDesktop
 
     }
 }
+#endif

@@ -219,4 +219,5 @@ Quiet until {n}:{n}	{n}:{n} వరకు నిశ్శబ్దం
 Quiet until turned off	ఆఫ్ చేసే వరకు నిశ్శబ్దం
 Export settings	సెట్టింగ్‌లను ఎగుమతి చేయి
 Import settings	సెట్టింగ్‌లను దిగుమతి చేయి
-Save Mainframe position	ప్యానెల్ స్థానాన్ని గుర్తుంచుకో
+Save Mainframe position	Mainframe స్థానాన్ని సేవ్ చేయి
+Capri options	Capri ఎంపికలు

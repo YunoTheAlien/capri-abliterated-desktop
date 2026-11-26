@@ -32,7 +32,7 @@ namespace CapriDesktop
 
         private static readonly object gate = new object();
         private static long dirtyAt = -1;
-        private static Timer timer;
+        private static Clock.OffTimer timer;
         private static int saving;
 
         [DataContract]
@@ -94,7 +94,6 @@ namespace CapriDesktop
             if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) return found;
             Action<string> add = delegate(string relative) { string path = Path.Combine(folder, relative); if (File.Exists(path)) found[relative.Replace('\\', '/')] = path; };
             add("twitch.md");
-            add("layout.md");
             add(Path.Combine("games", "chess.md"));
             foreach (string side in new[] { Plain, Senpai })
             {
@@ -123,7 +122,7 @@ namespace CapriDesktop
         private static bool PackSettings(string heading)
         {
             string bare = heading.Replace(CapriDesktop.LineFile.SenpaiMark, "").Trim();
-            foreach (string one in new[] { Personalities.LikesHeading, Personalities.WordsHeading, Personalities.DriftHeading, Personalities.ReactsHeading, Personalities.SwitchHeading })
+            foreach (string one in new[] { Personalities.LikesHeading, Personalities.WordsHeading, Personalities.DriftHeading, Personalities.ReactsHeading, Personalities.SwitchHeading, Personalities.NeedsHeading })
                 if (string.Equals(bare, one, StringComparison.OrdinalIgnoreCase)) return true;
             return false;
         }
@@ -227,7 +226,7 @@ namespace CapriDesktop
         internal static void Changed()
         {
             lock (gate) dirtyAt = Now();
-            if (timer == null && !string.IsNullOrEmpty(Folder)) lock (gate) if (timer == null) timer = new Timer(delegate { Tick(Now()); }, null, 15000, 15000);
+            if (timer == null && !string.IsNullOrEmpty(Folder)) lock (gate) if (timer == null) timer = new Clock.OffTimer("settings save", delegate { Tick(Now()); }, null, 15000, 15000);
         }
 
         // Written once two minutes have passed since the last change. True when it wrote.
@@ -261,7 +260,7 @@ namespace CapriDesktop
 
         internal static void Stop()
         {
-            Timer was;
+            Clock.OffTimer was;
             lock (gate) { was = timer; timer = null; }
             if (was != null) was.Dispose();
         }
@@ -302,6 +301,8 @@ namespace CapriDesktop
                         // A setting whose section was renamed or moved: the one place in the file that has that name.
                         if (row < 0) row = Only(rows, settings, one.Key);
                         if (row < 0 && Moves(one.Key)) { moved.Add(new[] { file.Key, one.Key, one.Value }); continue; }
+                        // Her needs are laid by her own start-up, so a file without one yet is no setting lost.
+                        if (row < 0 && string.Equals(section.Key, Personalities.NeedsHeading, StringComparison.OrdinalIgnoreCase)) continue;
                         if (row < 0) { missing.Add(file.Key + " > " + (section.Key.Length == 0 ? "" : section.Key + " > ") + one.Key); continue; }
                         int colon = rows[row].IndexOf(':');
                         string lead = rows[row].Substring(0, colon + 1), gap = Regex.Match(rows[row].Substring(colon + 1), @"^[ \t]*").Value;
@@ -376,6 +377,7 @@ namespace CapriDesktop
 
         // Saved by itself only once nothing has changed for two minutes; export, an update and import bring every setting
         // and the answer to the terms back; nothing secret is ever in it.
+#if CHECKS
         internal static void Check(List<string> checks, string folder)
         {
             string root = Path.Combine(folder, "settingsfile-" + Guid.NewGuid().ToString("N").Substring(0, 6));
@@ -498,5 +500,6 @@ namespace CapriDesktop
             }
             Companion.CheckModsKept(checks, folder);
         }
+#endif
     }
 }

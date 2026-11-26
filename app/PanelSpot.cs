@@ -70,6 +70,7 @@ namespace CapriDesktop
             return Placed(new Rectangle(x, y, size.Width, size.Height), area);
         }
 
+#if CHECKS
         private void SmokePanelSpot(List<string> checks)
         {
             // Beside her: the roomier side, level with her, wholly on the screen, and on her where there is no room either side.
@@ -177,6 +178,7 @@ namespace CapriDesktop
             if (missing != null) throw new Exception("A new SETTINGS label isn't in every language her menus have: " + missing);
             checks.Add("PASS Save Mainframe position, Custom colours, Custom colours..., Reset selected colour and Make a mod read in every language her menus have");
         }
+#endif
     }
 
     // SETTINGS at the top right of the Settings page, and Custom colours opening its window from it.

@@ -1,0 +1,44 @@
+// capri-mod: 1
+// id: settings-panel-code
+// name: Settings panel (code)
+// version: 1.0.0
+// author: Capri
+// permissions: settings
+// requires: api 4
+// description: The same panel as settings-panel.capri-tree, built through the mod API, for when a panel needs code.
+
+using System;
+using System.Drawing;
+using System.Windows.Forms;
+using CapriDesktop;
+
+public class SettingsPanelCode : ICapriMod
+{
+    private ICapriHost capri;
+    private bool mine;
+
+    public void Start(ICapriHost host)
+    {
+        capri = host;
+        capri.Mainframe.AddPanel("MY PANEL", "right", 1, Make);
+    }
+
+    // Her pieces from Ui, stacked down the panel: her switch on one of her settings, a switch of this mod's own, and a key.
+    private Control Make()
+    {
+        Panel panel = new Panel { Size = new Size(328, 78), BackColor = Color.Transparent };
+        Control wander = capri.Ui.Switch("Wander", capri.Settings.IsOn("wander") == true, on => capri.Settings.Turn("wander", on));
+        Control own = capri.Ui.Switch("My own switch", mine, on => mine = on);
+        Control hear = capri.Ui.Button("Hear her voice", () => capri.Log("Hear her voice pressed."));
+        own.Top = 28;
+        hear.Top = 56;
+        panel.Controls.Add(wander);
+        panel.Controls.Add(own);
+        panel.Controls.Add(hear);
+        return panel;
+    }
+
+    public bool Heard(string words) { return false; }
+
+    public void Stop() { }
+}

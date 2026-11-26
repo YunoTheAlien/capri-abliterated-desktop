@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Kimya hadi {n}:{n}
 Quiet until turned off	Kimya hadi kizimwe
 Export settings	Hamisha mipangilio
 Import settings	Leta mipangilio
-Save Mainframe position	Kumbuka mahali pa paneli
+Save Mainframe position	Hifadhi nafasi ya Mainframe
+Capri options	Chaguo za Capri

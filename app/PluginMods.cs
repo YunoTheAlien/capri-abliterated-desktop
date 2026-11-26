@@ -25,6 +25,8 @@ namespace CapriDesktop
     internal sealed class PluginInfo
     {
         internal string Id, Name, Version, Author, Description, Root, Hash;
+        // The TOOLS section it names (capri.section); naming none of hers, it shows in none.
+        internal string Section;
         internal PluginServer[] Servers = new PluginServer[0];
         internal string[] Skills = new string[0];
         // Its SKILL.md skills as read, for read_skill.
@@ -54,7 +56,8 @@ namespace CapriDesktop
         private static readonly string[] ServerFiles = { ".mcp.json", "mcp.json" };
         internal static readonly string[] PluginPermissions = { "network", "files", "send", "pay", "apps", "accounts" };
 
-        internal string PluginFolder { get { return Path.Combine(folder, PluginsFolderName); } }
+        // Plug-ins sit in pluginsApps with her apps, each unpacked into its own folder there (plugins before the folders by type).
+        internal string PluginFolder { get { return Path.Combine(folder, PluginsApps); } }
 
         // Her own mod list's plug-ins changed (one taken in or out), so her plug-in tools follow. Unset on a list made for a
         // check, so it never touches the plug-ins she runs.
@@ -100,7 +103,8 @@ namespace CapriDesktop
                 Name = Short(PluginJson.Str(manifest, "displayName") ?? Pretty(named ?? id), 40),
                 Version = Short(PluginJson.Str(manifest, "version"), 20),
                 Author = Short(author as string ?? PluginJson.Str(author, "name"), 40),
-                Description = Short(PluginJson.Str(manifest, "description"), 200)
+                Description = Short(PluginJson.Str(manifest, "description"), 200),
+                Section = Short(PluginJson.Str(PluginJson.Get(manifest, "capri"), "section"), 20)
             };
             if (string.IsNullOrEmpty(info.Name)) info.Name = id;
             List<string> permissions = new List<string>();
@@ -127,7 +131,9 @@ namespace CapriDesktop
             {
                 if (server.BuiltIn != null)
                 {
-                    reaches.Add("uses Capri's own " + Short(server.BuiltIn, 40) + " tools, with the account you set up in its cog" + (server.BuiltIn == "mail" ? ": it reads your mail, and asks you every time before it sends one" : ""));
+                    if (server.BuiltIn == Keyless.PluginId)
+                        reaches.Add("asks OVHcloud AI Endpoints, Kilo Gateway and AI Horde in turn for new lines in her voice, with her personality, mood and the moment, nothing of yours; Kilo Gateway may use what is sent to improve its service, and its free models may log asks (kilo.ai/terms)");
+                    else reaches.Add("uses Capri's own " + Short(server.BuiltIn, 40) + " tools, with the account you set up in its cog" + (server.BuiltIn == "mail" ? ": it reads your mail, and asks you every time before it sends one" : ""));
                     continue;
                 }
                 string[] pulled = PluginFloor.Pulled(server);
@@ -631,6 +637,7 @@ namespace CapriDesktop
             if (PluginsChanged != null) PluginsChanged();
         }
     
+#if CHECKS
         internal static void CheckPlugins(List<string> checks, string output)
         {
             string data = Path.Combine(output, "plugins-" + Guid.NewGuid().ToString("N").Substring(0, 6)), keptWas = ModDirectory.KeptFolder;
@@ -805,5 +812,6 @@ namespace CapriDesktop
                 Gone(data);
             }
         }
+#endif
     }
 }

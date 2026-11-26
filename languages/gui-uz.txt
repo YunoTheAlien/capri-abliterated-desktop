@@ -219,4 +219,5 @@ Quiet until {n}:{n}	{n}:{n} gacha jim
 Quiet until turned off	O'chirilguncha jim
 Export settings	Sozlamalarni eksport qilish
 Import settings	Sozlamalarni import qilish
-Save Mainframe position	Panel joyini eslab qolish
+Save Mainframe position	Mainframe joylashuvini saqlash
+Capri options	Capri sozlamalari

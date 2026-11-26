@@ -13,7 +13,6 @@ namespace CapriDesktop
 
         internal string FrameKeyName { get { return KeyName(preferences.FrameMods, preferences.FrameVk); } }
 
-        internal bool AdvancedSaved { get { return preferences.AdvancedSettings; } }
 
         internal int FrameKeyMods { get { return preferences.FrameMods; } }
 
@@ -78,6 +77,7 @@ namespace CapriDesktop
         // Her Mainframe on a screen shorter than this one: the fit's arithmetic keeps every offered size inside the
         // screen. Then Settings at each size from 100 to 200%, nothing overlapping or outside, naming the sizes the
         // screen granted.
+#if CHECKS
         private void SmokeMainframeSizes(List<string> checks)
         {
             int was = MainframeSize;
@@ -105,7 +105,9 @@ namespace CapriDesktop
             checks.Add("PASS her Settings page holds together at every size she offers: nothing overlapping, nothing outside her window and no text that does not fit, at " + string.Join(", ", granted.ToArray())
                 + " per cent. A size the screen cannot give is capped by the fit, which is why what was granted is named rather than what was asked for");
         }
+#endif
 
+#if CHECKS
         private void SmokeMainframeFits(List<string> checks)
         {
             int needs = mainframe.NeedsTall;
@@ -136,9 +138,11 @@ namespace CapriDesktop
                 + large.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
                 + " on 2160: a small screen caps the size, which is why bigger text there wants text scaling of its own rather than a bigger window");
         }
+#endif
 
         // Her main page on a short screen as it comes out: Auto, 100 and 200 on 1280 x 1024 and 1366 x 768 areas, no
         // taller than the area and kept inside it. Pictured as mainframe-fit-<width>x<height>-<size>.png.
+#if CHECKS
         private void SmokeMainframeShortScreens(List<string> checks, string output)
         {
             int sizeWas = MainframeSize, roomWas = Mainframe.RoomForChecks;
@@ -190,6 +194,94 @@ namespace CapriDesktop
             }
             if (wrong.Count > 0) throw new Exception("Her Mainframe hung off a short screen: " + string.Join("; ", wrong.ToArray()));
             checks.Add("PASS her main page on a short screen: " + string.Join(", ", got.ToArray()) + ", each no taller than the working area and kept inside it from 68 px down (mainframe-fit-*.png)");
+        }
+#endif
+
+#if CHECKS
+        // Every key on her Mainframe's pages, written out by name: the list a moved page is held to.
+        private void SmokeMainframeKeyList(List<string> checks, string output)
+        {
+            List<string> names = mainframe.KeyNames();
+            System.IO.File.WriteAllLines(System.IO.Path.Combine(output, "mainframe-keys.txt"), names.ToArray());
+            if (names.Count < 40) throw new Exception("Her Mainframe's keys weren't found: " + names.Count);
+            checks.Add("PASS her Mainframe's keys listed by name, " + names.Count + " of them, in mainframe-keys.txt");
+        }
+#endif
+
+#if CHECKS
+        // SETUP, its own page behind the Setup key: pictures at 100 and 150%, the keys moved and merged with none lost,
+        // and Refresh providers pulsing until pressed, then again a week later.
+        private void SmokeSetupPage(List<string> checks, string output)
+        {
+            FormWindowState stateWas = mainframe.WindowState;
+            bool shownWas = mainframe.Visible;
+            long refreshedWas = preferences.ProvidersRefreshedAt;
+            TimeSpan offsetWas = SimTime.Offset;
+            try
+            {
+                mainframe.WindowState = FormWindowState.Normal;
+                mainframe.Show();
+                Func<string, string> shot = delegate(string name)
+                {
+                    Application.DoEvents();
+                    using (Bitmap window = new Bitmap(mainframe.Width, mainframe.Height))
+                    {
+                        mainframe.DrawToBitmap(window, new Rectangle(Point.Empty, window.Size));
+                        window.Save(System.IO.Path.Combine(output, name), System.Drawing.Imaging.ImageFormat.Png);
+                    }
+                    return mainframe.Overlap();
+                };
+                List<string> wrong = new List<string>();
+                foreach (int percent in new[] { 100, 150 })
+                {
+                    mainframe.LayoutScale(96, percent, false);
+                    mainframe.ShowSetupPage(true);
+                    string setupOverlap = shot("setup-" + percent + ".png");
+                    if (setupOverlap != null) wrong.Add("SETUP at " + percent + "%: " + setupOverlap);
+                    mainframe.ShowSetupPage(false);
+                    string mainOverlap = shot("main-" + percent + ".png");
+                    if (mainOverlap != null) wrong.Add("main page at " + percent + "%: " + mainOverlap);
+                }
+                mainframe.LayoutScale(0, 0);
+                mainframe.ShowSettings(true);
+                string settingsTitle = mainframe.TitleKeys;
+                mainframe.ShowSettings(false);
+                string mainTitle = mainframe.TitleKeys;
+                mainframe.ShowSetupPage(true);
+                string setupTitle = mainframe.TitleKeys;
+                if (mainTitle != "Settings Mods" || setupTitle != "Back Settings Brain Mods" || settingsTitle != "Back Settings Brain Mods")
+                    wrong.Add("title bars " + mainTitle + " / " + setupTitle + " / " + settingsTitle);
+                mainframe.ShowSetupPage(false);
+                List<string> names = mainframe.KeyNames();
+                System.IO.File.WriteAllLines(System.IO.Path.Combine(output, "mainframe-keys-after.txt"), names.ToArray());
+                foreach (string kept in new[] { "Brain: her brain, its fallback, the conversation brain and her voice", "Fallback brain", "Local priority: Primary. This PC first, the cloud if it fails", "Brain model", "Conversation brain", "Microphone", "Quit Capri" })
+                    if (!names.Contains(kept)) wrong.Add("no key " + kept);
+                if (!names.Exists(one => one.StartsWith("Refresh providers", StringComparison.Ordinal))) wrong.Add("no Refresh providers");
+                // The pulse: on while unpressed, off once pressed, on again a week later.
+                preferences.ProvidersRefreshedAt = 0;
+                mainframe.ShowSetupPage(false);
+                mainframe.ShowSetupPage(true);
+                bool pulsing = mainframe.Pulsing;
+                ProvidersRefreshed();
+                for (int i = 0; i < 20 && mainframe.Pulsing; i++) { Application.DoEvents(); System.Threading.Thread.Sleep(20); }
+                bool stopped = !mainframe.Pulsing && !RefreshDue;
+                SimTime.Advance(TimeSpan.FromDays(7) + TimeSpan.FromMinutes(1));
+                bool due = RefreshDue;
+                if (!pulsing || !stopped || !due) wrong.Add("the pulse: on " + pulsing + ", stopped when pressed " + stopped + ", due a week on " + due);
+                mainframe.ShowSetupPage(false);
+                if (wrong.Count > 0) throw new Exception("SETUP went wrong: " + string.Join("; ", wrong.ToArray()));
+                checks.Add("PASS SETUP is a page of its own behind Settings' Brain key (Back and Brain on it return to Settings; the front page's bar is Settings and Mods alone), BRAIN and FALLBACK left, the conversation brain and VOICE right, Refresh providers on top pulsing until pressed and again a week later; the main page keeps CAPRI; nothing overlaps at 100 or 150% (setup-*.png, main-*.png); " + names.Count + " keys after (mainframe-keys-after.txt)");
+            }
+            finally
+            {
+                preferences.ProvidersRefreshedAt = refreshedWas;
+                SimTime.Reset();
+                SimTime.Advance(offsetWas);
+                mainframe.LayoutScale(0, 0);
+                mainframe.ShowSetupPage(false);
+                mainframe.WindowState = stateWas;
+                if (!shownWas) mainframe.Hide();
+            }
         }
 
         private void SmokeMainframeKey(List<string> checks)
@@ -243,10 +335,32 @@ namespace CapriDesktop
                 else mainframe.WindowState = stateWas;
             }
         }
+#endif
     }
 
     internal sealed partial class Mainframe
     {
+#if CHECKS
+        // Every key on every page of hers, by its name, for the check that none goes missing when a page is moved.
+        internal List<string> KeyNames()
+        {
+            List<string> names = new List<string>();
+            Stack<Control> left = new Stack<Control>();
+            left.Push(this);
+            while (left.Count > 0)
+            {
+                Control at = left.Pop();
+                foreach (Control inner in at.Controls) left.Push(inner);
+                Key key = at as Key;
+                if (key == null) continue;
+                string name = (string.IsNullOrEmpty(key.AccessibleName) ? key.Text : key.AccessibleName ?? "").Trim();
+                if (name.Length > 0 && !names.Contains(name)) names.Add(name);
+            }
+            names.Sort(StringComparer.Ordinal);
+            return names;
+        }
+#endif
+
         private sealed class Stop
         {
             internal Control Control;
@@ -275,7 +389,7 @@ namespace CapriDesktop
 
         private static bool Steerable(Control control) { return control is Key || control is Toggle || control is Slider || control is Rung || control is Entry; }
 
-        private int ColumnOf(Control control) { return paged && control.Left >= Scaled(Column) ? 1 : 0; }
+        private int ColumnOf(Control control) { return (paged || setuped) && control.Left >= Scaled(Column) ? 1 : 0; }
 
         private List<Stop> Stops()
         {
@@ -286,7 +400,8 @@ namespace CapriDesktop
             {
                 if (!control.Visible || control.Left >= Far) continue;
                 Head head = control as Head;
-                if (head != null) { if (head.Span > 0) heads.Add(head); continue; }
+                // A divider alone (RuleOnly) is no section: what sits under it stays with the section above.
+                if (head != null) { if (head.Span > 0 && !head.RuleOnly) heads.Add(head); continue; }
                 if (control.Enabled && Steerable(control)) stops.Add(new Stop { Control = control, Middle = control.Top + control.Height / 2f });
             }
             heads.Sort(delegate(Head one, Head other) { return ColumnOf(one) != ColumnOf(other) ? ColumnOf(one).CompareTo(ColumnOf(other)) : one.Top.CompareTo(other.Top); });
@@ -415,6 +530,8 @@ namespace CapriDesktop
             if (opened != null) { opened.Close(); return; }
             if (modded) { ShowMods(false); return; }
             if (paged) { ShowSettings(false); return; }
+            if (setuped) { ShowSetupPage(false); return; }
+            if (petShown) { ShowPetMode(false); return; }
             Close();
         }
 
@@ -422,8 +539,8 @@ namespace CapriDesktop
         {
             if (key == Keys.S) { if (!paged) { ShowSettings(true); Land(); } return true; }
             if (key == Keys.M) { if (!modded) { ShowMods(true); Land(); } return true; }
-            if (key == Keys.H) { if (modded) ShowMods(false); if (paged) ShowSettings(false); Land(); return true; }
-            if (key == Keys.A && paged) { advancedKey.PerformClick(); Land(); return true; }
+            if (key == Keys.H) { if (modded) ShowMods(false); if (paged) ShowSettings(false); if (setuped) ShowSetupPage(false); Land(); return true; }
+            if (key == Keys.A) { if (!setuped) ShowSetupPage(true); Land(); return true; }
             return false;
         }
 
@@ -479,7 +596,7 @@ namespace CapriDesktop
             }
             if (writing) return false;
             if (key == Keys.Enter) return repeated || Act(held);
-            if (repeated && (key == Keys.S || key == Keys.M || key == Keys.H || (key == Keys.A && paged))) return true;
+            if (repeated && (key == Keys.S || key == Keys.M || key == Keys.H || key == Keys.A)) return true;
             return TurnPage(key);
         }
 
@@ -542,10 +659,11 @@ namespace CapriDesktop
 
         private Control walkFrom;
 
+#if CHECKS
         internal void CheckKeyboard(List<string> checks)
         {
             FormWindowState stateWas = WindowState;
-            bool pagedWas = paged, moddedWas = modded, shownWas = Visible, advancedWas = capri.AdvancedSaved;
+            bool pagedWas = paged, moddedWas = modded, shownWas = Visible;
             int frameModsWas = capri.FrameKeyMods, frameVkWas = capri.FrameKeyVk;
             int sizeWas = capri.MainframeSize, dpiWas = layoutDpi, textWas = layoutText, scrollWas = pageScroll;
             bool fallbackWas = layoutFallback;
@@ -576,7 +694,6 @@ namespace CapriDesktop
                 if (left != null) left.Close();
                 CancelKeys();
                 if (capri.FrameKeyMods != frameModsWas || capri.FrameKeyVk != frameVkWas) capri.SetHotkey(Companion.FrameSlot, frameModsWas, frameVkWas);
-                if (capri.AdvancedSaved != advancedWas) capri.ToggleAdvancedSettings();
                 keysNote.Text = "";
                 if (!Visible) Show();
                 if (WindowState != FormWindowState.Normal) WindowState = FormWindowState.Normal;
@@ -595,13 +712,14 @@ namespace CapriDesktop
                 if (!shownWas) Hide();
             }
         }
+#endif
 
+#if CHECKS
         private bool CheckMarkPictures(List<string> checks)
         {
             WindowState = FormWindowState.Normal;
             LayoutScale(96, 100);
             SizeMainframe(100);
-            if (!capri.AdvancedSettings) capri.ToggleAdvancedSettings();
             ShowSettings(true);
             if (Math.Abs(Unit() - 1) > 0.001 || volume.Stepper || !frameSize.Stepper) throw new Exception("Her mark pictures need 100% and both slider kinds.");
             // A mark shows only while the Mainframe is the window in front. Another window taking it mid-check (theirs, on the
@@ -610,13 +728,17 @@ namespace CapriDesktop
             Native.SendMessage(Handle, 0x0127, new IntPtr(1 | (1 << 16)), IntPtr.Zero);
             CheckMarkPicture(onTop, "none", false);
             if (!CheckMarkPicture(more, "key", true) || !CheckMarkPicture(volume, "slider", true) || !CheckMarkPicture(frameSize, "steps", true) || !CheckMarkPicture(nickname, "entry", true)) { checks.Add(Unfocused); return false; }
-            ShowSettings(false);
-            if (!CheckMarkPicture(rungs[0], "row", true) || !CheckMarkPicture(close, "title", true)) { checks.Add(Unfocused); return false; }
+            ShowSetupPage(true);
+            if (!CheckMarkPicture(rungs[0], "row", true) || !CheckMarkPicture(close, "title", true)) { ShowSetupPage(false); checks.Add(Unfocused); return false; }
+            ShowSetupPage(false);
             checks.Add("PASS Mainframe mark pictures: seven kinds and an unmarked switch page saved at 100%. Saved pixels show white on all four sides, and none around the unmarked switch.");
             return true;
         }
+#endif
 
+#if CHECKS
         private const string Unfocused = "LIMIT Mainframe mark pictures: another window came in front during the check, so her keyboard mark could not show";
+#endif
 
         // False when the Mainframe is not the window in front, so the mark cannot show; otherwise it is checked and saved.
         private bool CheckMarkPicture(Control control, string kind, bool marked)
@@ -674,33 +796,40 @@ namespace CapriDesktop
             if (line != marked) throw new Exception("Her saved mark pixel is wrong: " + name + " at " + x + "," + y);
         }
 
+#if CHECKS
         private void CheckPageKeys(List<string> checks)
         {
             more.Focus();
             bool settings = Strike(Keys.S) && paged && !modded && HeldSection() == "YOU" && HeldFirst() && HeldMarked();
-            bool advancedWas = capri.AdvancedSaved;
-            bool advanced = Strike(Keys.A) && paged && capri.AdvancedSaved != advancedWas && Strike(Keys.A) && capri.AdvancedSaved == advancedWas && HeldSection() == "YOU";
-            bool mods = Strike(Keys.M) && modded && !paged && HeldSection() == "MODS" && HeldFirst();
+            bool setup = Strike(Keys.A) && setuped && !paged && !modded;
+            bool mods = Strike(Keys.M) && modded && !paged && !setuped && HeldSection() == "MODS" && HeldFirst();
             bool again = Strike(Keys.M) && modded;
-            bool home = Strike(Keys.H) && !modded && !paged && HeldSection() == "BRAIN" && HeldFirst();
-            bool offSettings = !Strike(Keys.A) && !paged;
+            bool home = Strike(Keys.H) && !modded && !paged && !setuped && HeldSection() == "TOOLS" && HeldFirst();
+            bool fromHome = Strike(Keys.A) && setuped && !paged;
+            Strike(Keys.H);
             Strike(Keys.S);
             Hold(nickname);
-            bool typed = nickname.Box.Focused && !Strike(Keys.S) && !Strike(Keys.M) && !Strike(Keys.H) && !Strike(Keys.A) && paged && !modded && capri.AdvancedSaved == advancedWas && Held() == nickname;
+            bool typed = nickname.Box.Focused && !Strike(Keys.S) && !Strike(Keys.M) && !Strike(Keys.H) && !Strike(Keys.A) && paged && !modded && !setuped && Held() == nickname;
             bool held = !Strike(Keys.Control | Keys.M) && !Strike(Keys.Alt | Keys.S) && paged && !modded;
             Strike(Keys.Up);
-            bool heldDown = Strike(Keys.M, true) && Strike(Keys.A, true) && !modded && paged && capri.AdvancedSaved == advancedWas;
+            bool heldDown = Strike(Keys.M, true) && Strike(Keys.A, true) && !modded && paged && !setuped;
             Strike(Keys.H);
-            if (!settings || !advanced || !mods || !again || !home || !offSettings || !typed || !held || !heldDown)
-                throw new Exception("Her Mainframe's page keys went wrong: settings " + settings + ", advanced " + advanced + ", mods " + mods + ", again " + again + ", home " + home + ", A off Settings " + offSettings + ", in a text box " + typed + ", with Ctrl or Alt " + held + ", a held key ignored " + heldDown);
-            checks.Add("PASS Mainframe page keys: S opens Settings, M opens Mods, H goes back to her main page and A switches Simple and Advanced Settings; each lands on the page's first option with its mark, and none fires while a text box has the keyboard, with Ctrl or Alt held, or again while the key stays down");
+            if (!settings || !setup || !mods || !again || !home || !fromHome || !typed || !held || !heldDown)
+                throw new Exception("Her Mainframe's page keys went wrong: settings " + settings + ", setup " + setup + ", mods " + mods + ", again " + again + ", home " + home + ", A from the main page " + fromHome + ", in a text box " + typed + ", with Ctrl or Alt " + held + ", a held key ignored " + heldDown);
+            checks.Add("PASS Mainframe page keys: S opens Settings, M opens Mods, A opens Setup and H goes back to her main page; each lands on the page's first option with its mark, and none fires while typing, with Ctrl or Alt, or held down");
         }
+#endif
 
+#if CHECKS
         private void CheckSectionKeys(List<string> checks)
         {
             more.Focus();
             string main = TabWalk(1, 12);
             string mainBack = TabWalk(-1, 12);
+            Strike(Keys.A);
+            more.Focus();
+            string setupWalk = TabWalk(1, 12);
+            Strike(Keys.H);
             more.Focus();
             Strike(Keys.Tab | Keys.Shift);
             string fromTitle = HeldSection();
@@ -716,25 +845,29 @@ namespace CapriDesktop
             more.Focus();
             string modPage = TabWalk(1, 12);
             Strike(Keys.H);
-            if (main != "BRAIN VOICE CAPRI" || mainBack != "CAPRI VOICE BRAIN" || fromTitle != "CAPRI" || page != "YOU VOICE SOUNDS CLIPS MOVES GAMES WEATHER GENERAL SETTINGS CAPRI DOOMSCROLL WATCH BRAIN KEYS"
+            if (main != "TOOLS CAPRI" || mainBack != "CAPRI TOOLS" || setupWalk != "BRAIN FALLBACK CONVERSATION BRAIN VOICE" || fromTitle != "CAPRI" || page != "YOU VOICE SOUNDS CLIPS MOVES GAMES WEATHER GENERAL SETTINGS CAPRI DOOMSCROLL WATCH BRAIN KEYS"
                 || pageBack != "KEYS BRAIN WATCH DOOMSCROLL CAPRI GENERAL SETTINGS WEATHER GAMES MOVES CLIPS SOUNDS VOICE YOU" || fromMiddle != "GAMES" || !first || modPage != "MODS INSTALLED COLORS")
-                throw new Exception("Tab between her Mainframe's sections went wrong: main " + main + " / back " + mainBack + " / from the title " + fromTitle + " / Settings " + page + " / back " + pageBack + " / from Dance to music " + fromMiddle + ", first " + first + " / Mods " + modPage);
-            checks.Add("PASS Mainframe Tab and Shift+Tab: Tab jumps to the first option of the next section and Shift+Tab to the one before, BRAIN, VOICE, CAPRI on her main page, YOU, VOICE, SOUNDS, CLIPS and on through both columns of Settings, and MODS, INSTALLED, COLORS on Mods, wrapping at either end");
+                throw new Exception("Tab between her Mainframe's sections went wrong: main " + main + " / back " + mainBack + " / SETUP " + setupWalk + " / from the title " + fromTitle + " / Settings " + page + " / back " + pageBack + " / from Dance to music " + fromMiddle + ", first " + first + " / Mods " + modPage);
+            checks.Add("PASS Mainframe Tab and Shift+Tab: Tab jumps to the first option of the next section and Shift+Tab to the one before, TOOLS and CAPRI on her main page, BRAIN, FALLBACK, CONVERSATION BRAIN and VOICE on SETUP, YOU, VOICE, SOUNDS, CLIPS and on through both columns of Settings, and MODS, INSTALLED, COLORS on Mods, wrapping at either end");
         }
+#endif
 
+#if CHECKS
         private void CheckArrowKeys(List<string> checks)
         {
             more.Focus();
             Strike(Keys.Tab);
             Strike(Keys.Tab);
             Control voiceFirst = Held();
+            string firstSection = HeldSection();
             bool[] tiers = Array.ConvertAll(rungs, rung => rung.Checked);
             int voiceWas = voiceRow;
             Strike(Keys.Up);
             string before = HeldSection();
             Control brainLast = Held();
             Strike(Keys.Down);
-            bool edge = before == "BRAIN" && Held() == voiceFirst && HeldMarked();
+            // Up from a section's first option lands in the section above; Down comes back.
+            bool edge = before != firstSection && before != "title" && before != "nothing" && Held() == voiceFirst && HeldMarked();
             Hold(rungs[0]);
             for (int i = 0; i < 12; i++) Strike(Keys.Down);
             bool rows = HeldSection() != "BRAIN";
@@ -755,10 +888,12 @@ namespace CapriDesktop
             Strike(Keys.Left);
             bool stays = Held() == showHide;
             if (brainLast == voiceFirst || !edge || !rows || !unpicked || !wrapped || !wrappedBack || !along || !stays)
-                throw new Exception("Her Mainframe's arrow keys went wrong: section edge " + edge + ", through the rows " + rows + ", nothing picked " + unpicked + ", wrapped " + wrapped + ", wrapped back " + wrappedBack + ", along a row " + along + ", stays at the row's end " + stays);
+                throw new Exception("Her Mainframe's arrow keys went wrong: section edge " + edge + " (" + firstSection + " up to " + before + ")" + ", through the rows " + rows + ", nothing picked " + unpicked + ", wrapped " + wrapped + ", wrapped back " + wrappedBack + ", along a row " + along + ", stays at the row's end " + stays);
             checks.Add("PASS Mainframe arrow keys: Up and Down move through a section's options with the mark on each, Up from VOICE's first goes to BRAIN's last and Down comes back, the BRAIN and VOICE rows are passed without being picked, the last option wraps to her title bar and back, and Left and Right move along a row of buttons");
         }
+#endif
 
+#if CHECKS
         private void CheckEnterKey(List<string> checks)
         {
             Strike(Keys.S);
@@ -798,7 +933,9 @@ namespace CapriDesktop
                 throw new Exception("Enter in her Mainframe went wrong: toggle " + flipped + ", back " + flippedBack + ", dropdown opened " + opened + ", a held Enter kept off it " + heldOff + ", on the picked choice " + onPicked + ", page keys held off " + swallowed + ", Up and Down pick " + picks + ", Esc closed it " + closed + ", reopened " + reopened + ", Esc closed only it " + closedHere + ", Enter chose " + chosen);
             checks.Add("PASS Mainframe Enter: it turns a switch on and off once a press however long it's held, and opens a dropdown on its picked choice without the held key choosing it; in the open dropdown Up and Down pick, Enter chooses and Esc closes just the dropdown, leaving Settings open");
         }
+#endif
 
+#if CHECKS
         private void CheckSliderKeys(List<string> checks)
         {
             Strike(Keys.S);
@@ -816,7 +953,9 @@ namespace CapriDesktop
                 throw new Exception("Her Mainframe's slider keys went wrong: left to the slider " + left + ", moved " + moved + ", moved back " + movedBack + ", Down leaves it " + leaves);
             checks.Add("PASS Mainframe slider keys: Left and Right are left to the slider with the keyboard, which moves a step each way and saves, and Up and Down still move on to the next option");
         }
+#endif
 
+#if CHECKS
         private void CheckEscKey(List<string> checks)
         {
             Strike(Keys.S);
@@ -842,7 +981,9 @@ namespace CapriDesktop
             checks.Add("PASS Mainframe Esc: a held press closes only the dropdown and stays in Settings; a new press leaves Settings or Mods for her main page, a text box included, and another closes the Mainframe");
             checks.Add(tipped ? "PASS Mainframe Esc and tips: with a tip showing, Esc puts the tip away and stays on the page" : "LIMIT Mainframe Esc and tips: no tip came up here to press Esc on");
         }
+#endif
 
+#if CHECKS
         private static void CheckFocusMark(List<string> checks)
         {
             using (Toggle toggle = new Toggle())
@@ -877,7 +1018,9 @@ namespace CapriDesktop
                 }
             checks.Add("PASS Mainframe focus mark: its box is the OFF and ON pair's box, both bottom corners are cut, and its outer diagonals meet the plates at 100%, 125%, 150% and 200%; square and top cut corners keep their outlines too");
         }
+#endif
 
+#if CHECKS
         private void CheckPickingKeys(List<string> checks)
         {
             string was = capri.FrameKeyName;
@@ -905,5 +1048,6 @@ namespace CapriDesktop
                 throw new Exception("Picking her keys from the keyboard went wrong: started " + started + ", a held Enter ignored " + held + ", pending " + pending + ", Enter confirmed " + confirmed + ", Esc cancelled " + cancelled + ", an arrow needs a click " + arrow + ", Enter can be picked " + enterKey + ", more Enters don't save it " + mashed + ", Esc drops it " + dropped + ", back " + back);
             checks.Add("PASS Mainframe keys from the keyboard: Enter on a key in KEYS starts picking, the keys pressed show, Enter confirms them and Esc cancels, a held Enter isn't taken as the new key, and a key that types or moves, like Down or Enter on its own, can still be picked but only a click on Confirm keeps it");
         }
+#endif
     }
 }

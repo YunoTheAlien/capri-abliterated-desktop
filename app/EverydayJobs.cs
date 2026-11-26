@@ -434,6 +434,7 @@ namespace CapriDesktop
 
         // The scripted brain plays each job's ideal: every job must pass, which proves the jobs, their checks and that
         // her brain reads tool calls and replies through the stand-in the way it does from a real model.
+#if CHECKS
         internal static void Check(List<string> checks, string folder)
         {
             List<string> lines = new List<string>();
@@ -442,8 +443,10 @@ namespace CapriDesktop
             if (passed != All.Length) throw new Exception("Everyday jobs on the scripted brain: " + passed + " of " + All.Length + ". " + string.Join(" / ", lines.FindAll(line => line.StartsWith("MISS", StringComparison.Ordinal)).ToArray()));
             checks.Add("PASS everyday jobs on the scripted brain: all " + All.Length + " right through her real brain code, every tool answered by the pretend PC and none run");
         }
+#endif
 
         // Her two other ways of only saying a job: the ask said back, or a tool written out as text, and "under way" words.
+#if CHECKS
         internal static void PromiseCheck(List<string> checks)
         {
             bool echoed = Hands.Echoed("pause the music", "pause the music") && Hands.Echoed("media: pause", "pause the music") && Hands.Echoed("media({\"action\":\"pause\"})", "pause the music")
@@ -455,5 +458,6 @@ namespace CapriDesktop
             if (!echoed || !underway || !handed) throw new Exception("A reply that only says a job was read wrong: said back " + echoed + ", under way " + underway + ", act at the end " + handed);
             checks.Add("PASS a reply that only says the ask back, writes a tool out as text, or says a job is under way counts as a job not done, and a lone act after its last sentence is read as act");
         }
+#endif
     }
 }

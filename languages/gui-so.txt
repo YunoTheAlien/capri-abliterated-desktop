@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Aamusnaan ilaa {n}:{n}
 Quiet until turned off	Aamusnaan ilaa la damiyo
 Export settings	Dhoofi dejinta
 Import settings	Soo deji dejinta
-Save Mainframe position	Xasuuso meesha guddiga
+Save Mainframe position	Kaydi meesha Mainframe
+Capri options	Doorashooyinka Capri

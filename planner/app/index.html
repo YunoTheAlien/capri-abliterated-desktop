@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StoryBoard</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='3' y='6' width='12' height='9' rx='2' fill='%23E5A93A'/><rect x='17' y='17' width='12' height='9' rx='2' fill='%233FA890'/><path d='M15 10 C22 10 18 21 17 21' stroke='%23EDE6DE' stroke-width='2' fill='none'/></svg>">
+<link rel="stylesheet" href="css/app.css">
+<script>
+  // Before the modules load, so a syntax error in any of them still reaches the server console.
+  window.addEventListener('error', function (e) {
+    if (window.__report) return;
+    try { fetch('/api/log', { method: 'POST', body: JSON.stringify({ level: 'error', msg: (e.message || 'load error') + ' @ ' + (e.filename || (e.target && e.target.src) || '') + ':' + (e.lineno || '') }) }); } catch (_) {}
+  }, true);
+</script>
+</head>
+<body>
+<header id="topbar">
+  <div class="brand"><img class="logo" src="logo.png" alt="StoryBoard" draggable="false"><input id="project-title" spellcheck="false" aria-label="Project title"><span class="titleSlash">/</span><button id="board-title" type="button"></button><span id="board-status" class="boardStatus" hidden></span></div>
+  <div class="topButtons">
+    <button id="btn-search" class="iconButton" title="Search the project (Ctrl+F)">&#x2315;</button>
+    <button id="btn-docs" class="button" title="Export boards as mission scripts, import mission docs as boards">&#x21C5; Missions</button>
+    <button id="btn-undo" class="iconButton" title="Undo (Ctrl+Z)">&#x21B6;</button>
+    <button id="btn-redo" class="iconButton" title="Redo (Ctrl+Y)">&#x21B7;</button>
+    <span id="save-state" class="saveState">Loading&hellip;</span>
+    <button id="btn-play-sel" class="button" title="Play from the selected scene (P)">&#9654; Start Here</button>
+    <button id="btn-play" class="button primary" title="Play from the start scene (Shift+P)">&#9654; Start All</button>
+    <button id="btn-help" class="iconButton" title="Shortcuts (?)">?</button>
+  </div>
+</header>
+<div id="main">
+  <div class="dock dockStrip" id="dock-top" data-dock="top"></div>
+  <div id="mid">
+    <div class="dock dockSide" id="dock-left" data-dock="left"></div>
+  <section id="board">
+    <div id="viewport" tabindex="-1">
+      <div id="world">
+        <svg id="edges" width="1" height="1"></svg>
+        <div id="nodes"><div id="labels"></div></div>
+        <svg id="handles" width="1" height="1"></svg>
+      </div>
+      <div id="marquee" hidden></div>
+    </div>
+    <div id="toolbar"></div>
+  </section>
+    <div class="dock dockSide" id="dock-right" data-dock="right"></div>
+  </div>
+  <div class="dock dockStrip" id="dock-bottom" data-dock="bottom"></div>
+  <nav id="rail" aria-label="Tools"></nav>
+  <aside id="library" aria-label="Library"></aside>
+  <aside id="inspector" aria-label="Inspector"></aside>
+</div>
+<div id="modal-root"></div>
+<div id="player" hidden></div>
+<div id="menu" hidden></div>
+<div id="toasts"></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -23,10 +23,12 @@ namespace CapriDesktop
             // A mod's panel: the mod's id and the slot it asked for. Null for hers.
             internal string Mod;
             internal int Slot;
+            // Folded down to its heading (Folding in Toggles).
+            internal bool Folded;
+            // Room above its heading for rows of its own that stay put, moving with it and never folding (YOU's keys).
+            internal int Lead;
             // How the panel is saved in her panel order: its id, or "mod:<id>:<title>" for a mod's.
             internal string Key { get { return Mod == null ? Id : "mod:" + Mod + ":" + Id; } }
-            // Stretches Simple Settings hides, as offsets from the heading.
-            internal readonly List<int[]> Folds = new List<int[]>();
         }
 
         // Each column's panels, top to bottom.
@@ -94,11 +96,6 @@ namespace CapriDesktop
                     // The last panel of a column ends below its lowest row.
                     if (panel.Span == int.MaxValue) panel.Span = Content(panel) + 24;
                     else gaps.Add(panel.Span - Content(panel));
-                    foreach (int[] band in column == 1 ? FoldedRight : FoldedLeft)
-                    {
-                        int from = Math.Max(band[0], head - HeadSlack), to = Math.Min(band[1], head + panel.Span - HeadSlack);
-                        if (to > from) panel.Folds.Add(new[] { from - head, to - head });
-                    }
                 }
             if (gaps.Count > 0)
             {
@@ -122,72 +119,55 @@ namespace CapriDesktop
             return end;
         }
 
-        // How much of a panel above this offset Simple hides.
-        private static int FoldedAbove(Panel panel, int offset)
+        // How tall a panel stands: its span less what the lift takes out of it.
+        private int PanelSpan(Panel panel)
         {
-            int gone = 0;
-            foreach (int[] band in panel.Folds) gone += Math.Max(0, Math.Min(band[1], offset) - band[0]);
-            return gone;
-        }
-
-        // How tall a panel stands in the view: its span less what Simple folds and the lift take out of it.
-        private int PanelSpan(Panel panel, bool simpleView)
-        {
-            if (simpleView) return panel.Span - FoldedAbove(panel, panel.Span);
+            if (panel.Folded) return 24 + panelGap;
             return panel.Span - (panel == liftPanel ? lifted : 0);
         }
 
         // Where a panel's heading sits in the view: under the panels above it in its column.
-        private int PanelTop(Panel panel, bool simpleView)
+        private int PanelTop(Panel panel)
         {
             int at = columnTop[panel.Column];
             foreach (Panel above in columns[panel.Column])
             {
-                if (above == panel) return at;
-                at += PanelSpan(above, simpleView);
+                if (above == panel) return at + panel.Lead;
+                at += above.Lead + PanelSpan(above);
             }
             return at;
         }
 
         // Where a row sits in the view, unscaled: its panel's place plus its own place inside it. A row outside every panel
         // (the page's own keys above the first heading) stays where it was built.
-        private int StackTop(Control control, bool simpleView)
+        private int StackTop(Control control)
         {
             Panel panel;
             if (!panelOf.TryGetValue(control, out panel)) return built[control];
             int inside = panel.Offsets[control];
-            if (simpleView) inside -= FoldedAbove(panel, inside);
-            else if (panel == liftPanel && lifting.Contains(control)) inside -= lifted;
-            return PanelTop(panel, simpleView) + inside;
+            if (panel == liftPanel && lifting.Contains(control)) inside -= lifted;
+            return PanelTop(panel) + inside;
         }
 
         // Where a row stands in pixels: its panel's top and its own place in the panel scaled apart, so rows built
         // flush stay flush wherever the panel goes.
-        private int PlacedTop(Control control, bool simpleView)
+        private int PlacedTop(Control control)
         {
             Panel panel;
             if (!panelOf.TryGetValue(control, out panel)) return Scaled(built[control]);
             int inside = panel.Offsets[control];
-            if (simpleView) inside -= FoldedAbove(panel, inside);
-            else if (panel == liftPanel && lifting.Contains(control)) inside -= lifted;
-            return Scaled(PanelTop(panel, simpleView)) + Scaled(inside);
+            if (panel == liftPanel && lifting.Contains(control)) inside -= lifted;
+            return Scaled(PanelTop(panel)) + Scaled(inside);
         }
 
-        private bool FoldedInPanel(Panel panel, Control control)
-        {
-            int offset = panel.Offsets[control];
-            foreach (int[] band in panel.Folds) if (offset >= band[0] && offset < band[1]) return true;
-            return false;
-        }
-
-        // How far the page runs in a view, measured off where everything in it sits.
-        private int PageReachOf(bool simpleView)
+        // How far the page runs, measured off where everything in it sits.
+        private int PageReachOf()
         {
             int reach = 0;
             foreach (KeyValuePair<Control, int> entry in pageLeft)
             {
-                if (!built.ContainsKey(entry.Key) || FoldedIn(entry.Key, simpleView) || dropped.Contains(entry.Key)) continue;
-                reach = Math.Max(reach, StackTop(entry.Key, simpleView) + entry.Key.Height + 24);
+                if (!built.ContainsKey(entry.Key) || dropped.Contains(entry.Key) || foldHidden.Contains(entry.Key)) continue;
+                reach = Math.Max(reach, StackTop(entry.Key) + entry.Key.Height + 24);
             }
             return reach;
         }
@@ -200,22 +180,10 @@ namespace CapriDesktop
             if (tall <= 0) return;
             List<Control> moving = new List<Control>();
             foreach (KeyValuePair<Control, int> row in source.Offsets) if (row.Key != source.Head && row.Value >= from && row.Value < to) moving.Add(row.Key);
-            List<int[]> carried = new List<int[]>(), kept = new List<int[]>();
-            foreach (int[] band in source.Folds)
-            {
-                if (band[0] < from) kept.Add(new[] { band[0], Math.Min(band[1], from) });
-                if (band[1] > from && band[0] < to) carried.Add(new[] { Math.Max(band[0], from) - from + at, Math.Min(band[1], to) - from + at });
-                if (band[1] > to) kept.Add(new[] { Math.Max(band[0], to) - tall, band[1] - tall });
-            }
-            source.Folds.Clear();
-            source.Folds.AddRange(kept);
             foreach (Control row in new List<Control>(source.Offsets.Keys))
                 if (source.Offsets[row] >= to) source.Offsets[row] -= tall;
             foreach (Control row in new List<Control>(target.Offsets.Keys))
                 if (target.Offsets[row] >= at && row != target.Head) target.Offsets[row] += tall;
-            foreach (int[] band in target.Folds)
-                if (band[0] >= at) { band[0] += tall; band[1] += tall; }
-            target.Folds.AddRange(carried);
             foreach (Control row in moving)
             {
                 int offset = source.Offsets[row] - from + at;
@@ -260,6 +228,8 @@ namespace CapriDesktop
             foreach (Panel gone in all)
             {
                 if (columns[gone.Column].Contains(gone)) continue;
+                // A category of theirs the order doesn't name yet goes at the foot of its column.
+                if (gone.Id.StartsWith(Companion.OwnPrefix, StringComparison.Ordinal)) { columns[gone.Column].Add(gone); continue; }
                 // Off the page altogether: nothing places, measures or Tabs to it again.
                 gone.Head.Visible = false;
                 dropped.Add(gone.Head);
@@ -350,9 +320,8 @@ namespace CapriDesktop
         }
 
         // A code mod's own panel (ICapriMainframe.AddPanel): title and control at the slot it asks for (1 is the top),
-        // or after an earlier mod's. A saved order wins, so a reorder survives a restart; Simple Settings shows it only
-        // when asked.
-        internal void AddModPanel(string mod, string title, int column, int slot, Control made, bool simpleToo)
+        // or after an earlier mod's. A saved order wins, so a reorder survives a restart.
+        internal void AddModPanel(string mod, string title, int column, int slot, Control made)
         {
             if (made == null || string.IsNullOrEmpty(mod)) return;
             column = column == 0 ? 0 : 1;
@@ -367,7 +336,6 @@ namespace CapriDesktop
             panel.Offsets[head] = 0;
             panel.Offsets[made] = 26;
             panel.Span = 26 + made.Height + panelGap;
-            if (!simpleToo) panel.Folds.Add(new[] { 0, panel.Span });
             WireDrag(head);
             foreach (Control control in new Control[] { head, made })
             {
@@ -421,22 +389,22 @@ namespace CapriDesktop
 
         // ---------- Panels mods share ----------
 
-        // One mod's part in a shared panel: its sub-heading, its control and whether Simple Settings shows it.
-        private sealed class GroupPart { internal string Mod, Title; internal Control Made; internal bool Simple; }
+        // One mod's part in a shared panel: its sub-heading and its control.
+        private sealed class GroupPart { internal string Mod, Title; internal Control Made; }
         private readonly Dictionary<string, List<GroupPart>> groups = new Dictionary<string, List<GroupPart>>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int[]> groupPlace = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
         internal const string GroupMod = "group";
 
         // A mod's part in the panel every mod naming this group shares, under a sub-heading of its own. The first part
         // sets where the panel sits; a part added again with the same title takes its old one's place.
-        internal void AddGroupPart(string mod, string group, string title, int column, int slot, Control made, bool simpleToo)
+        internal void AddGroupPart(string mod, string group, string title, int column, int slot, Control made)
         {
             if (made == null || string.IsNullOrEmpty(mod) || string.IsNullOrWhiteSpace(group)) return;
             group = group.Trim();
             List<GroupPart> parts;
             if (!groups.TryGetValue(group, out parts)) { groups[group] = parts = new List<GroupPart>(); groupPlace[group] = new[] { column == 0 ? 0 : 1, Math.Max(1, slot) }; }
             int at = parts.FindIndex(part => part.Mod == mod && string.Equals(part.Title, title, StringComparison.OrdinalIgnoreCase));
-            GroupPart made2 = new GroupPart { Mod = mod, Title = string.IsNullOrWhiteSpace(title) ? mod : title.Trim(), Made = made, Simple = simpleToo };
+            GroupPart made2 = new GroupPart { Mod = mod, Title = string.IsNullOrWhiteSpace(title) ? mod : title.Trim(), Made = made };
             if (at >= 0) { parts[at].Made.Dispose(); parts[at] = made2; }
             else parts.Add(made2);
             BuildGroup(group);
@@ -473,10 +441,8 @@ namespace CapriDesktop
             panel.Offsets[head] = 0;
             List<Control> placed = new List<Control> { head };
             int y = 26;
-            bool anySimple = false;
             foreach (GroupPart part in parts)
             {
-                int from = y;
                 Label sub = Caption(part.Title, 28 + x, y, Type(12f, true), White);
                 sub.AccessibleName = part.Title + ", in " + group;
                 panel.Offsets[sub] = y;
@@ -486,11 +452,8 @@ namespace CapriDesktop
                 placed.Add(sub);
                 placed.Add(part.Made);
                 y += 28 + part.Made.Height + 12;
-                if (!part.Simple) panel.Folds.Add(new[] { from, y });
-                anySimple |= part.Simple;
             }
             panel.Span = y - 12 + panelGap;
-            if (!anySimple) { panel.Folds.Clear(); panel.Folds.Add(new[] { 0, panel.Span }); }
             WireDrag(head);
             foreach (Control control in placed)
             {
@@ -586,6 +549,8 @@ namespace CapriDesktop
             };
             head.MouseMove += delegate(object sender, MouseEventArgs e) { if (dragged != null) DragTo(PointToClient(head.PointToScreen(e.Location))); };
             head.MouseUp += delegate { if (dragged != null) DropPanel(); };
+            // Locked, a foldable panel's heading folds it and opens it again.
+            head.Click += delegate { Panel panel; if (!panelsUnlocked && head.Foldable && panelOf.TryGetValue(head, out panel)) ToggleFold(panel); };
         }
 
         private void StartDrag(Panel panel)
@@ -611,9 +576,9 @@ namespace CapriDesktop
             for (int i = 0; i < list.Count; i++)
             {
                 Panel one = list[i];
-                int top = PanelTop(one, simple), span = PanelSpan(one, simple);
+                int top = PanelTop(one), span = PanelSpan(one);
                 if (span <= 0) continue;
-                if (y < top + span / 2.0) { index = i; mark = top - 12; break; }
+                if (y < top + span / 2.0) { index = i; mark = top - one.Lead - 12; break; }
                 mark = top + span - 12;
             }
             dropColumn = column;
@@ -675,6 +640,7 @@ namespace CapriDesktop
                 }
         }
 
+#if CHECKS
         internal void CheckPanelDrag(List<string> checks)
         {
             string savedWas = capri.PanelsSaved;
@@ -693,8 +659,8 @@ namespace CapriDesktop
                 TogglePanelLock();
                 if (lockKey.Glyph != 4 || !keys.Head.Draggable) throw new Exception("The lock didn't open, or the headings can't be dragged with it open");
                 StartDrag(keys);
-                ScrollPage(Math.Max(0, PanelTop(games, simple) - 100));
-                DragTo(new Point(Scaled(120), Scaled(PanelTop(games, simple) - pageScroll) + 2));
+                ScrollPage(Math.Max(0, PanelTop(games) - 100));
+                DragTo(new Point(Scaled(120), Scaled(PanelTop(games) - pageScroll) + 2));
                 bool marked = dropMark != null && dropMark.Visible && dropMark.Left < Scaled(Column);
                 DropPanel();
                 string after = PanelOrder, saved = capri.PanelsSaved ?? "";
@@ -717,6 +683,7 @@ namespace CapriDesktop
                 ShowSettings(pagedWas);
             }
         }
+#endif
 
         // After a panel came or went: the page's heights, every row's place, the columns' order saved.
         private void Restack()
@@ -725,11 +692,11 @@ namespace CapriDesktop
             // after; placed while scrolled, the next wheel turn would move them wrongly.
             int back = ShownScroll;
             ScrollPage(0);
-            pageTall = PageReachOf(false);
-            simpleTall = PageReachOf(true);
+            ApplyFolds();
+            pageTall = PageReachOf();
             Place();
             CloseGaps();
-            foreach (KeyValuePair<Control, int> entry in pageLeft) Reachable(entry.Key, paged && !Folded(entry.Key));
+            foreach (KeyValuePair<Control, int> entry in pageLeft) Reachable(entry.Key, paged);
             if (paged) Arrange(expanded);
             // Nothing kept from before the move outlives it: each row's place at the top of the page, which the scroll
             // moves rows from, is taken again from where it stands now, and the page's picture for sliding is thrown
@@ -747,22 +714,22 @@ namespace CapriDesktop
             if (at >= 0) pageLeft[at] = new KeyValuePair<Control, int>(control, left);
         }
 
+#if CHECKS
         internal void CheckModPanels(List<string> checks)
         {
             string savedWas = capri.PanelsSaved;
-            int capriAt = PanelTop(FindPanel("CAPRI"), false), capriSimple = PanelTop(FindPanel("CAPRI"), true);
+            int capriAt = PanelTop(FindPanel("CAPRI"));
             try
             {
                 capri.SavePanels(null);
-                AddModPanel("check-a", "Alpha", 1, 2, new Label { Text = "Alpha's row", Height = 60 }, false);
-                AddModPanel("check-b", "Beta", 1, 2, new Label { Text = "Beta's row", Height = 40 }, true);
+                AddModPanel("check-a", "Alpha", 1, 2, new Label { Text = "Alpha's row", Height = 60 });
+                AddModPanel("check-b", "Beta", 1, 2, new Label { Text = "Beta's row", Height = 40 });
                 string order = PanelOrder;
                 Panel alpha = FindPanel("ALPHA"), beta = FindPanel("BETA"), capriPanel = FindPanel("CAPRI");
                 if (!order.EndsWith("| GENERAL SETTINGS ALPHA BETA CAPRI DOOMSCROLL WATCH BRAIN KEYS", StringComparison.Ordinal))
                     throw new Exception("Two mods asking for slot 2 didn't take it in load order, pushing CAPRI down: " + order);
-                if (PanelTop(capriPanel, false) != capriAt + alpha.Span + beta.Span || PanelTop(capriPanel, true) != capriSimple + beta.Span)
-                    throw new Exception("CAPRI didn't move down by the mods' panels: " + PanelTop(capriPanel, false) + " for " + capriAt + " + " + alpha.Span + " + " + beta.Span + ", Simple " + PanelTop(capriPanel, true) + " for " + capriSimple + " + " + beta.Span);
-                if (!FoldedIn(alpha.Head, true) || FoldedIn(beta.Head, true)) throw new Exception("A mod's panel showed in Simple Settings without asking, or didn't when it asked");
+                if (PanelTop(capriPanel) != capriAt + alpha.Span + beta.Span)
+                    throw new Exception("CAPRI didn't move down by the mods' panels: " + PanelTop(capriPanel) + " for " + capriAt + " + " + alpha.Span + " + " + beta.Span);
                 string saved = capri.PanelsSaved ?? "";
                 if (!saved.Contains("GENERAL SETTINGS;mod:check-a:ALPHA;mod:check-b:BETA;CAPRI")) throw new Exception("The panel order wasn't saved with the mods' panels in it: " + saved);
                 RemoveModPanels("check-a");
@@ -771,11 +738,11 @@ namespace CapriDesktop
                 // A saved place beats the slot asked for: Beta saved under WATCH comes back there.
                 RemoveModPanels("check-b");
                 capri.SavePanels("YOU;VOICE;SOUNDS;CLIPS;MOVES;GAMES;WEATHER|GENERAL SETTINGS;CAPRI;DOOMSCROLL;WATCH;mod:check-b:BETA;BRAIN;KEYS");
-                AddModPanel("check-b", "Beta", 1, 2, new Label { Text = "Beta's row", Height = 40 }, true);
+                AddModPanel("check-b", "Beta", 1, 2, new Label { Text = "Beta's row", Height = 40 });
                 if (!PanelOrder.EndsWith("| GENERAL SETTINGS CAPRI DOOMSCROLL WATCH BETA BRAIN KEYS", StringComparison.Ordinal))
                     throw new Exception("A mod's panel didn't come back to its saved place: " + PanelOrder);
                 RemoveModPanels("check-b");
-                if (PanelOrder != PanelsShipped || PanelTop(FindPanel("CAPRI"), false) != capriAt) throw new Exception("The page didn't go back once the mods' panels went: " + PanelOrder);
+                if (PanelOrder != PanelsShipped || PanelTop(FindPanel("CAPRI")) != capriAt) throw new Exception("The page didn't go back once the mods' panels went: " + PanelOrder);
             }
             finally
             {
@@ -783,20 +750,22 @@ namespace CapriDesktop
                 RemoveModPanels("check-b");
                 capri.SavePanels(savedWas);
             }
-            checks.Add("PASS a mod's panel (AddPanel) takes the slot it asks for and pushes the panels under it down; two asking for one slot take it in load order; it shows in Simple only when asked; the order is saved with it, a saved place beats the slot asked for, and a mod taken out gives its slot back");
+            checks.Add("PASS a mod's panel (AddPanel) takes the slot it asks for and pushes the panels under it down; two asking for one slot take it in load order; the order is saved with it, a saved place beats the slot asked for, and a mod taken out gives its slot back");
             CheckGroupPanels(checks);
         }
+#endif
 
-        // Two mods naming one group share a panel, each under its own sub-heading; Simple shows only the part that asked;
-        // a mod taken out takes its part, and the panel goes with the last one.
+        // Two mods naming one group share a panel, each under its own sub-heading; a mod taken out takes its part, and the
+        // panel goes with the last one.
+#if CHECKS
         private void CheckGroupPanels(List<string> checks)
         {
             string savedWas = capri.PanelsSaved;
             try
             {
                 capri.SavePanels(null);
-                AddGroupPart("check-a", "Yuno Mods", "Door 1 settings", 1, 2, new Label { Text = "Door's row", Height = 40 }, false);
-                AddGroupPart("check-b", "Yuno Mods", "Screensavers", 1, 2, new Label { Text = "Saver's row", Height = 30 }, true);
+                AddGroupPart("check-a", "Yuno Mods", "Door 1 settings", 1, 2, new Label { Text = "Door's row", Height = 40 });
+                AddGroupPart("check-b", "Yuno Mods", "Screensavers", 1, 2, new Label { Text = "Saver's row", Height = 30 });
                 Panel group = FindPanel("YUNO MODS");
                 List<string> subs = new List<string>();
                 Control door = null, saver = null;
@@ -810,7 +779,6 @@ namespace CapriDesktop
                 string order = PanelOrder;
                 bool one2 = group != null && order.IndexOf("YUNO MODS", StringComparison.Ordinal) == order.LastIndexOf("YUNO MODS", StringComparison.Ordinal) && order.EndsWith("| GENERAL SETTINGS YUNO MODS CAPRI DOOMSCROLL WATCH BRAIN KEYS", StringComparison.Ordinal);
                 bool both = subs.Count == 2 && door != null && saver != null && saver.Top > door.Bottom;
-                bool simple = door != null && saver != null && FoldedIn(door, true) && !FoldedIn(saver, true);
                 RemoveModPanels("check-a");
                 Panel left = FindPanel("YUNO MODS");
                 List<string> texts = new List<string>();
@@ -818,8 +786,8 @@ namespace CapriDesktop
                 bool closed = left != null && !texts.Contains("Door's row") && !texts.Contains("Door 1 settings") && texts.Contains("Screensavers");
                 RemoveModPanels("check-b");
                 bool gone = FindPanel("YUNO MODS") == null && PanelOrder == PanelsShipped;
-                if (!one2 || !both || !simple || !closed || !gone)
-                    throw new Exception("A shared panel went wrong: one panel in slot 2 " + one2 + " (" + order + "), both parts under sub-headings " + both + ", Simple shows only the part that asked " + simple + ", a mod's part goes with it " + closed + ", the panel goes with the last part " + gone);
+                if (!one2 || !both || !closed || !gone)
+                    throw new Exception("A shared panel went wrong: one panel in slot 2 " + one2 + " (" + order + "), both parts under sub-headings " + both + ", a mod's part goes with it " + closed + ", the panel goes with the last part " + gone);
             }
             finally
             {
@@ -827,10 +795,12 @@ namespace CapriDesktop
                 RemoveModPanels("check-b");
                 capri.SavePanels(savedWas);
             }
-            checks.Add("PASS two mods naming one group (AddPanel with a group) share one panel in the slot the first asked for, each part under its own sub-heading in big text; Simple shows only the part that asked; a mod taken out takes its part and the panel closes up, and goes with its last part");
+            checks.Add("PASS two mods naming one group (AddPanel with a group) share one panel in the slot the first asked for, each part under its own sub-heading in big text; a mod taken out takes its part and the panel closes up, and goes with its last part");
         }
+#endif
 
         // Her title bar stays at the top while Settings scrolls under it, at every size; a row Tab reaches is shown under it.
+#if CHECKS
         internal void CheckTitleFixed(List<string> checks)
         {
             bool pagedWas = paged;
@@ -855,7 +825,7 @@ namespace CapriDesktop
                             throw new Exception(Name(control) + " isn't on her title band at " + size + "%: " + control.Bounds + ", band " + titleBand.Bounds);
                     Control under = null;
                     foreach (KeyValuePair<Control, int> entry in pageLeft)
-                        if (scrolled.Contains(entry.Key) && entry.Key.Visible && entry.Key.Top < titleBand.Bottom && entry.Key.Bottom > 0 && !Folded(entry.Key)) { under = entry.Key; break; }
+                        if (scrolled.Contains(entry.Key) && entry.Key.Visible && entry.Key.Top < titleBand.Bottom && entry.Key.Bottom > 0) { under = entry.Key; break; }
                     if (under != null && Controls.GetChildIndex(under) < Controls.GetChildIndex(titleBand))
                         throw new Exception(Name(under) + " scrolled over her title band at " + size + "%");
                     // Tab back to the first row of YOU shows it under the title bar, not behind it.
@@ -868,7 +838,7 @@ namespace CapriDesktop
                         if (first.Top < titleBand.Bottom) throw new Exception(Name(first) + " was shown under her title bar at " + size + "%: " + first.Top + " above " + titleBand.Bottom);
                     }
                 }
-                checks.Add("PASS her title bar stays at the top while Settings scrolls under it at 100, 150 and 200%: MAINFRAME, Settings, Advanced Settings, Mods, the search, the lock, minimise and close keep their place on a band of her own over the page, and a row brought into view sits under it");
+                checks.Add("PASS her title bar stays at the top while Settings scrolls under it at 100, 150 and 200%: MAINFRAME, Back, Setup, Mods, the search, the lock, minimise and close keep their place on a band of her own over the page, and a row brought into view sits under it");
                 CheckBandWhileSliding(checks);
             }
             finally
@@ -878,29 +848,33 @@ namespace CapriDesktop
                 ShowSettings(pagedWas);
             }
         }
+#endif
 
         internal const string PanelsShipped = "YOU VOICE SOUNDS CLIPS MOVES GAMES WEATHER | GENERAL SETTINGS CAPRI DOOMSCROLL WATCH BRAIN KEYS";
 
+#if CHECKS
         internal void CheckPanels(List<string> checks)
         {
             if (PanelOrder != PanelsShipped) throw new Exception("Settings' panels aren't in the order it ships: " + PanelOrder);
             string sound = PanelsSound();
             if (sound != null) throw new Exception(sound);
-            if (panelOf[playerFullScreen] != panelOf[quietSwitch] || StackTop(playerFullScreen, false) != StackTop(focusKey, false) + Row
-                || StackTop(exploreAway, false) != StackTop(playerFullScreen, false) + Row || StackTop(exploreAfter, false) != StackTop(exploreAway, false) + Row)
-                throw new Exception("Mini player over full screen and the Explore rows aren't the rows under " + FocusLabel + ": " + StackTop(focusKey, false) + ", " + StackTop(playerFullScreen, false) + ", " + StackTop(exploreAway, false) + ", " + StackTop(exploreAfter, false));
-            if (FindPanel("FOCUS") != null || panelOf[gameMute] != panelOf[quietSwitch] || panelOf[gameMute].Id != "CAPRI" || StackTop(quietSwitch, false) != StackTop(gameMute, false) + Row
-                || !panelOf.ContainsKey(focusKey) || panelOf[focusKey].Id != "CAPRI" || panelOf[focusSwitch].Id != "CAPRI" || StackTop(focusSwitch, false) != StackTop(quietSwitch, false) + Row || StackTop(focusKey, false) != StackTop(focusSwitch, false) + Row)
-                throw new Exception("CAPRI isn't Mute her, the Quiet timer, Focus mode, then " + FocusLabel + ", or FOCUS is still a panel: " + StackTop(gameMute, false) + ", " + StackTop(quietSwitch, false) + ", " + StackTop(focusSwitch, false) + ", " + StackTop(focusKey, false));
+            if (panelOf[playerFullScreen] != panelOf[quietSwitch] || StackTop(playerFullScreen) != StackTop(focusKey) + Row
+                || StackTop(exploreAway) != StackTop(playerFullScreen) + Row || StackTop(exploreAfter) != StackTop(exploreAway) + Row)
+                throw new Exception("Mini player over full screen and the Explore rows aren't the rows under " + FocusLabel + ": " + StackTop(focusKey) + ", " + StackTop(playerFullScreen) + ", " + StackTop(exploreAway) + ", " + StackTop(exploreAfter));
+            if (FindPanel("FOCUS") != null || panelOf[gameMute] != panelOf[quietSwitch] || panelOf[gameMute].Id != "CAPRI" || StackTop(quietSwitch) != StackTop(gameMute) + Row
+                || !panelOf.ContainsKey(focusKey) || panelOf[focusKey].Id != "CAPRI" || panelOf[focusSwitch].Id != "CAPRI" || StackTop(focusSwitch) != StackTop(quietSwitch) + Row || StackTop(focusKey) != StackTop(focusSwitch) + Row)
+                throw new Exception("CAPRI isn't Mute her, the Quiet timer, Focus mode, then " + FocusLabel + ", or FOCUS is still a panel: " + StackTop(gameMute) + ", " + StackTop(quietSwitch) + ", " + StackTop(focusSwitch) + ", " + StackTop(focusKey));
             foreach (Control row in new Control[] { memoriesKey, startup, discord, cursor, remembering, security, powerSaver, musicApp, perchFps, keepAwake, hideFullScreen })
                 if (!panelOf.ContainsKey(row) || panelOf[row].Id != "GENERAL SETTINGS") throw new Exception(Name(row) + " isn't under GENERAL SETTINGS");
             if (FindPanel("HABITS") != null || settingsHead.Text != "GENERAL SETTINGS >") throw new Exception("HABITS is still a panel, or SETTINGS isn't GENERAL SETTINGS: " + settingsHead.Text);
-            checks.Add("PASS Settings' panels stack " + PanelsShipped + " in Advanced and Simple, every row inside its own panel and column; CAPRI has Mute her, the Quiet timer, Focus mode and " + FocusLabel + " in that order, with Mini player over full screen, Explore while I'm away and Explore after under them with no gap, and no FOCUS panel; HABITS' other rows are under GENERAL SETTINGS");
+            checks.Add("PASS Settings' panels stack " + PanelsShipped + ", every row inside its own panel and column; CAPRI has Mute her, the Quiet timer, Focus mode and " + FocusLabel + " in that order, with Mini player over full screen, Explore while I'm away and Explore after under them with no gap, and no FOCUS panel; HABITS' other rows are under GENERAL SETTINGS");
             CheckPanelOrders(checks);
         }
+#endif
 
         // Panels moved with the page scrolled, as a drag is: WATCH under WEATHER from a saved order, WATCH at every
         // left place, the left column rotated and reversed; rows stay in their panels with no overlap.
+#if CHECKS
         internal void CheckPanelOrders(List<string> checks)
         {
             string savedWas = capri.PanelsSaved;
@@ -926,15 +900,13 @@ namespace CapriDesktop
             try
             {
                 ShowSettings(true);
-                foreach (bool view in new[] { false, true })
                 {
-                    simple = view;
                     foreach (string[][] order in orders)
                     {
                         SetPanels(StockLeft, StockRight);
                         Neighbours();
                         Restack();
-                        ScrollPage(Math.Max(0, PanelTop(FindPanel("WEATHER"), simple) - 200));
+                        ScrollPage(Math.Max(0, PanelTop(FindPanel("WEATHER")) - 200));
                         int before = pageScroll;
                         if (order[0].Length == StockLeft.Length + 1 && order[0][order[0].Length - 1] == "WATCH")
                             MovePanel(FindPanel("WATCH"), 0, columns[0].Count);
@@ -944,7 +916,7 @@ namespace CapriDesktop
                             Neighbours();
                             Restack();
                         }
-                        string named = string.Join(" ", order[0]) + (simple ? " in Simple" : "");
+                        string named = string.Join(" ", order[0]);
                         string problem = PanelsSound() ?? Overlap() ?? RowsUnderScroll();
                         if (problem == null && pageScroll != Math.Min(before, Math.Max(0, PageNow - pageView))) problem = "the page jumped from " + before + " to " + pageScroll;
                         if (problem != null) throw new Exception("Moving panels while scrolled broke the page, " + named + ": " + problem);
@@ -956,7 +928,6 @@ namespace CapriDesktop
             }
             finally
             {
-                simple = !capri.AdvancedSettings;
                 SetPanels(StockLeft, StockRight);
                 Neighbours();
                 capri.SavePanels(savedWas);
@@ -964,14 +935,16 @@ namespace CapriDesktop
                 capri.SavePanels(savedWas);
                 ShowSettings(pagedWas);
             }
-            checks.Add("PASS panels moved while Settings is scrolled (WATCH dropped under WEATHER, WATCH at each place in the left column, the left column turned round and backwards, Advanced and Simple) keep the page where it was, every row in its own panel and where its panel puts it, nothing overlapping, before and after a turn of the wheel");
+            checks.Add("PASS panels moved while Settings is scrolled (WATCH dropped under WEATHER, WATCH at each place in the left column, the left column turned round and backwards) keep the page where it was, every row in its own panel and where its panel puts it, nothing overlapping, before and after a turn of the wheel");
         }
+#endif
 
         // ---------- The panel sweep ----------
 
         // Every panel dropped into every place in both columns at one size, at the page's top, middle, bottom or after
         // a wheel turn: rows stay in their panels, nothing overlaps, the title band stays in front, and at 125% Auto
         // picture and restart match.
+#if CHECKS
         internal void CheckPanelMoves(List<string> checks, string output, int text, int size)
         {
             string folder = System.IO.Path.Combine(output, "panelsweep");
@@ -1055,7 +1028,7 @@ namespace CapriDesktop
                 foreach (int column in new[] { 0, 1 })
                 {
                     ScrollPage(Math.Max(0, PageNow - pageView) / 2);
-                    AddModPanel("sweep-check", "Sweep", column, 3, new Label { Text = "Sweep's row", Height = 40 }, true);
+                    AddModPanel("sweep-check", "Sweep", column, 3, new Label { Text = "Sweep's row", Height = 40 });
                     string added = PanelsSound() ?? Overlap() ?? RowsUnderScroll() ?? BandProblem();
                     RemoveModPanels("sweep-check");
                     string gone = PanelsSound() ?? Overlap() ?? RowsUnderScroll() ?? BandProblem();
@@ -1082,6 +1055,7 @@ namespace CapriDesktop
             if (failed.Count > 0) throw new Exception(failed.Count + " of " + moves + " panel moves broke the page (pictures in " + folder + "): " + string.Join(" | ", failed.ToArray()));
             checks.Add("PASS the panel sweep at " + sizeName + ": " + moves + " drops of every panel into every place in both columns, made at the top, mid-page, the bottom and while the page moved, each leave every row in its panel and in place, nothing overlapping, the title band in front; " + compared + " compared the page's picture with the page and " + restarted + " came back the same after a restart from the saved order" + (owners ? "; with the lock shut a drag does nothing; a mod's panel comes and goes while scrolled" : ""));
         }
+#endif
 
         // Overlap, naming both controls and where they stand.
         private string OverlapNamed()
@@ -1129,7 +1103,7 @@ namespace CapriDesktop
         {
             string order = PanelOrder;
             Dictionary<string, int> placed = new Dictionary<string, int>();
-            foreach (List<Panel> list in columns) foreach (Panel one in list) placed[one.Id] = PanelTop(one, simple);
+            foreach (List<Panel> list in columns) foreach (Panel one in list) placed[one.Id] = PanelTop(one);
             int scroll = pageScroll;
             SetPanels(StockLeft, StockRight);
             Neighbours();
@@ -1140,7 +1114,7 @@ namespace CapriDesktop
             if (PanelOrder != order) return "after a restart the order was " + PanelOrder + " for " + order;
             foreach (List<Panel> list in columns)
                 foreach (Panel one in list)
-                    if (placed.ContainsKey(one.Id) && placed[one.Id] != PanelTop(one, simple)) return "after a restart " + one.Id + " stands at " + PanelTop(one, simple) + " for " + placed[one.Id];
+                    if (placed.ContainsKey(one.Id) && placed[one.Id] != PanelTop(one)) return "after a restart " + one.Id + " stands at " + PanelTop(one) + " for " + placed[one.Id];
             return RowsUnderScroll();
         }
 
@@ -1150,10 +1124,10 @@ namespace CapriDesktop
             {
                 Settle();
                 Update();
-                System.Drawing.Rectangle at = RectangleToScreen(ClientRectangle);
-                using (System.Drawing.Bitmap shot = new System.Drawing.Bitmap(at.Width, at.Height))
+                // Drawn from the panel itself, never the screen, so nothing else on it can end up in the picture.
+                using (System.Drawing.Bitmap shot = new System.Drawing.Bitmap(Math.Max(1, ClientSize.Width), Math.Max(1, ClientSize.Height)))
                 {
-                    using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(shot)) g.CopyFromScreen(at.Location, System.Drawing.Point.Empty, at.Size);
+                    DrawToBitmap(shot, new System.Drawing.Rectangle(System.Drawing.Point.Empty, shot.Size));
                     shot.Save(path, System.Drawing.Imaging.ImageFormat.Png);
                 }
             }
@@ -1208,8 +1182,8 @@ namespace CapriDesktop
             foreach (KeyValuePair<Control, int> entry in pageLeft)
             {
                 Control row = entry.Key;
-                if (!built.ContainsKey(row) || Folded(row) || dropped.Contains(row) || !panelOf.ContainsKey(row) || !row.Visible) continue;
-                int wanted = PlacedTop(row, simple) - shift;
+                if (!built.ContainsKey(row) || dropped.Contains(row) || !panelOf.ContainsKey(row) || !row.Visible) continue;
+                int wanted = PlacedTop(row) - shift;
                 if (row.Top != wanted) return Name(row) + " in " + panelOf[row].Id + " stands at " + row.Top + " for " + wanted + " (scrolled " + pageScroll + ")";
             }
             return null;
@@ -1225,24 +1199,24 @@ namespace CapriDesktop
             return at >= 0 && at + 1 < list.Count ? list[at + 1].Head : null;
         }
 
-        // Each panel's rows under its heading and above the next panel's heading, in its own column, in both views; null
-        // when they all are.
+        // Each panel's rows under its heading and above the next panel's heading, in its own column; null when they all
+        // are.
         private string PanelsSound()
         {
-            foreach (bool view in new[] { false, true })
-                for (int column = 0; column < 2; column++)
+            for (int column = 0; column < 2; column++)
                 {
                     List<Panel> list = columns[column];
                     for (int i = 0; i < list.Count; i++)
                     {
                         Panel panel = list[i];
-                        int top = PanelTop(panel, view), next = i + 1 < list.Count ? PanelTop(list[i + 1], view) : int.MaxValue;
+                        // A panel runs from its own rows above its heading (Lead) to the next one's.
+                        int top = PanelTop(panel) - panel.Lead, next = i + 1 < list.Count ? PanelTop(list[i + 1]) - list[i + 1].Lead : int.MaxValue;
                         foreach (KeyValuePair<Control, int> row in panel.Offsets)
                         {
-                            if (FoldedIn(row.Key, view) || !row.Key.Visible) continue;
-                            int at = StackTop(row.Key, view);
+                            if (!row.Key.Visible) continue;
+                            int at = StackTop(row.Key);
                             // Its height as built, so the check holds at every Mainframe size and not only at 100%.
-                            if (at < top - HeadSlack || at + (int)Math.Round(row.Key.Height / Unit()) > next) return Name(row.Key) + " in " + panel.Id + " sits at " + at + ", outside its panel (" + top + " to " + next + ")" + (view ? " in Simple" : "");
+                            if (at < top - HeadSlack || at + (int)Math.Round(row.Key.Height / Unit()) > next) return Name(row.Key) + " in " + panel.Id + " sits at " + at + ", outside its panel (" + top + " to " + next + ")";
                             if (pageLeft.Find(entry => entry.Key == row.Key).Value / Column != column) return Name(row.Key) + " isn't in " + panel.Id + "'s column";
                         }
                     }

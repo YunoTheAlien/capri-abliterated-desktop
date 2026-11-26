@@ -219,4 +219,5 @@ Quiet until {n}:{n}	ჩუმი {n}:{n}-მდე
 Quiet until turned off	ჩუმი გამორთვამდე
 Export settings	პარამეტრების ექსპორტი
 Import settings	პარამეტრების იმპორტი
-Save Mainframe position	პანელის მდებარეობის დამახსოვრება
+Save Mainframe position	Mainframe-ის მდებარეობის შენახვა
+Capri options	Capri-ის პარამეტრები

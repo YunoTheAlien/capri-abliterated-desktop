@@ -155,7 +155,7 @@ namespace CapriDesktop
         internal const int Wide = 480, Tall = 634;
         internal readonly ChessGame Game;
         internal event Action Played;
-        private readonly Timer ticks = new Timer();
+        private readonly Clock.Frames ticks = new Clock.Frames("ChessBoard");
         private readonly Random dice = new Random();
         private ChessWork work;
         private bool hintWork, hintAfter, placing, dragging;

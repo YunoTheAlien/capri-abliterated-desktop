@@ -75,7 +75,7 @@ namespace CapriDesktop
         private static int spokeAt;
         private static bool clipped;
         private static int clippedAt;
-        private static Timer ticks;
+        private static Clock.OffTimer ticks;
         private static int ticking;
         internal static GameLog Log = new GameLog(GameLog.Minecraft);
         // These are noise until the frames say otherwise, so Events only spaces them out.
@@ -352,7 +352,7 @@ namespace CapriDesktop
 
         internal static void Start()
         {
-            if (ticks == null) ticks = new Timer(Tick, null, 1000, 1000);
+            if (ticks == null) ticks = new Clock.OffTimer("Commentary ticks", Tick, null, 1000, 1000);
         }
 
         internal static void Tick(object state)

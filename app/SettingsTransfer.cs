@@ -107,6 +107,8 @@ namespace CapriDesktop
                 if (introsTaken == null) introsTaken = intros;
                 Dictionary<string, string> picks = SysLines.TakeSaverPicks(path);
                 if (saverPicksTaken == null) saverPicksTaken = picks;
+                Dictionary<string, string> looks = SysLines.TakeSaverLooks(path);
+                if (saverLooksTaken == null) saverLooksTaken = looks;
                 Dictionary<string, string> quiet = SysLines.TakeQuiet(path);
                 if (quietTaken == null) quietTaken = quiet;
             }
@@ -115,7 +117,7 @@ namespace CapriDesktop
             if (preferences == null) return;
             if (untestedTaken != null && untestedTaken.Value != preferences.LoadUntested) { preferences.LoadUntested = untestedTaken.Value; SavePreferences(); }
             untestedTaken = null;
-            if (saverTaken != null && saverTaken.Value != preferences.ScreensaverOn) { preferences.ScreensaverOn = saverTaken.Value; SavePreferences(); }
+            if (saverTaken != null && saverTaken.Value != ScreensaverOn) SetScreensaver(saverTaken.Value);
             saverTaken = null;
             if (introsTaken != null) { preferences.Intros = string.Join(",", introsTaken); SavePreferences(); }
             introsTaken = null;
@@ -127,6 +129,8 @@ namespace CapriDesktop
                 SavePreferences();
             }
             saverPicksTaken = null;
+            if (saverLooksTaken != null) PutSaverLooks(saverLooksTaken);
+            saverLooksTaken = null;
             Mods.Untested = preferences.LoadUntested;
             if (Mods.Untested) ModGuard.ForgetUnchecked();
         }
@@ -137,6 +141,14 @@ namespace CapriDesktop
         // One intro on or off in Toggles > Intros; with more than one on she picks one at random.
         internal bool IntroOn(string name) { return Array.IndexOf(SysLines.Intros(), name) >= 0; }
 
+        internal void SetIntrosAllowed(bool on)
+        {
+            preferences.IntrosAllOff = !on;
+            SavePreferences();
+            Brain.Log("intro", -1, "Intros switched " + (on ? "on; each by its own switch." : "off; each keeps its switch."));
+            if (mainframe != null) mainframe.Sync();
+        }
+
         internal void SetIntro(string name, bool on)
         {
             List<string> picked = new List<string>(SysLines.Intros());
@@ -144,6 +156,12 @@ namespace CapriDesktop
             if (on) picked.Add(name);
             preferences.Intros = string.Join(",", picked.ToArray());
             SavePreferences();
+            // A door's intro switched on here turns its mod on, so it joins the list a start picks from; only by their hand.
+            if (on && (name == "door" || name == "door2") && ModList != null)
+            {
+                Mod door = ModList.All.Find(mod => mod.File.Id == (name == "door" ? Mods.DoorId : Mods.FrontId));
+                if (door != null && !door.On) ModList.Set(door, true, null);
+            }
             if (mainframe != null) mainframe.Sync();
         }
         private Dictionary<string, string> saverPicksTaken;
@@ -171,17 +189,271 @@ namespace CapriDesktop
             SavePreferences();
         }
 
-        // The Screensaver switch in her Toggles: kept in her settings, and what SysLines.Saver reads.
-        internal bool ScreensaverOn { get { return preferences.ScreensaverOn; } }
+        // Its looks switched on in Toggles, a switch each: what SysLines.Saver reads. A settings file from before had one
+        // switch and a style, which become that one look on.
+        internal string[] SaverLooksOn
+        {
+            get
+            {
+                List<string> on = new List<string>();
+                foreach (string one in (preferences.SaverLooks ?? (preferences.ScreensaverOn ? SaverStyle : "")).Split(','))
+                    foreach (string style in SaverLook.Styles)
+                        if (string.Equals(style, one.Trim(), StringComparison.OrdinalIgnoreCase) && !on.Contains(style)) on.Add(style);
+                return on.ToArray();
+            }
+        }
 
+        internal bool SaverLookOn(string look) { return Array.Exists(SaverLooksOn, one => string.Equals(one, look, StringComparison.OrdinalIgnoreCase)); }
+
+        // Off by the screensavers' own switch, none runs; her looks keep their own switches as they are.
+        internal bool ScreensaverOn { get { return !preferences.SaverAllOff && SaverLooksOn.Length > 0; } }
+
+        internal bool SaversAllowed { get { return !preferences.SaverAllOff; } }
+
+        internal void SetSaversAllowed(bool on)
+        {
+            preferences.SaverAllOff = !on;
+            SavePreferences();
+            Brain.Log("screensaver", -1, "Screensavers switched " + (on ? "on; each look by its own switch." : "off; the looks keep their switches."));
+            if (!on && SaverShowing && !bullySaver) SaverOff();
+            if (mainframe != null) mainframe.Sync();
+        }
+
+        internal void SetSaverLook(string look, bool on)
+        {
+            List<string> now = new List<string>(SaverLooksOn);
+            now.RemoveAll(one => string.Equals(one, look, StringComparison.OrdinalIgnoreCase));
+            if (on && Array.Exists(SaverLook.Styles, one => string.Equals(one, look, StringComparison.OrdinalIgnoreCase))) now.Add(look.Trim().ToLowerInvariant());
+            preferences.SaverLooks = string.Join(",", now.ToArray());
+            SavePreferences();
+            Brain.Log("screensaver", -1, look + " switched " + (on ? "on" : "off") + ", saved; on now: " + (now.Count == 0 ? "none" : string.Join(", ", now.ToArray())) + ".");
+            if (now.Count == 0 && SaverShowing && !bullySaver) SaverOff();
+            if (mainframe != null) mainframe.Sync();
+        }
+
+        // On is the look last picked, off is every look off: for her settings tool and an old sys.md's one switch.
+        // On or off as the screensavers' own switch, so her looks' switches stay as they were; on with none on turns the
+        // last one picked on.
         internal void SetScreensaver(bool on)
         {
-            if (preferences.ScreensaverOn == on) return;
-            preferences.ScreensaverOn = on;
+            if (on == ScreensaverOn) return;
+            if (on != SaversAllowed) SetSaversAllowed(on);
+            if (on && SaverLooksOn.Length == 0) SetSaverLook(SaverStyle, true);
+        }
+
+        // A look for this showing: the one on, or a random one of those on; null when none is.
+        private readonly Random saverPick = new Random();
+
+        internal string SaverPick()
+        {
+            string[] on = SaverLooksOn;
+            if (on.Length == 0) return null;
+            lock (saverPick) return on[saverPick.Next(on.Length)];
+        }
+
+        private Dictionary<string, string> saverLooksTaken;
+
+        // The screensaver's look as its own sliders in Toggles name it, step by step, each with the value it stands for; the
+        // mod adds the same. A sys.md from before is carried to the nearest step once.
+        internal const string SaverModId = "capri-screensaver";
+        internal static readonly string[] SaverSizes = { "Small", "Normal", "Large", "2x", "3x" }, SaverSpeeds = { "Slow", "Normal", "Fast" }, SaverFlashes = { "Off", "Gentle", "On" };
+        private static readonly double[] SizeValues = { 0.72, 1, 1.5, 2, 3 }, SpeedValues = { 0.45, 1, 2.4 };
+
+        internal static string[] Percents(int most) { List<string> made = new List<string>(); for (int one = 0; one <= most; one += 10) made.Add(one + "%"); return made.ToArray(); }
+
+        // Each look's own row in Toggles > Screensaver, as the mod names them.
+        internal static readonly string[] SaverLookRows = { "Terminals", "Hexes", "Code", "Rain" };
+
+        // Size and speed were one for every look, so each look takes them; flashing was only ever the hexes'; see through is
+        // the whole group's. Which screens and the volume are gone: it covers every screen and is silent.
+        private void PutSaverLooks(Dictionary<string, string> said)
+        {
+            string one;
+            if (said.TryGetValue(SysLines.SaverSizeKey, out one)) foreach (string look in SaverLookRows) SetModToggle(SaverModId, look, "Size", SaverSizes[Nearest(one, SizeValues, "small", "large")]);
+            if (said.TryGetValue(SysLines.SaverSpeedKey, out one)) foreach (string look in SaverLookRows) SetModToggle(SaverModId, look, "Speed", SaverSpeeds[Nearest(one, SpeedValues, "slow", "fast")]);
+            if (said.TryGetValue(SysLines.SaverThroughKey, out one)) SetModToggle(SaverModId, null, "See through", Percents(90)[Math.Min(9, Tenths(one))]);
+            if (said.TryGetValue(SysLines.SaverFlashKey, out one))
+            {
+                string flash = one.Trim().ToLowerInvariant();
+                SetModToggle(SaverModId, "Hexes", "Flashing", flash == "off" || flash == "0" ? "Off" : flash == "gentle" || flash == "slow" ? "Gentle" : "On");
+            }
+        }
+
+        // A word, or a number to the nearest of the values; anything else is the middle step.
+        private static int Nearest(string said, double[] values, string low, string high)
+        {
+            string one = (said ?? "").Trim();
+            if (one.Equals(low, StringComparison.OrdinalIgnoreCase)) return 0;
+            if (one.Equals(high, StringComparison.OrdinalIgnoreCase)) return Array.IndexOf(values, low == "small" ? 1.5 : 2.4);
+            double made;
+            if (!double.TryParse(one, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out made)) return Array.IndexOf(values, 1.0);
+            int best = 0;
+            for (int at = 1; at < values.Length; at++) if (Math.Abs(values[at] - made) < Math.Abs(values[best] - made)) best = at;
+            return best;
+        }
+
+        private static int Tenths(string said)
+        {
+            double made;
+            if (!double.TryParse((said ?? "").Trim().TrimEnd('%'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out made)) return 0;
+            return (int)Math.Round(Math.Max(0, Math.Min(100, made)) / 10);
+        }
+
+        // An old sys.md's screensaver look carried once to the mod's sliders, nothing of it left in the file she writes; the
+        // mod's fold in Toggles; each intro switched on counting once in the pick. Her settings are put back after.
+#if CHECKS
+        private void SmokeModToggles(List<string> checks, string output)
+        {
+            string sys = Path.Combine(Path.GetTempPath(), "capri-looks-" + Guid.NewGuid().ToString("N") + ".md");
+            List<string> togglesWas = preferences.ModToggles == null ? null : new List<string>(preferences.ModToggles);
+            string introsWas = preferences.Intros;
+            List<string> wrong = new List<string>();
+            try
+            {
+                File.WriteAllText(sys, SysLines.SaverHeading + "\r\n\r\n>! Shows while the PC is idle, when Toggles > Screensaver is on. Space or Esc ends it.\r\n"
+                    + ">! size:        small, normal, large, or a number. 1 is normal.\r\n>! volume:      0 to 100.\r\nscreensaver size:    large\r\n"
+                    + "screensaver speed:   2\r\nscreensaver see through: 35\r\nscreensaver screens: main\r\nscreensaver flashing: gentle\r\n"
+                    + "screensaver sound:   sounds/alarm.wav\r\nscreensaver volume:  55\r\n");
+                Dictionary<string, string> taken = SysLines.TakeSaverLooks(sys), again = SysLines.TakeSaverLooks(sys);
+                string left = File.ReadAllText(sys);
+                if (taken == null || taken.Count != 6 || again != null) wrong.Add("taken " + (taken == null ? "none" : taken.Count.ToString()) + ", again " + (again != null));
+                foreach (string gone in new[] { "screensaver size", "speed", "see through", "screens:", "flashing", "volume", ">! size:", "Shows while" })
+                    if (left.IndexOf(gone, StringComparison.OrdinalIgnoreCase) >= 0) wrong.Add("left " + gone);
+                if (left.Contains("screensaver sound") || left.Contains(SysLines.SaverHeading)) wrong.Add("its sound line or heading stayed");
+                preferences.ModToggles = new List<string>();
+                if (taken != null) PutSaverLooks(taken);
+                // Size and speed to every look, flashing to the hexes, see through to the group; screens and volume nowhere.
+                string[,] want = { { "Terminals", "Size", "Large" }, { "Rain", "Size", "Large" }, { "Code", "Speed", "Fast" }, { "", "See through", "40%" }, { "Hexes", "Flashing", "Gentle" }, { "", "Every screen", null }, { "", "Volume", null } };
+                for (int i = 0; i < want.GetLength(0); i++)
+                {
+                    string item = want[i, 0].Length == 0 ? null : want[i, 0];
+                    if (ModToggle(SaverModId, item, want[i, 1]) != want[i, 2]) wrong.Add(want[i, 0] + " " + want[i, 1] + " carried as " + ModToggle(SaverModId, item, want[i, 1]));
+                }
+                List<string> saved = LoadPreferences().ModToggles;
+                if (saved == null || !saved.Contains(SaverModId + "\tTerminals\tSize\tLarge")) wrong.Add("not saved in her settings");
+                if (SysLines.Text.IndexOf(SysLines.SaverHeading, StringComparison.Ordinal) >= 0) wrong.Add("the sys.md she writes still has a screensaver section");
+                // One on is always that one, several on each a share, none picked no share (no forced intros).
+                NamedIntros three = new NamedIntros();
+                preferences.Intros = "hijack";
+                int one = Mods.IntroShares(three);
+                preferences.Intros = "hijack,wake,door";
+                int two = Mods.IntroShares(three);
+                preferences.Intros = "door";
+                int none = Mods.IntroShares(three);
+                if (one != 1 || two != 2 || none != 0) wrong.Add("intro shares " + one + "/" + two + "/" + none);
+                // Its fold: the screensaver mod's look as sliders in Toggles, a step pressed there reaching the mod and her settings.
+                preferences.ModToggles = new List<string>();
+                ICapriScreensaver saver = ModList == null ? null : ModList.Screensaver;
+                if (saver == null) checks.Add("LIMIT the screensaver mod isn't running here, so its sliders in Toggles weren't checked");
+                else
+                {
+                    // The group's own settings first (After, See through), then the looks, each with its own behind its ">".
+                    mainframe.OpenToggles();
+                    mainframe.UnfoldToggles("Screensaver");
+                    string list = mainframe.TogglesText ?? "";
+                    // A picture of the fold with the mod's own sliders in it, for an eye on how they line up.
+                    using (System.Drawing.Bitmap shot = mainframe.PictureToggles()) shot.Save(Path.Combine(output, "toggles-screensaver.png"), System.Drawing.Imaging.ImageFormat.Png);
+                    // The group's own sliders sit behind the screensaver's > (After, then See through), not in the list.
+                    mainframe.OpenToggleSettings("Screensaver");
+                    string group = mainframe.TogglesText ?? "";
+                    int side = group.IndexOf("{Screensaver}", StringComparison.Ordinal);
+                    int after = side < 0 ? -1 : group.IndexOf("After:", side, StringComparison.Ordinal), through = side < 0 ? -1 : group.IndexOf("See through:", side, StringComparison.Ordinal);
+                    bool ordered = after > side && through > after && list.IndexOf("After:", StringComparison.Ordinal) < 0 && list.Contains("Terminals ") && !list.Contains("Every screen") && !list.Contains("Size:");
+                    if (!ordered) list += " / its > side " + group;
+                    mainframe.PickToggleRow("Rain");
+                    string rain = mainframe.TogglesText ?? "";
+                    mainframe.PressToggle("Size: Large");
+                    System.Reflection.FieldInfo sizes = saver.GetType().GetField("sizes", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                    Dictionary<string, float> held = sizes == null ? null : sizes.GetValue(saver) as Dictionary<string, float>;
+                    float now = held != null && held.ContainsKey("rain") ? held["rain"] : -1;
+                    bool nameKept = mainframe.ClickToggleName("Hexes");
+                    string hexes = mainframe.TogglesText ?? "";
+                    bool own = rain.Contains("{Rain}") && rain.Contains("Size: Normal") && rain.Contains("Speed: Normal") && rain.Contains("Density: 100%") && !rain.Contains("Flashing")
+                        && hexes.Contains("{Hexes}") && hexes.Contains("Flashing: On") && !hexes.Contains("Density");
+                    if (!ordered || !own || !nameKept || ModToggle(SaverModId, "Rain", "Size") != "Large" || Math.Abs(now - 1.5f) > 0.01)
+                        wrong.Add("its group showed " + list + " / rain " + rain + " / hexes by its name " + hexes + (nameKept ? "" : ", the name click turned Hexes' switch") + ", Rain's size saved " + ModToggle(SaverModId, "Rain", "Size") + ", the mod's " + now);
+                    mainframe.PickToggleRow("Rain");
+                    mainframe.PressToggle("Size: Normal");
+                    mainframe.CloseToggles();
+                }
+                // Toggles > Pranks: a switch per prank, off to start; twitch.md's old list carried in once and taken out.
+                string twitchWas = twitchPath, pranksWas = preferences.PranksOn;
+                string twitch = Path.Combine(Path.GetTempPath(), "capri-twitch-" + Guid.NewGuid().ToString("N") + ".md");
+                try
+                {
+                    File.WriteAllText(twitch, "# Capri on Twitch\r\n\r\n## Streamer bully\r\n\r\n>! What chat can set off.\r\n\r\ncrash, alert\r\n\r\n## Connection\r\n\r\nchannel:\r\n");
+                    twitchPath = twitch;
+                    preferences.PranksOn = null;
+                    CarryBully();
+                    string kept = File.ReadAllText(twitch);
+                    bool carried = PrankOn("crash") && PrankOn("alert") && !PrankOn("dance") && !kept.Contains("Streamer bully") && !kept.Contains("crash, alert") && kept.Contains("## Connection") && TwitchRules.TakeBully(twitch) == null;
+                    mainframe.OpenToggles();
+                    mainframe.UnfoldToggles("Pranks");
+                    string shown = mainframe.TogglesText ?? "";
+                    mainframe.PressToggle("Dance");
+                    bool pressed = PrankOn("dance") && (mainframe.TogglesText ?? "").Contains("Dance on");
+                    mainframe.CloseToggles();
+                    preferences.PranksOn = "";
+                    bool fresh = !PrankOn("crash") && TwitchRules.Default.IndexOf("Streamer bully", StringComparison.OrdinalIgnoreCase) < 0;
+                    if (!carried || !pressed || !fresh || !shown.Contains("[PRANKS]") || !shown.Contains("Crash on") || !shown.Contains("Metal pipe off"))
+                        wrong.Add("pranks: carried " + carried + ", pressed " + pressed + ", fresh " + fresh + ", shown " + shown);
+                }
+                finally
+                {
+                    twitchPath = twitchWas;
+                    twitchReadAt = DateTime.MinValue;
+                    preferences.PranksOn = pranksWas;
+                    try { File.Delete(twitch); } catch (IOException) { }
+                }
+                // Her red alert is her own copy of the hexes: it comes up and goes with nothing asked of the screensaver mod.
+                if (!SaverShowing)
+                {
+                    string shown = AlertTool("show");
+                    bool up = alertWindows.Count > 0;
+                    AlertTool("stop");
+                    if (shown != "Red alert." || !up || alertWindows.Count > 0) wrong.Add("her red alert said " + shown + ", up " + up + ", left " + alertWindows.Count);
+                    // Its own alarm, laid with her prank sounds, with no sys.md line and whether the screensaver mod runs or not.
+                    if (alarmAsked == null || !File.Exists(alarmAsked) || new FileInfo(alarmAsked).Length != 1713308) wrong.Add("her red alert's own alarm wasn't there to play: " + alarmAsked);
+                }
+                if (wrong.Count > 0) throw new Exception("A mod's switches and sliders went wrong: " + string.Join(" | ", wrong.ToArray()));
+                checks.Add("PASS a mod's settings in Toggles, kept in her settings: one for the whole group sits behind the group's own >, one for an item only in that item's side area behind its >; the screensaver's group is After and See through then its looks, Rain with Size, Speed and Density, Hexes with Flashing; an old sys.md's size and speed go to every look, flashing to Hexes, see through to the group, to the nearest step, and the sys.md she writes has none; each intro switched on counts once in the start's pick; her red alert draws its own hexes and plays its own alarm, needing nothing of the screensaver mod or sys.md; Toggles > Pranks has a switch per prank, off to start, deciding what her mood and Twitch chat may set off, with twitch.md's old list carried in once and taken out of the file");
+            }
+            finally
+            {
+                preferences.ModToggles = togglesWas;
+                preferences.Intros = introsWas;
+                SavePreferences();
+                try { File.Delete(sys); } catch (IOException) { }
+            }
+        }
+#endif
+
+        private sealed class NamedIntros : ICapriMod, ICapriIntroNames
+        {
+            public string[] Intros { get { return new[] { "Hijack", "Shatter", "Wake" }; } }
+            public void Start(ICapriHost capri) { }
+            public bool Heard(string words) { return false; }
+            public void Stop() { }
+        }
+
+        // A mod's own switch or slider as last picked, or null; set as it changes. item is the row it belongs to, or null for
+        // one of the mod's own rows or the whole group.
+        internal string ModToggle(string id, string item, string name)
+        {
+            if (preferences == null || preferences.ModToggles == null) return null;
+            string head = id + "\t" + (item ?? "") + "\t" + name + "\t";
+            foreach (string one in preferences.ModToggles) if (one != null && one.StartsWith(head, StringComparison.OrdinalIgnoreCase)) return one.Substring(head.Length);
+            return null;
+        }
+
+        internal void SetModToggle(string id, string item, string name, string value)
+        {
+            if (preferences == null) return;
+            if (preferences.ModToggles == null) preferences.ModToggles = new List<string>();
+            string head = id + "\t" + (item ?? "") + "\t" + name + "\t";
+            preferences.ModToggles.RemoveAll(one => one == null || one.StartsWith(head, StringComparison.OrdinalIgnoreCase));
+            preferences.ModToggles.Add(head + value);
             SavePreferences();
-            Brain.Log("screensaver", -1, "Switched " + (on ? "on" : "off") + ", saved.");
-            if (!on && SaverShowing) SaverOff();
-            if (mainframe != null) mainframe.Sync();
         }
 
         // The screensaver's two colours left sys.md for its fold under ADD-ONS. At her start each sys.md still holding them,
@@ -243,9 +515,57 @@ namespace CapriDesktop
         // The switch in Mods > MODS.
         internal bool UntestedMods { get { return preferences.LoadUntested; } }
 
+#if CHECKS
+        // The pick as her saved settings have it, read back from disk.
+        internal bool ModsPluginsSaved() { return LoadPreferences().ModsShowPlugins; }
+#endif
+
+        // Her own topics per personality, as her settings keep them.
+        // Her picks rolled for the personality she is in when it has none yet: an updated install the same as a new one.
+        private void RollHerTopics()
+        {
+            string now = Personalities.Under ?? Personalities.Chosen;
+            if (string.IsNullOrEmpty(now) || now == Personalities.Dynamic) return;
+            if (OwnSet.Shown) OwnSet.Hers(now);
+            if (HerTopicsFor(now) != null) return;
+            Topics.Hers(now, null);
+        }
+
+        private string[] HerTopicsFor(string personality)
+        {
+            foreach (string line in (preferences.HerTopics ?? "").Split('\n'))
+            {
+                int tab = line.IndexOf('\t');
+                if (tab > 0 && string.Equals(line.Substring(0, tab), personality, StringComparison.OrdinalIgnoreCase))
+                    return line.Substring(tab + 1).Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+            }
+            return null;
+        }
+
+        private void KeepHerTopics(string personality, string[] picked)
+        {
+            List<string> lines = new List<string>();
+            foreach (string line in (preferences.HerTopics ?? "").Split('\n'))
+            {
+                int tab = line.IndexOf('\t');
+                if (tab > 0 && !string.Equals(line.Substring(0, tab), personality, StringComparison.OrdinalIgnoreCase)) lines.Add(line);
+            }
+            lines.Add(personality + "\t" + string.Join("|", picked));
+            preferences.HerTopics = string.Join("\n", lines.ToArray());
+            SavePreferences();
+        }
+
+        // Mods > INSTALLED's pick: plug-ins, or mods.
+        internal bool ModsPlugins
+        {
+            get { return preferences.ModsShowPlugins; }
+            set { if (preferences.ModsShowPlugins == value) return; preferences.ModsShowPlugins = value; SavePreferences(); }
+        }
+
         // Her mods in settings.json: switches and this side's overrides go out and back, a never-approved mod or
         // starter stays off, nothing sealed goes in, and an update takes the block only when signed here; their own
         // Import takes it from anywhere.
+#if CHECKS
         internal static void CheckModsKept(List<string> checks, string output)
         {
             string data = Path.Combine(output, "mods-kept-" + Guid.NewGuid().ToString("N").Substring(0, 6));
@@ -336,6 +656,7 @@ namespace CapriDesktop
                 try { Directory.Delete(data, true); } catch (Exception) { }
             }
         }
+#endif
 
         private static string KindOf(Mod mod) { return mod.Code ? "code" : mod.Skin ? "skin" : mod.Skill ? "skill" : "mod"; }
 
@@ -449,7 +770,8 @@ namespace CapriDesktop
         {
             try
             {
-                if (replaced == 0 || string.IsNullOrEmpty(SettingsFile.Folder)) return;
+                // A first start has nothing of theirs to put back, whatever it wrote.
+                if (replaced == 0 || !Renew.Changing || string.IsNullOrEmpty(SettingsFile.Folder)) return;
                 string kept = Path.Combine(SettingsFile.Folder, SettingsFile.FileName), before = Path.Combine(SettingsFile.Folder, SettingsFile.BeforeUpdate);
                 if (gatheredSettings == null)
                 {
@@ -461,6 +783,55 @@ namespace CapriDesktop
             }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
+
+#if CHECKS
+        // A first start puts nothing back and says nothing of an update; an update, with or without a settings.json from
+        // before, still gathers what was theirs.
+        internal void CheckFreshNoUpdateLine(List<string> checks, string output)
+        {
+            string root = Path.Combine(output, "fresh-" + Guid.NewGuid().ToString("N").Substring(0, 6));
+            string settings = Path.Combine(root, Personalities.SettingsName), side = Path.Combine(settings, Personalities.PlainName);
+            string folderWas = SettingsFile.Folder, gatheredWas = gatheredSettings, before = Path.Combine(settings, SettingsFile.BeforeUpdate);
+            List<string> wrong = new List<string>();
+            try
+            {
+                // A first start: only her day log there before she writes anything.
+                Directory.CreateDirectory(Path.Combine(settings, Logs.FolderName));
+                File.WriteAllText(Path.Combine(settings, Logs.FolderName, "today.txt"), "a log line");
+                bool held = Renew.Held(settings);
+                Renew.Begin(settings, "9.9.1", held);
+                if (held || Renew.Changing) wrong.Add("a first start read as an update");
+                // Then what a first start writes, her settings.json among it.
+                Directory.CreateDirectory(side);
+                File.WriteAllText(Path.Combine(side, "lines.md"), "# Her lines\r\n\r\n## settings\r\nrecent hours: 24\r\n");
+                File.WriteAllText(Path.Combine(settings, SettingsFile.FileName), "{}");
+                SettingsFile.Folder = settings;
+                gatheredSettings = null;
+                GatherSettings(root);
+                OfferSettingsBack(5);
+                if (gatheredSettings != null || File.Exists(before)) wrong.Add("a first start kept settings to put back");
+                // An update from a version without settings.json: her files were there first, so they are gathered.
+                File.Delete(Path.Combine(settings, SettingsFile.FileName));
+                Renew.Begin(settings, "9.9.2", Renew.Held(settings));
+                GatherSettings(root);
+                if (!Renew.Changing || gatheredSettings == null || !File.Exists(before)) wrong.Add("an update from a version without settings.json gathered nothing");
+                // An update with a record of an older version.
+                File.WriteAllText(Path.Combine(settings, Renew.StampName), "shared\t9.9.1\r\n");
+                Renew.Begin(settings, "9.9.2", Renew.Held(settings));
+                if (!Renew.Changing) wrong.Add("an update with an older record read as a first start");
+                if (wrong.Count > 0) throw new Exception("Settings after a first start or an update went wrong: " + string.Join("; ", wrong.ToArray()));
+                checks.Add("PASS a first start (only her day log there) says nothing of an update and keeps no settings to put back; an update from a version without settings.json still gathers theirs, and one with an older record still counts as an update");
+            }
+            finally
+            {
+                // As the smoke start left it: no record, nothing due.
+                Renew.Begin(null, Built, false);
+                SettingsFile.Folder = folderWas;
+                gatheredSettings = gatheredWas;
+                try { Directory.Delete(root, true); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            }
+        }
+#endif
 
         internal string ImportSettings(string path) { return ImportSettings(path, false); }
 
@@ -480,7 +851,7 @@ namespace CapriDesktop
                     int set;
                     missing = SettingsFile.Import(dump, SettingsFile.Folder, out set, !updating);
                     said = updating
-                        ? (set == 0 ? "I'm on a new version, and your settings are all still here." : "I'm on a new version, and I've put your settings back: " + set + (set == 1 ? " setting." : " settings.") + " Some take effect when I next start.")
+                        ? (set == 0 ? "I'm on a new version, and your settings are all still here." : "I'm on a new version, and I've put your settings back: " + set + (set == 1 ? " setting." : " settings."))
                         : set == 0 ? "Nothing to change: those are already my settings." : "Done, " + set + (set == 1 ? " setting is" : " settings are") + " back. Some take effect when I next start.";
                     if (missing.Count > 0)
                         said += " Not in this version: " + string.Join(", ", missing.Count <= 4 ? missing.ToArray() : missing.GetRange(0, 4).ToArray()) + (missing.Count > 4 ? " and " + (missing.Count - 4) + " more." : ".");
@@ -503,7 +874,9 @@ namespace CapriDesktop
                     : "These settings from before the update have no place in this version, so they were not put back:";
                 Brain.Log("PROBLEM", -1, "settings after an update: " + (failed ?? missing.Count + " not put back: " + string.Join(", ", missing.ToArray())));
                 StringBuilder told = new StringBuilder(what);
-                if (failed == null) foreach (string one in missing) told.Append("\r\n  " + one);
+                // The first twenty, and how many more; every one is in her log.
+                if (failed == null) for (int at = 0; at < missing.Count && at < 20; at++) told.Append("\r\n  " + missing[at]);
+                if (failed == null && missing.Count > 20) told.Append("\r\n  and " + (missing.Count - 20) + " more, all in her log");
                 told.Append("\r\n\r\nEverything from before is kept in " + Path.GetFileName(path) + " in her settings folder.");
                 // A test run has no one to press OK, so it only logs.
                 if (!SmokeRun.Worker) Notice.Tell(this, told.ToString(), "Settings after the update", true);

@@ -1,6 +1,6 @@
 # A switch of its own, and a multiplier
 
-A pack can't run code, so a switch in her right-click Toggles menu, or a multiplier on an act, comes from a small
+A pack can't run code, so a switch in her Toggles window, or a multiplier on an act, comes from a small
 code mod beside it. `night-owl-switch.capri-code` does both:
 
 ```csharp

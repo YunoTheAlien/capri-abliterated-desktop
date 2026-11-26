@@ -113,14 +113,19 @@ namespace CapriDesktop
         }
 
         internal bool Listening { get { return running; } }
-        internal bool DeviceChanged { get { return running && !string.Equals(openedId, resolve(Chosen), StringComparison.OrdinalIgnoreCase); } }
+        internal bool DeviceChanged { get { return running && !standing && !string.Equals(openedId, resolve(Chosen), StringComparison.OrdinalIgnoreCase); } }
+
+        // A bench or shots run (Recorders): her ears stand open on nothing and no mic of the PC's is opened.
+        private volatile bool standing;
+        internal bool Standing { get { return standing; } }
+
 
         // The mic is open but nothing has come from it for 5 s: unplugged, lost when the PC slept, or dropped by its driver.
         internal bool Stalled
         {
             get
             {
-                if (!running) return false;
+                if (!running || standing) return false;
                 if (Environment.TickCount - lastChunk > 5000 || (modern != null && !modern.Alive)) return true;
                 if (Environment.TickCount - routeAt < 0) return false;
                 routeAt = Environment.TickCount + RouteMs;
@@ -335,6 +340,12 @@ namespace CapriDesktop
         internal void Start()
         {
             if (running) return;
+            if (!fake && Recorders.Hold("her mic"))
+            {
+                standing = running = true;
+                if (Changed != null) Changed(null);
+                return;
+            }
             if (blocked())
             {
                 Brain.Log("ears", -1, Dictation.MicBlocked);
@@ -426,6 +437,7 @@ namespace CapriDesktop
         internal void Stop()
         {
             if (!running) return;
+            if (standing) { standing = running = false; return; }
             if (modern == null && Environment.TickCount - lastChunk > 5000) preferModern = true;
             running = false;
             if (modern != null) { modern.Dispose(); modern = null; }
@@ -2006,7 +2018,7 @@ namespace CapriDesktop
     {
         // Capri's own copies of the exact packs she was tested on. sherpa-onnx can re-upload theirs, and a changed
         // file can't pass the size and hash pinned here, which would cost every copy of Capri her ears.
-        internal const string Hosted = "https://github.com/lachydotmcg/capri-desktop/releases/download/ears-pack-1/";
+        internal const string Hosted = "https://github.com/YunoTheAlien/capri-abliterated-desktop/releases/download/ears-pack-1/";
         internal const string Pack = "parakeet-tdt-0.6b-v2-int8";
         internal static string PackUrl = Hosted + "sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8.tar.bz2";
         internal static string PackSha = "157c157bc51155e03e37d2466522a3a737dd9c72bb25f36eb18912964161e1ad";
@@ -2645,6 +2657,81 @@ namespace CapriDesktop
         [PreserveSig] int GetMute([MarshalAs(UnmanagedType.Bool)] out bool mute);
     }
 
+    // A call into Windows' audio service or media sessions, which can stall on a guest PC: run off her thread and given
+    // up after its bound. While one is out, the next gets the fallback at once; her log names it.
+    internal static class Bounded
+    {
+        private static readonly object gate = new object();
+        private static readonly Dictionary<string, System.Threading.Tasks.Task> pending = new Dictionary<string, System.Threading.Tasks.Task>();
+        // Checks set it to stand in for a service that doesn't answer until Unstuck is set.
+        internal static Func<string, bool> Stuck = delegate { return false; };
+        internal static readonly ManualResetEvent Unstuck = new ManualResetEvent(true);
+
+        internal static T Call<T>(string what, int ms, T fallback, Func<T> work)
+        {
+            System.Threading.Tasks.Task<T> task;
+            lock (gate)
+            {
+                System.Threading.Tasks.Task prior;
+                if (pending.TryGetValue(what, out prior) && !prior.IsCompleted) return fallback;
+                task = System.Threading.Tasks.Task.Run(delegate { if (Stuck(what)) Unstuck.WaitOne(); return work(); });
+                pending[what] = task;
+            }
+            try { if (task.Wait(ms)) return task.Result; }
+            catch (AggregateException) { return fallback; }
+            Brain.Log("slow", -1, "Windows didn't answer for " + what + " in " + ms + " ms, so she went on without it.");
+            return fallback;
+        }
+    }
+
+#if CHECKS
+    internal static class BoundedChecks
+    {
+        // A Windows service that doesn't answer costs her window its bound and no more: the speakers' volume gives up in a
+        // second, the media sessions in a second and a half, the next call while one is out returns at once, and both say so.
+        internal static void Check(List<string> checks)
+        {
+            Func<string, bool> stuckWas = Bounded.Stuck;
+            List<string> wrong = new List<string>();
+            string logWas = Brain.LogPath, log = Path.Combine(Path.GetTempPath(), "capri-bounded-" + Guid.NewGuid().ToString("N").Substring(0, 6) + ".txt");
+            try
+            {
+                Brain.LogPath = log;
+                Bounded.Unstuck.Reset();
+                Bounded.Stuck = delegate(string what) { return true; };
+                Stopwatch took = Stopwatch.StartNew();
+                double? level = Speakers.Decibels();
+                long first = took.ElapsedMilliseconds;
+                took.Restart();
+                double? again = Speakers.Decibels();
+                long second = took.ElapsedMilliseconds;
+                if (level != null || first < 900 || first > 1600) wrong.Add("the speakers' volume took " + first + " ms and said " + level);
+                if (again != null || second > 200) wrong.Add("a second volume read while the first was out took " + second + " ms");
+                took.Restart();
+                List<Tune> sessions = Tunes.Sessions();
+                long third = took.ElapsedMilliseconds;
+                if (sessions != null || third > 2100) wrong.Add("the media sessions took " + third + " ms");
+                string said = File.Exists(log) ? File.ReadAllText(log) : "";
+                if (said.IndexOf("Windows didn't answer for the speakers' volume in 1000 ms", StringComparison.Ordinal) < 0 || said.IndexOf("Windows didn't answer for Windows' media sessions in 1500 ms", StringComparison.Ordinal) < 0) wrong.Add("her log didn't name what didn't answer");
+                Bounded.Stuck = stuckWas;
+                Bounded.Unstuck.Set();
+                Stopwatch settle = Stopwatch.StartNew();
+                while (settle.ElapsedMilliseconds < 3000 && Bounded.Call("a check's own", 500, -1, delegate { return 7; }) != 7) Thread.Sleep(20);
+                if (Bounded.Call("a check's own", 500, -1, delegate { return 7; }) != 7) wrong.Add("a call that answers didn't come back");
+                if (wrong.Count > 0) throw new Exception("A stuck Windows service held her up: " + string.Join("; ", wrong.ToArray()));
+                checks.Add("PASS a Windows service that doesn't answer (the speakers' volume, the media sessions) costs her at most its bound, 1 s and 1.5 s, a second call while one is out comes back at once, her log names it, and a call that answers comes back as it was");
+            }
+            finally
+            {
+                Bounded.Stuck = stuckWas;
+                Bounded.Unstuck.Set();
+                Brain.LogPath = logWas;
+                try { File.Delete(log); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            }
+        }
+    }
+#endif
+
     // The PC's own volume and mute on the default speakers, the ones the volume keys change. Null or false when Windows won't say.
     internal static class Speakers
     {
@@ -2659,7 +2746,10 @@ namespace CapriDesktop
 
         internal static bool SetLevel(double level) { return Use(delegate(ISpeakerVolume volume) { return volume.SetMasterVolumeLevelScalar((float)Math.Max(0, Math.Min(1, level)), IntPtr.Zero); }); }
 
-        private static bool Use(Func<ISpeakerVolume, int> act)
+        // Windows' audio service can stall on a guest PC, so each use is bounded.
+        private static bool Use(Func<ISpeakerVolume, int> act) { return Bounded.Call("the speakers' volume", 1000, false, delegate { return Using(act); }); }
+
+        private static bool Using(Func<ISpeakerVolume, int> act)
         {
             ISoundDevices devices = null;
             ISoundDevice device = null;
@@ -2763,6 +2853,7 @@ namespace CapriDesktop
 
         internal static SoundTap Open(bool start)
         {
+            if (Recorders.Hold("the PC's sound")) return null;
             ISoundDevices devices = null;
             ISoundDevice device = null;
             ISoundClient client = null;
@@ -3125,7 +3216,9 @@ namespace CapriDesktop
             };
             try
             {
-                double heardAt = now(), checkedAt = heardAt, openedAt = -10, estimateAt = heardAt + 1;
+                double heardAt = now(), checkedAt = heardAt, openedAt = -10, estimateAt = heardAt + 1, listenedAt = -1;
+                bool told = false;
+                string namedDevice = null;
                 while (playing == run)
                 {
                     // Its 100 ms of buffer leaves room for Power saver's slower pace.
@@ -3143,8 +3236,19 @@ namespace CapriDesktop
                         tap = SoundTap.Open(true);
                         count = 0;
                         heardAt = at;
-                        if (tap == null) continue;
+                        if (tap == null) { if (!told) { told = true; CapriDesktop.Brain.Log("beat", -1, "Couldn't listen to the default speakers for the beat."); } continue; }
                         onset = new Onset(tap.Rate);
+                        // Named once per device, since a tap that drops is opened again every 2 s.
+                        if (tap.Device != namedDevice) { namedDevice = tap.Device; CapriDesktop.Brain.Log("beat", -1, "Listening for the beat on " + (Ears.FullName(tap.Device) ?? "the default speakers") + ", " + tap.Format + "."); }
+                        if (listenedAt < 0) listenedAt = at;
+                    }
+                    // Ten seconds of music on these speakers with no kick and no tempo: said once, naming them.
+                    if (!told && listenedAt >= 0 && at - listenedAt > 10)
+                    {
+                        bool kicked;
+                        lock (gate) kicked = at - kickHeardAt < 10 || beat.Bpm > 0;
+                        if (!kicked && tap != null) CapriDesktop.Brain.Log("beat", -1, "No beat heard in 10 s on " + (Ears.FullName(tap.Device) ?? "the default speakers") + ": is the music playing on another output?");
+                        told = true;
                     }
                     int before = pushed;
                     long newest;

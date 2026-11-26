@@ -128,6 +128,7 @@ namespace CapriDesktop
             Put(s, "extended", Extended.Text);
             if (Personalities.SenpaiAdded != null) s["added"] = Grid(Personalities.SenpaiAdded);
             Put(s, "angles", Angles.SenpaiAngles);
+            Put(s, "set", OwnSet.SenpaiSet);
             if (VoiceProfiles.SenpaiVoice != null)
                 foreach (string one in Both(order, moods))
                 {
@@ -213,6 +214,7 @@ namespace CapriDesktop
             string added = Get(s, "added");
             if (added != null) Personalities.SenpaiAdded = Grid(added);
             Angles.SenpaiAngles = Get(s, "angles") ?? "";
+            OwnSet.SenpaiSet = Get(s, "set") ?? "";
             VoiceProfiles.SenpaiVoice = delegate(string named) { return Voice(Get(s, "voice/" + named)); };
             string[] repair = Lines(Get(s, "repair"));
             if (repair.Length == 3)
@@ -468,6 +470,9 @@ namespace CapriDesktop
         // Null when it is in place, otherwise why not.
         internal static string Fetch(string name, string sha, long size, string path, string tag)
         {
+#if !CROSS
+            if (Recorders.Hold("a download")) return "a test run fetches nothing";
+#endif
             if (string.IsNullOrEmpty(path)) return "no folder to put it in";
             if (Matches(path, sha, size)) return null;
             if (string.IsNullOrEmpty(sha) || size <= 0) return "this build was made without one";

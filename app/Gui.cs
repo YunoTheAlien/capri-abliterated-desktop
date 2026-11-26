@@ -248,6 +248,7 @@ namespace CapriDesktop
     {
         // Her GUI in another language: a menu read in French says the French built in for it, a label no file has
         // stays English, the English comes back when the language is cleared, and a key draws without failing.
+#if CHECKS
         internal void CheckGuiTranslation(List<string> checks)
         {
             string was = Brain.Language;
@@ -380,5 +381,6 @@ namespace CapriDesktop
                 Gui.Forget();
             }
         }
+#endif
     }
 }

@@ -69,6 +69,7 @@ Jealous	ईर्ष्यालु
 Mood pranks	मूड शरारतें
 Lets a furious or ignored mood set off her icon rampage and window mischief	एक गुस्से वाले या अनदेखे मूड को उसके आइकन रैम्पेज और विंडो शरारत को ट्रिगर करने दें
 Personality editor	व्यक्तित्व संपादक
+Personality settings	व्यक्तित्व सेटिंग्स
 Feed her	उसे खिलाएं
 A snack	एक नाश्ता
 A proper meal	एक उचित भोजन
@@ -95,6 +96,9 @@ Stream safe	स्ट्रीम सुरक्षित
 Hides your file names, icons and window titles from anything she shows or says	उसके द्वारा दिखाए जाने या कहे जाने वाले किसी भी चीज़ से आपके फ़ाइल नामों, आइकनों और विंडो शीर्षकों को छिपाता है
 Twitch	Twitch
 Read chat	चैट पढ़ें
+Read chat aloud	चैट ज़ोर से पढ़ें
+Read all chat aloud	पूरी चैट ज़ोर से पढ़ें
+Better conversations	बेहतर बातचीत
 Who's live now	कौन अब लाइव है
 Edit twitch.md	twitch.md संपादित करें
 Clear memory	मेमोरी साफ़ करें
@@ -391,4 +395,152 @@ Quiet until turned off	बंद करने तक शांत
 Export settings	सेटिंग्स निर्यात करें
 Import settings	सेटिंग्स आयात करें
 GENERAL SETTINGS	सामान्य सेटिंग्स
-Save Mainframe position	पैनल की जगह याद रखें
+Save Mainframe position	Mainframe की स्थिति सहेजें
+Capri options	Capri विकल्प
+Default all	सब डिफ़ॉल्ट
+Defaults	डिफ़ॉल्ट
+Hear her	उसे सुनें
+What she likes	उसे क्या पसंद है
+How she reacts	वह कैसे प्रतिक्रिया देती है
+Add GIFs	GIF जोड़ें
+Add to pack	पैक में जोड़ें
+Allow	अनुमति दें
+As set in Toggles	टॉगल के अनुसार
+Back to stock	मूल पर लौटें
+BRAIN PROVIDER	मस्तिष्क प्रदाता
+Browse	ब्राउज़ करें
+Capri only	केवल Capri
+Capri Remote	Capri Remote
+Capri resources	Capri संसाधन
+Clear	साफ़ करें
+Deny	अस्वीकार करें
+Edit as text	टेक्स्ट के रूप में संपादित करें
+EXTRAS	अतिरिक्त
+Focus mode	फ़ोकस मोड
+Forget	भूल जाएँ
+Forget account	खाता भूल जाएँ
+Forget everything about me	मेरे बारे में सब भूल जाओ
+Fork capri-mods	capri-mods फ़ोर्क करें
+Free voice: Her own	मुफ़्त आवाज़: उसकी अपनी
+From a file	फ़ाइल से
+Going live	लाइव जा रहे हैं
+Grows	बढ़ता है
+Guide	गाइड
+Hear it	सुनें
+Her GIFs	उसके GIF
+HER HANDS	उसके हाथ
+HER JOBS	उसके काम
+HER MEMORY	उसकी स्मृति
+HER MODS	उसके मॉड
+Her personality	उसका व्यक्तित्व
+Her text	उसका टेक्स्ट
+HER VOICE	उसकी आवाज़
+Hide for now	अभी के लिए छिपाएँ
+IN DISCORD	DISCORD में
+Input: default	इनपुट: डिफ़ॉल्ट
+Install	इंस्टॉल करें
+Learn more	और जानें
+Load untested mods	बिना जाँचे मॉड लोड करें
+MAIN	मुख्य
+Mainframe: Ctrl + Alt + M	Mainframe: Ctrl + Alt + M
+Mod rules	मॉड नियम
+Mods directory	मॉड्स निर्देशिका
+New mood now	अभी नया मूड
+No intro mod is on: open Mods	कोई इंट्रो मॉड चालू नहीं: Mods खोलें
+None saved yet: connect one and it is kept here	अभी कुछ सहेजा नहीं: एक जोड़ें और वह यहाँ रहेगा
+Nothing listed yet. Press Refresh.	अभी कुछ सूची में नहीं। रीफ़्रेश दबाएँ।
+Ollama	Ollama
+Open the player	प्लेयर खोलें
+OTHER PROGRAMS	अन्य प्रोग्राम
+Output: none	आउटपुट: कोई नहीं
+Pair a phone	फ़ोन जोड़ें
+PHONES	फ़ोन
+Pick a file	फ़ाइल चुनें
+Plug-ins	प्लग-इन
+Preset {n}	प्रीसेट {n}
+Publish mod	मॉड प्रकाशित करें
+Push to talk: not set	बोलने के लिए दबाएँ: सेट नहीं
+QR CODE	QR कोड
+RELAY	रिले
+Reload	फिर से लोड करें
+Remove all phones	सभी फ़ोन हटाएँ
+Report a problem	समस्या बताएँ
+Restart to update	अपडेट के लिए फिर से शुरू करें
+Revoke	वापस लें
+Room	रूम
+Save log	लॉग सहेजें
+Save pack	पैक सहेजें
+Saved providers	सहेजे गए प्रदाता
+Screensaver	स्क्रीनसेवर
+SECURITY	सुरक्षा
+Set	सेट करें
+Set up Email	ईमेल सेट करें
+Short	छोटा
+Show my mod file	मेरी मॉड फ़ाइल दिखाएँ
+Show QR	QR दिखाएँ
+Take it off her	उससे हटा दें
+Take out	निकालें
+Tamagotchi	Tamagotchi
+The Screensaver mod is off: open Mods	स्क्रीनसेवर मॉड बंद है: Mods खोलें
+Transparent	पारदर्शी
+Turn off mini player	मिनी प्लेयर बंद करें
+Undo	पूर्ववत करें
+Use saved	सहेजा हुआ उपयोग करें
+Use this server	यह सर्वर उपयोग करें
+View	देखें
+View mod	मॉड देखें
+VOICE IN YOUR MIC	आपके माइक में आवाज़
+VOICE LAYERS	आवाज़ की परतें
+Voice model	आवाज़ मॉडल
+WHO	कौन
+Window	विंडो
+TOOLS	उपकरण
+TAMAGOTCHI MODE	तामागोची मोड
+Setup	सेटअप
+FALLBACK	बैकअप
+Refresh providers	प्रदाता ताज़ा करें
+Conversation brain	बातचीत का दिमाग
+Get it	पाएँ
+Advanced circuits package: a download, off until turned on, its size shown first. It comes with the designer.	उन्नत सर्किट पैक: एक डाउनलोड, चालू करने तक बंद, पहले उसका आकार दिखता है। यह डिज़ाइनर के साथ आता है।
+Show music player	म्यूज़िक प्लेयर दिखाएँ
+Sections	अनुभाग
+Resume	फिर से चलाएँ
+Keep playing when closed	बंद करने पर भी चलता रहे
+App	ऐप
+Mod	मॉड
+Kind	प्रकार
+Plugs into	इससे जुड़ता है
+Main files	मुख्य फ़ाइलें
+Personality files	व्यक्तित्व फ़ाइलें
+Scan wave	स्कैन तरंग
+Conflicts	टकराव
+Copy	कॉपी करें
+Edit in MD editor	MD संपादक में बदलें
+Merge	मिलाएँ
+Mod maker	मॉड मेकर
+Save collection	संग्रह सहेजें
+Colours	रंग
+Security	सुरक्षा
+Modding	मॉडिंग
+Workspace	वर्कस्पेस
+Her memory	उसकी स्मृति
+File keeper	फ़ाइल कीपर
+Keeps files in	फ़ाइलें यहाँ रखती है
+Pick a folder	फ़ोल्डर चुनें
+Follow	फॉलो करें
+Her topics	उसके विषय
+Send it	भेजें
+What she said	जो उसने कहा
+What went wrong	जो गलत हुआ
+Remember viewers	दर्शकों को याद रखें
+Forget viewers	दर्शकों को भूल जाएं
+Topics	विषय
+Growth	विकास
+Moods	मूड
+Personalities	व्यक्तित्व
+CAPRI STREAM	CAPRI STREAM
+Fold all	सब समेटें
+Folding	समेटना
+Panels	पैनल
+Chat pace	चैट की गति
+Increases gain rates by multiplier	गुणक से लाभ दर बढ़ाता है

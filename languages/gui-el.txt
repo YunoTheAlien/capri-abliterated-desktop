@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Σιωπή έως {n}:{n}
 Quiet until turned off	Σιωπή μέχρι να απενεργοποιηθεί
 Export settings	Εξαγωγή ρυθμίσεων
 Import settings	Εισαγωγή ρυθμίσεων
-Save Mainframe position	Απομνημόνευση θέσης πίνακα
+Save Mainframe position	Αποθήκευση θέσης Mainframe
+Capri options	Επιλογές Capri

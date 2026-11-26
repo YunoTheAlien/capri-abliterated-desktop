@@ -198,6 +198,7 @@ namespace CapriDesktop
 
         // Her chimes, made, played, switched and kept out of her ears, with stand-in heads, mics and speakers. Every speaker here
         // is a silent one and every chime goes into a list, so nothing plays on the PC's speakers.
+#if CHECKS
         private void SmokeSounds(List<string> checks, string output)
         {
             // Her pranks and cues under the same ceiling a mod's sound has: at full speakers the pipe and a prank clip
@@ -256,7 +257,7 @@ namespace CapriDesktop
             bool offWas = preferences.NoChimes, sentWas = preferences.NoChimeSent, heardWas = preferences.NoChimeHeard, listeningWas = preferences.NoChimeListening;
             int volumeWas = preferences.ChimeVolume;
             string setWas = preferences.ChimeSet;
-            bool advancedWas = preferences.AdvancedSettings, pageWas = mainframe.SettingsShown;
+            bool pageWas = mainframe.SettingsShown;
             long now = 1000000;
             double ringing = 0;
             chimesTested = true;
@@ -415,19 +416,18 @@ namespace CapriDesktop
                 mainframe.Sync();
 
                 string reach = "";
-                Action<bool> fits = delegate(bool advanced)
+                Action fits = delegate
                 {
                     mainframe.ShowSettings(true);
-                    if (mainframe.AdvancedShown != advanced) throw new Exception("Settings didn't open " + (advanced ? "Advanced." : "Simple."));
                     string[] parts = mainframe.PageReach.Split('|');
-                    reach += (advanced ? "Advanced " : "Simple ") + mainframe.PageReach + "; ";
+                    reach += mainframe.PageReach + "; ";
                     if (!mainframe.SoundsInPage) throw new Exception("SOUNDS is off the page: " + reach);
                     if (Math.Max(int.Parse(parts[0].Trim()), int.Parse(parts[1].Trim())) > int.Parse(parts[2].Trim())) throw new Exception("The Settings page runs past its height: " + reach);
                     string squeezed = mainframe.Overlap() ?? mainframe.Outside();
                     if (squeezed != null) throw new Exception("SOUNDS crowded Settings: " + squeezed);
                     mainframe.Wheel(-80);
                     Application.DoEvents();
-                    SnapMainframe(Path.Combine(output, advanced ? "mainframe-sounds-advanced.png" : "mainframe-sounds-simple.png"));
+                    SnapMainframe(Path.Combine(output, "mainframe-sounds.png"));
                     mainframe.Wheel(80);
                 };
                 // Shown for real, on the smoke's own desktop, so the page is laid out as they'd see it.
@@ -438,16 +438,14 @@ namespace CapriDesktop
                     mainframe.WindowState = FormWindowState.Normal;
                     mainframe.Show();
                     Application.DoEvents();
-                    InSimpleSettings(delegate { fits(false); });
-                    preferences.AdvancedSettings = true;
-                    fits(true);
+                    fits();
                 }
                 finally
                 {
                     if (!shownWas) mainframe.Hide();
                     mainframe.WindowState = stateWas;
                 }
-                checks.Add("PASS SOUNDS shows under VOICE in Simple and Advanced Settings with nothing overlapping or past the page (" + reach.TrimEnd(' ', ';') + "); pictures in mainframe-sounds-simple.png and mainframe-sounds-advanced.png");
+                checks.Add("PASS SOUNDS shows under VOICE on Settings with nothing overlapping or past the page (" + reach.TrimEnd(' ', ';') + "); picture in mainframe-sounds.png");
                 SettingsLook(Path.Combine(output, "sounds-look"));
                 {
                     bool visibleWas = mainframe.Visible;
@@ -466,7 +464,6 @@ namespace CapriDesktop
                         mainframe.ShowSettings(pageWas);
                     }
                 }
-                preferences.AdvancedSettings = advancedWas;
                 mainframe.ShowSettings(pageWas);
 
                 SoundsHeard(checks, played, delegate { now += 2000; }, delegate(long ms) { now += ms; });
@@ -481,16 +478,17 @@ namespace CapriDesktop
                 chimesTested = false;
                 preferences.NoChimes = offWas; preferences.NoChimeSent = sentWas; preferences.NoChimeHeard = heardWas; preferences.NoChimeListening = listeningWas;
                 preferences.ChimeVolume = volumeWas;
-                preferences.AdvancedSettings = advancedWas;
                 ShowChimes();
                 SavePreferences();
                 mainframe.Sync();
                 mainframe.ShowSettings(pageWas);
             }
         }
+#endif
 
         // Sound set: each step saves, takes over from the very next chime and plays its heard chime once; never over one still
         // ringing, never with Chimes off; and her settings tool picks a set by name.
+#if CHECKS
         private void SoundSets(List<string> checks, List<short[]> played, Action later, Action<double> ring)
         {
             Func<int> count = delegate { lock (played) return played.Count; };
@@ -546,9 +544,11 @@ namespace CapriDesktop
                 throw new Exception("Her settings tool or help didn't handle Sound set: " + shard + " / " + crush + " / " + help);
             checks.Add("PASS Sound set steps " + string.Join(", ", walked.ToArray()) + ", each saved, taking over from the very next chime and playing its heard chime once; picked mid-ring it plays nothing over the ringing chime, and with Chimes off it saves but plays nothing; her settings tool picks a set by name and her help answers about it");
         }
+#endif
 
         // Every way of talking to her plays its chime once, through her real ears and hands with a stand-in brain, and her ears
         // never take a chime for them.
+#if CHECKS
         private void SoundsHeard(List<string> checks, List<short[]> played, Action later, Action<long> step)
         {
             bool listenWas = preferences.ListenCapri, toldWas = preferences.ListenCapriTold, freeToldWas = preferences.FreeChatTold;
@@ -822,9 +822,11 @@ namespace CapriDesktop
                 talkState = TalkState.Off;
             }
         }
+#endif
 
         // How much of what they say right after a chime reaches her, with the chime's echo in the mic: each 100 ms of
         // their line is looked for in what her ears heard. Losing a first word is worse than any echo.
+#if CHECKS
         private void SoundsLost(List<string> checks, Action later, Action<long> step)
         {
             Func<short[], string> runWas = Hearing.Run;
@@ -1068,6 +1070,7 @@ namespace CapriDesktop
                 CloseTalk();
             }
         }
+#endif
 
         private static short[] Tone(int index, int amplitude)
         {
@@ -1145,10 +1148,10 @@ namespace CapriDesktop
             return best;
         }
 
-        // Settings drawn at 100%, 125% and 150%, Simple and Advanced, into folder, with every row's place in settings-rows.txt.
+        // Settings drawn at 100%, 125% and 150% into folder, with every row's place in settings-rows.txt.
         private void SettingsLook(string folder)
         {
-            bool advancedWas = preferences.AdvancedSettings, pageWas = mainframe.SettingsShown, shownWas = mainframe.Visible;
+            bool pageWas = mainframe.SettingsShown, shownWas = mainframe.Visible;
             FormWindowState stateWas = mainframe.WindowState;
             List<string> rows = new List<string>();
             Directory.CreateDirectory(folder);
@@ -1157,18 +1160,12 @@ namespace CapriDesktop
                 mainframe.WindowState = FormWindowState.Normal;
                 mainframe.Show();
                 Application.DoEvents();
-                foreach (bool advanced in new[] { false, true })
-                    foreach (int percent in new[] { 100, 125, 150 })
-                    {
-                        Action draw = delegate { mainframe.SnapSettings(percent * 96 / 100, (advanced ? "advanced-" : "simple-") + percent, folder, rows); };
-                        if (advanced) { preferences.AdvancedSettings = true; draw(); }
-                        else InSimpleSettings(draw);
-                    }
+                foreach (int percent in new[] { 100, 125, 150 })
+                    mainframe.SnapSettings(percent * 96 / 100, "settings-" + percent, folder, rows);
                 File.WriteAllLines(Path.Combine(folder, "settings-rows.txt"), rows.ToArray());
             }
             finally
             {
-                preferences.AdvancedSettings = advancedWas;
                 mainframe.ShowSettings(pageWas);
                 if (!shownWas) mainframe.Hide();
                 mainframe.WindowState = stateWas;
@@ -1206,23 +1203,24 @@ namespace CapriDesktop
         private void BuildSounds(int c, int last)
         {
             int y = last + 42;
-            Section("SOUNDS >", c, y);
-            chimes = Switch("Chimes", c, y + 24, delegate { if (!syncing) capri.ToggleChimes(); });
+            // From its tree (SoundsTree).
+            Dictionary<string, Control> rows = HerPanel(SoundsTree, c, y, Font);
+            chimes = (Toggle)rows["Chimes"];
             chimes.AccessibleName = "Chimes. Soft sounds when your message is sent, when she's heard you and when she's listening";
-            chimeSet = Setting("Sound set", SetNames(), c, y + 24 + Row, "Which set of chimes she plays");
+            chimeSet = (Slider)rows["Sound set"];
+            chimeSet.AccessibleName = "Which set of chimes she plays";
             chimeSetName = new Readout(chimeSet);
             chimeSetLabel = Controls[Controls.IndexOf(chimeSet) - 1];
-            chimeSet.Changed += delegate { if (syncing) return; chimeSetName.Text = SetNames()[chimeSet.Value]; capri.SetChimeSet(Chimes.Picked[chimeSet.Value]); };
-            chimeVolume = Setting("Chime volume", ChimeVolumeNames, c, y + 24 + Row * 2, "How loud her chimes are");
+            chimeVolume = (Slider)rows["Chime volume"];
+            chimeVolume.AccessibleName = "How loud her chimes are";
             chimeVolumeName = new Readout(chimeVolume);
             chimeVolumeLabel = Controls[Controls.IndexOf(chimeVolume) - 1];
-            chimeVolume.Changed += delegate { if (syncing) return; chimeVolumeName.Text = ChimeVolumeNames[chimeVolume.Value]; capri.SetChimeVolume((chimeVolume.Value + 1) * 10); };
             chimeVolume.Released += delegate { if (!syncing) capri.PreviewChime(); };
-            chimeSent = Switch("Message sent", c, y + 24 + Row * 3, delegate { if (!syncing) capri.ToggleChime(Chime.Sent); });
+            chimeSent = (Toggle)rows["Message sent"];
             chimeSent.AccessibleName = "Message sent. A soft rising tick when your typed message goes to her";
-            chimeHeard = Switch("Heard you", c, y + 24 + Row * 4, delegate { if (!syncing) capri.ToggleChime(Chime.Heard); });
+            chimeHeard = (Toggle)rows["Heard you"];
             chimeHeard.AccessibleName = "Heard you. A soft falling tick when she's heard you finish talking";
-            chimeListening = Switch("Listening", c, y + 24 + Row * 5, delegate { if (!syncing) capri.ToggleChime(Chime.Listening); });
+            chimeListening = (Toggle)rows["Listening"];
             chimeListening.AccessibleName = "Listening. Three soft rising ticks when Hey Capri opens her ears";
         }
 
@@ -1283,7 +1281,7 @@ namespace CapriDesktop
                 foreach (KeyValuePair<Control, int> entry in pageLeft)
                 {
                     Control row = entry.Key;
-                    if (Folded(row) || Hidden(row) || !row.Visible) continue;
+                    if (Hidden(row) || !row.Visible) continue;
                     string label = row.AccessibleName ?? "";
                     if (label.Length == 0) label = row.Text ?? "";
                     if (label.Length == 0) label = row.GetType().Name;
@@ -1338,6 +1336,7 @@ namespace CapriDesktop
         }
 
         // SOUNDS greyed with Chimes off, and the tips on its rows, with Windows at 100%, 125% and 150%.
+#if CHECKS
         internal void SoundsTips(string folder)
         {
             int dpiWas = layoutDpi, textWas = layoutText, sizeWas = capri.MainframeSize;
@@ -1387,13 +1386,14 @@ namespace CapriDesktop
                 SizeMainframe(sizeWas);
             }
         }
+#endif
 
         internal bool SoundsInPage
         {
             get
             {
                 foreach (Control row in new Control[] { chimes, chimeSet, chimeVolume, chimeSent, chimeHeard, chimeListening })
-                    if (Folded(row) || Hidden(row)) return false;
+                    if (Hidden(row)) return false;
                 return true;
             }
         }

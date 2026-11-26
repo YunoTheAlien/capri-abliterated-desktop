@@ -108,6 +108,8 @@ namespace CapriDesktop
                 if (opened != null) try { key = Convert.FromBase64String(opened); } catch (FormatException) { key = null; }
                 if (key == null || key.Length != 32)
                 {
+                    // One that can't be opened here is kept aside, never written over, so it isn't lost if it can be read again.
+                    if (File.Exists(kept)) KeepAside(kept);
                     key = new byte[32];
                     using (RandomNumberGenerator random = RandomNumberGenerator.Create()) random.GetBytes(key);
                     Gate(folder);
@@ -119,6 +121,14 @@ namespace CapriDesktop
             catch (PlatformNotSupportedException) { return null; }
             catch (IOException caughtOne) { Brain.Caught(caughtOne); return null; }
             catch (UnauthorizedAccessException caughtOne) { Brain.Caught(caughtOne); return null; }
+        }
+
+        internal static string KeepAside(string kept)
+        {
+            string aside = kept + ".unreadable-" + DateTime.UtcNow.ToString("yyyyMMddHHmmss", System.Globalization.CultureInfo.InvariantCulture);
+            File.Move(kept, aside);
+            Brain.Log("plugins", -1, "Her plug-ins' signing key couldn't be read on this PC; it is kept as " + System.IO.Path.GetFileName(aside) + " and a new one made, so plug-ins and approvals signed with the old one need turning on again.");
+            return aside;
         }
 
         private static void Gate(string folder)

@@ -1,7 +1,7 @@
 // capri-mod: 1
 // id: startup-intros
 // name: Startup Intros
-// version: 2.4.0
+// version: 2.5.0
 // author: Avery
 // description: Three start-up animations: Hijack, Shatter and Wake.
 // intro: yes
@@ -42,11 +42,9 @@ public class StartupIntros : ICapriMod, ICapriIntro, ICapriIntroNames
     public string[] Intros { get { return Names; } }
 
     private ICapriHost capri;
-    private string choiceFile;
     // One play asked for now: from her test menu, or "hijack intro", whatever Toggles has on.
     private bool once;
     private int current;
-    private bool shuffle = true;
     private int fired;
 
     private Bitmap head, headHalf, headRed, headCyan, headViolet;
@@ -89,68 +87,28 @@ public class StartupIntros : ICapriMod, ICapriIntro, ICapriIntroNames
         capri = host;
         Tint();
         host.Ui.ColoursChanged += Tint;
-        choiceFile = Path.Combine(host.Folder, "choice.txt");
-        Load();
-        // Toggles > Intros decides: one of those on is picked at random each start; none on means no intro, as it ships.
-        // Saying "shatter", "hijack" or "wake" still pins one for the next start.
+        // Toggles > Intros decides: one on is always that one, several on a random one of them each start, none on no
+        // intro, as it ships.
         int[] allowed = Allowed();
-        if (allowed.Length > 0)
-        {
-            current = allowed[new Random().Next(allowed.Length)];
-            shuffle = false;
-            offByFile = false;
-        }
-        else offByFile = true;
-        if (shuffle)
-        {
-            current = (current + 1) % Names.Length;
-            Save();
-        }
+        offByFile = allowed.Length == 0;
+        if (!offByFile) current = allowed[new Random().Next(allowed.Length)];
     }
 
     private bool offByFile;
 
-    // Each intro asked of her settings; an older Capri without them still has the list in sys.md.
+    // Each intro asked of her settings, Toggles > Intros.
     private int[] Allowed()
     {
         List<int> on = new List<int>();
-        bool asked = false;
         try
         {
             for (int i = 0; i < Names.Length; i++)
             {
                 bool? one = capri.Settings.IsOn("intro_" + Names[i].ToLowerInvariant());
-                if (one == null) continue;
-                asked = true;
-                if (one.Value) on.Add(i);
+                if (one == true) on.Add(i);
             }
         }
-        catch (Exception) { asked = false; on.Clear(); }
-        if (asked) return on.ToArray();
-        // Her sys.md sits two folders up from a mod's own folder: mods\<this mod>\ is inside her data folder.
-        try
-        {
-            string folder = capri.Folder;
-            string home = Path.GetDirectoryName(Path.GetDirectoryName(folder)) ?? "";
-            string file = SysFile(home);
-            if (!File.Exists(file)) return on.ToArray();
-            bool inside = false;
-            foreach (string raw in File.ReadAllLines(file))
-            {
-                string one = (raw ?? "").Trim();
-                if (one.StartsWith("#"))
-                {
-                    inside = one.TrimStart('#').Trim().Equals("Her start-up intro", StringComparison.OrdinalIgnoreCase);
-                    continue;
-                }
-                if (!inside || one.Length == 0 || one.StartsWith(">")) continue;
-                if (one.StartsWith("intros:", StringComparison.OrdinalIgnoreCase)) one = one.Substring(7);
-                foreach (string part in one.Split(','))
-                    for (int i = 0; i < Names.Length; i++)
-                        if (Names[i].Equals(part.Trim(), StringComparison.OrdinalIgnoreCase) && !on.Contains(i)) on.Add(i);
-            }
-        }
-        catch (Exception) { }
+        catch (Exception) { on.Clear(); }
         return on.ToArray();
     }
 
@@ -166,22 +124,12 @@ public class StartupIntros : ICapriMod, ICapriIntro, ICapriIntroNames
             return true;
         }
         if (!said.Contains("intro")) return false;
-        if (said.Contains("shuffle"))
-        {
-            shuffle = true;
-            Save();
-            capri.Say("Shuffling my entrances. Keep up.");
-            return true;
-        }
         int picked = said.Contains("hijack") ? 0 : said.Contains("shatter") ? 1 : said.Contains("wake") ? 2 : -1;
         if (picked < 0) return false;
+        // Played now, once; the next start is still Toggles' pick.
         current = picked;
         once = true;
-        // Tried from her test menu: played now and never kept as the pick.
-        if (said.StartsWith("test ")) { capri.PlayIntro(); return true; }
-        shuffle = false;
-        Save();
-        capri.Say("Locked in: " + Names[picked] + ".");
+        if (!said.StartsWith("test ")) capri.Say("Fine. Watch this.");
         capri.PlayIntro();
         return true;
     }
@@ -862,28 +810,6 @@ public class StartupIntros : ICapriMod, ICapriIntro, ICapriIntroNames
         desktopCopy = null;
     }
 
-    private void Load()
-    {
-        try
-        {
-            if (!File.Exists(choiceFile)) return;
-            string[] parts = File.ReadAllText(choiceFile).Trim().Split(' ');
-            int saved;
-            if (parts.Length == 2 && int.TryParse(parts[1], out saved) && saved >= 0 && saved < Names.Length)
-            {
-                current = saved;
-                shuffle = parts[0] == "shuffle";
-            }
-        }
-        catch (IOException error) { capri.Log(error.Message); }
-    }
-
-    private void Save()
-    {
-        try { File.WriteAllText(choiceFile, (shuffle ? "shuffle " : "fixed ") + current); }
-        catch (IOException error) { capri.Log(error.Message); }
-    }
-
     // ---- Small helpers. ----
     private static PointF[] Points(float[] shape, PointF middle, float unit, float squash = 1)
     {
@@ -948,25 +874,4 @@ public class StartupIntros : ICapriMod, ICapriIntro, ICapriIntroNames
     private static double Out(double value) { value = Clamp(value); return 1 - (1 - value) * (1 - value) * (1 - value); }
     private static double Back(double value) { value = Clamp(value) - 1; return 1 + value * value * (2.4 * value + 1.4); }
     private static double Bump(double value) { return Math.Sin(Clamp(value) * Math.PI); }
-
-    // Her sys.md now sits in a folder of its own under personalSettings, one per side, and only the one she is
-    // using is written as she starts. So the newest sys.md under personalSettings is hers; the old places are the
-    // fallback for an older Capri.
-    private static string SysFile(string home)
-    {
-        string newest = null;
-        DateTime when = DateTime.MinValue;
-        try
-        {
-            string settings = Path.Combine(home, "personalSettings");
-            if (Directory.Exists(settings))
-                foreach (string one in Directory.GetFiles(settings, "sys.md", SearchOption.AllDirectories))
-                {
-                    DateTime at = File.GetLastWriteTimeUtc(one);
-                    if (newest == null || at > when) { newest = one; when = at; }
-                }
-        }
-        catch (Exception) { newest = null; }
-        return newest ?? Path.Combine(home, "sys.md");
-    }
 }

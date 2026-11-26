@@ -22,7 +22,12 @@ namespace CapriDesktop
     // Shared state sits behind gate; events are raised outside it and must return quickly.
     internal sealed partial class RemoteLink
     {
-        internal const string DefaultHost = "capri-remote.lachydotmcg.workers.dev";
+        // The relay Remote uses unless they type their own: one of ours, none yet.
+        internal static string DefaultHost = "";
+        internal const string NoRemote = "Capri Remote isn't available until we have our own server.";
+
+        // Remote needs a phone page to pair through; until there's one of ours it stays off.
+        internal static bool Available { get { return RemoteCrypto.QrBase.Length > 0; } }
         internal const int CodeSeconds = 600;
         private static readonly string[] Features = { "chat" };
         internal const string PairFeature = "pair";
@@ -64,7 +69,7 @@ namespace CapriDesktop
         private long tickDue;
         private string status = "off";
         private CancellationTokenSource run;
-        private Timer ticker;
+        private Clock.OffTimer ticker;
 
         // relay is a base address from RelayBase. state is the room and the paired phones; save gets a copy after each
         // change, to seal and store.
@@ -175,7 +180,7 @@ namespace CapriDesktop
                 if (started) return;
                 started = true;
                 run = new CancellationTokenSource();
-                ticker = new Timer(Tick);
+                ticker = new Clock.OffTimer("RemoteLink ticker", Tick);
                 token = run.Token;
             }
             Task.Run(delegate { return Loop(token); });
@@ -199,7 +204,7 @@ namespace CapriDesktop
             }
         }
 
-        // The relay's base address from what was typed: a host such as capri-remote.lachydotmcg.workers.dev (wss), or a
+        // The relay's base address from what was typed: a host such as relay.example (wss), or a
         // ws:// or wss:// address. Plain ws:// is only allowed to this PC, for a relay under wrangler dev. Null when it
         // isn't a host.
         internal static string RelayBase(string host)
@@ -533,6 +538,7 @@ namespace CapriDesktop
 
         // Job frames on a stand-in wire: both phones get each sealed with their own keys, updates batch to the newest,
         // five frames a second at most, stale frames dropped, a lagging phone keeps the newest 30 steps.
+#if CHECKS
         internal static void SmokeJobs(List<string> checks)
         {
             RemoteState state = RemoteState.Fresh();
@@ -603,7 +609,9 @@ namespace CapriDesktop
             }
             checks.Add("PASS job messages reach both live phones, open with each phone's keys, batch steps, stay at five frames a second, drop frames from a replaced session and keep a phone that fell behind to the newest 30 steps");
         }
+#endif
 
+#if CHECKS
         internal static RemoteLink SmokeSession(RemoteState state)
         {
             RemoteLink link = new RemoteLink(state, "ws://127.0.0.1:1", "Test PC", "test", null);
@@ -614,8 +622,10 @@ namespace CapriDesktop
             }
             return link;
         }
+#endif
 
 #if CROSS
+#if CHECKS
         internal static byte[] SmokePictureBytes(int width, bool jpeg, int height = 2)
         {
             using (SkiaSharp.SKBitmap bitmap = new SkiaSharp.SKBitmap(width, height))
@@ -626,7 +636,9 @@ namespace CapriDesktop
             }
         }
 #endif
+#endif
 
+#if CHECKS
         internal static void SmokePictureHeaders(List<string> checks)
         {
             Func<string, byte[], RemoteJson.Map> message = delegate(string mime, byte[] bytes)
@@ -670,7 +682,9 @@ namespace CapriDesktop
             }
             checks.Add("PASS JPEG and PNG headers reject 12000 by 12000, truncated and 1569 pixel pictures without decoding; 1568 decodes and small fake images fail");
         }
+#endif
 
+#if CHECKS
         internal static void SmokePictures(List<string> checks, Action<string, RemotePicture> answer = null)
         {
             byte[] bytes;
@@ -850,7 +864,9 @@ namespace CapriDesktop
                 finally { release.Set(); link.Stop(); }
             }
         }
+#endif
 
+#if CHECKS
         internal static void SmokePictureTurns(Action<RemoteLink, string, Action<string>> run)
         {
             RemoteState state = RemoteState.Fresh();
@@ -874,7 +890,9 @@ namespace CapriDesktop
                 finally { link.wire.Socket.Dispose(); }
             }
         }
+#endif
 
+#if CHECKS
         internal static void SmokePictureOrder(List<string> checks)
         {
             RemoteState state = RemoteState.Fresh();
@@ -972,7 +990,9 @@ namespace CapriDesktop
                 finally { release.Set(); link.wire.Socket.Dispose(); next.wire.Socket.Dispose(); }
             }
         }
+#endif
 
+#if CHECKS
         internal static void SmokePictureReceipts(List<string> checks)
         {
             RemoteState state = RemoteState.Fresh();
@@ -1048,7 +1068,9 @@ namespace CapriDesktop
                 finally { link.wire.Socket.Dispose(); }
             }
         }
+#endif
 
+#if CHECKS
         internal static void SmokePairing(List<string> checks)
         {
             RemoteState state = RemoteState.Fresh();
@@ -1134,6 +1156,7 @@ namespace CapriDesktop
             }
             checks.Add("PASS pairing links refuse link-added phones, limit each phone to one ask a minute across sessions, save the parent's id and revoke its known link children; Remove all phones queues all 16 relay revokes and starts a fresh room with no phones");
         }
+#endif
 
         // Messages that only mean something now, like a screen frame or a moment of voice, sealed together in order and
         // never held for a later session. left runs once they're sent or dropped and must not block. False when that

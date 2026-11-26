@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Runtime.Serialization;
 using System.Windows.Forms;
@@ -96,20 +97,20 @@ namespace CapriDesktop
 
         private void BuildWeather(int y)
         {
-            Section("WEATHER >", 0, y);
-            weatherSwitch = Switch("Weather", 0, y + 24, delegate { if (!syncing) capri.ToggleWeather(); });
+            // From its tree (WeatherTree). What is sent, and to whom, is the City box's tip.
+            Dictionary<string, Control> rows = HerPanel(WeatherTree, 0, y, Font);
+            weatherSwitch = (Toggle)rows["Weather"];
             weatherSwitch.AccessibleName = "Weather. Opt in to forecasts from Open-Meteo for the city you type; off by default";
-            Caption("City", 28, y + 56, Type(9.5f), Rose);
-            weatherCity = Input(ValueAt, y + 52, ValueWide, 22);
-            weatherCity.Cue = "Your city";
+            weatherCity = (Entry)rows["City"];
             weatherCity.Box.AccessibleName = "City for the weather";
             Explain(weatherCity, "Weather", "Mainframe.cs", null, "City for the weather");
             weatherCity.Box.KeyDown += delegate(object sender, KeyEventArgs e) { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; UseWeatherCity(); } };
             weatherCity.Box.LostFocus += delegate { UseWeatherCity(); };
-            Label hint = Caption("From Open-Meteo, no key. Only the city you\ntype is sent. I never look you up by IP.", 28, y + 80, Look.Mono(8.5f, FontStyle.Regular, GraphicsUnit.Point), Faint);
-            hint.AutoSize = false;
-            hint.Bounds = new Rectangle(28, y + 80, 328, 36);
+            SettingHint cityTip;
+            if (hints.TryGetValue(weatherCity, out cityTip)) { cityTip.Exact = CityTip; cityTip.Title = ""; }
         }
+
+        internal const string CityTip = "From Open-Meteo, no key. Only the city you type is sent. I never look you up by IP.";
 
         private void UseWeatherCity()
         {

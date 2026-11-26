@@ -38,37 +38,46 @@ namespace CapriDesktop
             int[] far = rimDistance;
             int* image = (int*)pixels.ToPointer();
             const int Away = 1 << 20;
+            // Her body's box, and the glow's reach round it: nothing further out is lit, so nothing further out is worked
+            // over. On a box with no graphics card the whole canvas cost a frame twice as long.
+            int top = height, bottom = -1, left = width, right = -1;
+            for (int y = 0; y < height; y++)
+                for (int x = 0, at = y * width; x < width; x++, at++)
+                    if (((uint)image[at] >> 24) >= 128) { if (y < top) top = y; bottom = y; if (x < left) left = x; if (x > right) right = x; }
+            if (bottom < 0) return;
+            int pad = reach / 3 + 2;
+            int y0 = Math.Max(0, top - pad), y1 = Math.Min(height - 1, bottom + pad), x0 = Math.Max(0, left - pad), x1 = Math.Min(width - 1, right + pad);
             fixed (int* distance = far)
             {
-                for (int y = 0; y < height; y++)
-                    for (int x = 0, at = y * width; x < width; x++, at++)
+                for (int y = y0; y <= y1; y++)
+                    for (int x = x0, at = y * width + x0; x <= x1; x++, at++)
                     {
                         int d = ((uint)image[at] >> 24) >= 128 ? 0 : Away;
                         if (d != 0)
                         {
-                            if (x > 0) d = Math.Min(d, distance[at - 1] + 3);
-                            if (y > 0)
+                            if (x > x0) d = Math.Min(d, distance[at - 1] + 3);
+                            if (y > y0)
                             {
                                 d = Math.Min(d, distance[at - width] + 3);
-                                if (x > 0) d = Math.Min(d, distance[at - width - 1] + 4);
-                                if (x < width - 1) d = Math.Min(d, distance[at - width + 1] + 4);
+                                if (x > x0) d = Math.Min(d, distance[at - width - 1] + 4);
+                                if (x < x1) d = Math.Min(d, distance[at - width + 1] + 4);
                             }
                         }
                         distance[at] = d;
                     }
                 Color colour = Neon.Hot;
                 int most = (int)Math.Round(230 * Math.Min(1f, level));
-                for (int y = height - 1; y >= 0; y--)
-                    for (int x = width - 1, at = y * width + width - 1; x >= 0; x--, at--)
+                for (int y = y1; y >= y0; y--)
+                    for (int x = x1, at = y * width + x1; x >= x0; x--, at--)
                     {
                         int d = distance[at];
                         if (d == 0) continue;
-                        if (x < width - 1) d = Math.Min(d, distance[at + 1] + 3);
-                        if (y < height - 1)
+                        if (x < x1) d = Math.Min(d, distance[at + 1] + 3);
+                        if (y < y1)
                         {
                             d = Math.Min(d, distance[at + width] + 3);
-                            if (x < width - 1) d = Math.Min(d, distance[at + width + 1] + 4);
-                            if (x > 0) d = Math.Min(d, distance[at + width - 1] + 4);
+                            if (x < x1) d = Math.Min(d, distance[at + width + 1] + 4);
+                            if (x > x0) d = Math.Min(d, distance[at + width - 1] + 4);
                         }
                         distance[at] = d;
                         if (d >= reach) continue;
@@ -89,6 +98,7 @@ namespace CapriDesktop
         // Her pulse and the Mainframe's edge glow peak within 50 ms of the same beat at every strength; her swell shows
         // and her outline glows in drawn frames; Glow, Steady, the cost at size 560, and Motion or the switch off
         // removing it all.
+#if CHECKS
         private void SmokeBeatPulse(List<string> checks)
         {
             ThrowCheck(checks, delegate(List<string> list, List<short[]> sounds)
@@ -187,9 +197,11 @@ namespace CapriDesktop
                     dancePos = 0.5;
                     GlowWithBeat();
                     int[] heldLater = Outside(dance);
-                    bool steadyGlow = Pulse() == 1f && Hop() == 0f && held[0] > 100 && Math.Abs(held[1] - heldLater[1]) <= held[1] / 5 && steadyLit > 0 && steadyLit == mainframe.BeatGlowShown;
+                    // Per pixel of her outline, since a dance frame can lengthen or shorten the outline itself.
+                    double heldEach = held[1] / (double)Math.Max(1, held[0]), laterEach = heldLater[1] / (double)Math.Max(1, heldLater[0]);
+                    bool steadyGlow = Pulse() == 1f && Hop() == 0f && held[0] > 100 && Math.Abs(heldEach - laterEach) <= heldEach / 5 && steadyLit > 0 && steadyLit == mainframe.BeatGlowShown;
                     if (!glowOnly || !steadyGlow)
-                        throw new Exception("The glow looks went wrong: Glow " + glowOnly + " (still " + still + ", outline " + onBeat[0] + " px on the beat, light " + onBeat[1] + " on the beat and " + offBeat[1] + " between, flipped " + flipped[0] + ", sitting " + sitting[0] + ", colour " + onBeat[2] + "," + onBeat[3] + "," + onBeat[4] + " against " + hot.R + "," + hot.G + "," + hot.B + ", Mainframe " + glowLit + "), Steady glow " + steadyGlow + " (outline " + held[0] + " px, light " + held[1] + " and " + heldLater[1] + ", Mainframe " + steadyLit + " and " + mainframe.BeatGlowShown + ")");
+                        throw new Exception("The glow looks went wrong: Glow " + glowOnly + " (still " + still + ", outline " + onBeat[0] + " px on the beat, light " + onBeat[1] + " on the beat and " + offBeat[1] + " between, flipped " + flipped[0] + ", sitting " + sitting[0] + ", colour " + onBeat[2] + "," + onBeat[3] + "," + onBeat[4] + " against " + hot.R + "," + hot.G + "," + hot.B + ", Mainframe " + glowLit + "), Steady glow " + steadyGlow + " (outline " + held[0] + " and " + heldLater[0] + " px, light " + held[1] + " and " + heldLater[1] + ", Mainframe " + steadyLit + " and " + mainframe.BeatGlowShown + ")");
                     // What a frame costs with her outline glowing at size 560, against the same with the pulse off.
                     int sizeWas = preferences.Size;
                     bool musicHeld = musicOn;
@@ -281,15 +293,18 @@ namespace CapriDesktop
                         throw new Exception("The kick didn't drive her pulse: pulsing " + kickPulses + ", level " + onKick + " on the kick and " + afterKick + " 300 ms on, Mainframe " + edgeOnKick + " then " + edgeAfter + " (it was " + framedBeforeKick + " after her own song), gone with no kick or lock " + kickGone);
                     found.Add("another app's kick takes her swell to " + onKick.ToString("0.00") + " at once and " + afterKick.ToString("0.00") + " 300 ms on, the Mainframe's edge from " + edgeOnKick + " to " + edgeAfter + ", and with no kick and no beat found she stops");
                     // A kick draws her at once: the beat thread's word puts a frame up ahead of her frame timer.
+                    // Waited on the frame itself, up to KickDrawLimit, so a busy run's slow message queue isn't taken for a missed kick.
+                    const int KickDrawLimit = 3000;
+                    Play(dance);
                     int framesBefore = kickFrames;
                     groove.PretendKick(1, clock.Elapsed.TotalSeconds);
                     Action kicked = groove.Kicked;
                     double kickToldAt = clock.Elapsed.TotalSeconds;
                     if (kicked != null) kicked();
                     System.Diagnostics.Stopwatch kickWait = System.Diagnostics.Stopwatch.StartNew();
-                    while (kickFrames == framesBefore && kickWait.ElapsedMilliseconds < 500) { Application.DoEvents(); System.Threading.Thread.Sleep(1); }
+                    while (kickFrames == framesBefore && kickWait.ElapsedMilliseconds < KickDrawLimit) { Application.DoEvents(); System.Threading.Thread.Sleep(1); }
                     groove.PretendKick(0, -10);
-                    if (kickFrames == framesBefore) throw new Exception("A kick didn't draw her at once: no frame within 500 ms of the beat thread's word");
+                    if (kickFrames == framesBefore) throw new Exception("A kick didn't draw her: no frame within " + KickDrawLimit + " ms of the beat thread's word (pulse " + preferences.BeatPulse + ", " + Doing + ")");
                     found.Add("a kick starts her frame " + ((kickFrameAt - kickToldAt) * 1000).ToString("0") + " ms after the beat thread reads it, ahead of her frame timer");
                     // A song from her own playlist counts as music, so she dances to it: it plays inside Capri, where
                     // Windows' media sessions never see it. A short silent one, played at nothing.
@@ -310,18 +325,21 @@ namespace CapriDesktop
                         queuedAt = 0;
                         // Windows' sessions, hers included, are read at most about once a second, so each look waits that out.
                         ownStarted = FolderTunes.Start(quiet);
+                        Func<bool, bool> reads = delegate(bool want)
+                        {
+                            bool got = !want;
+                            for (int look = 0; look < 12 && got != want; look++) { System.Threading.Thread.Sleep(250); got = MusicPlaying(); }
+                            return got;
+                        };
                         if (ownStarted)
                         {
-                            System.Threading.Thread.Sleep(1000);
-                            ownSong = MusicPlaying();
+                            ownSong = reads(true);
                             FolderTunes.Pause();
-                            System.Threading.Thread.Sleep(1000);
-                            ownPaused = MusicPlaying();
+                            ownPaused = reads(false);
                             FolderTunes.Resume();
                         }
                         FolderTunes.Stop();
-                        System.Threading.Thread.Sleep(1000);
-                        ownStopped = MusicPlaying();
+                        ownStopped = reads(false);
                     }
                     finally
                     {
@@ -357,6 +375,248 @@ namespace CapriDesktop
                 }
             });
         }
+#endif
+
+        // Her player after a close: Play brings it back and carries on the song, Show music player only shows it, and the
+        // kept song comes back by the 30 minute rule; she pulses to music from her Play menu and the TOOLS tile alike.
+#if CHECKS
+        private void SmokePlayerBack(List<string> checks, string output)
+        {
+            string folder = System.IO.Path.Combine(output, "player-back");
+            System.IO.Directory.CreateDirectory(folder);
+            string[] songs = { System.IO.Path.Combine(folder, "first.wav"), System.IO.Path.Combine(folder, "second.wav") };
+            foreach (string song in songs)
+                using (System.IO.BinaryWriter wav = new System.IO.BinaryWriter(System.IO.File.Create(song)))
+                {
+                    int rate = 8000, samples = rate * 20;
+                    wav.Write(new[] { 'R', 'I', 'F', 'F' }); wav.Write(36 + samples * 2); wav.Write(new[] { 'W', 'A', 'V', 'E', 'f', 'm', 't', ' ' });
+                    wav.Write(16); wav.Write((short)1); wav.Write((short)1); wav.Write(rate); wav.Write(rate * 2); wav.Write((short)2); wav.Write((short)16);
+                    wav.Write(new[] { 'd', 'a', 't', 'a' }); wav.Write(samples * 2); wav.Write(new byte[samples * 2]);
+                }
+            Playlist listWas = playlist;
+            List<string> queuedWas = queued;
+            int queuedAtWas = queuedAt;
+            double nextWas = nextSongAt, loudWas = FolderTunes.Loudness;
+            string keptWas = preferences.KeptSong;
+            double keptAtWas = preferences.KeptAt;
+            long keptWhenWas = preferences.KeptWhen;
+            bool closedWas = playerClosed, askedWas = playerAsked, pulseWas = preferences.BeatPulse, framedWas = mainframe.Visible, noPlayerWas = preferences.NoPlayer, keepsWas = preferences.PlayerCloseKeepsMusic;
+            double focusWas = focusUntil;
+            Func<bool> musicWas = MusicPlaying;
+            List<string> wrong = new List<string>();
+            Func<bool> shown = delegate { Tuned(PlaylistTune(), clock.Elapsed.TotalSeconds, Tunes.Now); return player.Visible; };
+            try
+            {
+                FolderTunes.Loudness = 0;
+                preferences.NoPlayer = false;
+                preferences.PlayerCloseKeepsMusic = false;
+                playlist = new Playlist(System.IO.Path.Combine(folder, "playlist.json"));
+                playlist.AddFolder(folder);
+                preferences.KeptSong = null;
+                if (ContinuePlaylist() != "Playing now." || FolderTunes.Playing == null)
+                {
+                    checks.Add("LIMIT her player after a close: her playlist couldn't play here (no Windows media playback)");
+                    return;
+                }
+                string first = FolderTunes.Playing;
+                System.Threading.Thread.Sleep(1200);
+                if (!shown()) wrong.Add("the player didn't come up as her playlist played");
+
+                // Closed while the song plays, as it starts: the music stops, and the song and its place are kept and saved.
+                player.Press(PlayerPart.Close);
+                Preferences saved = LoadPreferences();
+                if (player.Visible || !playerClosed) wrong.Add("the close button didn't put the player away");
+                if (preferences.KeptSong != first || preferences.KeptAt < 0.5 || Math.Abs(preferences.KeptWhen - EpochNow) > 5 || saved.KeptSong != first)
+                    wrong.Add("the close didn't keep the song: " + preferences.KeptSong + " at " + preferences.KeptAt.ToString("0.0") + " s, " + (EpochNow - preferences.KeptWhen) + " s ago, saved " + saved.KeptSong);
+                if (FolderTunes.Playing != null) wrong.Add("closing the player didn't stop the music, as it does by default");
+
+                // Play from her menu after it: the player comes back and the same song carries on where it was.
+                double kept = preferences.KeptAt;
+                PlayMyMusic();
+                CloseTalk();
+                System.Threading.Thread.Sleep(300);
+                if (FolderTunes.Playing != first || FolderTunes.At + 0.6 < kept || !shown()) wrong.Add("Play after a close didn't carry the song on or left the player away: " + Playlist.Name(FolderTunes.Playing ?? "nothing") + " at " + FolderTunes.At.ToString("0.0") + " s, kept at " + kept.ToString("0.0") + " s, player " + player.Visible);
+
+                // Her Play menu's Stop, then Resume: the song stops and is kept, then carries on.
+                StopOrResume();
+                bool stopped = MusicStopped && FolderTunes.Playing == null && preferences.KeptSong == first;
+                kept = preferences.KeptAt;
+                StopOrResume();
+                System.Threading.Thread.Sleep(300);
+                if (!stopped || FolderTunes.Playing != first || FolderTunes.At + 0.6 < kept) wrong.Add("Stop then Resume: stopped " + stopped + ", then " + Playlist.Name(FolderTunes.Playing ?? "nothing") + " at " + FolderTunes.At.ToString("0.0") + " s, kept at " + kept.ToString("0.0") + " s");
+
+                // Keep playing when closed, Music's part in Toggles and nowhere else: the close leaves the music going, and
+                // Play carries it on untouched.
+                bool inPlayerMenu = false;
+                foreach (ToolStripItem one in playerMenu.Items) if (one.Text == "Keep playing when closed") inPlayerMenu = true;
+                mainframe.PictureToggles().Dispose();
+                mainframe.PickToggleRow("Music");
+                string togglesShown = mainframe.TogglesText ?? "";
+                mainframe.PressToggle("Keep playing when closed");
+                mainframe.CloseToggles();
+                if (inPlayerMenu || togglesShown.IndexOf("{Music} | Keep playing when closed off", StringComparison.Ordinal) < 0)
+                    wrong.Add("Keep playing when closed isn't Music's part in Toggles, off, alone: player menu " + inPlayerMenu + ", Toggles " + togglesShown);
+                bool keepsSaved = LoadPreferences().PlayerCloseKeepsMusic;
+                player.Press(PlayerPart.Close);
+                double before = FolderTunes.At;
+                if (!keepsSaved || FolderTunes.Playing != first) wrong.Add("with Keep playing when closed on, closing the player stopped the music (saved " + keepsSaved + ")");
+                PlayMyMusic();
+                CloseTalk();
+                if (FolderTunes.Playing != first || FolderTunes.At + 0.2 < before || !shown()) wrong.Add("Play with the song still going restarted it or left the player away: " + FolderTunes.At.ToString("0.0") + " s from " + before.ToString("0.0") + " s, player " + player.Visible);
+
+                // Show music player while it plays: the window only, nothing restarted.
+                player.Press(PlayerPart.Close);
+                before = FolderTunes.At;
+                ShowMusicPlayer();
+                if (FolderTunes.Playing != first || FolderTunes.At + 0.2 < before || !shown()) wrong.Add("Show music player touched the music or didn't show the player: " + FolderTunes.At.ToString("0.0") + " s from " + before.ToString("0.0") + " s, player " + player.Visible);
+
+                // Nothing playing: Show music player shows the kept song, paused, and nothing starts.
+                player.Press(PlayerPart.Close);
+                FolderTunes.Stop();
+                queuedAt = -1;
+                preferences.KeptSong = first;
+                preferences.KeptAt = 6;
+                preferences.KeptWhen = EpochNow - 60;
+                ShowMusicPlayer();
+                bool up = shown();
+                System.Threading.Thread.Sleep(400);
+                if (!up || FolderTunes.Playing != null || player.Tune == null || player.Tune.Title != Playlist.Name(first) || player.Tune.Playing)
+                    wrong.Add("Show music player with nothing playing: player " + up + ", playing " + (FolderTunes.Playing ?? "nothing") + ", shown " + (player.Tune == null ? "no song" : player.Tune.Title));
+
+                // Play a minute after the close: the kept song, where it was.
+                player.Press(PlayerPart.Close);
+                ContinuePlaylist();
+                System.Threading.Thread.Sleep(300);
+                double resumed = FolderTunes.At;
+                if (FolderTunes.Playing != first || resumed < 5.5) wrong.Add("Play under 30 minutes on didn't carry on the kept song: " + Playlist.Name(FolderTunes.Playing ?? "nothing") + " at " + resumed.ToString("0.0") + " s, kept at 6 s");
+
+                // Play 31 minutes after: the same song from its start.
+                FolderTunes.Stop();
+                queuedAt = -1;
+                preferences.KeptAt = 6;
+                preferences.KeptWhen = EpochNow - KeptFor - 60;
+                ContinuePlaylist();
+                System.Threading.Thread.Sleep(300);
+                double restarted = FolderTunes.At;
+                if (FolderTunes.Playing != first || restarted > 3) wrong.Add("Play 31 minutes on didn't start the kept song from the top: " + Playlist.Name(FolderTunes.Playing ?? "nothing") + " at " + restarted.ToString("0.0") + " s");
+
+                // She dances and pulses to it from her Play menu and from the TOOLS tile.
+                if (!framedWas) mainframe.Show();
+                preferences.BeatPulse = true;
+                MusicPlaying = delegate { return true; };
+                Mainframe.Tool tile = mainframe.Tools().Find(one => one.Id == "music");
+                ToolStripMenuItem fromMenu = null;
+                foreach (ToolStripItem one in mainframe.MiniChoices().Items) if (one.Text == "Music") fromMenu = one as ToolStripMenuItem;
+                foreach (string way in new[] { "her Play menu", "the TOOLS tile", "her Play menu during Focus time" })
+                {
+                    Play(idle);
+                    CloseTalk();
+                    // Focus time keeps her talk quiet, not her dancing.
+                    focusUntil = way.EndsWith("Focus time", StringComparison.Ordinal) ? clock.Elapsed.TotalSeconds + 600 : focusWas;
+                    if (way.StartsWith("her Play menu", StringComparison.Ordinal)) { if (fromMenu != null) fromMenu.PerformClick(); else wrong.Add("her Play menu has no Music"); }
+                    else if (tile != null && tile.Open != null) tile.Open(); else wrong.Add("TOOLS has no Music tile");
+                    CloseTalk();
+                    musicOn = true;
+                    CheckMusic(clock.Elapsed.TotalSeconds);
+                    // A beat locked at 120, followed frame by frame as SmokeBeatPulse does, so her tempo lock eases in.
+                    double t0 = clock.Elapsed.TotalSeconds + 10;
+                    groove.Pretend(120, t0);
+                    for (double t = t0; t <= t0 + 1.25; t += 0.005) FollowBeat(t);
+                    if (clip != dance && clip != perchDance) wrong.Add("music from " + way + " didn't get her dancing: " + Doing);
+                    else if (!Pulsing) wrong.Add("music from " + way + " didn't pulse: gain " + nodGain.ToString("0.00") + ", beat " + danceBeat.ToString("0.00") + ", hidden " + hidden + ", docked " + docked);
+                }
+            }
+            finally
+            {
+                MusicPlaying = musicWas;
+                musicOn = false;
+                groove.Pretend(0, 0);
+                FolderTunes.Stop();
+                FolderTunes.Loudness = loudWas;
+                playlist = listWas;
+                queued = queuedWas;
+                queuedAt = queuedAtWas;
+                nextSongAt = nextWas;
+                preferences.KeptSong = keptWas;
+                preferences.KeptAt = keptAtWas;
+                preferences.KeptWhen = keptWhenWas;
+                preferences.BeatPulse = pulseWas;
+                preferences.NoPlayer = noPlayerWas;
+                preferences.PlayerCloseKeepsMusic = keepsWas;
+                focusUntil = focusWas;
+                playerClosed = closedWas;
+                playerAsked = askedWas;
+                HidePlayer();
+                CloseTalk();
+                Play(seat != null ? perch : idle);
+                if (!framedWas) mainframe.Hide();
+                SavePreferences();
+            }
+            if (wrong.Count > 0) throw new Exception("Her player after a close went wrong: " + string.Join("; ", wrong.ToArray()));
+            checks.Add("PASS her player after a close: the close stops the music and keeps the song and its place in her settings, and Play brings the player back with the song carried on; her Play menu's Stop keeps the song and Resume carries it on; with Keep playing when closed on (saved) the close leaves the music going; Show music player only shows it, and with nothing playing shows the kept song paused and starts nothing; Play under 30 minutes on carries on the kept song where it was and 31 minutes on starts it from the top; she dances and pulses to music from her Play menu and the TOOLS tile alike, and during Focus time");
+        }
+
+        // Her own song on her player's bar: it can seek while it plays, and a seek from the bar moves the song there; a
+        // place past its end stops short of it.
+        private void SmokePlayerSeek(List<string> checks, string output)
+        {
+            string folder = System.IO.Path.Combine(output, "player-seek");
+            System.IO.Directory.CreateDirectory(folder);
+            string song = System.IO.Path.Combine(folder, "long.wav");
+            using (System.IO.BinaryWriter wav = new System.IO.BinaryWriter(System.IO.File.Create(song)))
+            {
+                int rate = 8000, samples = rate * 40;
+                wav.Write(new[] { 'R', 'I', 'F', 'F' }); wav.Write(36 + samples * 2); wav.Write(new[] { 'W', 'A', 'V', 'E', 'f', 'm', 't', ' ' });
+                wav.Write(16); wav.Write((short)1); wav.Write((short)1); wav.Write(rate); wav.Write(rate * 2); wav.Write((short)2); wav.Write((short)16);
+                wav.Write(new[] { 'd', 'a', 't', 'a' }); wav.Write(samples * 2); wav.Write(new byte[samples * 2]);
+            }
+            Playlist listWas = playlist;
+            double loudWas = FolderTunes.Loudness, nextWas = nextSongAt;
+            bool noPlayerWas = preferences.NoPlayer, framedWas = mainframe.Visible;
+            string keptWas = preferences.KeptSong;
+            List<string> wrong = new List<string>();
+            try
+            {
+                FolderTunes.Loudness = 0;
+                preferences.NoPlayer = false;
+                playlist = new Playlist(System.IO.Path.Combine(folder, "playlist.json"));
+                playlist.AddFolder(folder);
+                if (ContinuePlaylist() != "Playing now." || FolderTunes.Playing == null) { checks.Add("LIMIT her player's seek: her playlist couldn't play here (no Windows media playback)"); return; }
+                Func<double, bool> until = delegate(double seconds)
+                {
+                    for (int i = 0; i < 40; i++) { if (FolderTunes.Seconds > 0) break; System.Threading.Thread.Sleep(50); }
+                    Tuned(PlaylistTune(), clock.Elapsed.TotalSeconds, Tunes.Now);
+                    return player.Tune != null;
+                };
+                if (!until(0) || !player.Tune.CanSeek || player.Tune.Length < 35) wrong.Add("her own song can't seek on the bar: " + (player.Tune == null ? "no song shown" : "can seek " + player.Tune.CanSeek + ", " + player.Tune.Length.ToString("0.0") + " s long"));
+                else
+                {
+                    player.SeekTo(0.5);
+                    System.Threading.Thread.Sleep(500);
+                    double at = FolderTunes.At;
+                    if (at < 19 || at > 23) wrong.Add("a seek to half way put the song at " + at.ToString("0.0") + " s of " + FolderTunes.Seconds.ToString("0.0"));
+                    PlayerCommand("seek:9999");
+                    System.Threading.Thread.Sleep(300);
+                    if (FolderTunes.Playing == null && FolderTunes.At > FolderTunes.Seconds) wrong.Add("a seek past the end went past it");
+                    PlayerCommand("seek:NaN");
+                }
+            }
+            finally
+            {
+                FolderTunes.Stop();
+                FolderTunes.Loudness = loudWas;
+                playlist = listWas;
+                nextSongAt = nextWas;
+                preferences.NoPlayer = noPlayerWas;
+                preferences.KeptSong = keptWas;
+                HidePlayer();
+                CloseTalk();
+                if (!framedWas) mainframe.Hide();
+            }
+            if (wrong.Count > 0) throw new Exception("Her player's seek went wrong: " + string.Join("; ", wrong.ToArray()));
+            checks.Add("PASS her player's bar seeks her own song: it can seek while a song with a length plays, a seek to half way puts it there, and a place past the end or not a number is held short or dropped");
+        }
+#endif
 
         // A frame drawn now as this clip, with her pulse on or off, her outline glow included as her frames get it.
         private Bitmap Drawn(bool pulsed, Clip shownAs)

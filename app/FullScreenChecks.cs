@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
+#if CHECKS
 namespace CapriDesktop
 {
     // None of her windows goes full screen on a double-click on its title bar.
@@ -35,7 +36,7 @@ namespace CapriDesktop
                 new KeyValuePair<string, Func<Form>>("Resources", delegate { return new ResourcesSheet(this, 1f, false); }),
                 new KeyValuePair<string, Func<Form>>("Set up Email", delegate { return new MailSheet(this, 1f); }),
                 new KeyValuePair<string, Func<Form>>("Security overrides", delegate { return new OverridesSheet(this, 1f, "Check", "check", new List<string[]>(), null); }),
-                new KeyValuePair<string, Func<Form>>("Logs", delegate { return new LogSheet(this, 1f, new string[0]); }),
+                new KeyValuePair<string, Func<Form>>("Logs", delegate { return LogPartForCheck(); }),
                 new KeyValuePair<string, Func<Form>>("File editor", delegate { return new FileEditor(); }),
                 new KeyValuePair<string, Func<Form>>("Hint card", delegate { return new HintCard(); }),
                 new KeyValuePair<string, Func<Form>>("Type box", delegate { return new TypeBox(); }),
@@ -88,3 +89,4 @@ namespace CapriDesktop
         }
     }
 }
+#endif

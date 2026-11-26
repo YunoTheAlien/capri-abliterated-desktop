@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Ціха да {n}:{n}
 Quiet until turned off	Ціха да выключэння
 Export settings	Экспарт налад
 Import settings	Імпарт налад
-Save Mainframe position	Запамінаць месца панэлі
+Save Mainframe position	Захаваць пазіцыю Mainframe
+Capri options	Налады Capri

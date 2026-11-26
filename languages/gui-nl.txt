@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Stil tot {n}:{n}
 Quiet until turned off	Stil tot uitgezet
 Export settings	Instellingen exporteren
 Import settings	Instellingen importeren
-Save Mainframe position	Paneelpositie onthouden
+Save Mainframe position	Mainframe-positie opslaan
+Capri options	Capri-opties

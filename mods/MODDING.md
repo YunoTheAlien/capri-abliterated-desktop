@@ -9,7 +9,20 @@ after her own check and your yes. Take a file out of that folder and its mod com
 - `.capri-skill`: Know-how for a game that she follows when she plays it
 - `.capri-code`: C# that runs inside Capri, on Windows, Mac and Linux
 
-Share finished mods in [capri-mods](https://github.com/lachydotmcg/capri-mods).
+Send a finished mod with Publish on its row in her Mods page: it opens the mod-submission form on
+[capri-abliterated-desktop](https://github.com/YunoTheAlien/capri-abliterated-desktop/issues/new?template=mod-submission.yml),
+where you drop the mod zipped. It is checked first, and nothing goes in without our yes.
+
+### Where mods go
+
+Her mods folder keeps each mod in its type's folder, with its own data folder (`<id>-data`) and a skin's art
+(`<id>-skin`) beside it: `skinsCapri` (skins and her colours), `skinsMainframe\skin`, `skinsMainframe\layout`, `intros`,
+`screensavers`, `pranks`, `pluginsApps\<app>` (an app, its sounds, and the mods that plug into it; plug-ins too),
+`skills`, `personality\personas`, `personality\moods`, `personality\lines` and `other`. Import puts a mod there itself;
+a file dropped loose into the mods folder works at once and moves into its folder on her next start. Your record files
+(approvals, on and off, load order) stay at the top. `templates` holds starting copies as loose files that are never
+loaded (`pluginsApps\templates` for an app's or a plug-in's): copy one up into the mods folder to make it a mod.
+`templates\menu-layout.capri-mod` lays out her right-click menu with a `menu` list, one item a line, a dash per level.
 
 ## Stacking skins
 
@@ -51,7 +64,7 @@ the same way as hers (open a personality in her editor to see the layout):
 ## Drop-in packs
 
 A drop-in pack is a `.capri-mod` with `"format": 2`. It changes her without code: it takes over parts of her files,
-adds to them, or both, and everything goes back to hers when it is off. The template in `mods/template` has every
+adds to them, or both, and everything goes back to hers when it is off. The template in `mods/templates` has every
 kind in one pack (`night-owl.capri-mod`), with a file for each part explaining it, ready to copy.
 
 **Mainframe > Mods > Make a mod** opens the mod helper: pick one of her files and a part of it, change its text or
@@ -81,19 +94,35 @@ or text) and which pack holds one now. Her safety rules and SECURITY are not slo
 3. `text` is what goes there, as it would be in her file, with `\n` between rows. Numbers are written the same way,
    so a pack can change `personalities/Sassy.md > How she reacts` or `What she likes`.
 4. Her files on disk are never touched. Up to 60 overrides, each up to 20000 characters.
+5. `personality.md` has six headings: `Who she is`, `What she is to you`, `How she acts`, `Praise and tips`,
+   `How she sounds` and `How she talks`. Take over one, or the whole file. Her safety lines always come after it.
 
 ### Adds
 
 1. `adds.acts`: a new act, with a `name`, a `kind` (like `food`, `touch` or `words`) and a `like` from -5 to 5.
-2. `adds.mood`: a term on an act's worth, hers or the pack's, from -3 to 3.
+2. `adds.mood`: a term on an act's worth, hers or the pack's, from -3 to 3. With a `who` it counts only while she is one of
+   the personalities or moods named, like `"who": ["Emo", "Bratty", "mood sleepy"]`: a plain name counts for a personality
+   or a mood of that name, `mood <name>` for the mood only, up to 24 names. With no `who` it counts for everyone. Her
+   personality's number and her mood's add together, as in her own files.
 3. `names`: a name offered to Custom Names once, and wake names she answers to while the pack is on.
-4. Adds never conflict. Two packs adding to the same act both count.
+4. `personality_settings`: numbers and switches for her personalities and moods while the pack is on, each
+   `{ "who": "Sassy", "section": "How she reacts", "key": "flirt", "value": "2" }` (section left out is How she
+   reacts). They show in her Personality settings window and are read over her stock and their own. Her .md files hold
+   only her lines now; a pack that takes over a numbers heading as a slot (`personalities/Sassy.md > How she reacts`)
+   still works the same way.
+5. Adds never conflict. Two packs adding to the same act both count.
 
 ### Conflicts
 
 When a pack turns on and takes a slot another pack holds, she asks which keeps it, file by file, and a file opens
 into its headings so each heading can come from either. The choice is kept and asked again only when either pack
 changes. Both packs' rows in Mods say what they hold and what they gave up.
+
+**Conflicts** (beside Mod maker on the Mods page) shows her collections and the order mods are laid in; the later mod wins
+a part they share unless a part's dropdown picks another, Merge (lists of lines only) or an edit in the MD editor. A
+mod may say where it goes when first added: `// load after: night-owl` or `// load before: night-owl` in a code mod's
+header, `"load_after": ["night-owl"]` or `"load_before": [...]` in a pack. That only places it the first time; a drag in
+Conflicts moves it after.
 
 ### The act maths
 
@@ -116,6 +145,28 @@ hers.
 A pack can't run code. A switch in her Toggles window, a multiplier, or an act that happens on its own comes from a
 code mod beside it: `capri.Acts`, `capri.Mood`, `capri.Slots` and `capri.Toggles` below (API 6). The template's
 `night-owl-switch.capri-code` is one.
+
+## Tree mods
+
+A `.capri-tree` puts a panel on her Settings page with no code: a dash per level, her own pieces in brackets, and what
+each row reaches in round brackets. `mods/templates/settings-panel.capri-tree` has every row explained, and
+`settings-panel-code.capri-code` beside it builds the same panel through the mod API.
+
+```
+// capri-tree: 1
+// id: my-panel
+// name: My panel
+settings
+-MY PANEL
+--Wander [switch] (setting: wander)
+--Size [slider] (setting: size)
+--Hear her voice [buttonLarge] (command: preview voice)
+```
+
+1. `[switch]`, `[slider]`, `[buttonSmall]`, `[buttonLarge]` and `[buttonRow]` are her pieces; a line she can't read is
+   left out, with a line in her log naming the mod.
+2. `(setting: name)` is one of her settings by its name; any other name is the mod's own value, kept with her settings.
+3. `(command: name)` runs one of hers: `preview voice`, `refresh providers`.
 
 ## Code mods
 
@@ -178,6 +229,8 @@ The Hooks Tour sample draws on her and has an options page, so it's Windows only
 
 Her question also says what changed since you last approved a mod: its version then, any new permission, and anything new or gone in what her scan sees.
 
+A mod that reaches past `ICapriHost` into Capri's own code (reflection with `BindingFlags.NonPublic`, in its source or its compiled code) is named in her question as reaching into Capri's own private code, as High. Beside that, it is named for her chat history, her notes and memories, or her brain when it names them. A path into another mod's data folder is named on its own. None of these are covered by a permission, so use `ICapriHost` instead. Three more are named High as well: code that tries to find the PC's real address, a site not on Capri's trusted list, and private data read (her chat, notes, memories, keys, files outside its folder, a clipboard read or a screen capture) in a mod that also reaches the network. A permission alone is not a read, and nor is adding to her chat with `Chat.AddContext` or `Chat.Send`.
+
 ### Permissions
 
 Using a hook without its permission throws a `CapriPermissionException` that names the missing one.
@@ -195,6 +248,7 @@ Using a hook without its permission throws a `CapriPermissionException` that nam
 - `system`: Know when you're away or back, when your PC locks, sleeps or wakes, and its battery
 - `hotkeys`: Add keyboard shortcuts that work in any app
 - `music`: See what's playing, control your music apps and their volume, and hear how loud your PC's sound is
+- `pet`: Charge for her food, add to her Tamagotchi menu, and see when she was fed
 
 ### The host
 
@@ -235,12 +289,13 @@ Using a hook without its permission throws a `CapriPermissionException` that nam
 - `Switch(text, on, changed)`, `Button(text, clicked)`: Her own OFF/ON switch and key, in her colours and font and the column's width, to return from `Mainframe.AddPanel`'s `make` so a mod's panel looks like hers and follows Mainframe colours. `changed` gets the new state; a change or click that throws is the mod's failure, not hers. Needs API 4
 - `BubbleOpacity`: How solid her speech bubble draws, `0.3` to `1`. With more than one mod asking, the most see-through wins. Back to `1` when the mod stops. Needs API 4
 - `AddMenuItem(text, clicked)`: An item under **Mods** in her right-click menu
-- `AddMenu(text)`: A menu of the mod's own under **Mods** in her right-click menu, in her menu's look. It returns an `ICapriMenu`: `Add(text, clicked)`, `AddCheck(text, on, changed)` for an item with a tick (`changed` gets the new state), `AddLine()`, `Clear()` and `Remove()`. `Add` and `AddCheck` return an `ICapriMenuItem` with `Text`, `Checked`, `Enabled` and `Remove()`, which can be changed any time. Up to 30 items and lines, 60 characters each. It goes when the mod stops. Needs API 4
+- `AddMenu(text)`: A menu of the mod's own under **Mods** in her right-click menu, in her menu's look. It returns an `ICapriMenu`: `Add(text, clicked)`, `AddCheck(text, on, changed)` for an item with a tick (`changed` gets the new state), `AddLine()`, `Clear()` and `Remove()`. `Add` and `AddCheck` return an `ICapriMenuItem` with `Text`, `Checked`, `Enabled` and `Remove()`, which can be changed any time. Up to 30 items and lines, 60 characters each. It goes when the mod stops. Needs API 4. `AddMenu(text)` on an `ICapriMenu` puts a list inside it, dressed as hers the moment it is made; an item's `Note` is words in the right-hand column, like a price, and `Colour` the colour it draws in. Needs API 9
 - `MenuOpening`: Just before her right-click menu opens, to bring a menu's ticks and words up to date. Needs API 4
 - `SetOptions(title, make)`: An **Options** button on the mod's row in Mods. `make` returns the WinForms `Control` to show
+- `ShowOptions()`: Opens that window, as its Options button does, so a menu item of the mod's own can open it. Needs API 9
 - `Bubble(text)`: A line in her bubble, not spoken
 - `Window`: Her window
-- `Colour(name, usual)`: A colour of the mod's own, by a name that says what it colours, up to 40 characters and 16 a mod. The first ask names it, so ask in `Start`. It comes back as they set it in **Custom colours**, under a fold-down of the mod's own below hers, or as `usual` in her current look, following Mainframe colours like her own. Kept in `colours.md` in the mod's own data folder. Its approval and its Mods row say it has custom colours. Needs API 5
+- `Colour(name, usual)`: A colour of the mod's own, by a name that says what it colours, up to 40 characters and 16 a mod. The first ask names it, so ask in `Start`. It comes back as they set it in **Custom colours**, under a fold-down of the mod's own below hers, or as `usual` in her current look, following Mainframe colours like her own. Kept with her settings (settings.json), never in an .md file; a colours.md from an older build is carried in once and kept as colours.md.bak. Its approval and its Mods row say it has custom colours. Needs API 5
 - `ColoursChanged`: One of the mod's colours was set, or her look changed: ask `Colour` again. Needs API 5
 
 ### `capri.Mainframe`
@@ -249,7 +304,7 @@ Using a hook without its permission throws a `CapriPermissionException` that nam
 
 `ShowPage(title, make)` opens a page of the mod's own beside her Mainframe, up to 1200 × 900, for things bigger than options, like a dashboard. `make` returns the `Control`, made fresh each time. One page is open at a time. `ClosePage()` closes it, and it closes by itself when the mod stops.
 
-`AddPanel(title, column, slot, make, simple)` puts a panel of the mod's own on her Settings page, in the same look as hers: `title` is its heading and `make` returns the `Control` under it, the column's width (328 px at 100%) and as tall as it is made. `column` is `"left"` or `"right"`, and `slot` is where in that column, 1 at the top. The panel in that slot and the ones under it move down. When two mods ask for the same slot, the one loaded first keeps it and the next goes straight after it. It shows in Advanced Settings only, unless `simple` is `true`. Where the panels sit is saved with her settings (settings.json), so it is the same after a restart, an update or an import, and when the mod stops or is taken out its panel goes and the panels under it move back up. Approving a mod that calls it shows "adds a Settings panel". Needs API 4: put `// requires: api 4` in its header. `AddPanel(title, column, slot, make, simple, group)` puts it inside a panel every mod naming the same `group` shares, like `"Yuno Mods"`: the group is the panel's heading, and `title` is this mod's sub-heading in it, in big text. The first part placed sets where the panel sits. A mod taken out takes its part, and the panel goes with the last one. Needs API 7.
+`AddPanel(title, column, slot, make, simple)` puts a panel of the mod's own on her Settings page, in the same look as hers: `title` is its heading and `make` returns the `Control` under it, the column's width (328 px at 100%) and as tall as it is made. `column` is `"left"` or `"right"`, and `slot` is where in that column, 1 at the top. The panel in that slot and the ones under it move down. When two mods ask for the same slot, the one loaded first keeps it and the next goes straight after it. `simple` is still taken, for mods written for API 4, and ignored: Settings has one view, every panel always shows. Where the panels sit is saved with her settings (settings.json), so it is the same after a restart, an update or an import, and when the mod stops or is taken out its panel goes and the panels under it move back up. Approving a mod that calls it shows "adds a Settings panel". Needs API 4: put `// requires: api 4` in its header. `AddPanel(title, column, slot, make, simple, group)` puts it inside a panel every mod naming the same `group` shares, like `"Yuno Mods"`: the group is the panel's heading, and `title` is this mod's sub-heading in it, in big text. The first part placed sets where the panel sits. A mod taken out takes its part, and the panel goes with the last one. Needs API 7.
 
 ```csharp
 public void Start(ICapriHost capri)
@@ -374,10 +429,28 @@ Her acts and how much each is worth to her. Needs API 6, so a mod using them say
 - `Acts.List`: Every act she has now: hers, packs' and mods'
 - `Mood.Add(term, act, value)`: Adds -3 to 3 to an act's worth, under the term's name in her mood log
 - `Mood.Multiply(term, act, value)`: Multiplies an act's worth by 0.25 to 2, after every add
+- `Mood.Add(term, act, value, who)` and `Mood.Multiply(term, act, value, who)`: The same, counted only while she is one of the personalities or moods in `who` (`new[] { "Emo", "mood sleepy" }`), as a pack's `who`. Needs API 11
 - `Mood.Remove(term)`: Takes the term back
 - `Mood.Warmth`, `Mood.Upset`, `Mood.Willing`, `Mood.Today`: How she feels now, and today's mood by name
 
 A value past its limit throws `ArgumentOutOfRangeException`. Everything the mod added goes when it stops.
+
+- `Acts.Worth(name)`: What the act is worth to her now, -5 to 5, her personality and mood and every term in it. Needs API 9
+- `Acts.Line(name, liked)`: Her line for the act, a glad one or not. Needs API 9
+- `Acts.Pool(heading)`: A line from one of her pools in `lines.md` by its heading, like `gift remembered`. Needs API 9
+
+### A pet game: `ICapriPet` and `capri.Pet` (pet)
+
+She keeps feeding and hunger; a pet game mod keeps the game. Needs API 9, so it says `// requires: api 9`. Her own
+Tamagotchi is one: `capri-tamagotchi.capri-code`, carried in her and laid in off. Her hunger runs only while a pet
+game runs with `Feeding` on. Without one, Feed her is free like a headpat and nothing about it is kept. A gift she
+likes, given through `Acts.Did` by a pet game, nudges her forwardness when it is set to drift.
+
+- The mod's class implements `ICapriPet` as well as `ICapriMod`: `Heading` and `HeadingColour` (a line at the top of her Tamagotchi menu, like `Points: 412`, empty for none), `Cost(food)` (a food's price by its label in Feed her, 0 for free), `Pay(food)` (paid just before she is fed; false when it can't be), `CanPay(food)` (whether `Pay` would go through now; a food it can't pay for is greyed in her menu) and `Feeding` (off, Feed her is gone and she never says she's hungry)
+- `Pet.SinceFed`: Hours since she was fed, time at a desk counting for less, or -1 when she never has been
+- `Pet.Hunger`: `fed`, `peckish` or `hungry`
+- `Pet.Fed(food)`: Each feed as it lands, by the food's act name
+- `Pet.Menu`: Her Tamagotchi menu as an `ICapriMenu`. What the mod puts in goes under Feed her, above a line; under that line she adds the mod's window herself, named for the mod, when it has options. What the mod puts in goes when it stops; hers stays
 
 ### `capri.Slots` (slots)
 
@@ -389,11 +462,27 @@ Her files' slots, as `slots.md` in the mods folder names them, like `lines.md > 
 
 ### `capri.Toggles`
 
-`Add(name, on, changed)` puts a switch of the mod's own in her Toggles window (right-click her > Toggles), under her own; `changed` gets the new state. It goes when the mod stops. Needs API 6.
+A mod's settings are switches and sliders in her Toggles window (right-click her > Toggles), under the mod's name in one of the sections (a `Sec:` fold), Uncategorised until the user drags it into another on the Sections side, and its colours are in Custom colours (`capri.Ui.Colour`). Never in sys.md or a file of its own for her to edit. A panel in the Mainframe is only for a mod that adds one there on purpose.
+
+Where each one goes, the same in every group:
+- A setting for the whole group sits at the top of the group, above its items, like the screensaver's After
+- A setting for one item lives only in that item's side area: the item's row shows a `>`, and picking it shows its settings to the right of the list. An item with none shows nothing there
+- Give each item only the settings its own drawing or behaviour really has
+
+The calls:
+- `Add(name, on, changed)`: One of the mod's own switch rows; `changed` gets the new state. Needs API 6
+- `AddSlider(name, steps, at, changed)`: A slider for the whole group, over two to 21 named steps, starting at step `at`; `changed` gets the step picked. Needs API 9
+- `Add(item, name, on, changed)` and `AddSlider(item, name, steps, at, changed)`: The same, in the side area of `item`: one of the mod's own switch rows (add it first), or one of a screensaver mod's looks. Needs API 9
+- `// section: fun` in the header puts the mod in a section by its id: `fun`, `homelab`, `learning`, `productivity` or `uncategorised`; `games` and `play` mean `fun`, `work` and `office` mean `productivity`. A section the user made has its own id; an unknown one lands in Uncategorised. The user's renames change only the shown name, never the id. The user can drag the mod to any section after. A section that names no section but names an app (`email`, `planner`, `pet`) puts the mod's switches inside that app's row, as `// plugs into:` does
+- `// kind: app` in the header (`"kind": "app"` in a pack) marks software, an app or plug-in: it gets a tile on TOOLS in its section, its row in Toggles holds its own switches, and Mods lists it under Plug-ins. Its tile opens its options, else its cog. With no kind, or `// kind: mod`, it is a mod: no tile, listed under Mods
+- `// plugs into: email` in the header (`"plugs_into": "email"` in a pack) names the app the mod needs, by id or name: `email`, `planner`, `pet` (the Tamagotchi), `music`, a plug-in's id or an app mod's id. Its switches sit inside that app's row in Toggles under the mod's own name, its Mods row says PLUGS INTO and the app, and while that app is missing or off it waits off (WAITS FOR on its row), as a missing `// requires:` mod does. It still switches on Mods. Make a mod sets both under Pack name
+- `Join(title)`, called before the first switch: with `"Intros"`, `"Screensaver"` or `"Pranks"` the mod's switches go in that group of hers instead of under its own name; with a section's name or id (`"Fun"`, `"fun"`) the mod sits in that section until the user moves it. Needs API 10
+
+She keeps what was picked in her settings and hands it back as the mod adds the same one again: `changed` is called once at the start when the saved value differs from the one given, so a mod needs no store of its own. They go when the mod stops. A screensaver mod's group is her own Screensaver group, with its looks as the items; an intro mod's is her Intros group.
 
 ### Screensavers (`ICapriScreensaver`)
 
-A mod that draws a screensaver implements `ICapriScreensaver` beside `ICapriMod`: `Looks` names its looks, `Show(ask)` puts one up and returns whether it did, `Hide()` takes it down, and `Showing` says whether it is up. She decides when: the PC left alone as long as Toggles says, never over full screen, a stream or a job of hers. `ask` carries the look and her settings for it (size, speed, see through, screens, flashing, sound and volume, how long before a key may end it, and whether any key does). Her own is `capri-screensaver`, carried like the doors; its looks are what Test > Screensavers lists. Needs API 8.
+A mod that draws a screensaver implements `ICapriScreensaver` beside `ICapriMod`: `Looks` names its looks, `Show(ask)` puts one up and returns whether it did, `Hide()` takes it down, and `Showing` says whether it is up. She decides when: the PC left alone as long as Toggles says, never over full screen, a stream or a job of hers. `ask` carries the look, her sound and her sound volume, how long before a key may end it, and whether any key does; its look is the mod's own, as sliders in Toggles: see through for the group, size, speed and the rest per look (`ask` still carries plain values for a mod from before). It always covers every screen and is silent; a screensaver with a sound ships it inside its own mod. Her own is `capri-screensaver`, carried like the doors; its looks are what Test > Screensavers lists. Needs API 8; its own sliders API 9.
 
 ## Plug-ins
 

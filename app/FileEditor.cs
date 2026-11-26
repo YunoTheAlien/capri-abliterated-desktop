@@ -82,7 +82,7 @@ namespace CapriDesktop
         internal static Mods Skills;
         internal static Action SkillSaved;
         private static readonly object skillWriting = new object();
-        internal readonly bool ForPersonalities;
+        internal bool ForPersonalities;
         internal bool Motion = true;
         // The frames it drew, in order, while her smoke test watches: where in the art each one was, when on the animation's clock,
         // and how long it took to draw. And a stop on its clock for stepping it by hand.
@@ -111,6 +111,11 @@ namespace CapriDesktop
         private Point pressedAt, startedAt;
         private Action after;
 
+        // The part Conflicts opened for editing, and its tab's name.
+        internal static string PartPath;
+        internal const string PartName = "This part";
+        private static readonly object PartWriting = new object();
+
         internal FileEditor(float scale = 0, float art = 0, bool personalities = false)
         {
             forcedScale = scale;
@@ -124,7 +129,16 @@ namespace CapriDesktop
             BackColor = Black;
             Cursor = Cursors.SizeAll;
             Neon.Repainted += Recoloured;
-            docs = new[]
+            ForPersonalities = personalities;
+            docs = DocsFor(personalities);
+            frost = new Frost();
+            page = new Page(this);
+        }
+
+        // Her main files, or her personality files on the side she is on: each set as it is right now.
+        private static Doc[] DocsFor(bool personalities)
+        {
+            Doc[] docs = new[]
             {
                 // personality.md is in her personality editor, with her packs and moods, and only there.
                 new Doc("me.md", delegate { return Brain.OpenNote(false); }),
@@ -136,6 +150,7 @@ namespace CapriDesktop
                 new Doc(Sayings.FileName, delegate { return Sayings.Open(); }),
                 new Doc(Moments.FileName, delegate { return Moments.Open(); }),
                 new Doc(Angles.FileName, delegate { return Angles.Open(); }),
+                new Doc(Topics.FileName, delegate { return Topics.Open(); }),
                 // Her stories, while a size anybody would open: this editor lays a whole document out as pages and
                 // would hang on megabytes. Absent rather than greyed out, since an unusable tab is noise.
                 new Doc(Lore.FileName, delegate { return Lore.Open(); }, delegate { return Lore.Editable; }),
@@ -144,7 +159,9 @@ namespace CapriDesktop
                 // Absent until her settings folder is known, since there is no file to offer before that.
                 new Doc("check-ins.md", delegate { return CareLines.Open.Note(); }, delegate { return CareLines.Open != null; }),
                 // The modding guide, from the mod helper's Guide: hers to read, laid again from the copy she carries.
-                new Doc(ModGuide.FileName, delegate { ModGuide.Lay(); return ModGuide.Open(); }, delegate { return ModGuide.Kept != null; })
+                new Doc(ModGuide.FileName, delegate { ModGuide.Lay(); return ModGuide.Open(); }, delegate { return ModGuide.Kept != null; }),
+                // One part two mods share, opened from Conflicts to be edited for the collection in use.
+                new Doc(PartName, delegate { return new WrittenNote(PartPath, "", PartWriting); }, delegate { return PartPath != null; })
             };
             // Only with the switch on; the tab is left out rather than disabled.
             if (!personalities && Interests.Shown)
@@ -159,7 +176,6 @@ namespace CapriDesktop
             // Her personalities open in her own editor rather than whatever Windows has for.md, which was Notepad
             //. Order: who she is right now, then the dynamic settings, then the rest, then her moods.
             // The tab strip already wraps, so three rows of them is fine.
-            ForPersonalities = personalities;
             if (personalities) docs = PersonalityDocs();
             // Skills she was taught here open as tabs in her own files, never among the personalities.
             else docs = WithSkills(docs);
@@ -168,8 +184,7 @@ namespace CapriDesktop
             List<Doc> offered = new List<Doc>();
             foreach (Doc one in docs) if (one.Shows) offered.Add(one);
             if (offered.Count > 0 && offered.Count != docs.Length) docs = offered.ToArray();
-            frost = new Frost();
-            page = new Page(this);
+            return docs;
         }
 
         protected override bool ShowWithoutActivation { get { return true; } }
@@ -204,6 +219,8 @@ namespace CapriDesktop
         internal Rectangle PageBox { get { return pageBox; } }
         internal float ArtScale { get { return a; } }
         internal float UiScale { get { return s; } }
+        // For checks: where the panel is in its life, and whether a scale was forced, when a redraw didn't come.
+        internal string StageSaid { get { return stage + (forcedScale > 0 ? ", forced " + forcedScale : ""); } }
         internal int BodyPixelsHigh { get { return page.BoxHeight; } }
         internal string BodyFontName { get { return page.BoxFont; } }
         internal string[] Choices { get { return page.Labels; } }
@@ -421,6 +438,7 @@ namespace CapriDesktop
             Finish();
             page.Keep();
             after = then;
+            switchTo = null;
             if (Dirty) { guarded = true; Raise(); page.Guard(UnsavedNames()); return; }
             Depart();
         }
@@ -455,6 +473,7 @@ namespace CapriDesktop
                 return;
             }
             guarded = false;
+            if (Switched()) return;
             Depart();
         }
 
@@ -462,6 +481,7 @@ namespace CapriDesktop
         {
             foreach (Doc doc in docs) { if (!doc.Dirty) continue; doc.Revert(); ForgetDraft(doc); }
             guarded = false;
+            if (Switched()) return;
             Depart();
         }
 
@@ -469,6 +489,7 @@ namespace CapriDesktop
         {
             guarded = false;
             after = null;
+            switchTo = null;
             page.Unguard();
             page.Mark(docs[current]);
         }
@@ -531,6 +552,40 @@ namespace CapriDesktop
             }
             catch (IOException) { doc.Problem = "Couldn't read " + doc.Label + ". Try opening it again."; }
             catch (UnauthorizedAccessException) { doc.Problem = "Couldn't read " + doc.Label + ". Check access to its folder."; }
+        }
+
+        // The other file set asked for while files had unsaved changes: it opens once they are saved or discarded.
+        private bool? switchTo;
+
+        // Main files or personality files in the same window, from the keys at its top.
+        internal void SwitchSet(bool personalities)
+        {
+            if (stage == Stage.Waiting || stage == Stage.Gone || Leaving || guarded || personalities == ForPersonalities) return;
+            Finish();
+            page.Keep();
+            if (Dirty) { switchTo = personalities; guarded = true; Raise(); page.Guard(UnsavedNames(), true); return; }
+            Swap(personalities);
+        }
+
+        private void Swap(bool personalities)
+        {
+            ForPersonalities = personalities;
+            docs = DocsFor(personalities);
+            current = 0;
+            page.Sets();
+            page.ShowTab(0);
+            page.Take(docs[0]);
+        }
+
+        private bool Switched()
+        {
+            if (switchTo == null) return false;
+            bool to = switchTo.Value;
+            switchTo = null;
+            after = null;
+            page.Unguard();
+            Swap(to);
+            return true;
         }
 
         internal void Turn(int which)
@@ -1222,8 +1277,12 @@ namespace CapriDesktop
         }
 
         // Dragged onto a screen of another scale: the panel redraws for it, under the mouse.
+        // For checks: the last DPI message and what came of it.
+        internal string RescaleSaid = "none";
+
         private void Rescale(int dpi)
         {
+            RescaleSaid = dpi + " at " + stage + (forcedScale > 0 ? ", forced" : "");
             if (forcedScale > 0 || stage == Stage.Waiting || stage == Stage.Gone) return;
             Measure(dpi, Screen.FromHandle(Handle).WorkingArea);
             Size = PlateSize;
@@ -1233,6 +1292,7 @@ namespace CapriDesktop
             if (stage != Stage.Open) TakeVeil();
             DrawFrame();
             if (stage == Stage.Open) DropSurface();
+            RescaleSaid += " -> " + s + " " + a;
         }
 
         // The colours its controls were given, so a change in Custom colours finds them and swaps them.
@@ -1266,7 +1326,6 @@ namespace CapriDesktop
                 Neon.Repainted -= Recoloured;
                 pacer.Stop();
                 DropVeil();
-                DropFonts();
                 DropSurface();
                 if (shade != null) shade.Dispose();
                 if (grain != null) grain.Dispose();
@@ -1274,6 +1333,8 @@ namespace CapriDesktop
                 if (!frost.IsDisposed) frost.Dispose();
             }
             base.Dispose(disposing);
+            // Its fonts after its windows, which paint with them until they are gone.
+            if (disposing) DropFonts();
         }
 
         [DllImport("user32.dll")] private static extern IntPtr BeginDeferWindowPos(int count);
@@ -1428,7 +1489,7 @@ namespace CapriDesktop
             private readonly WordBox box;
             private readonly Bar bar;
             private Ink[] tabs;
-            private readonly Ink close, save, reload, keep, make;
+            private readonly Ink close, save, reload, keep, make, mainSet, personaSet;
             private readonly Note status;
             private const TextFormatFlags TitleWidth = TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
             private const TextFormatFlags TitleLine = TitleWidth | TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis;
@@ -1441,7 +1502,8 @@ namespace CapriDesktop
             // What's on screen; the page without its caret, kept for the caret's blink; and the page painted on white and on black.
             // All four are kept between redraws, so typing allocates nothing.
             private Native.Surface face, look, light, dark;
-            private readonly Timer blinker = new Timer();
+            private bool gone;
+            private readonly Clock.Ticker blinker = new Clock.Ticker("editor caret");
             private bool queued, blink = true, blinks;
             private int seenFirst = -1, seenStart = -1, seenLength = -1, revealed = -1, titled = -1;
             private Rectangle seenCaret;
@@ -1481,13 +1543,18 @@ namespace CapriDesktop
                 // New file, which today means a skill.md. Not in the personalities editor, where a skill has no tab.
                 make = new Ink { Text = "New", AccessibleName = "Make a new file, like a skill.md that teaches Capri an app or game", Visible = !panel.ForPersonalities };
                 make.Click += delegate { panel.New(make); };
+                mainSet = new Ink { Text = "Main files", AccessibleName = "Main files" };
+                mainSet.Click += delegate { panel.SwitchSet(false); };
+                personaSet = new Ink { Text = "Personality files", AccessibleName = "Personality files" };
+                personaSet.Click += delegate { panel.SwitchSet(true); };
+                Lit();
                 status = new Note { BackColor = Paper, ForeColor = Solid(Salmon), AutoEllipsis = true, UseMnemonic = false, TextAlign = ContentAlignment.MiddleLeft };
                 cover = new Veil(panel, this) { Visible = false };
-                Controls.AddRange(new Control[] { cover, close, box, bar, status, keep, make, reload, save });
+                Controls.AddRange(new Control[] { cover, close, box, bar, status, keep, make, reload, save, mainSet, personaSet });
                 Controls.AddRange(tabs);
                 cover.BringToFront();
                 int order = 0;
-                foreach (Control next in new Control[] { box, save, reload, make, keep }) next.TabIndex = order++;
+                foreach (Control next in new Control[] { mainSet, personaSet, box, save, reload, make, keep }) next.TabIndex = order++;
                 foreach (Ink tab in tabs) tab.TabIndex = order++;
                 close.TabIndex = order++;
                 foreach (Control grip in new Control[] { this, status })
@@ -1546,13 +1613,34 @@ namespace CapriDesktop
             private void Style()
             {
                 float s = panel.s;
-                foreach (Font font in new[] { buttonFont, statusFont }) if (font != null) font.Dispose();
-                buttonFont = Title(14 * s);
-                statusFont = Look.Mono(13 * s, FontStyle.Regular, GraphicsUnit.Pixel);
-                box.Font = Look.Mono(BodySize * s, FontStyle.Regular, GraphicsUnit.Pixel);
+                // A control handed a font equal to its own keeps its own, so a font is made again, and the old one let go, only
+                // when the size changes: an equal new one never reached the keys, which then painted in a font already freed.
+                Font oldButton = buttonAt == s ? null : buttonFont, oldStatus = buttonAt == s ? null : statusFont;
+                if (buttonAt != s)
+                {
+                    buttonFont = Title(14 * s);
+                    statusFont = Look.Mono(13 * s, FontStyle.Regular, GraphicsUnit.Pixel);
+                    box.Font = Look.Mono(BodySize * s, FontStyle.Regular, GraphicsUnit.Pixel);
+                    buttonAt = s;
+                }
                 status.Font = statusFont;
-                foreach (Ink ink in new[] { close, save, reload, make, keep }) ink.Font = buttonFont;
+                foreach (Ink ink in new[] { close, save, reload, make, keep, mainSet, personaSet }) ink.Font = buttonFont;
                 foreach (Ink tab in tabs) tab.Font = buttonFont;
+                Restyle(this, oldButton, oldStatus);
+                foreach (Font font in new[] { oldButton, oldStatus }) if (font != null) font.Dispose();
+            }
+
+            // The scale its fonts were made at; 0 before the first.
+            private float buttonAt;
+
+            private void Restyle(Control under, Font oldButton, Font oldStatus)
+            {
+                foreach (Control one in under.Controls)
+                {
+                    if (oldButton != null && ReferenceEquals(one.Font, oldButton)) one.Font = buttonFont;
+                    else if (oldStatus != null && ReferenceEquals(one.Font, oldStatus)) one.Font = statusFont;
+                    if (one.HasChildren) Restyle(one, oldButton, oldStatus);
+                }
             }
 
             internal void Fit()
@@ -1564,6 +1652,8 @@ namespace CapriDesktop
                 int pad = Scaled(18), row = Scaled(44), foot = Scaled(48), gap = Scaled(8);
                 close.Bounds = new Rectangle(Width - pad - Scaled(28), Scaled(6), Scaled(28), Scaled(28));
                 int right = close.Left - Scaled(12);
+                int setAt = PlaceButton(mainSet, pad, Scaled(6), Scaled(30), gap);
+                PlaceButton(personaSet, setAt, Scaled(6), Scaled(30), gap);
                 for (int i = 0; i < tabs.Length; i++) tabs[i].Text = panel.docs[i].Label;
                 // Tabs laid out right to left and wrapped onto a new line before they reach her title; the text below
                 // moves down to match.
@@ -1785,15 +1875,33 @@ namespace CapriDesktop
                 if (shown != null && !box.ReadOnly) shown.Draft = box.Text;
             }
 
-            internal void Guard(string names)
+            internal void Guard(string names, bool switching = false)
             {
-                save.Text = "Save + close";
+                save.Text = switching ? "Save" : "Save + close";
                 reload.Text = "Discard";
                 keep.Visible = true;
                 make.Visible = false;
                 PlaceFoot();
                 Say("Unsaved changes in " + names + ".", false);
                 save.Focus();
+            }
+
+            // The set showing filled, as Save is; New only among her main files.
+            private void Lit()
+            {
+                mainSet.Filled = !panel.ForPersonalities;
+                personaSet.Filled = panel.ForPersonalities;
+                mainSet.Invalidate();
+                personaSet.Invalidate();
+            }
+
+            // The other set's files in this window.
+            internal void Sets()
+            {
+                Lit();
+                make.Visible = !panel.ForPersonalities;
+                tabFirst = 0;
+                Retab();
             }
 
             internal void Unguard()
@@ -1856,7 +1964,7 @@ namespace CapriDesktop
             // Something on the page changed: it's drawn again once the messages already waiting are done, however many asked.
             internal void Freshen()
             {
-                if (queued || !IsHandleCreated || IsDisposed) return;
+                if (gone || queued || !IsHandleCreated || IsDisposed) return;
                 queued = true;
                 BeginInvoke(new Action(Render));
             }
@@ -1879,7 +1987,7 @@ namespace CapriDesktop
             // back on top.
             private void Check()
             {
-                if (!box.IsHandleCreated) return;
+                if (gone || !box.IsHandleCreated) return;
                 int first = Native.SendMessage(box.Handle, 0x00CE, IntPtr.Zero, IntPtr.Zero).ToInt32(), start = box.SelectionStart, length = box.SelectionLength;
                 bool redraw = first != seenFirst || length != seenLength || length > 0 && start != seenStart;
                 seenFirst = first;
@@ -1893,7 +2001,7 @@ namespace CapriDesktop
             internal void Render()
             {
                 queued = false;
-                if (!IsHandleCreated || IsDisposed || Width <= 0 || Height <= 0) return;
+                if (gone || !IsHandleCreated || IsDisposed || Width <= 0 || Height <= 0) return;
                 Stopwatch timed = Stopwatch.StartNew();
                 Fit(ref look);
                 if (cover.Visible) VeilFrame();
@@ -1905,7 +2013,7 @@ namespace CapriDesktop
 
             private void Compose()
             {
-                if (!IsHandleCreated || IsDisposed || Width <= 0 || Height <= 0) return;
+                if (gone || !IsHandleCreated || IsDisposed || Width <= 0 || Height <= 0) return;
                 Fit(ref face);
                 seenCaret = Caret;
                 bool ready = Fits(look), caret = blink && !seenCaret.IsEmpty;
@@ -2095,14 +2203,19 @@ namespace CapriDesktop
 
             protected override void Dispose(bool disposing)
             {
+                // Gone before anything is let go: its text box goes after this and still sends a scroll or a caret move, which
+                // would lay the page out again on a surface already let go.
+                gone = true;
                 if (disposing)
                 {
-                    foreach (Font font in new[] { titleFont, buttonFont, statusFont }) if (font != null) font.Dispose();
                     blinker.Dispose();
                     if (face != null) face.Dispose();
                     foreach (Native.Surface surface in new[] { look, light, dark }) if (surface != null) surface.Dispose();
+                    face = look = light = dark = null;
                 }
                 base.Dispose(disposing);
+                // Its fonts last: its keys paint with them until they themselves are gone.
+                if (disposing) foreach (Font font in new[] { titleFont, buttonFont, statusFont }) if (font != null) font.Dispose();
             }
         }
 
@@ -2561,13 +2674,9 @@ namespace CapriDesktop
         {
             internal bool Filled, Mark;
             // A tab rather than a bottom button: its text is a file name, left aligned because that end tells files
-            // apart, and it scrolls on hover since an ellipsis would hide the part that differs.
+            // apart, cut with "..." when long and given whole in its tip.
             internal bool Rolling;
             private bool hot, down;
-            private Timer roll;
-            private int shift;
-
-            private const int Gap = 24;
 
             internal Ink()
             {
@@ -2578,49 +2687,36 @@ namespace CapriDesktop
             }
 
             protected override void OnInvalidated(InvalidateEventArgs e) { base.OnInvalidated(e); Touch(this); }
-            protected override void OnMouseEnter(EventArgs e) { hot = true; StartRoll(); Invalidate(); base.OnMouseEnter(e); }
-            protected override void OnMouseLeave(EventArgs e) { hot = false; down = false; StopRoll(); Invalidate(); base.OnMouseLeave(e); }
+            protected override void OnMouseEnter(EventArgs e)
+            {
+                hot = true;
+                if (Rolling) { Mainframe.CutWords.Enter(this, Text); Mainframe.CutWords.AlsoCut(this, Overflow() > 0); }
+                Invalidate();
+                base.OnMouseEnter(e);
+            }
+
+            protected override void OnMouseLeave(EventArgs e) { hot = false; down = false; Mainframe.CutWords.Leave(this); Invalidate(); base.OnMouseLeave(e); }
 
             // How wide the text wants to be, against the room it has.
             private int Overflow()
             {
                 if (!Rolling || string.IsNullOrEmpty(Text)) return 0;
-                int wants = TextRenderer.MeasureText(Text, Font, new Size(int.MaxValue, int.MaxValue), TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix).Width;
+                int wants = TextRenderer.MeasureText(Text, Words(), new Size(int.MaxValue, int.MaxValue), TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix).Width;
                 int room = Width - Pad() * 2;
                 return wants > room ? wants : 0;
             }
 
             private int Pad() { return Math.Max(4, Height / 4); }
 
-            // Only while the mouse is on it, and only when there is something to see. Nothing ticks otherwise.
-            private void StartRoll()
+            // Its font, or the plain one when the font it was given has been let go: a key painted once more as its window
+            // closes, or as its window's fonts are made again at a new size, must not take her down.
+            private Font Words()
             {
-                if (Overflow() == 0) return;
-                shift = -Gap / 2;
-                if (roll == null) { roll = new Timer { Interval = 33 }; roll.Tick += delegate { Step(); }; }
-                roll.Start();
+                Font font = Font;
+                try { font.GetHeight(); return font; }
+                catch (ArgumentException) { return Control.DefaultFont; }
             }
 
-            private void StopRoll()
-            {
-                if (roll != null) roll.Stop();
-                shift = 0;
-            }
-
-            private void Step()
-            {
-                int wants = Overflow();
-                if (wants == 0 || !hot) { StopRoll(); Invalidate(); return; }
-                shift++;
-                if (shift > wants + Gap) shift = -Gap / 2;
-                Invalidate();
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-                if (disposing && roll != null) { roll.Stop(); roll.Dispose(); roll = null; }
-                base.Dispose(disposing);
-            }
             protected override void OnMouseDown(MouseEventArgs e) { if (e.Button == MouseButtons.Left) { down = true; Invalidate(); } base.OnMouseDown(e); }
             protected override void OnMouseUp(MouseEventArgs e) { down = false; Invalidate(); base.OnMouseUp(e); }
 
@@ -2654,31 +2750,14 @@ namespace CapriDesktop
                     Color ink = !Enabled ? Shifted(Red, -105, -24, -20) : lit ? Dark : Red;
                     if (!Rolling)
                     {
-                        TextRenderer.DrawText(pen, Text, Font, ClientRectangle, ink, BackColorFor(lit), TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
+                        TextRenderer.DrawText(pen, Text, Words(), ClientRectangle, ink, BackColorFor(lit), TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
                     }
                     else
                     {
-                        int pad = Pad(), wants = Overflow();
+                        int pad = Pad();
                         Rectangle inside = new Rectangle(pad, 0, Math.Max(1, Width - pad * 2), Height);
                         TextFormatFlags how = TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoClipping;
-                        if (wants == 0 || !hot)
-                        {
-                            // It fits, or the mouse is elsewhere: left aligned, and cut with an ellipsis if it is long.
-                            TextRenderer.DrawText(pen, Text, Font, inside, ink, BackColorFor(lit), how | TextFormatFlags.EndEllipsis);
-                        }
-                        else
-                        {
-                            // Drawn twice, a gap apart, so the end of the name runs straight into its start again.
-                            Region was = pen.Clip;
-                            pen.SetClip(inside);
-                            Rectangle first = new Rectangle(inside.X - shift, inside.Y, wants + Gap, inside.Height);
-                            TextRenderer.DrawText(pen, Text, Font, first, ink, how);
-                            TextRenderer.DrawText(pen, Text, Font, new Rectangle(first.X + wants + Gap, first.Y, first.Width, first.Height), ink, how);
-                            pen.Clip = was;
-                            // Clip is a property that builds a new Region on every read, so the saved one
-                            // is ours to free. This is a scrolling name, redrawn every frame it moves.
-                            was.Dispose();
-                        }
+                        TextRenderer.DrawText(pen, Text, Words(), inside, ink, BackColorFor(lit), how | TextFormatFlags.EndEllipsis);
                     }
                 }
                 if (Focused && ShowFocusCues)

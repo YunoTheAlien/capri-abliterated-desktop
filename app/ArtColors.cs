@@ -201,8 +201,10 @@ namespace CapriDesktop
             string[] names = { "hair", "accent", "eyes", "edges", "body" };
             for (int i = 0; i < slots.Length; i++) if (slots[i] != null) parts.Add("\"" + names[i] + "\":\"" + slots[i] + "\"");
             string text = "{\n  \"format\": 1,\n  \"id\": \"" + MyColors + "\",\n  \"name\": \"My Colors\",\n  \"version\": \"1.0.0\",\n  \"description\": \"Colors picked on the Mods page.\",\n  \"colors\": { " + string.Join(", ", parts.ToArray()) + " }\n}\n";
-            Directory.CreateDirectory(folder);
-            File.WriteAllText(Path.Combine(folder, MyColors + Extension), text);
+            // Hers sit with the skins, beside the one already there.
+            string place = Located(folder, MyColors) ?? Path.Combine(folder, SkinsCapri);
+            Directory.CreateDirectory(place);
+            File.WriteAllText(Path.Combine(place, MyColors + Extension), text);
             HashSet<string> off = Off();
             OnlyColours(MyColors, off);
             off.Remove(MyColors);
@@ -212,7 +214,7 @@ namespace CapriDesktop
 
         internal void ResetColours()
         {
-            string mine = Path.Combine(folder, MyColors + Extension);
+            string mine = Path.Combine(Located(folder, MyColors) ?? folder, MyColors + Extension);
             if (File.Exists(mine)) File.Delete(mine);
             HashSet<string> off = Off();
             off.Remove(MyColors);
@@ -225,6 +227,7 @@ namespace CapriDesktop
 #if !CROSS
     internal sealed partial class Companion
     {
+#if CHECKS
         private void CheckColours(List<string> checks, string output)
         {
             Mods mods = ModList;
@@ -291,7 +294,7 @@ namespace CapriDesktop
             string maid = Path.Combine(folder, "maid-suit" + Mods.SkinExtension);
             bool haveAll = File.Exists(maid);
             foreach (string name in presets) haveAll &= File.Exists(Path.Combine(folder, name + Mods.Extension));
-            if (!haveAll) { checks.Add("LIMIT colours: the preset files aren't beside this build, so the previews weren't drawn"); return; }
+            if (!haveAll) { checks.Add("LIMIT colours: the preset files aren't beside this build, so the previews weren't drawn"); ModsBack(); return; }
             const int Across = 5, CellW = 240, CellH = 384;
             using (Bitmap sheet = new Bitmap(Across * CellW, CellH * 2))
             using (Graphics paper = Graphics.FromImage(sheet))
@@ -314,7 +317,10 @@ namespace CapriDesktop
             }
             if (hair() != usual) throw new Exception("The previews left her recoloured.");
             checks.Add("PASS colours: all presets import and work with and without the Maid Suit");
+            // Her own code mods it stopped, laid again and running, so no check after it finds them gone.
+            ModsBack();
         }
+#endif
     }
 #endif
 }

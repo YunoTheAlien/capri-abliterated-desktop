@@ -22,7 +22,7 @@ namespace CapriDesktop
         // Phones that asked for her brains, which hear when they change, and what they last heard.
         private readonly HashSet<string> brainWatchers = new HashSet<string>(StringComparer.Ordinal);
         private string brainSent;
-        private System.Windows.Forms.Timer brainTimer;
+        private Clock.Ticker brainTimer;
         private readonly Stopwatch brainClock = Stopwatch.StartNew();
         // Where brain messages go: her link, or the smoke test's tap. The smoke test hears the notice too.
         private Action<string, string> brainOut;
@@ -188,7 +188,7 @@ namespace CapriDesktop
         {
             if (brainTimer == null)
             {
-                brainTimer = new System.Windows.Forms.Timer { Interval = 1500 };
+                brainTimer = new Clock.Ticker("RemoteBrains brainTimer") { Interval = 1500 };
                 brainTimer.Tick += delegate { BrainTick(); };
             }
             if (!brainTimer.Enabled) brainTimer.Start();
@@ -211,6 +211,7 @@ namespace CapriDesktop
         // A phone's brain asks through her real key path with stand-in providers: the key checked, saved with DPAPI and
         // used as the key box does; bad, paid-under-MEDIUM and rejected keys, one at a time, rung picks, malformed
         // asks, and no key going back.
+#if CHECKS
         private void SmokeRemoteBrains(List<string> checks)
         {
             SmokeRemoteLateBrain(checks);
@@ -373,7 +374,9 @@ namespace CapriDesktop
                 SavePreferences();
             }
         }
+#endif
 
+#if CHECKS
         private void SmokeRemoteLateBrain(List<string> checks)
         {
             RemoteLink current = remoteLink;
@@ -401,6 +404,7 @@ namespace CapriDesktop
             finally { remoteLink = current; brainOut = output; }
             checks.Add("PASS a revoked phone's queued brain.get, brain.use and brain.key do nothing after its session is removed");
         }
+#endif
     }
 
     // What BRAIN shows, for a phone and for the smoke test.

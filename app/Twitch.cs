@@ -30,9 +30,12 @@ namespace CapriDesktop
         private readonly List<string> words = new List<string>();
         private readonly List<string> watch = new List<string>();
         private readonly HashSet<string> users = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        private readonly HashSet<string> bully = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> bots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // What she calls someone who gives: each term with who it fits (boy, girl or anyone), and the pet names she picks
+        // from at random when she doesn't know.
+        internal readonly List<KeyValuePair<string, string>> Terms = new List<KeyValuePair<string, string>>();
+        internal readonly List<string> PetNames = new List<string>();
 
         // The stream's own bots: never answered or read aloud, trusted for pranks and donation lines.
         internal bool IsBot(string user) { return bots.Contains((user ?? "").Trim().TrimStart('@')); }
@@ -45,10 +48,6 @@ namespace CapriDesktop
             if (line.Has("broadcaster") || string.Equals(who, (channel ?? "").Trim(), StringComparison.OrdinalIgnoreCase) || IsBot(who) || allowed.Contains(who)) return true;
             return allowed.Contains("mods") && line.Has("moderator") || allowed.Contains("vips") && line.Has("vip");
         }
-
-        // What chat is allowed to set off, and nothing else. An empty list means chat can set off nothing at all.
-        internal bool Bully(string word) { return bully.Contains((word ?? "").Trim().TrimStart('!')); }
-        internal int BullyCount { get { return bully.Count; } }
 
         internal List<string> Watching { get { return new List<string>(watch); } }
 
@@ -156,7 +155,7 @@ namespace CapriDesktop
             TwitchRules rules = new TwitchRules();
             if (path == null || !File.Exists(path)) return rules;
             string zone = "";
-            foreach (string raw in File.ReadAllLines(path))
+            foreach (string raw in Notes.ReadLines(path))
             {
                 string line = (raw ?? "").Trim();
                 if (line.Length == 0 || line.StartsWith(">", StringComparison.Ordinal) || line.StartsWith("<!--", StringComparison.Ordinal)) continue;
@@ -174,11 +173,22 @@ namespace CapriDesktop
                     foreach (string piece in line.Split(',')) { string name = piece.Trim().TrimStart('@'); if (name.Length > 0) (zone == "bots" ? rules.bots : rules.allowed).Add(name); }
                     continue;
                 }
-                if (zone == "streamer bully" || zone == "streamer_bully")
+                if (zone == "what she calls chatters")
                 {
-                    foreach (string piece in line.Split(',')) { string act = piece.Trim().TrimStart('!').ToLowerInvariant(); if (act.Length > 0) rules.bully.Add(act); }
+                    int split = line.IndexOf(':');
+                    if (split <= 0) continue;
+                    string term = line.Substring(0, split).Trim(), fits = line.Substring(split + 1).Trim();
+                    if (string.Equals(term, "chatPetNames", StringComparison.OrdinalIgnoreCase))
+                    {
+                        foreach (string piece in fits.Split(',')) { string pet = piece.Trim(); if (pet.Length > 0 && !rules.PetNames.Contains(pet)) rules.PetNames.Add(pet); }
+                        continue;
+                    }
+                    fits = fits.ToLowerInvariant();
+                    if (term.Length > 0 && (fits == "boy" || fits == "girl" || fits == "anyone")) rules.Terms.Add(new KeyValuePair<string, string>(term, fits));
                     continue;
                 }
+                // The old "Streamer bully" list is Toggles > Pranks now (TakeBully); a file not yet carried is skipped here.
+                if (zone == "streamer bully" || zone == "streamer_bully") continue;
                 if (zone == "banned words" || zone == "banned users" || zone == "ignored" || zone == "channels to watch" || zone == "users to watch")
                 {
                     foreach (string piece in line.Split(','))
@@ -246,7 +256,42 @@ namespace CapriDesktop
             return new WrittenNote(Kept, Default, writing);
         }
 
-        internal const string BotsHeading = "## Bots", AllowedHeading = "## Allowed to set off pranks";
+        internal const string BotsHeading = "## Bots", AllowedHeading = "## Allowed to set off pranks", CallsHeading = "## What she calls chatters";
+
+        private static readonly string[] CallsBlock =
+        {
+            CallsHeading,
+            "",
+            ">! What she calls someone who gives: the term, then who it fits, boy, girl or anyone. With Remember viewers on, a",
+            ">! first-time donor is asked which, and keeps the one they pick. chatPetNames: one picked at random when she doesn't know.",
+            "",
+            "good boy: boy",
+            "good girl: girl",
+            "good gremlin: anyone",
+            "chatPetNames: good gremlin, good kitten, good puppy",
+            ""
+        };
+
+        // A twitch.md from before What she calls chatters gains it under My channel, with its own lines never touched.
+        // Running it again changes nothing.
+        internal static bool AddCalls(string path)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return false;
+                string had = Notes.ReadAll(path);
+                string newline = had.Contains("\r\n") ? "\r\n" : "\n";
+                List<string> rows = new List<string>(had.Replace("\r\n", "\n").Split('\n'));
+                if (Heading(rows, CallsHeading) >= 0) return false;
+                int before = Heading(rows, "## Channels to watch");
+                if (before < 0) before = Heading(rows, "## Timers");
+                if (before < 0) { before = rows.Count; if (before > 0 && rows[before - 1].Trim().Length > 0) { rows.Add(""); before++; } }
+                rows.InsertRange(before, CallsBlock);
+                Notes.Put(path, string.Join(newline, rows.ToArray()));
+                return true;
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return false; }
+        }
         internal const string BotsStock = "nightbot, streamelements, streamlabs, moobot, fossabot, sery_bot", AllowedStock = "mods";
 
         // A twitch.md from before Bots: the stock bots move out of Banned users into it, names they added stay where they
@@ -311,8 +356,36 @@ namespace CapriDesktop
             return rows.FindIndex(row => string.Equals(row.Trim(), heading, StringComparison.OrdinalIgnoreCase));
         }
 
-        // What chat may set off. Deleting a word is the documented way to switch that prank off.
+        // Every prank chat can set off, as the old list named them.
         internal const string BullyStock = "crash, clones, rampage, dance, mess, alert, surprise, goodbye, alive";
+
+        // The "Streamer bully" section of a twitch.md from before the switches in Toggles > Pranks: its words, and the
+        // section taken out of the file, notes and all. Null when there is none.
+        internal static List<string> TakeBully(string path)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
+                string text = CapriDesktop.Notes.ReadAll(path);
+                string newline = text.Contains("\r\n") ? "\r\n" : "\n";
+                List<string> rows = new List<string>(text.Replace("\r\n", "\n").Split('\n'));
+                int head = rows.FindIndex(row => row.Trim().StartsWith("#", StringComparison.Ordinal) && Regex.IsMatch(row.Trim().TrimStart('#').Trim(), "^streamer[ _]bully$", RegexOptions.IgnoreCase));
+                if (head < 0) return null;
+                int end = head + 1;
+                while (end < rows.Count && !rows[end].TrimStart().StartsWith("#", StringComparison.Ordinal)) end++;
+                List<string> words = new List<string>();
+                for (int at = head + 1; at < end; at++)
+                {
+                    string one = rows[at].Trim();
+                    if (one.Length == 0 || one.StartsWith(">", StringComparison.Ordinal)) continue;
+                    foreach (string piece in one.Split(',')) { string act = piece.Trim().TrimStart('!').ToLowerInvariant(); if (act.Length > 0 && !words.Contains(act)) words.Add(act); }
+                }
+                rows.RemoveRange(head, end - head);
+                Notes.Put(path, string.Join(newline, rows.ToArray()));
+                return words;
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return null; }
+        }
 
         // The timers she ships and the note explaining them, in one place.
         private static readonly string[,] TimerStock =
@@ -470,6 +543,7 @@ namespace CapriDesktop
                     "",
                     ">! The chat she reads. Name or link. No account needed, so any live channel works.",
                     "",
+                    string.Join(Environment.NewLine, CallsBlock),
                     "## Channels to watch",
                     "",
                     ">! She tells you when these go live. One per line or commas, best first.",
@@ -477,21 +551,9 @@ namespace CapriDesktop
                     "## Timers",
                     "",
                     TimerBlock,
-                    "## Streamer bully",
-                    "",
-                    ">! What chat can set off on your screen with !capri <word>. Delete a word to switch it off, empty the",
-                    ">! list and chat can do nothing. These ignore full screen and the stream on purpose, but never fire while",
-                    ">! she has your mouse or is mid-job. They are the only things chat can ever make her do.",
-                    "",
-                    BullyStock,
-                    "",
-                    ">! crash: her fake blue screen for five seconds. clones: copies of her that wander until cleared.",
-                    ">! rampage: your desktop icons fly around for ten seconds, then go home. dance: she dances.",
-                    ">! mess: your icons scatter for a bit. alert: six seconds of flashing red hexagons across your",
-                    ">! screens with her alarm over them, ending on any key. None of them touches a file.",
-                    "",
                     AllowedHeading,
                     "",
+                    ">! Chat sets off a prank with !capri <word>, for the pranks switched on in Toggles > Pranks.",
                     ">! Who can set off those pranks. Add a name, one per line or commas. mods means the channel's mods, vips its",
                     ">! VIPs. You and your bots always can; anyone else's !capri prank is skipped.",
                     "",
@@ -1010,6 +1072,7 @@ namespace CapriDesktop
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
         }
 
+#if CHECKS
         internal static void Check(List<string> checks)
         {
             string folder = Path.Combine(Path.GetTempPath(), "capri-twitch-seen-" + Guid.NewGuid().ToString("N"));
@@ -1036,6 +1099,7 @@ namespace CapriDesktop
             }
             finally { try { if (Directory.Exists(folder)) Directory.Delete(folder, true); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }
         }
+#endif
     }
 
     // Twitch chat read aloud: what a message becomes in her voice, or null. It only makes words to speak, never
@@ -1043,7 +1107,6 @@ namespace CapriDesktop
     // bleeps is skipped, and nothing of the senpai side is read.
     internal static class TwitchAloud
     {
-        internal const int Longest = 200;
         internal const string Bleep = "bleep";
         private const int LongestPhrase = 5;
 
@@ -1145,11 +1208,6 @@ namespace CapriDesktop
             int words = Regex.Matches(text, @"[\p{L}\p{N}']+").Count;
             if (words == 0 || (banned + gated) * 2 >= words) return null;
             text = Regex.Replace(text, @"\s+", " ").Trim();
-            if (text.Length > Longest)
-            {
-                int cut = text.LastIndexOf(' ', Longest);
-                text = text.Substring(0, cut > 40 ? cut : Longest).TrimEnd(',', ';', ':', ' ') + "...";
-            }
             string name = Speakable(rules, who);
             bool again = string.Equals((who ?? "").Trim().TrimStart('@'), (lastWho ?? "").Trim().TrimStart('@'), StringComparison.OrdinalIgnoreCase);
             return again || name == null ? text : name + ": " + text;
@@ -1208,6 +1266,7 @@ namespace CapriDesktop
 
         // Read aloud, switch on or off: names once per burst, banned users, commands and emote-only messages skipped,
         // links as "a link", banned and gated words bleeped, long ones cut; a made-up word stands in for the gate's.
+#if CHECKS
         internal static void Check(List<string> checks, string folder)
         {
             string file = System.IO.Path.Combine(folder, "twitch-aloud.md");
@@ -1244,10 +1303,10 @@ namespace CapriDesktop
                         string got = Line(rules, cases[at, 0], cases[at, 1], cases[at, 2]);
                         if (got != cases[at, 3]) throw new Exception("Read aloud said the wrong thing for " + Voice.Quote(cases[at, 1]) + " with the switch " + (on ? "on" : "off") + ": " + (got == null ? "nothing" : Voice.Quote(got)));
                     }
-                    string cut = Line(rules, "viewer3", longOne, "");
-                    if (cut == null || !cut.EndsWith("...", StringComparison.Ordinal) || cut.Length > Longest + 20) throw new Exception("A long chat message was not cut: " + (cut ?? "nothing"));
+                    string whole = Line(rules, "viewer3", longOne, "");
+                    if (whole == null || whole.EndsWith("...", StringComparison.Ordinal) || whole.Length < longOne.Trim().Length) throw new Exception("A long chat message was cut: " + (whole ?? "nothing"));
                 }
-                checks.Add("PASS Twitch read aloud says <name>: <message> once per burst, skips banned users, chat commands and emote-only lines, reads links as a link, bleeps banned and gated words, skips a mostly bleeped line and cuts a long one, the same with the sys.md switch on and off");
+                checks.Add("PASS Twitch read aloud says <name>: <message> once per burst, skips banned users, chat commands and emote-only lines, reads links as a link, bleeps banned and gated words, skips a mostly bleeped line and reads a long one whole, the same with the sys.md switch on and off");
             }
             finally
             {
@@ -1256,5 +1315,6 @@ namespace CapriDesktop
                 try { System.IO.File.Delete(file); } catch (Exception) { }
             }
         }
+#endif
     }
 }

@@ -1,0 +1,1186 @@
+{
+ "format": 1,
+ "his": [
+  "[a-z0-9.-]*\\.workers\\.dev",
+  "capriai\\.app",
+  "discord\\.gg/capridesktop",
+  "ko-fi\\.com/lachysdev",
+  "lachydotmcg/capri-desktop/releases/download"
+ ],
+ "mods": {
+  "MK001-dice-roller": {
+   "file": "MK001-dice-roller.capri-code",
+   "sha256": "70051cf0e53a06c150a74ce6fc5ef01010b5d558980ffdeea03611f5f63330c1",
+   "verdict": "held",
+   "version": "1.7.15",
+   "why": "Works on this build, but reads chat history, memory notes and memories, writes into chat history and calls Brain.Aside/Quick through private reflection, skipping the chat, memory and brain permissions."
+  },
+  "MK002-Caprichat": {
+   "file": "MK002-Caprichat.capri-code",
+   "sha256": "c7ff14dc9c38453cd233dfa2820ec2c3275bc1296ede77fce7849e43d241fb41",
+   "verdict": "rejected",
+   "version": "2.1.14",
+   "why": "Calls Capri's private Brain.Aside with its own system prompt, skipping the brain permission."
+  },
+  "arasaka": {
+   "file": "arasaka.capri-skin",
+   "result": "d573bbd4eb32153d2efc3b50bf7344013111db8301bfe3bc84a189073a0d2055",
+   "sha256": "d573bbd4eb32153d2efc3b50bf7344013111db8301bfe3bc84a189073a0d2055",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "aurora-borealis": {
+   "file": "aurora-borealis.capri-skin",
+   "result": "3698da030b1bd3728f470456cf6e2c62ced82192b60e06180c19f01d7a28283d",
+   "sha256": "3698da030b1bd3728f470456cf6e2c62ced82192b60e06180c19f01d7a28283d",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "auto-game-hologram": {
+   "file": "auto-game-hologram.capri-code",
+   "sha256": "780b06803028049716cb7a7b4e92c6d253c711f046211f2c6c9f55cb93973ccc",
+   "verdict": "superseded",
+   "version": "2.0",
+   "why": "Upstream 2.0; this build ships 2.2 (../../agents/wt-a3/_smoke/mainsrc/CapriSourceFiles/mods/forks/auto-game-hologram.capri-code)."
+  },
+  "battery-drama": {
+   "file": "battery-drama.capri-code",
+   "result": "1a92f16a4d6870676c9b24bdc1badd4f80490f0d0abf1a9c6ef44bd11d578a2b",
+   "rewritten": true,
+   "sha256": "2ab7d260784b32ec8e3f6ff6c393f8c89e1a4e6de90bbdb84ef03790b07a5219",
+   "steps": [
+    {
+     "count": 1,
+     "find": "        lieDown = capri.Store.Flag(\"lie down\", true);\n",
+     "op": "replace",
+     "with": "        lieDown = capri.Store.Flag(\"lie down\", true);\n        for (int i = 0; i < Steps.Length; i++)\n        {\n            int index = i;\n            capri.Toggles.Add(\"At \" + Steps[i] + \"%\", on[i], delegate(bool now) { on[index] = now; capri.Store.Set(\"step \" + Steps[index], now); });\n        }\n        capri.Toggles.Add(\"Lie down when low\", lieDown, delegate(bool now) { lieDown = now; capri.Store.Set(\"lie down\", now); });\n"
+    },
+    {
+     "count": 1,
+     "find": "        capri.Ui.SetOptions(\"Low Battery Drama\", MakeOptions);\n",
+     "op": "replace",
+     "with": ""
+    }
+   ],
+   "toggles": [
+    "Toggles.Add(\"Lie down when low\", lieDown, ...)",
+    "Toggles.Add(step, \"On\", on[i], ...) for each step (an item each)"
+   ],
+   "verdict": "adapted",
+   "version": "1.0.1"
+  },
+  "better-chat-capri": {
+   "file": "better-chat-capri.capri-code",
+   "result": "db91ed3f64b10147a5d38f2a43a1416d8d7058dc63b561e4726827a04a194d7a",
+   "rewritten": true,
+   "sha256": "78c5843b6bb785799448c6c459e898f23336ade8551d036eafd0bb9e37f04098",
+   "steps": [
+    {
+     "count": 1,
+     "find": "        bubbleHidden = host.Store.Flag(\"hide_bubble\", false);\n",
+     "op": "replace",
+     "with": "        bubbleHidden = host.Store.Flag(\"hide_bubble\", false);\n        host.Toggles.Add(\"Hide her bubble\", bubbleHidden, delegate(bool on) { if (on != bubbleHidden) ToggleBubble(); });\n"
+    }
+   ],
+   "toggles": [
+    "Toggles.Add(\"Hide her bubble\", bubbleHidden, ...)"
+   ],
+   "verdict": "adapted",
+   "version": "1.0.1"
+  },
+  "better-toolbar-capri": {
+   "file": "better-toolbar-capri.capri-code",
+   "result": "d0b63314c1bc2265ed2eb87e809290882e9e15c2fd34855d5c70c50c477914a9",
+   "sha256": "d0b63314c1bc2265ed2eb87e809290882e9e15c2fd34855d5c70c50c477914a9",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.0.0"
+  },
+  "btd6-strategy": {
+   "file": "btd6-strategy.capri-skill",
+   "sha256": "ff76fb6f0efec4070557e267cf88fd106844e6d95ac768c77d6d22a8c8a7ed99",
+   "verdict": "shipped",
+   "version": "1.0.0",
+   "why": "Identical to ../../agents/wt-a3/_smoke/mainsrc/CapriSourceFiles/mods/btd6-strategy.capri-skill already in this build."
+  },
+  "business-suit": {
+   "file": "business-suit.capri-skin",
+   "result": "4f69199e41e39a72923e40e23a9b468f15a1b67a39250e4b13f6129bf6363bee",
+   "sha256": "4f69199e41e39a72923e40e23a9b468f15a1b67a39250e4b13f6129bf6363bee",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "capri-bezel-led": {
+   "file": "capri-bezel-led.capri-code",
+   "sha256": "8273870d2cbef126afb281726406be093abc8099cefaff9f5abc7a7fa268366c",
+   "verdict": "superseded",
+   "version": "7.0.1",
+   "why": "Upstream 7.0.1; this build ships 7.1.1 (../../agents/wt-a3/_smoke/mainsrc/CapriSourceFiles/mods/forks/capri-bezel-led.capri-code)."
+  },
+  "capri-close-to-tray": {
+   "file": "capri-close-to-tray.capri-code",
+   "result": "3e2f7069abc326f4189ccb15141040b8a6693a861aff4f5d2b6b3145c7fe43ab",
+   "sha256": "3e2f7069abc326f4189ccb15141040b8a6693a861aff4f5d2b6b3145c7fe43ab",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.0.0"
+  },
+  "capri-discord-status": {
+   "file": "capri-discord-status.capri-code",
+   "sha256": "25354865a3ad2ec755de71a139945695dcd46047b596742ac36340d645d130b5",
+   "verdict": "rejected",
+   "version": "1.0.0",
+   "why": "Contacts capriai.app and publishes to the Discord profile; this build cut presence."
+  },
+  "capri-internal-browser": {
+   "file": "capri-internal-browser.capri-code",
+   "sha256": "a9f8c367a4bfc88a4dec8f03227d22aa02c1edf42a71e7a1ab974b2c91b73148",
+   "verdict": "rejected",
+   "version": "2.0.1",
+   "why": "1 MB embedded WebView2 browser, 85 external addresses, matches for saved secrets and autostart, minified lines."
+  },
+  "capri-lyrics": {
+   "file": "capri-lyrics.capri-code",
+   "sha256": "82f6f1595d44915a91fd7de061bc2d6498d85c733eb669788d36a01896ed8b58",
+   "verdict": "rejected",
+   "version": "1.4.0",
+   "why": "Network lyrics from two services plus packed images; capriplus-lyrics kept instead."
+  },
+  "capri-night-city": {
+   "file": "capri-night-city.capri-code",
+   "sha256": "c98aee2ced75b1162ec69162b9dc77c94db8f5dd1a8e20680c2a07e458fb14b7",
+   "verdict": "held",
+   "version": "1.9.4",
+   "why": "Calls private Brain.Aside (skips the brain permission), reads another mod's folder under AppData, and needs a Cyberpunk CET Lua bridge from GitHub that is not in the repo."
+  },
+  "capri-pad": {
+   "file": "capri-pad.capri-code",
+   "result": "ba9cc062a088ce5d1fa50e5c156c4769d2e562bee945edb6844fb51bccc01e2a",
+   "rewritten": true,
+   "sha256": "f763b3e5519667e2d98754bdb74002afc8599d7ce2b882aaf50030fd3934b7d5",
+   "steps": [
+    {
+     "count": 1,
+     "find": "        autoPerch = capri.Store.Flag(\"auto_perch\", true);\n",
+     "op": "replace",
+     "with": "        autoPerch = capri.Store.Flag(\"auto_perch\", true);\n        capri.Toggles.Add(\"Perch on the pad by herself\", autoPerch, delegate(bool on) { if (on != autoPerch) SetPerchPadActiveState(on); });\n"
+    },
+    {
+     "from": "        ToolStripMenuItem chk = new ToolStripMenuItem(\"Auto Perch Pad\");",
+     "op": "cut",
+     "to": "    }\n\n    private void OnHerDragged()",
+     "with": ""
+    }
+   ],
+   "toggles": [
+    "Toggles.Add(\"Perch on the pad by herself\", autoPerch, ...)"
+   ],
+   "verdict": "adapted",
+   "version": "1.0.2"
+  },
+  "capriplus-lyrics": {
+   "file": "capriplus-lyrics.capri-code",
+   "result": "d1e1754f22356d0362c9096e8a50b5d4dec8bed11868c927914a9668b50a7784",
+   "rewritten": true,
+   "sha256": "f7df27caa4b18917959fea68cfe310e8570fa1f904dd7f63e8a02bae2cd4997e",
+   "steps": [
+    {
+     "count": 1,
+     "find": "internal const string Agent = \"CapriPlus-Lyrics/1.0.0 (unofficial Capri community mod; https://github.com/lachydotmcg/capri-mods)\";",
+     "op": "replace",
+     "with": "internal const string Agent = \"CapriPlus-Lyrics/1.0.0\";"
+    },
+    {
+     "allow": [
+      "lrclib.net"
+     ],
+     "op": "comment-links"
+    },
+    {
+     "op": "permissions",
+     "set": "music"
+    },
+    {
+     "count": 1,
+     "find": "            host.Ui.SetOptions(\"Capri+ Lyrics\", MakeOptions);\n",
+     "op": "replace",
+     "with": "            MakeOptions().Dispose();\n            host.Ui.SetOptions(\"Capri+ Lyrics\", MakeOptions);\n"
+    },
+    {
+     "count": 1,
+     "find": "        private Control MakeOptions()\n",
+     "op": "replace",
+     "with": "        private bool togglesMade;\n\n        private Control MakeOptions()\n"
+    },
+    {
+     "from": "            Func<string, bool, Action<bool>, CheckBox> check = delegate",
+     "op": "cut",
+     "to": "            check(\"Show lyrics\"",
+     "with": "            Func<string, bool, Action<bool>, CheckBox> check = delegate(string text, bool on, Action<bool> changed)\n            {\n                if (!togglesMade) capri.Toggles.Add(text, on, delegate(bool now) { changed(now); Saved(); });\n                return null;\n            };\n            Func<string, int, int, int, int, Func<int, string>, Action<int>, TrackBar> slider = delegate(string text, int min, int max, int step, int value, Func<int, string> show, Action<int> changed)\n            {\n                if (togglesMade) return null;\n                // Her Toggles sliders hold 21 steps at most, so a finer one takes every few.\n                int wide = step * Math.Max(1, ((max - min) / step + 21) / 21);\n                List<string> steps = new List<string>();\n                for (int v = min; v <= max; v += wide) steps.Add(show(v));\n                capri.Toggles.AddSlider(text, steps.ToArray(), Math.Min(steps.Count - 1, (Math.Max(min, Math.Min(max, value)) - min + wide / 2) / wide), delegate(int at) { changed(min + at * wide); Saved(); });\n                return null;\n            };\n"
+    },
+    {
+     "count": 1,
+     "find": "            Button clear = new Button { Text = \"Forget saved lyrics\"",
+     "op": "replace",
+     "with": "            togglesMade = true;\n            Button clear = new Button { Text = \"Forget saved lyrics\""
+    }
+   ],
+   "toggles": [
+    "its options window's ticks and sliders as Toggles.Add and Toggles.AddSlider, one each"
+   ],
+   "verdict": "adapted",
+   "version": "1.0.0"
+  },
+  "cat-ears": {
+   "file": "cat-ears.capri-skin",
+   "result": "500e4bda5f1de19658bb3e0b385c406d0b7c5e6ceac13f65f8b870cb1c2aa126",
+   "sha256": "500e4bda5f1de19658bb3e0b385c406d0b7c5e6ceac13f65f8b870cb1c2aa126",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "cherry-blossom": {
+   "file": "cherry-blossom.capri-skin",
+   "result": "9361728bea52bdf0cecc4575bab0978da6ea3e8ad42c6d80358cae8740834828",
+   "sha256": "9361728bea52bdf0cecc4575bab0978da6ea3e8ad42c6d80358cae8740834828",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "chess-strategy": {
+   "file": "chess-strategy.capri-skill",
+   "result": "84541f3f7f86fb4e434fb594974c459a77ae26032d6d998d78f0dcc42bb22c27",
+   "sha256": "84541f3f7f86fb4e434fb594974c459a77ae26032d6d998d78f0dcc42bb22c27",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.0.0"
+  },
+  "colors-bubblegum": {
+   "file": "colors-bubblegum.capri-mod",
+   "sha256": "69ebb613c4c3098f0afbd2d797299b15340bd8dde9ecf1efa1d82357e5b1247e",
+   "verdict": "shipped",
+   "version": "1.0.0",
+   "why": "Identical to ../../agents/wt-a3/_smoke/mainsrc/CapriSourceFiles/mods/colors-bubblegum.capri-mod already in this build."
+  },
+  "colors-cyber-cyan": {
+   "file": "colors-cyber-cyan.capri-mod",
+   "sha256": "edf17ae8de38053ba57e2e4e5aa34d73b0a67f444200de26751c048fe8313c9e",
+   "verdict": "shipped",
+   "version": "1.0.0",
+   "why": "Identical to ../../agents/wt-a3/_smoke/mainsrc/CapriSourceFiles/mods/colors-cyber-cyan.capri-mod already in this build."
+  },
+  "colors-royal": {
+   "file": "colors-royal.capri-mod",
+   "sha256": "be08ab575ec441458df2882cfdd6a5627c27e5048b72e036e95b669beab3fad6",
+   "verdict": "shipped",
+   "version": "1.0.0",
+   "why": "Identical to ../../agents/wt-a3/_smoke/mainsrc/CapriSourceFiles/mods/colors-royal.capri-mod already in this build."
+  },
+  "colors-toxic": {
+   "file": "colors-toxic.capri-mod",
+   "sha256": "5364f548d90100ab0f104796b487d4b43a02ab2a587f70b7a5ad3c070d5d4ef3",
+   "verdict": "shipped",
+   "version": "1.0.0",
+   "why": "Identical to ../../agents/wt-a3/_smoke/mainsrc/CapriSourceFiles/mods/colors-toxic.capri-mod already in this build."
+  },
+  "crt-terminal": {
+   "file": "crt-terminal.capri-skin",
+   "result": "37ee593938afc094f16423bec4f01ebe6728e2c31f7ad4ce3d9ae19fc8f0e59c",
+   "sha256": "37ee593938afc094f16423bec4f01ebe6728e2c31f7ad4ce3d9ae19fc8f0e59c",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "custom-names": {
+   "file": "custom-names.capri-mod",
+   "sha256": "c861d12b5c7a51b9bed9684d18cf6af9be393bd2dd7ae7c37ce1341240dae5a2",
+   "verdict": "superseded",
+   "version": "1.0.0",
+   "why": "Upstream 1.0.0; this build ships 3.0.0 (../../agents/wt-a3/_smoke/mainsrc/CapriSourceFiles/mods/custom-names.capri-mod)."
+  },
+  "deep-sea": {
+   "file": "deep-sea.capri-skin",
+   "result": "6cac8f4b55f709532b00740bac490e397d7c00116e9493dcbea942ebb34f92eb",
+   "sha256": "6cac8f4b55f709532b00740bac490e397d7c00116e9493dcbea942ebb34f92eb",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "desktop-weather": {
+   "file": "desktop-weather.capri-code",
+   "result": "d842bbe361720df116d57be8835d271563ef5e96ce2a1133b8b91811253969bb",
+   "sha256": "d842bbe361720df116d57be8835d271563ef5e96ce2a1133b8b91811253969bb",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.0.0"
+  },
+  "dice-decider": {
+   "file": "dice-decider.capri-code",
+   "result": "a9f3bca523e883031b2157ddedc4c8a1d1a1839296a41a7c7acf00c7d7461efa",
+   "sha256": "a9f3bca523e883031b2157ddedc4c8a1d1a1839296a41a7c7acf00c7d7461efa",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.0.0"
+  },
+  "dice-roll-rus": {
+   "file": "dice-roll-rus.capri-code",
+   "result": "c8449f8dba1f3c6516c5aefdb60f9718b5d34dadbf6d87c16cdd74f417b0d92f",
+   "sha256": "c8449f8dba1f3c6516c5aefdb60f9718b5d34dadbf6d87c16cdd74f417b0d92f",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.1.0"
+  },
+  "duo-commentary": {
+   "file": "duo-commentary.capri-code",
+   "result": "355c7b31326e8949be4bfb7c8e05a1037469f57cc3d00cfe1808529b4f24a403",
+   "sha256": "355c7b31326e8949be4bfb7c8e05a1037469f57cc3d00cfe1808529b4f24a403",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.1.0"
+  },
+  "ember": {
+   "file": "ember.capri-skin",
+   "result": "695a8862e05d5b8876ff6658f041b8fc60f140b04b030c017ab4397c06e58c60",
+   "sha256": "695a8862e05d5b8876ff6658f041b8fc60f140b04b030c017ab4397c06e58c60",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "fire-blaze": {
+   "file": "fire-blaze.capri-skin",
+   "result": "048972a877431a6ccff1fb55982f22073c5326b6ebaf405d5d4d47cb94787a5e",
+   "sha256": "048972a877431a6ccff1fb55982f22073c5326b6ebaf405d5d4d47cb94787a5e",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "fire-bluefire": {
+   "file": "fire-bluefire.capri-skin",
+   "result": "bef2f274401ba3a10b6d4df635f82846af4c31bb9cac8f877375397c6e5b2088",
+   "sha256": "bef2f274401ba3a10b6d4df635f82846af4c31bb9cac8f877375397c6e5b2088",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "fire-witchfire": {
+   "file": "fire-witchfire.capri-skin",
+   "result": "07251dc4868db5544bc2d5593f462773dd1206992e44da1f52d5de5051d4c9af",
+   "sha256": "07251dc4868db5544bc2d5593f462773dd1206992e44da1f52d5de5051d4c9af",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "float-glide": {
+   "file": "float-glide.capri-code",
+   "result": "efad028cd3492a9b4634141d55122b3ef7d7f9457e4824a1c4d0fc032bb19efd",
+   "sha256": "efad028cd3492a9b4634141d55122b3ef7d7f9457e4824a1c4d0fc032bb19efd",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.0.0"
+  },
+  "focus-guard": {
+   "file": "focus-guard.capri-code",
+   "result": "61eb7f3d5884063fb71caa623619be8b8d48b8a29c42391df553419283d9d5fc",
+   "sha256": "61eb7f3d5884063fb71caa623619be8b8d48b8a29c42391df553419283d9d5fc",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.1.0"
+  },
+  "focus-mode": {
+   "file": "focus-mode.capri-code",
+   "result": "0fa08410021e9bbfa0f104b8a7c44172ef301c31c6b9051dfc7b52f15923246f",
+   "rewritten": true,
+   "sha256": "b310fc73158e4b19a12aa5e9821ba72ae7500d94c894c6c79a27ab4f4a539cd6",
+   "steps": [
+    {
+     "count": 1,
+     "find": "        rounds = (int)capri.Store.Number(\"rounds\", 4);\n",
+     "op": "replace",
+     "with": "        rounds = (int)capri.Store.Number(\"rounds\", 4);\n        Func<string[], int, int> near = delegate(string[] steps, int value) { int best = 0; for (int i = 0; i < steps.Length; i++) if (Math.Abs(int.Parse(steps[i]) - value) < Math.Abs(int.Parse(steps[best]) - value)) best = i; return best; };\n        string[] workSteps = { \"15\", \"20\", \"25\", \"30\", \"45\", \"50\", \"60\", \"90\" }, breakSteps = { \"3\", \"5\", \"10\", \"15\", \"20\" };\n        string[] longSteps = { \"10\", \"15\", \"20\", \"30\", \"45\" }, roundSteps = { \"2\", \"3\", \"4\", \"5\", \"6\", \"8\" };\n        capri.Toggles.AddSlider(\"Work\", workSteps, near(workSteps, work), delegate(int at) { work = int.Parse(workSteps[at]); capri.Store.Set(\"work\", work); });\n        capri.Toggles.AddSlider(\"Break\", breakSteps, near(breakSteps, rest), delegate(int at) { rest = int.Parse(breakSteps[at]); capri.Store.Set(\"break\", rest); });\n        capri.Toggles.AddSlider(\"Long break\", longSteps, near(longSteps, longRest), delegate(int at) { longRest = int.Parse(longSteps[at]); capri.Store.Set(\"long break\", longRest); });\n        capri.Toggles.AddSlider(\"Rounds\", roundSteps, near(roundSteps, rounds), delegate(int at) { rounds = int.Parse(roundSteps[at]); capri.Store.Set(\"rounds\", rounds); });\n"
+    },
+    {
+     "count": 1,
+     "find": "        NumericUpDown w = Number(page, \"Work (minutes)\", work, 1, 240);\n        NumericUpDown b = Number(page, \"Break (minutes)\", rest, 1, 60);\n        NumericUpDown l = Number(page, \"Long break (minutes)\", longRest, 1, 120);\n        NumericUpDown r = Number(page, \"Rounds before a long break\", rounds, 1, 12);\n",
+     "op": "replace",
+     "with": ""
+    },
+    {
+     "count": 1,
+     "find": "            work = (int)w.Value; rest = (int)b.Value; longRest = (int)l.Value; rounds = (int)r.Value;\n            capri.Store.Set(\"work\", work); capri.Store.Set(\"break\", rest); capri.Store.Set(\"long break\", longRest); capri.Store.Set(\"rounds\", rounds);\n",
+     "op": "replace",
+     "with": ""
+    }
+   ],
+   "toggles": [
+    "Toggles.AddSlider(\"Work\", minutes, ...)",
+    "Toggles.AddSlider(\"Break\", ...)",
+    "Toggles.AddSlider(\"Long break\", ...)",
+    "Toggles.AddSlider(\"Rounds\", ...)",
+    "hotkey stays in its options window"
+   ],
+   "verdict": "adapted",
+   "version": "1.0.1"
+  },
+  "frutiger-aero": {
+   "file": "frutiger-aero.capri-skin",
+   "result": "e9f866ebd775cf577f498380e0e6080e5b66ea36505f32c9112375852f754c21",
+   "sha256": "e9f866ebd775cf577f498380e0e6080e5b66ea36505f32c9112375852f754c21",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "galaxy": {
+   "file": "galaxy.capri-skin",
+   "result": "dd0e4ac4f6a7df05b3bd031eb3f409c09c17b79c8323a824efb16f1296dcbbc7",
+   "sha256": "dd0e4ac4f6a7df05b3bd031eb3f409c09c17b79c8323a824efb16f1296dcbbc7",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "galaxy-hair-aurora": {
+   "file": "galaxy-hair-aurora.capri-skin",
+   "result": "721cfc36259a04dd4493e0d44d3a9692f96d7e4bd0c7d8306ac8c7bb31d09505",
+   "sha256": "721cfc36259a04dd4493e0d44d3a9692f96d7e4bd0c7d8306ac8c7bb31d09505",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "galaxy-hair-ember": {
+   "file": "galaxy-hair-ember.capri-skin",
+   "result": "a6d2a3095731c13fe37de78679a81016ff61f6af6b0732106b9f07851d7901ed",
+   "sha256": "a6d2a3095731c13fe37de78679a81016ff61f6af6b0732106b9f07851d7901ed",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "galaxy-hair-nebula": {
+   "file": "galaxy-hair-nebula.capri-skin",
+   "result": "a20be671d7a5631993b3380f36eba8ad91abcd59742e3dc738a174d1e458123b",
+   "sha256": "a20be671d7a5631993b3380f36eba8ad91abcd59742e3dc738a174d1e458123b",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "gaming-coach": {
+   "file": "gaming-coach.capri-code",
+   "result": "bfab3e353dfdd9f419916adc55cd98fba7f936949445c9bdac2da03a93c854f8",
+   "sha256": "bfab3e353dfdd9f419916adc55cd98fba7f936949445c9bdac2da03a93c854f8",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.1.0"
+  },
+  "hair-down": {
+   "file": "hair-down.capri-skin",
+   "result": "06b0868e6bb39231c27e8145dd342247a932adc4fda86973433e61cb0776c28c",
+   "sha256": "06b0868e6bb39231c27e8145dd342247a932adc4fda86973433e61cb0776c28c",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "halo": {
+   "file": "halo.capri-skin",
+   "result": "6ea55dab546d094447c39bef4cd96892c6a85c282639ab4db20abf65d38857c1",
+   "sha256": "6ea55dab546d094447c39bef4cd96892c6a85c282639ab4db20abf65d38857c1",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "hearing-log": {
+   "file": "hearing-log.capri-mod",
+   "sha256": "aea80d77f0fdaf9183612ff3f8438b5574bb609a30df035e6a84b9e3b1822f2b",
+   "verdict": "shipped",
+   "version": "1.0.0",
+   "why": "Identical to ../../agents/wt-a3/_smoke/mainsrc/CapriSourceFiles/mods/hearing-log.capri-mod already in this build."
+  },
+  "hello-code": {
+   "file": "hello-code.capri-code",
+   "sha256": "cf4aafd2a44efa5ac9c28f29665d30bcfa7a2bf2801384e63d707a3c1e6d9239",
+   "verdict": "shipped",
+   "version": "1.0.0",
+   "why": "Identical to ../../agents/wt-a3/_smoke/mainsrc/CapriSourceFiles/mods/hello-code.capri-code already in this build."
+  },
+  "hide-and-seek": {
+   "file": "hide-and-seek.capri-code",
+   "result": "05cd70009658b5d110c5eb6534e4168d79a2e098b830634cd7473ceb7528a3a2",
+   "sha256": "05cd70009658b5d110c5eb6534e4168d79a2e098b830634cd7473ceb7528a3a2",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.0.1"
+  },
+  "holocall": {
+   "file": "holocall.capri-code",
+   "result": "cfc2ea134cadf412905d13f7789b696b5f74ddc0b35baa8c95b8b0ceea9e777e",
+   "sha256": "cfc2ea134cadf412905d13f7789b696b5f74ddc0b35baa8c95b8b0ceea9e777e",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.2.1"
+  },
+  "hologram-speech-glass": {
+   "file": "hologram-speech-glass.capri-code",
+   "sha256": "bde01a69de6901da5024b51eade759b8edf2582ca1bca4a1bd6866768f54e3ab",
+   "verdict": "superseded",
+   "version": "0.1.10",
+   "why": "Upstream 0.1.10; this build ships 0.2.1 (../../agents/wt-a3/_smoke/mainsrc/CapriSourceFiles/mods/forks/hologram-speech-glass.capri-code)."
+  },
+  "kintsugi-porcelain": {
+   "file": "kintsugi-porcelain.capri-skin",
+   "result": "06091c5379a11b1195293ced9e04c85eefe714a5e81f66231df923697c7011c8",
+   "sha256": "06091c5379a11b1195293ced9e04c85eefe714a5e81f66231df923697c7011c8",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "kitchen-sponge": {
+   "file": "kitchen-sponge.capri-skin",
+   "result": "4e7bd12284762b718ee1032c36f3c92c58c68aeca275e3831cb22efb83624316",
+   "sha256": "4e7bd12284762b718ee1032c36f3c92c58c68aeca275e3831cb22efb83624316",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "kyoto-rain": {
+   "file": "kyoto-rain.capri-skin",
+   "result": "d1f9144aedeac67249b0840de14c6c1f60f9891939230e66c129580befa4c09a",
+   "sha256": "d1f9144aedeac67249b0840de14c6c1f60f9891939230e66c129580befa4c09a",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "lava-lamp": {
+   "file": "lava-lamp.capri-skin",
+   "result": "67680ba37d81af0d6d7abae1373533e5a2a31d35bb12a22611fefcc27b3784d9",
+   "sha256": "67680ba37d81af0d6d7abae1373533e5a2a31d35bb12a22611fefcc27b3784d9",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "maid-suit": {
+   "file": "maid-suit.capri-skin",
+   "result": "29ef5c202b7840527446ca8fad975825a11740f6328c57d1548f55c18f581e05",
+   "sha256": "29ef5c202b7840527446ca8fad975825a11740f6328c57d1548f55c18f581e05",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "maxtac": {
+   "file": "maxtac.capri-skin",
+   "result": "5f1ae74cafc00e6315fcc7741b39f14708288b90766416d9f89f4d9eb09ead8d",
+   "sha256": "5f1ae74cafc00e6315fcc7741b39f14708288b90766416d9f89f4d9eb09ead8d",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "medal-clip": {
+   "file": "medal-clip.capri-code",
+   "result": "380e3411b68d59b00e315bb3767a762ac15dc51c14dbf44944a236946b90e51e",
+   "sha256": "380e3411b68d59b00e315bb3767a762ac15dc51c14dbf44944a236946b90e51e",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.0.0"
+  },
+  "mk002-emoji-activities-01": {
+   "file": "MK002-Emoji-activities-01.capri-code",
+   "sha256": "523bb6117b71bd677bd32cb07a7bed27eb650785fbe95f70a645b2e86f8e3aa1",
+   "verdict": "rejected",
+   "version": "2.1.14",
+   "why": "Packed emoji images for MK002-Caprichat, which is rejected."
+  },
+  "mk002-emoji-animals-01": {
+   "file": "MK002-Emoji-animals-01.capri-code",
+   "sha256": "5861e3d553449795a03b8a60708a38baa57eb79f59474430627db63e30138243",
+   "verdict": "rejected",
+   "version": "2.1.14",
+   "why": "Packed emoji images for MK002-Caprichat, which is rejected."
+  },
+  "mk002-emoji-component-01": {
+   "file": "MK002-Emoji-component-01.capri-code",
+   "sha256": "103801dad5403c48fc4ce4cbf719df6fabb8a225e2086e76cf5e66e534bee830",
+   "verdict": "rejected",
+   "version": "2.1.14",
+   "why": "Packed emoji images for MK002-Caprichat, which is rejected."
+  },
+  "mk002-emoji-default": {
+   "file": "MK002-Emoji-Defaults.capri-code",
+   "sha256": "4a2294897977496269e228888901e9bb33ddb7fc99f4ec91b8df9db00d85e4f1",
+   "verdict": "rejected",
+   "version": "2.1.14",
+   "why": "Packed emoji images for MK002-Caprichat, which is rejected."
+  },
+  "mk002-emoji-flags-01": {
+   "file": "MK002-Emoji-flags-01.capri-code",
+   "sha256": "7828687ab186b3290f86dce6f9a729dcc32c49e06d37177a203b6fc512d35294",
+   "verdict": "rejected",
+   "version": "2.1.14",
+   "why": "Packed emoji images for MK002-Caprichat, which is rejected."
+  },
+  "mk002-emoji-food-01": {
+   "file": "MK002-Emoji-food-01.capri-code",
+   "sha256": "89bccf6950de4acf3588c33b427233c224e0277d433ca4314139bd2ab9dfcac2",
+   "verdict": "rejected",
+   "version": "2.1.14",
+   "why": "Packed emoji images for MK002-Caprichat, which is rejected."
+  },
+  "mk002-emoji-objects-01": {
+   "file": "MK002-Emoji-objects-01.capri-code",
+   "sha256": "da45a3a5037e6733e96f67f1dcfacfb8bdef71ef71a56281f416c70a86683941",
+   "verdict": "rejected",
+   "version": "2.1.14",
+   "why": "Packed emoji images for MK002-Caprichat, which is rejected."
+  },
+  "mk002-emoji-people-01": {
+   "file": "MK002-Emoji-people-01.capri-code",
+   "sha256": "4b2d209e72ef036ee441ee5859dabd298ee71af20f5d30d7ebf41fddab451cfa",
+   "verdict": "rejected",
+   "version": "2.1.14",
+   "why": "Packed emoji images for MK002-Caprichat, which is rejected."
+  },
+  "mk002-emoji-people-02": {
+   "file": "MK002-Emoji-people-02.capri-code",
+   "sha256": "6a695de447d7a5d7843c6f2a44c482f0e472e84de689eb891cf79cd573399b07",
+   "verdict": "rejected",
+   "version": "2.1.14",
+   "why": "Packed emoji images for MK002-Caprichat, which is rejected."
+  },
+  "mk002-emoji-people-03": {
+   "file": "MK002-Emoji-people-03.capri-code",
+   "sha256": "4a193c2b265581a29229a22da0665b72b78fed2d3a2bf99f9b0e22a5dda58633",
+   "verdict": "rejected",
+   "version": "2.1.14",
+   "why": "Packed emoji images for MK002-Caprichat, which is rejected."
+  },
+  "mk002-emoji-people-04": {
+   "file": "MK002-Emoji-people-04.capri-code",
+   "sha256": "522f3b358c4ee6fd4a734dd2aebe16f6a81300a881e5b86fb2cdcf779bd61c2d",
+   "verdict": "rejected",
+   "version": "2.1.14",
+   "why": "Packed emoji images for MK002-Caprichat, which is rejected."
+  },
+  "mk002-emoji-people-05": {
+   "file": "MK002-Emoji-people-05.capri-code",
+   "sha256": "3136098d02a1bdd53051cc93574a89a768e7852f6b255079da42d780ee26e913",
+   "verdict": "rejected",
+   "version": "2.1.14",
+   "why": "Packed emoji images for MK002-Caprichat, which is rejected."
+  },
+  "mk002-emoji-people-06": {
+   "file": "MK002-Emoji-people-06.capri-code",
+   "sha256": "2011064947c11675463579943871789e318b320edfd9798fcb5d562ee292b175",
+   "verdict": "rejected",
+   "version": "2.1.14",
+   "why": "Packed emoji images for MK002-Caprichat, which is rejected."
+  },
+  "mk002-emoji-people-07": {
+   "file": "MK002-Emoji-people-07.capri-code",
+   "sha256": "ee4f9efabb43d59b82cfbb3ee39cb382976c6b1db66a58f41055446a8b72dad3",
+   "verdict": "rejected",
+   "version": "2.1.14",
+   "why": "Packed emoji images for MK002-Caprichat, which is rejected."
+  },
+  "mk002-emoji-people-08": {
+   "file": "MK002-Emoji-people-08.capri-code",
+   "sha256": "e84c94418cdd74318aa0aaadfa0ae8ce7b1c9efe272028e9a8da0953d0eabd05",
+   "verdict": "rejected",
+   "version": "2.1.14",
+   "why": "Packed emoji images for MK002-Caprichat, which is rejected."
+  },
+  "mk002-emoji-symbols-01": {
+   "file": "MK002-Emoji-symbols-01.capri-code",
+   "sha256": "abe9f6d1a199fb719c776ae50cc614f1d1d881e899484feb03a6a4ac5140764f",
+   "verdict": "rejected",
+   "version": "2.1.14",
+   "why": "Packed emoji images for MK002-Caprichat, which is rejected."
+  },
+  "mk002-emoji-travel-01": {
+   "file": "MK002-Emoji-travel-01.capri-code",
+   "sha256": "296c42806cea094faec4f32aec71448ec050e0c6c46bc68a260bbad495f7fe4a",
+   "verdict": "rejected",
+   "version": "2.1.14",
+   "why": "Packed emoji images for MK002-Caprichat, which is rejected."
+  },
+  "music-deck": {
+   "file": "music-deck.capri-code",
+   "result": "676040895daff804d0e891de5579f7b7e46af80530e5d22d8fe6cd0b46990038",
+   "rewritten": true,
+   "sha256": "c2d1e8c848d3dd8cad50c3987c5010385cdd1338655340c44d260124da1bbd6a",
+   "steps": [
+    {
+     "from": "    private void Search(Played played)",
+     "op": "cut",
+     "to": "    // ---- Its menu ----",
+     "with": "    private void Search(Played played)\n    {\n    }\n\n"
+    },
+    {
+     "count": -1,
+     "find": "    // A song from the history: Spotify opens its search, anything else searches YouTube Music.\n",
+     "op": "replace",
+     "with": ""
+    },
+    {
+     "count": 1,
+     "find": "private const string Agent = \"Capri Music Deck mod 1.1.0 (https://github.com/lachydotmcg/capri-desktop)\";",
+     "op": "replace",
+     "with": "private const string Agent = \"Capri Music Deck mod 1.1.0\";"
+    },
+    {
+     "allow": [
+      "lrclib.net"
+     ],
+     "op": "comment-links"
+    },
+    {
+     "op": "permissions",
+     "set": "chat, hotkeys, music, tools"
+    },
+    {
+     "count": 1,
+     "find": "        capri.Ui.SetOptions(\"Music Deck\", deck.Options);\n",
+     "op": "replace",
+     "with": "        deck.Options().Dispose();\n        capri.Ui.SetOptions(\"Music Deck\", deck.Options);\n"
+    },
+    {
+     "count": 1,
+     "find": "    public Control Options()\n    {\n",
+     "op": "replace",
+     "with": "    private bool togglesMade;\n\n    public Control Options()\n    {\n"
+    },
+    {
+     "from": "        Action<string, bool, Action<bool>> check = delegate",
+     "op": "cut",
+     "to": "        check(\"Take colours from the song's cover\"",
+     "with": "        Action<string, bool, Action<bool>> check = delegate(string text, bool on, Action<bool> set)\n        {\n            if (!togglesMade) host.Toggles.Add(text, on, delegate(bool now) { set(now); settings.Save(host.Store); Recolour(); });\n        };\n"
+    },
+    {
+     "from": "        Label sizeLabel = new Label",
+     "op": "cut",
+     "to": "        Label keys = new Label",
+     "with": "        if (!togglesMade)\n        {\n            string[] sizes = { \"80%\", \"90%\", \"100%\", \"110%\", \"120%\", \"130%\", \"140%\" };\n            host.Toggles.AddSlider(\"Size\", sizes, Math.Max(0, Math.Min(6, (int)Math.Round((settings.Size * 100 - 80) / 10))), delegate(int at) { settings.Size = (80 + at * 10) / 100.0; settings.Save(host.Store); layerKey = null; });\n            host.Toggles.AddSlider(\"Mode\", new[] { \"Full\", \"Mini\" }, mode == Mini ? 1 : 0, delegate(int at) { SetMode(at == 1 ? Mini : Full); });\n        }\n        togglesMade = true;\n"
+    }
+   ],
+   "toggles": [
+    "Toggles.AddSlider(\"Mode\", {\"Full\", \"Mini\"}, ...)",
+    "its options window's ticks and size slider as Toggles calls"
+   ],
+   "verdict": "adapted",
+   "version": "1.1.0"
+  },
+  "mute-button": {
+   "file": "mute-button.capri-code",
+   "result": "c9e032c66bff195733fbeb2d5d67a5b87ec1ccb2320506b9b54bd57f98347bb2",
+   "sha256": "c9e032c66bff195733fbeb2d5d67a5b87ec1ccb2320506b9b54bd57f98347bb2",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.2.1"
+  },
+  "neon-sign": {
+   "file": "neon-sign.capri-skin",
+   "result": "397f94cfddcc7b132f06fd9e2a2fcc54024ca2e7b903080cdb14c9eee01335db",
+   "sha256": "397f94cfddcc7b132f06fd9e2a2fcc54024ca2e7b903080cdb14c9eee01335db",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "nicknames": {
+   "file": "nicknames.capri-code",
+   "result": "d19e5d150275b9275c629a586a2765df1b2809615fa407eeb8745a5890981d0a",
+   "sha256": "d19e5d150275b9275c629a586a2765df1b2809615fa407eeb8745a5890981d0a",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.0.0"
+  },
+  "nova-angel": {
+   "file": "nova-angel.capri-skin",
+   "result": "b5adb40718b6e85982c2c446dfa95faf8ac34499ef851cb84a2446da9f01daf0",
+   "sha256": "b5adb40718b6e85982c2c446dfa95faf8ac34499ef851cb84a2446da9f01daf0",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "outfit-schedule": {
+   "file": "outfit-schedule.capri-code",
+   "result": "d4fc65c0d98551b20dec4d3d5feac0d96350b19e33dcbacb1a29bbced7f72078",
+   "rewritten": true,
+   "sha256": "bc26b2a77f926163aba4d3a3db5e11945380af4f3a490059d24de06f6593fc32",
+   "steps": [
+    {
+     "count": 1,
+     "find": "        paused = capri.Store.Flag(\"paused\", false);\n",
+     "op": "replace",
+     "with": "        paused = capri.Store.Flag(\"paused\", false);\n        capri.Toggles.Add(\"Paused\", paused, delegate(bool on) { paused = on; capri.Store.Set(\"paused\", on); });\n"
+    }
+   ],
+   "toggles": [
+    "Toggles.Add(\"Paused\", paused, ...)",
+    "its rules list stays in its window"
+   ],
+   "verdict": "adapted",
+   "version": "1.0.0"
+  },
+  "paint-job": {
+   "file": "paint-job.capri-code",
+   "sha256": "a23c13092328feb56d59b8e6d4433a18d1b145e39fe53315bd966baffa419155",
+   "verdict": "rejected",
+   "version": "1.0.0",
+   "why": "Overwrites static readonly fields in Capri internals through emitted IL."
+  },
+  "prism-overdrive": {
+   "file": "prism-overdrive.capri-skin",
+   "result": "5fd66b370f710d7c02a4643a7ed93a0e0aa6a5a388108f785cdecabf8445ffd4",
+   "sha256": "5fd66b370f710d7c02a4643a7ed93a0e0aa6a5a388108f785cdecabf8445ffd4",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "quiet-thinking": {
+   "file": "quiet-thinking.capri-code",
+   "result": "343430930fcee4b2740aaaabe2566fe76b677cb67de3da317e442ebc2da3d097",
+   "sha256": "343430930fcee4b2740aaaabe2566fe76b677cb67de3da317e442ebc2da3d097",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.0.0"
+  },
+  "rei-plugsuit": {
+   "file": "rei-plugsuit.capri-skin",
+   "result": "8fbedc68b4613db5bddbc7e6762a4191e757c08a270cb4290ac8c05570d2e465",
+   "sha256": "8fbedc68b4613db5bddbc7e6762a4191e757c08a270cb4290ac8c05570d2e465",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "response-overhaul": {
+   "file": "response-overhaul.capri-code",
+   "sha256": "a0866529abaa98df918e8c20e645c4ac99d873f79b741f9479912de7d4fa77c6",
+   "verdict": "rejected",
+   "version": "2.9.2",
+   "why": "Cursor-lock prank and cross-process reads of Explorer's desktop icon list."
+  },
+  "russian-ui": {
+   "file": "russian-ui.capri-code",
+   "result": "7183c0b617e45be3aa8c7e5dde4f2146b661a422bf04a33df7b8fc55ae60f793",
+   "sha256": "ec8b2c00d40fe5f26d7f2b99061d8f84f64cdcfc1823bb979dd53ec479d14de8",
+   "steps": [
+    {
+     "name": "Dict",
+     "op": "base64-const"
+    },
+    {
+     "count": 1,
+     "find": "Encoding.UTF8.GetString(Convert.FromBase64String(Dict))",
+     "op": "replace",
+     "with": "Dict"
+    },
+    {
+     "name": "Dict",
+     "op": "drop-his-lines"
+    },
+    {
+     "allow": [],
+     "op": "comment-links"
+    }
+   ],
+   "verdict": "adapted",
+   "version": "1.0.0"
+  },
+  "sakura": {
+   "file": "sakura.capri-skin",
+   "result": "314eeb2b4f49b887a516addc0210fef9c89adbe8774811e5b41ec93bd8642ed4",
+   "sha256": "314eeb2b4f49b887a516addc0210fef9c89adbe8774811e5b41ec93bd8642ed4",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "sandevistan": {
+   "file": "mirit0-sandevistan.capri-code",
+   "result": "3ef1d6ff12bdc84a2a2f7fad49b23e40c0ccb8fd996cfd182cb488e3878ade22",
+   "sha256": "3ef1d6ff12bdc84a2a2f7fad49b23e40c0ccb8fd996cfd182cb488e3878ade22",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.9.0"
+  },
+  "santa-hat-black": {
+   "file": "santa-hat-black.capri-skin",
+   "result": "607fe6fdc20e3b344dd650bba9f9660208713bc55cd2b398473195c2b6f6458e",
+   "sha256": "607fe6fdc20e3b344dd650bba9f9660208713bc55cd2b398473195c2b6f6458e",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "santa-hat-crimson": {
+   "file": "santa-hat-crimson.capri-skin",
+   "result": "667d39a419c43a4c042e24f7427d254fd68ba4391e397aa3ecc0ee532079258a",
+   "sha256": "667d39a419c43a4c042e24f7427d254fd68ba4391e397aa3ecc0ee532079258a",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "screen-context-memory": {
+   "file": "screen-context-memory.capri-code",
+   "result": "6a4029ca4e806043f572c24b1f4e43c1e6f9fd55ee78a15de98696ba92fbe694",
+   "sha256": "6a4029ca4e806043f572c24b1f4e43c1e6f9fd55ee78a15de98696ba92fbe694",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.1.0"
+  },
+  "shadow-clone": {
+   "file": "shadow-clone.capri-code",
+   "result": "d9331713f83d7d0a576f85f177e443642f4204a98b85f04a6701af9549e52238",
+   "sha256": "d9331713f83d7d0a576f85f177e443642f4204a98b85f04a6701af9549e52238",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.1.0"
+  },
+  "sharper-ears": {
+   "file": "sharper-ears.capri-mod",
+   "sha256": "bdb71253e2899461a31cef6494e6a251f7fab9f4ed174175481c22ee1f2a7ded",
+   "verdict": "shipped",
+   "version": "1.0.0",
+   "why": "Identical to ../../agents/wt-a3/_smoke/mainsrc/CapriSourceFiles/mods/sharper-ears.capri-mod already in this build."
+  },
+  "sleep-timer": {
+   "file": "sleep-timer.capri-code",
+   "sha256": "d14f825cfa5522b8ebab117b40726a8683d3e42e02daf2e01b8356c70aeaa2ac",
+   "verdict": "rejected",
+   "version": "1.0.0",
+   "why": "Shuts the PC down; owner chose not to use it."
+  },
+  "smart-reminders": {
+   "file": "smart-reminders.capri-code",
+   "result": "77d2b35da8f7cb390e1fca588637e0c6c80a82487ed259a659f7e800256dbd8a",
+   "sha256": "77d2b35da8f7cb390e1fca588637e0c6c80a82487ed259a659f7e800256dbd8a",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.1.0"
+  },
+  "soundboard": {
+   "file": "soundboard.capri-code",
+   "result": "36b18e4d71a77a86ce0a3208f7898e37d4fbc79b11b36747a9cd1f200ae5be99",
+   "rewritten": true,
+   "sha256": "e72eb43ddb1b32038f1f3a2d1a9b0848f8a8d05f3ebc6b9e2e91b8c23b560333",
+   "steps": [
+    {
+     "count": 1,
+     "find": "        Bind();\n        capri.Ui.SetOptions(\"Soundboard\", MakeOptions);\n",
+     "op": "replace",
+     "with": "        Bind();\n        capri.Toggles.Add(\"Soundboard\", on, delegate(bool now) { on = now; capri.Store.Set(\"on\", on); Bind(); });\n        string[] volumeSteps = { \"0\", \"10\", \"20\", \"30\", \"40\", \"50\", \"60\", \"70\", \"80\", \"90\", \"100\" };\n        foreach (Sound s in sounds)\n        {\n            Sound sound = s;\n            capri.Toggles.AddSlider(sound.Name + \" volume\", volumeSteps, Math.Max(0, Math.Min(10, sound.Volume / 10)), delegate(int at) { sound.Volume = at * 10; capri.Store.Set(\"volume \" + sound.File, sound.Volume); });\n        }\n        capri.Ui.SetOptions(\"Soundboard\", MakeOptions);\n"
+    },
+    {
+     "count": 1,
+     "find": "        page.Controls.Add(onBox);\n",
+     "op": "replace",
+     "with": ""
+    },
+    {
+     "count": 1,
+     "find": "TableLayoutPanel grid = new TableLayoutPanel { ColumnCount = 6, AutoSize = true };",
+     "op": "replace",
+     "with": "TableLayoutPanel grid = new TableLayoutPanel { ColumnCount = 5, AutoSize = true };"
+    },
+    {
+     "count": 1,
+     "find": "new[] { \"Sound\", \"Shortcut\", \"\", \"Volume\", \"Reaction\", \"\" }",
+     "op": "replace",
+     "with": "new[] { \"Sound\", \"Shortcut\", \"\", \"Reaction\", \"\" }"
+    },
+    {
+     "count": 1,
+     "find": "            NumericUpDown volume = new NumericUpDown { Minimum = 0, Maximum = 100, Increment = 10, Value = s.Volume, Width = 60 };\n            volume.ValueChanged += delegate { sound.Volume = (int)volume.Value; capri.Store.Set(\"volume \" + sound.File, sound.Volume); };\n            grid.Controls.Add(volume);\n",
+     "op": "replace",
+     "with": ""
+    }
+   ],
+   "toggles": [
+    "Toggles.Add(\"Soundboard\", on, ...)",
+    "Toggles.AddSlider(file, \"Volume\", {\"0\"..\"100\" by 10}, ...) per sound",
+    "keys and reactions stay in its window"
+   ],
+   "verdict": "adapted",
+   "version": "1.0.1"
+  },
+  "stained-glass": {
+   "file": "stained-glass.capri-skin",
+   "result": "bdab706b9bdb3fb7a4792f19e67c9ad5096efdc8130806f242f0c33a0090e6ee",
+   "sha256": "bdab706b9bdb3fb7a4792f19e67c9ad5096efdc8130806f242f0c33a0090e6ee",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "startup-intros": {
+   "file": "startup-intros.capri-code",
+   "sha256": "4d74faa1e310232f7a65ca5b53a67d7d2dac96b09c23fdda56d1d61b288d122c",
+   "verdict": "superseded",
+   "version": "2.0.0",
+   "why": "Upstream 2.0.0; this build ships 2.5.0 (../../agents/wt-a3/_smoke/mainsrc/CapriSourceFiles/mods/startup-intros.capri-code)."
+  },
+  "study-buddy": {
+   "file": "study-buddy.capri-code",
+   "result": "740f6f5df8a976f82da4b3f8702b53ba852c7cf97a6cf8504fac7bf7ee6e6b5d",
+   "rewritten": true,
+   "sha256": "e7e8c775160ab46ccddd6bb61c53d9bd44ce4a24050c877bc8f03456d8038fc4",
+   "steps": [
+    {
+     "count": 1,
+     "find": "        catch (Exception) { studyMode = false; }\n        Type hands",
+     "op": "replace",
+     "with": "        catch (Exception) { studyMode = false; }\n        host.Toggles.Add(\"Study mode\", studyMode, delegate(bool on) { SetStudyMode(on); });\n        Type hands"
+    }
+   ],
+   "toggles": [
+    "Toggles.Add(\"Study mode\", studyMode, ...) in place of study-mode.txt"
+   ],
+   "verdict": "adapted",
+   "version": "1.4.0"
+  },
+  "talia-capri": {
+   "file": "talia-capri.capri-skin",
+   "result": "2b7fc49d0c102d778a856a0cb9ea74711f326de62752eb8a40934fa32996bc07",
+   "sha256": "2b7fc49d0c102d778a856a0cb9ea74711f326de62752eb8a40934fa32996bc07",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "tell-claude": {
+   "file": "tell-claude.capri-code",
+   "sha256": "467eefcabea51bb80986b64d7c878463946c5fcd9261afeee6494360a45f284c",
+   "verdict": "rejected",
+   "version": "3.2.0",
+   "why": "Starts Claude Code with --permission-mode dontAsk and --add-dir on the home folder, driven by chat text."
+  },
+  "touch-grass": {
+   "file": "touch-grass.capri-code",
+   "result": "e3dd496dccca4266e47ec289da01526c49e79ccea73f49f95f2b8e3cb274fbdd",
+   "rewritten": true,
+   "sha256": "a5626484fbe419f23aed3b0df20440b83d277a41e82b2309d368fedc759fda93",
+   "steps": [
+    {
+     "count": 1,
+     "find": "        Load();\n        lastTick = lastSaved = Clock();\n",
+     "op": "replace",
+     "with": "        Load();\n        string[] everySteps = { \"15\", \"30\", \"45\", \"60\", \"90\", \"120\", \"180\", \"240\" };\n        int everyAt = 0;\n        for (int i = 0; i < everySteps.Length; i++) if (Math.Abs(double.Parse(everySteps[i], CultureInfo.InvariantCulture) - every) < Math.Abs(double.Parse(everySteps[everyAt], CultureInfo.InvariantCulture) - every)) everyAt = i;\n        capri.Toggles.AddSlider(\"Every (minutes of gaming)\", everySteps, everyAt, delegate(int at) { every = double.Parse(everySteps[at], CultureInfo.InvariantCulture); SaveSettings(); });\n        capri.Toggles.Add(\"Quiet\", quiet, delegate(bool on) { quiet = on; SaveSettings(); });\n        lastTick = lastSaved = Clock();\n"
+    }
+   ],
+   "toggles": [
+    "Toggles.AddSlider(\"Every\", minutes from 15, ...) and Toggles.Add(\"Quiet\", quiet, ...) in place of settings.txt"
+   ],
+   "verdict": "adapted",
+   "version": "1.0.0"
+  },
+  "track-commentator": {
+   "file": "track-commentator.capri-code",
+   "result": "88fa49696809e855e90b6b38f0357fe321749a68958d78927350b98fb1bef58b",
+   "rewritten": true,
+   "sha256": "96b2d6325e3bd6547bb937e3c31da1410ca6bef68c8fcb8ea9d8c60a310a7819",
+   "steps": [
+    {
+     "count": 1,
+     "find": "            every = saved;\n\n",
+     "op": "replace",
+     "with": "            every = saved;\n        capri.Toggles.Add(\"Commentary\", enabled, delegate(bool on) { enabled = on; Save(); });\n        string[] everySteps = new string[20];\n        for (int i = 0; i < everySteps.Length; i++) everySteps[i] = (i + 1).ToString();\n        capri.Toggles.AddSlider(\"Every\", everySteps, every - 1, delegate(int at) { every = at + 1; Save(); });\n        capri.Toggles.AddSlider(\"Language\", new[] { \"English\", \"Russian\" }, lang == \"ru\" ? 1 : 0, delegate(int at) { lang = at == 1 ? \"ru\" : \"en\"; Save(); });\n\n"
+    }
+   ],
+   "toggles": [
+    "Toggles.Add(\"Commentary\", enabled, ...)",
+    "Toggles.AddSlider(\"Every\", {\"1\"..\"20\"} tracks, every - 1, ...)",
+    "Toggles.AddSlider(\"Language\", {\"English\", \"Russian\"}, ...)"
+   ],
+   "verdict": "adapted",
+   "version": "1.2.0"
+  },
+  "vaporwave": {
+   "file": "vaporwave.capri-skin",
+   "result": "1f270dbd6b74e0eacc26adc52cfdda95af4696ac94b2b8b2704f27118d27d6ad",
+   "sha256": "1f270dbd6b74e0eacc26adc52cfdda95af4696ac94b2b8b2704f27118d27d6ad",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "voice-trivia": {
+   "file": "voice-trivia.capri-code",
+   "result": "baaa1a34a99d794acd1a29276b5861affdb50c6b94953415cf9d665ff395e002",
+   "sha256": "df5d549accce86c372d987ae8609b026403be4fd57679cf5acbcc8436a6df297",
+   "steps": [
+    {
+     "from": "    private static string Download(string url)",
+     "op": "cut",
+     "to": "    // With encode=url3986",
+     "with": "    private static string Download(string url)\n    {\n        return null;\n    }\n\n"
+    },
+    {
+     "find": "        string url = \"https://opentdb\\.com/api\\.php[^\\n]*\\n",
+     "op": "regex",
+     "with": "        string url = null;\n"
+    },
+    {
+     "count": 1,
+     "find": "                    say.Add(\"Can't reach the trivia server, so you get my own questions.\");\n",
+     "op": "replace",
+     "with": ""
+    },
+    {
+     "count": -1,
+     "find": "if (problem != null) capri.Log(\"Open Trivia DB: \" + problem);",
+     "op": "replace",
+     "with": "if (problem != null) capri.Log(\"Trivia: \" + problem);"
+    },
+    {
+     "find": "// Questions come from opentdb\\.com[^\\n]*\\n// how many\\. If it can't be reached, she asks her own questions from the list at the bottom\\.\\n",
+     "op": "regex",
+     "with": "// Questions come from the list at the bottom.\n"
+    },
+    {
+     "allow": [],
+     "op": "comment-links"
+    }
+   ],
+   "verdict": "adapted",
+   "version": "1.0.0"
+  },
+  "wardrobe": {
+   "file": "wardrobe.capri-code",
+   "result": "5b861ed4dd1bf920b692844dc664286cfdcb1a36996b345ecb46e973ef5052f5",
+   "sha256": "5b861ed4dd1bf920b692844dc664286cfdcb1a36996b345ecb46e973ef5052f5",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.3.1"
+  },
+  "word-filter": {
+   "file": "word-filter.capri-code",
+   "result": "59bbab5879dfe27b907c46bf0537eb5f3f9f2f44d0ec34ca49bbb3342ea0949b",
+   "sha256": "59bbab5879dfe27b907c46bf0537eb5f3f9f2f44d0ec34ca49bbb3342ea0949b",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.0.0"
+  },
+  "workspace-usage-ring": {
+   "file": "workspace-usage-ring.capri-code",
+   "sha256": "ec0e3a7890bb3d35a40d6a430ea39b8d5a6ac9ea24c83019a1edea0f11120572",
+   "verdict": "rejected",
+   "version": "1.0.0",
+   "why": "Starts the claude CLI by itself to read rate limits."
+  },
+  "y2k-chrome": {
+   "file": "y2k-chrome.capri-skin",
+   "result": "5d9cd71997cb662b457edff4729bb5b2960038b6bd5a8aeaf938b478adde2ea3",
+   "sha256": "5d9cd71997cb662b457edff4729bb5b2960038b6bd5a8aeaf938b478adde2ea3",
+   "steps": [],
+   "verdict": "adapted",
+   "version": null
+  },
+  "yandere-capri": {
+   "file": "yandere-capri.capri-code",
+   "sha256": "78e7bfde9ffcb00ee0631eb36dd4bfe9b18fb174f9f10597a6d3a85d2a1052ee",
+   "verdict": "rejected",
+   "version": "4.4.5",
+   "why": "Moves the mouse, presses Win+D and Ctrl+Tab, reads window titles."
+  },
+  "yuno-tone-presets": {
+   "file": "yuno-tone-presets.capri-code",
+   "result": "c389c48ae51033c4677df840e67f43d168d55d94bcc4add585e53f07a9b4de83",
+   "sha256": "c389c48ae51033c4677df840e67f43d168d55d94bcc4add585e53f07a9b4de83",
+   "steps": [],
+   "verdict": "adapted",
+   "version": "1.0.0"
+  }
+ }
+}

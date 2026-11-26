@@ -438,7 +438,7 @@ namespace CapriDesktop
         // Where each file stopped, for "carry on", and the last one stopped.
         private readonly Dictionary<string, Aloud.Place> aloudKept = new Dictionary<string, Aloud.Place>(StringComparer.OrdinalIgnoreCase);
         private string aloudLastFile;
-        private System.Windows.Forms.Timer aloudTimer;
+        private Clock.Ticker aloudTimer;
         // How many times she was told to hush, for her checks.
         private int hushes;
 
@@ -462,6 +462,8 @@ namespace CapriDesktop
                 BargeIn("told to hush");
                 CloseTalk();
                 hushes++;
+                // "Be quiet", with her name or a please, is a quiet ask too: quiet time starts with the hush.
+                if (Hands.QuietAsked(input) && !Focused) StartFocus(input);
                 return true;
             }
             // "carry on": the file she was reading, from the part she was on when it stopped.
@@ -510,6 +512,7 @@ namespace CapriDesktop
 
         private string AloudText(Aloud.Ask reading, out string problem, out string file)
         {
+            if (Recorders.Hold("text in the window in front")) { problem = "Nothing is read in a test run."; file = null; return null; }
             problem = null;
             file = null;
             IntPtr window = reading.App != null ? Aloud.NamedWindow(reading.App) : Aloud.FrontWindow();
@@ -546,7 +549,7 @@ namespace CapriDesktop
             if (aloudParts == null) return;
             if (aloudTimer == null)
             {
-                aloudTimer = new System.Windows.Forms.Timer { Interval = 250 };
+                aloudTimer = new Clock.Ticker("Aloud aloudTimer") { Interval = 250 };
                 aloudTimer.Tick += delegate { AloudNext(); };
             }
             aloudTimer.Start();
@@ -630,7 +633,7 @@ namespace CapriDesktop
             if (aloudParts.Count == 0 && (aloudPlace == null || aloudNext == null)) aloudParts = null;
             if (aloudTimer == null)
             {
-                aloudTimer = new System.Windows.Forms.Timer { Interval = 250 };
+                aloudTimer = new Clock.Ticker("Aloud aloudTimer") { Interval = 250 };
                 aloudTimer.Tick += delegate { AloudNext(); };
             }
             if (aloudParts != null) aloudTimer.Start();
@@ -649,6 +652,7 @@ namespace CapriDesktop
 
         internal int AloudLeft { get { return aloudParts == null ? 0 : aloudParts.Count; } }
 
+#if CHECKS
         private void SmokeAloudFile(List<string> checks, string output)
         {
             // "carry on" and the like, in her languages; not the asks that only look like it.
@@ -714,7 +718,9 @@ namespace CapriDesktop
             }
             checks.Add("PASS with nothing selected the file a window has open is read whole from the top, a piece at a time to its end; stopped part way it keeps its place, and \"carry on\" reads again from the part it stopped on");
         }
+#endif
 
+#if CHECKS
         private void SmokeAloud(List<string> checks)
         {
             // Told to hush, in her languages; not the asks that only look like it.
@@ -728,10 +734,30 @@ namespace CapriDesktop
             foreach (string notStop in new[] { "stop talking", "shut up", "stop the music", "stop asking me", "hush" })
                 if (Aloud.BareStop(notStop)) throw new Exception("\"" + notStop + "\" was taken as a bare stop.");
             int hushedBefore = hushes, bargedBefore = bargeIns;
+            bool focusedBefore = Focused;
             ownLines.Enqueue(delegate { });
-            if (!AloudHeard(++asking, "shut up") || hushes != hushedBefore + 1 || bargeIns != bargedBefore + 1 || ownLines.Count != 0 || Hands.QuietAsked("shut up"))
+            if (!AloudHeard(++asking, "shut up") || hushes != hushedBefore + 1 || bargeIns != bargedBefore + 1 || ownLines.Count != 0 || !Hands.QuietAsked("shut up"))
                 throw new Exception("\"shut up\" didn't stop her voice and drop her queued lines with no reply.");
+            if (!focusedBefore && Focused) EndFocus(false);
             if (!VoiceStop("shut up") || !VoiceStop("stop talking") || VoiceStop("stop the music")) throw new Exception("A hush said over her voice isn't let through her ears while she talks.");
+            // "Be quiet", "shut up", "silence", "hush", "shush" and "quiet" hush her and start quiet time; "stop" and "enough"
+            // only hush her.
+            bool focusWas = Focused;
+            try
+            {
+                if (Focused) EndFocus(false);
+                foreach (string ask in new[] { "capri be quiet", "be quiet please", "Capri, be quiet now", "be quiet", "shut up", "silence", "hush", "shush", "quiet" })
+                {
+                    if (!AloudHeard(++asking, ask) || !Focused || !QuietTimed) throw new Exception("\"" + ask + "\" didn't hush her and start quiet time.");
+                    EndFocus(false);
+                }
+                foreach (string bare in new[] { "stop", "enough", "zip it" })
+                {
+                    AloudHeard(++asking, bare);
+                    if (Focused) throw new Exception("\"" + bare + "\" started quiet time; it's only a hush.");
+                }
+            }
+            finally { if (Focused && !focusWas) EndFocus(false); }
             checks.Add("PASS \"shut up\", \"stop talking\", \"silence\", \"hush\", \"enough\" and the like, in her languages, stop her voice and her queued lines with no brain and no reply, and get through her ears while she talks; \"stop the music\", \"shut up and play music\", \"silence my phone\", focus asks and quoted words do not");
 
             // Saying their words.
@@ -848,5 +874,6 @@ namespace CapriDesktop
             checks.Add("PASS long text is read in parts of whole sentences, each after the one before, and anything they say, \"stop\" or Esc ends it");
             SmokeAloudFile(checks, Path.GetTempPath());
         }
+#endif
     }
 }

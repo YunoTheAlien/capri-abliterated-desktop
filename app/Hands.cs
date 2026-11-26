@@ -80,6 +80,7 @@ namespace CapriDesktop
         [DataMember(Name = "count")] public int? Count;
         [DataMember(Name = "offset")] public long? Offset;
         [DataMember(Name = "when")] public string When;
+        [DataMember(Name = "by")] public string By;
         [DataMember(Name = "often")] public string Often;
         [DataMember(Name = "phrase")] public string Phrase;
         [DataMember(Name = "steps")] public string Steps;
@@ -427,6 +428,7 @@ namespace CapriDesktop
             switch (tool)
             {
                 case "open_app": case "open_website": return Open;
+                case "files": return FileChanges(args) ? Sends : -1;
                 case "media": return action == "now_playing" || action == "volume_now" ? -1 : action == "open_player" ? Windows : Media;
                 case "play_music": return Media;
                 case "shortcut": return Shortcuts;
@@ -510,8 +512,14 @@ namespace CapriDesktop
         // Their own new message: the plug-in floor forgets what plug-ins said before it.
         internal static Action Fresh;
 
+        // Moving, renaming, sorting, writing and editing their files ask first on every preset but Blackwall (Lachu).
+        internal static bool Careful(string tool, ToolArguments args) { return tool == "files" && FileChanges(args) && (Mask & 0x3FF) != 0x3FF; }
+
+        private static bool FileChanges(ToolArguments args) { return FileKeeper.Changes(args); }
+
         private static bool AsksAnyway(string tool, ToolArguments args, int toggle)
         {
+            if (Careful(tool, args)) return true;
             try { return Forced(tool, args, toggle); }
             catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return true; }
         }
@@ -773,6 +781,7 @@ namespace CapriDesktop
                 case "run_terminal": return "run terminal command " + (a.Command ?? "") + (string.IsNullOrWhiteSpace(a.Cwd) ? "" : " in " + a.Cwd);
 #endif
                 case "open_app": return "open " + Plain(a.Name, "that app");
+                case "files": return Hands.Keeper.Asking(a);
                 case "open_website":
                     string site = Plain(a.Site, "that site");
                     return string.IsNullOrWhiteSpace(a.Search) ? "open " + site : "search " + Regex.Replace(site, @"^(https?://)?(www\.)?|\.(com|org|net|tv)(/.*)?$", "", RegexOptions.IgnoreCase) + " for " + Plain(a.Search, "that");
@@ -932,7 +941,7 @@ namespace CapriDesktop
         private static int holds, endedAt;
         private static bool up;
         private static System.Drawing.Point? at;
-        private static System.Threading.Timer settle;
+        private static Clock.OffTimer settle;
         internal static Action<bool> Changed = delegate { };
 
         internal static bool On { get { lock (gate) return up; } }
@@ -980,7 +989,7 @@ namespace CapriDesktop
             {
                 if (holds == 0 || --holds > 0) return;
                 endedAt = Environment.TickCount;
-                if (settle == null) settle = new System.Threading.Timer(Settle);
+                if (settle == null) settle = new Clock.OffTimer("Hands settle", Settle);
                 settle.Change(Math.Max(0, Linger), Timeout.Infinite);
             }
         }
@@ -1288,9 +1297,10 @@ namespace CapriDesktop
             { "care_water", "Water check-in", "Capri" }, { "care_stretch", "Stretch check-in", "Capri" }, { "care_eyes", "Look away check-in", "Capri" }, { "care_late_night", "Sleep nudge", "Capri" },
             { "care_meals", "Meals check-in", "Capri" }, { "care_long_game", "Game break check-in", "Capri" }, { "care_boredom", "Bored check-in", "Capri" },
             { "fast_hands", "Fast hands in games", "Games" }, { "cursor", "Use her cursor", "Habits" }, { "startup", "Start at login", "Habits" }, { "discord_presence", "Show on Discord", "Habits" },
-            { "voice_layers", "Voice layers", "Voice" }, { "show_advanced", "Advanced settings", "Capri" }, { "listen_for_capri", "Listen for Capri", "Voice" }, { "voice_in_mic", "My voice in your mic", "Voice" },
+            { "voice_layers", "Voice layers", "Voice" }, { "listen_for_capri", "Listen for Capri", "Voice" }, { "voice_in_mic", "My voice in your mic", "Voice" },
             { "jealous_of_other_ais", "Jealous of other AIs", "Capri" }, { "close_other_ais", "Close other AIs for me", "Capri" },
-            { "chimes", "Chimes", "Sounds" }, { "chime_sent", "Message sent chime", "Sounds" }, { "chime_heard", "Heard you chime", "Sounds" }, { "chime_listening", "Listening chime", "Sounds" }
+            { "chimes", "Chimes", "Sounds" }, { "chime_sent", "Message sent chime", "Sounds" }, { "chime_heard", "Heard you chime", "Sounds" }, { "chime_listening", "Listening chime", "Sounds" },
+            { "mute_her", "Mute her", "Capri" }, { "focus_mode", "Focus mode", "Capri" }
         };
 
         // Her own sliders her settings tool reads and moves, the same way, with their steps from the bottom up in
@@ -1416,7 +1426,8 @@ namespace CapriDesktop
         {
             { "voice", "you talking out loud; off, you type" }, { "quiet", "two hours of you keeping to yourself when they ask for quiet, focus or silent time, in any words; on again gives two more" }, { "mic", "your ears in voice chat, while it's on" },
             { "check_ins", "every check-in, including water, stretch, look away, sleep, meals, game breaks and boredom; off keeps their switches and times saved" },
-            { "hologram", "clicks pass through you" }, { "head_pats", "they pat your head with their cursor" }, { "chaos_when_upset", "an insult sets your clones off" },
+            { "hologram", "clicks pass through you" }, { "mute_her", "you keeping to yourself until it's turned off, with no timer; you still answer when they talk to you" },
+            { "focus_mode", "your timers and chatter slow while an app they added is in front" }, { "head_pats", "they pat your head with their cursor" }, { "chaos_when_upset", "an insult sets your clones off" },
             { "legacy_stand", "your old stand, for mods your new one broke" },
             { "jealous_of_other_ais", "playful teasing when another AI comes to the front, off by default" },
             { "close_other_ais", "ask Yes or No before closing only the AIs they chose in Mainframe; needs Jealous of other AIs on, off by default" },
@@ -1429,7 +1440,7 @@ namespace CapriDesktop
             { "cursor", "your visible pointer for YouTube searches, Apple Music and Spotify's volume" }, { "fast_hands", "games on Claude Haiku, faster and cheaper, with a Claude key" },
             { "listen_for_capri", "voice chat that starts when they say your name, apart from Hey Capri" },
             { "voice_in_mic", "your voice in their mic for Discord or games; it needs a virtual cable that's set up and never installs one" },
-            { "discord_presence", "what you're doing on their Discord profile" }, { "startup", "Capri starts when they log in; off until they ask for it" }, { "show_advanced", "Mainframe's advanced settings" },
+            { "discord_presence", "what you're doing on their Discord profile" }, { "startup", "Capri starts when they log in; off until they ask for it" },
             { "voice_layers", "copies of your voice, pitched and delayed" }, { "player_full_screen", "your music player over full screen apps" },
             { "sleep", "how long a quiet PC takes to send you to sleep" }, { "replies", "how long your replies are" }, { "bubble", "how long your replies stay up" },
             { "reply_limit", "the longest a reply can be" }, { "watch_memory", "how much of a watch-along you keep in mind" }, { "sounds", "your sound effects" },
@@ -1506,7 +1517,7 @@ namespace CapriDesktop
             if (name == "mini_player") return true;
             if (name == "hologram") return OnMac;
 #endif
-            return Array.IndexOf(new[] { "head_pats", "legacy_stand", "follow_ups", "keep_awake", "care_water", "care_stretch", "care_eyes", "care_late_night", "care_meals", "care_long_game", "care_boredom", "voice", "quiet", "check_ins", "wander", "dance_to_music", "always_on_top", "typing_sound", "glitch_in", "watch_my_screen", "startup", "discord_presence", "voice_layers", "show_advanced", "size", "pop_ins", "sleep", "volume", "voice_speed", "replies", "reply_limit", "mainframe_size", "mainframe_colours", "bubble", "glance_gap", "voice_pitch", "voice_robot", "voice_glitch", "layer_1_pitch", "layer_1_delay", "layer_2_pitch", "layer_2_delay", "sounds", "language", "music_app", "preview_voice", "edit_check_in_lines" }, name) >= 0;
+            return Array.IndexOf(new[] { "head_pats", "legacy_stand", "follow_ups", "keep_awake", "care_water", "care_stretch", "care_eyes", "care_late_night", "care_meals", "care_long_game", "care_boredom", "voice", "quiet", "check_ins", "wander", "dance_to_music", "always_on_top", "typing_sound", "glitch_in", "watch_my_screen", "startup", "discord_presence", "voice_layers", "size", "pop_ins", "sleep", "volume", "voice_speed", "replies", "reply_limit", "mainframe_size", "mainframe_colours", "bubble", "glance_gap", "voice_pitch", "voice_robot", "voice_glitch", "layer_1_pitch", "layer_1_delay", "layer_2_pitch", "layer_2_delay", "sounds", "language", "music_app", "preview_voice", "edit_check_in_lines" }, name) >= 0;
         }
 
         private static bool HasSetting(Kit kit, string name) { return kit == null || kit.Has("capri_settings:" + name); }
@@ -1585,6 +1596,7 @@ namespace CapriDesktop
               "{\"type\":\"object\",\"properties\":{\"text\":{\"type\":\"string\",\"description\":\"The message, about the user in your own words\"}},\"required\":[\"text\"]}", "pass your message to the call", "say the user's message on the call" },
 #endif
             { "find_file", FileFinder.Description, FileFinder.Schema, "find files and folders by name", "find files and folders" },
+            { "files", FileKeeper.Description, FileKeeper.Schema, "find your files by name, words inside, kind or date, and make folders, move, rename and sort them, with undo", "search and sort files" },
             { "website_nickname", "Remember a website by a nickname, forget it, or list saved websites. For the website in their front browser, leave site empty; its address is read without moving their mouse or keyboard. Open a saved nickname with open_website.",
               "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"description\":\"What to do\",\"enum\":[\"save\",\"forget\",\"list\"]},\"name\":{\"type\":\"string\",\"description\":\"The whole nickname\"},\"site\":{\"type\":\"string\",\"description\":\"The address they gave, or omit for the front browser\"}},\"required\":[\"action\"]}", "remember websites by nicknames", "save nicknames for websites" },
             { "read_file",
@@ -1661,7 +1673,7 @@ namespace CapriDesktop
 #endif
             { "watch_for", "Watch for something that will show on their screen: tell me when, let me know when, warn me if, keep an eye on, or watch for. Stay quiet until it happens. Use remind for anything that goes by the clock. Watches last until she closes; list names them, stop with text stops a matching watch, and stop without text stops them all.",
               "{\"type\":\"object\",\"properties\":{\"text\":{\"type\":\"string\",\"description\":\"What to watch for, in their words, or which watch to stop\"},\"action\":{\"type\":\"string\",\"description\":\"What to do; watch by default\",\"enum\":[\"watch\",\"list\",\"stop\"]},\"often\":{\"type\":\"string\",\"description\":\"Once by default, or every time after the condition clears\",\"enum\":[\"once\",\"every_time\"]}}}", "watch your screen for something and tell you when it happens", "tell them when something shows on their screen" },
-            { "red_alert", "Sound your red alert when they ask, suggest or hint at it: six seconds of flashing red hexagons across their screens with an alarm, ending on any key. It changes nothing and won't start over full screen, a stream or a mouse job. stop takes it down early.",
+            { "red_alert", "Sound your red alert when they ask, suggest or hint at it: six seconds of flashing red hexagons across their screens, silent, ending on any key. It changes nothing and won't start over full screen, a stream or a mouse job. stop takes it down early.",
               "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"description\":\"show or stop the alert\",\"enum\":[\"show\",\"stop\"]}},\"required\":[\"action\"]}", "sound or stop her red alert", "sound or stop your red alert" },
             { "fake_crash", "Show your five-second " + CrashKind + " or stop it when they ask, suggest or hint at the prank. It never crashes their PC and won't start over full screen, a stream or a mouse job.",
               "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"description\":\"show or stop the prank\",\"enum\":[\"show\",\"stop\"]}},\"required\":[\"action\"]}", "show or stop her " + CrashKind, "show or stop your " + CrashKind },
@@ -1687,7 +1699,7 @@ namespace CapriDesktop
             { "twitch_live", "Turn your Twitch live notifications on or off, when they ask you to stop or start telling them who from their watch list has gone live. Only this: it is not about reading Twitch chat and not about any other notification.",
               "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"description\":\"on or off\",\"enum\":[\"on\",\"off\"]}},\"required\":[\"action\"]}", "turn her Twitch live notifications on or off", "turn your Twitch live notifications on or off" },
 #if !CROSS
-            { "mainframe", "Open Capri Mainframe or a page when they ask, suggest or hint at seeing your controls. name is an optional page; mixer is the setup for your voice in their mic, for friends in Discord or Roblox to hear you. This only opens it; keys, brains, voice services, SECURITY, Hey Capri and memories are changed there by them.",
+            { "mainframe", "Open Capri Mainframe or a page when they ask, suggest or hint at seeing your controls. name is an optional page; setup holds your brain, its fallback, the conversation brain and your voice; mixer is the setup for your voice in their mic, for friends in Discord or Roblox to hear you. This only opens it; keys, brains, voice services, SECURITY, Hey Capri and memories are changed there by them.",
               "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"The page to open; omit for Mainframe\",\"enum\":[\"main\",\"settings\",\"brain\",\"voice\",\"you\",\"moves\",\"keys\",\"capri\",\"watch\",\"habits\",\"games\",\"clips\",\"security\",\"extras\",\"layers\",\"mixer\",\"personality\",\"memories\"]}}}", "open Mainframe or one of its pages", "open Mainframe or one of its pages" },
 #endif
             { "updates", "Check for a Capri update or read its status when they ask, suggest or hint at it. Install only when they clearly ask to install or update Capri, through the usual update checks. A status question or hint alone never authorizes installation.",
@@ -1896,6 +1908,9 @@ namespace CapriDesktop
         internal static Func<string, int?, long?, string> ReadFile = delegate { return "I don't have a file you handed me at that path."; };
         internal static Websites Websites;
         internal static FileFinder Finder = new FileFinder();
+        // Her file keeper (Lachu, 0.9.6), offered to her brain only while it is on.
+        internal static FileKeeper Keeper = new FileKeeper(null);
+        internal static Func<bool> Filing = delegate { return false; };
         internal static Func<string, string> Fetch = Download;
         internal static Func<List<OpenWindow>> Windows = ReadWindows;
         internal static Func<OpenWindow, string, bool> Steer = Apply;
@@ -2007,6 +2022,7 @@ namespace CapriDesktop
         internal static Func<string> StopSpeech = delegate { return "Stopped talking."; };
         internal static Func<ToolArguments, string> JobControl = delegate { return "I'm not on a job right now."; };
         internal static Func<ToolArguments, string> Quit = delegate { return "Couldn't quit Capri."; };
+        internal static Func<ToolArguments, string> Uninstall = delegate { return "My uninstaller can't be opened from here."; };
         internal static Func<ToolArguments, string> Updates = delegate { return "Couldn't check for an update."; };
         internal static Func<string, string> MiniPlayer = delegate { return "Couldn't show my mini player."; };
 #if !CROSS
@@ -2384,6 +2400,7 @@ namespace CapriDesktop
                 if (tool == "speech") return Valid(tool, args) ? StopSpeech() : "Couldn't find that speech action.";
                 if (tool == "job_control") return Valid(tool, args) ? JobControl(args) : "Couldn't find that job instruction.";
                 if (tool == "quit") return Valid(tool, args) ? Quit(args) : "Couldn't find that quit action.";
+                if (tool == "uninstall") return Uninstall(args);
                 if (tool == "new_chat") return Valid(tool, args) ? StartNewChat() : "Couldn't find that new chat action.";
                 if (tool == "twitch_live") return Valid(tool, args) ? SwitchTwitchLive(args.Action) : "Say on or off for Twitch live notifications.";
                 if (tool == "twitch_who") { Func<string> asking = TwitchWho; return asking == null ? "Twitch isn't set up on this PC." : asking(); }
@@ -2410,6 +2427,7 @@ namespace CapriDesktop
                 if (tool == "mini_player") return Valid(tool, args) ? MiniPlayer(args.Action) : "Couldn't find that mini player action.";
                 if (tool == "website_nickname") return Websites == null ? "Couldn't open your website nicknames just now." : Websites.Do(args);
                 if (tool == "find_file") return Finder.Do(args, null);
+                if (tool == "files") return Filing() ? Keeper.Do(args, null) : "The file keeper is off; it turns on in Toggles.";
                 if (tool == "read_file") return ReadFile(args.Path, args.Page, args.Offset);
                 if (tool == "watch_for") return WatchFor(args);
                 if (tool == "game_notes") return Valid(tool, args) ? GameNotes.Do(args) : "What game controls should I keep?";
@@ -2650,9 +2668,10 @@ namespace CapriDesktop
             foreach (string[] gap in off) key.Append("|off ").Append(gap[0]).Append('=').Append(gap[1]);
             foreach (string[] tool in modTools) key.Append("|mod ").Append(tool[0]).Append('=').Append(tool[1]).Append('=').Append(tool[2]);
             foreach (string[] tool in pluginTools) key.Append("|plugin ").Append(tool[0]).Append('=').Append(tool[1]).Append('=').Append(tool[2]);
-            bool skilled = Skilled, gifted = Gifted;
+            bool skilled = Skilled, gifted = Gifted, filing = Filing();
             if (skilled) key.Append("|skills");
             if (gifted) key.Append("|gifs");
+            if (filing) key.Append("|files");
             lock (kits)
             {
                 Kit kit;
@@ -2660,7 +2679,7 @@ namespace CapriDesktop
                 {
                     // Mods come and go, so a kit made for tools no mod has any more isn't kept forever.
                     if (modTools.Length + pluginTools.Length > 0 && kits.Count > 200) kits.Clear();
-                    kits.Add(key.ToString(), kit = Made(missing, off, modTools, pluginTools, skilled, gifted));
+                    kits.Add(key.ToString(), kit = Made(missing, off, modTools, pluginTools, skilled, gifted, filing));
                 }
                 return kit;
             }
@@ -3002,9 +3021,9 @@ namespace CapriDesktop
 
         // A kit for what's missing and off: her tools without them, her prompts saying what isn't here, and the short
         // list of what she can do now, so even a small local model knows its tools (Lachy).
-        private static Kit Made(List<string[]> missing, List<string[]> off) { return Made(missing, off, NoModTools, NoModTools, Skilled, Gifted); }
+        private static Kit Made(List<string[]> missing, List<string[]> off) { return Made(missing, off, NoModTools, NoModTools, Skilled, Gifted, Filing()); }
 
-        private static Kit Made(List<string[]> missing, List<string[]> off, string[][] modTools, string[][] pluginTools, bool skilled, bool gifted)
+        private static Kit Made(List<string[]> missing, List<string[]> off, string[][] modTools, string[][] pluginTools, bool skilled, bool gifted, bool filing)
         {
             Kit kit = new Kit();
             foreach (string[] gap in missing) kit.Missing[gap[0]] = gap[1];
@@ -3023,7 +3042,7 @@ namespace CapriDesktop
             for (int i = 0; i < Specs.GetLength(0); i++)
             {
                 string tool = Specs[i, 0], how;
-                if (!kit.Has(tool) || tool == "read_skill" && !skilled || tool == "send_gif" && !gifted) continue;
+                if (!kit.Has(tool) || tool == "read_skill" && !skilled || tool == "send_gif" && !gifted || tool == "files" && !filing) continue;
                 string description = Unsaying(kit, tool == "shortcut" && someKeys ? "Press a keyboard shortcut for them: " + Joined(doing, "or") + "." : Specs[i, 1]), schema = Unsaying(kit, Specs[i, 2]);
                 if (tool == "capri_settings") { description = Unsaying(kit, SettingsDescription(kit)); schema = SettingsSchema(kit); }
                 foreach (string gap in kit.Missing.Keys)
@@ -3849,6 +3868,9 @@ namespace CapriDesktop
 
         private static readonly Regex Chatter = new Regex(@"^(?:let'?s (?:talk|see|go|be honest)|we should talk|how about you|time for bed)$|^(play (with|along|around|dead|dumb|nice|fair|a game with|a joke)|open up (to|about)|start (a story|a joke|an argument)|run (a mile|a race)|kill (the boss|me|time)|look (at it this way|forward)|show me (how|why)|check my (spelling|grammar)|rate my joke|mets-toi)\b", RegexOptions.IgnoreCase);
 
+        // "Uninstall yourself" or "uninstall Capri" as the whole ask; a question about uninstalling, or another app, isn't it.
+        private static readonly Regex UninstallSelf = new Regex(@"^uninstall (?:yourself|" + SpokenName + @")(?:[\s,]+" + SpokenName + @")?$", RegexOptions.IgnoreCase);
+
         // "Go to sleep" or "take a nap" said to her is her own nap, not the PC's (that needs a PC word), and "wake up" ends it.
         // "Sleep here" is the same nap, where she is.
         private static readonly Regex Napping = new Regex(@"^(?:(?:go (?:back )?to (?:sleep|bed)|(?:go )?(?:take|have|grab) (?:a |ur |your )?(?:little |quick |power )?(?:nap|snooze|rest)|go (?:nap|rest|snooze|sleep)|nap(?: time)?|sleep|good ?night|night night|doze off|get some (?:sleep|rest))(?: (?:here|there|right here|right there|over here|where you are))?|(?<wake>wake(?: up|y wakey)|rise and shine|good morning))(?:[\s,]+(?:now|then|already|girl|choom|" + SpokenName + @"))*$", RegexOptions.IgnoreCase);
@@ -4026,7 +4048,7 @@ namespace CapriDesktop
             @"|^(?:sesi|ses seviyesini)\s+(?:y\u00fczde\s*|%\s*)?(?<n>\d{1,3})\s*%?\s*(?:yap|ayarla|olsun)$|^(?:volume|suara)\s+(?:ke\s+)?(?<n>\d{1,3})\s*%?$" +
             @"|^(?:\u97f3\u91cf|\u30dc\u30ea\u30e5\u30fc\u30e0)\u3092?(?<n>\d{1,3})\s*%?\u306b(?:\u3057\u3066|\u8a2d\u5b9a\u3057\u3066)(?:\u304f\u3060\u3055\u3044)?$|^(?:\u8bf7|\u8acb)?(?:\u628a)?(?:\u97f3\u91cf|\u58f0\u97f3|\u8072\u97f3)(?:\u8c03|\u8abf|\u8bbe|\u8a2d)?(?:\u5230|\u6210|\u4e3a|\u70ba)\s*(?<n>\d{1,3})\s*%?$|^(?:\ubcfc\ub968|\uc74c\ub7c9|\uc18c\ub9ac)(?:\uc744|\ub97c)?\s*(?<n>\d{1,3})\s*%?(?:\uc73c\ub85c|\ub85c)\s*(?:\ud574|\ub9de\ucdb0|\uc124\uc815\ud574)(?:\uc918|\uc918\uc694|\uc8fc\uc138\uc694)?$", "volume_set", "n",
             // Unmute before mute, since "turn mute off" says mute.
-            @"^(?:un-?mute|unsilence)(?:\s+" + Thing + @")?$|^(?:turn|switch|put|set)\s+(?:the\s+)?mute\s+off$|^(?:turn|switch)\s+off\s+(?:the\s+)?mute$|^(?:take|get)\s+(?:" + Thing + @"\s+)?off\s+(?:of\s+)?mute$|^mute off$", "unmute", "",
+            @"^un-?mute\s+" + Thing + @"$|^unsilence(?:\s+" + Thing + @")?$|^(?:turn|switch|put|set)\s+(?:the\s+)?mute\s+off$|^(?:turn|switch)\s+off\s+(?:the\s+)?mute$|^(?:take|get)\s+(?:" + Thing + @"\s+)?off\s+(?:of\s+)?mute$|^mute off$", "unmute", "",
             @"^(?:turn|switch|put|bring)\s+" + Sound + @"\s+(?:back\s+)?on$|^(?:turn|switch)\s+(?:back\s+)?on\s+" + Sound + @"$|^(?:sound|volume|audio)\s+(?:back\s+)?on$|^bring\s+(?:back\s+)?" + Sound + @"(?:\s+back)?$", "unmute", "",
             @"^(?:quita(?:le)? el silencio|desmutea(?:r)?|activa el (?:sonido|audio|volumen)|pon el (?:sonido|audio|volumen)|enciende el (?:sonido|audio|volumen)|devu[e\u00e9]lveme el sonido)$|^(?:remets|r[\u00e9e]active|rallume) le son$|^enl[e\u00e8]ve la sourdine$", "unmute", "",
             @"^(?:(?:schalt|schalte|mach|mache)\s+(?:den\s+)?)?(?:ton|sound|audio)\s+(?:wieder\s+)?an$|^(?:stummschaltung\s+aufheben|nicht mehr stumm|laut\s*schalten)$" +
@@ -4034,7 +4056,7 @@ namespace CapriDesktop
             @"|^(?:\u0432\u043a\u043b\u044e\u0447\u0438 \u0437\u0432\u0443\u043a|\u0432\u0435\u0440\u043d\u0438 \u0437\u0432\u0443\u043a|\u0440\u0430\u0437\u043c\u044c\u044e\u0442\u044c|\u0440\u0430\u0437\u043c\u0443\u0442\u044c|\u0443\u0432\u0456\u043c\u043a\u043d\u0438 \u0437\u0432\u0443\u043a|\u043f\u043e\u0432\u0435\u0440\u043d\u0438 \u0437\u0432\u0443\u043a|sesi geri a\u00e7|sessizden \u00e7\u0131kar|nyalakan suara|hidupkan suara|bunyikan lagi)$" +
             @"|^(?:\u30df\u30e5\u30fc\u30c8(?:\u3092)?\u89e3\u9664\u3057\u3066|\u97f3\u3092\u623b\u3057\u3066)(?:\u304f\u3060\u3055\u3044)?$|^(?:\u8bf7|\u8acb)?(?:\u53d6\u6d88\u9759\u97f3|\u53d6\u6d88\u975c\u97f3|\u89e3\u9664\u9759\u97f3|\u89e3\u9664\u975c\u97f3)$|^(?:\uc74c\uc18c\uac70\s*\ud574\uc81c(?:\ud574|\ud574\uc918|\ud574\s*\uc918)?|\uc18c\ub9ac\s*\ucf1c(?:\uc918)?)$", "unmute", "",
             // "Hush" is said to her, not the PC, so it goes to her brain like any chat.
-            @"^(?:mute|silence)(?:\s+" + Thing + @")?$|^(?:kill|cut)\s+" + Sound + @"$|^(?:turn|switch|shut)\s+off\s+" + Sound + @"$|^(?:turn|switch|shut)\s+" + Sound + @"\s+off$", "mute", "",
+            @"^(?:mute|silence)\s+" + Thing + @"$|^(?:kill|cut)\s+" + Sound + @"$|^(?:turn|switch|shut)\s+off\s+" + Sound + @"$|^(?:turn|switch|shut)\s+" + Sound + @"\s+off$", "mute", "",
             @"^(?:turn|switch|put|set)\s+(?:on\s+)?(?:the\s+)?mute(?:\s+on)?$|^(?:put|set)\s+(?:" + Thing + @"\s+)?on mute$|^(?:mute on|sound off|volume off|audio off|no sound)$", "mute", "",
             @"^(?:silencia(?:r)?|mutea(?:r)?|quita(?:le)? el (?:sonido|volumen|audio)|pon(?:lo)? en silencio|apaga el (?:sonido|volumen|audio))(?:\s+(?:el|la)\s+(?:volumen|sonido|audio|pc|computadora|ordenador|compu))?$|^(?:coupe(?:r)?|couper) (?:le )?(?:son|volume)$|^mets(?: le pc| l'ordi)? en sourdine$", "mute", "",
             @"^(?:(?:schalt|schalte|mach|mache)\s+(?:den\s+)?)?(?:ton|sound|audio)\s+aus$|^(?:stumm|stummschalten|schalte? (?:alles|den pc|den computer|es) stumm)$" +
@@ -4154,8 +4176,12 @@ namespace CapriDesktop
             // Scroll TikTok or Shorts for them, read straight off what they said.
             if (CapriDesktop.WatchAlong.Request(said) == "scroll") { tool = "watch_along"; args = new ToolArguments { Action = "scroll" }; return true; }
 #endif
+            // A word said alone switches its row: "mute" or "mute her" is Mute her, "focus" is Focus mode.
+            string alone, way;
+            if (Alone(said, out alone, out way)) { tool = "capri_settings"; args = new ToolArguments { Action = way, Name = alone }; return true; }
             // Asking for quiet in plain words starts her quiet time straight away, without waiting on her brain.
             if (QuietAsked(said)) { tool = "capri_settings"; args = new ToolArguments { Action = "on", Name = "quiet" }; return true; }
+            if (QuietEnded(said)) { tool = "capri_settings"; args = new ToolArguments { Action = "off", Name = "quiet" }; return true; }
             if (Planned(said, out tool, out args)) return true;
             List<string> tries = new List<string>();
             Match named = Regex.Match(said ?? "", SpokenName + @"[\s,.!?]*([^\s,.!?].*)$", RegexOptions.IgnoreCase | RegexOptions.RightToLeft);
@@ -4176,17 +4202,57 @@ namespace CapriDesktop
             return false;
         }
 
-        // The plain ways of asking her for quiet. The whole line has to be the ask, give or take her name and a
-        // please, so "leave me alone" quoted inside something longer does not hush her.
+        // The plain ways of asking her for quiet, a bare "shut up", "silence", "hush", "shush" or "quiet" among them. The
+        // whole line has to be the ask, give or take her name and a please, so "leave me alone" quoted inside something
+        // longer does not hush her.
         private static readonly Regex QuietAsk = new Regex(@"^(?:(?:hey\s+)?capri[\s,.!]*)?(?:(?:please|pls|ok(?:ay)?|right)[\s,]+)?(?:"
             + @"(?:i\s+)?(?:need|want|could use)\s+(?:some\s+|a\s+bit\s+of\s+|a\s+little\s+)?(?:peace\s+and\s+quiet|quiet(?:\s+time)?|focus(?:\s+time)?|me\s+time|alone\s+time|silence|space|head\s?space)"
             + @"|give\s+me\s+(?:some\s+|a\s+bit\s+of\s+)?(?:peace\s+and\s+quiet|quiet(?:\s+time)?|space|silence)"
-            + @"|(?:be|go|keep|stay)\s+quiet(?:\s+for\s+(?:a\s+(?:bit|while)|now|now\s+please))?"
+            + @"|(?:be|go|keep|stay)\s+quiet(?:\s+(?:for\s+)?(?:a\s+(?:bit|while)|now|now\s+please))?"
+            + @"|(?:(?:turn|switch|put)\s+on\s+|go\s+(?:in|into|to)\s+|enter\s+|start\s+)?quiet\s+mode(?:\s+on)?|(?:turn|switch|put)\s+quiet\s+mode\s+on"
             + @"|leave\s+me\s+alone\s+for\s+(?:a\s+(?:bit|while)|now)"
             + @"|shush\s+for\s+a\s+(?:bit|while)|not\s+now(?:\s+capri)?|quiet\s+time|focus\s+time"
+            + @"|shut\s*up|silence|hush|shush|quiet"
             + @")[\s,.!]*(?:please|pls|capri|thanks|thank\s+you)?[\s.!]*$", RegexOptions.IgnoreCase);
 
         internal static bool QuietAsked(string said) { return !string.IsNullOrWhiteSpace(said) && QuietAsk.IsMatch(said.Trim()); }
+
+        // Quiet mode ended in words: "quiet mode off", "turn off quiet mode", "end quiet mode".
+        private static readonly Regex QuietEnd = new Regex(@"^(?:(?:hey\s+)?capri[\s,.!]*)?(?:(?:please|pls|ok(?:ay)?)[\s,]+)?(?:"
+            + @"(?:turn|switch|put)\s+off\s+quiet\s+mode|(?:turn|switch|put)\s+quiet\s+mode\s+off|quiet\s+mode\s+off|(?:end|stop|exit|leave|quit|cancel)\s+quiet\s+mode|(?:get|come)\s+out\s+of\s+quiet\s+mode"
+            + @")[\s,.!]*(?:please|pls|capri|thanks|thank\s+you)?[\s.!]*$", RegexOptions.IgnoreCase);
+
+        internal static bool QuietEnded(string said) { return !string.IsNullOrWhiteSpace(said) && QuietEnd.IsMatch(said.Trim()); }
+
+        // A word or two said alone, give or take her name and a please, and the row it switches. "mute pc", "mute the
+        // pc", "mute my computer" and "mute sound" stay the PC's mute.
+        private static readonly string[,] AloneWords =
+        {
+            { @"mute|mute\s+(?:her|capri|yourself)|(?:turn|switch|put)\s+on\s+mute\s+her|(?:turn|switch|put)\s+mute\s+her\s+on|mute\s+her\s+on", "mute_her", "on" },
+            { @"un-?mute\s+(?:her|capri|yourself)|(?:turn|switch)\s+off\s+mute\s+her|(?:turn|switch)\s+mute\s+her\s+off|mute\s+her\s+off|you\s+can\s+talk(?:\s+again)?|un-?mute", "mute_her", "off" },
+            { @"focus|focus\s+mode(?:\s+on)?|focus\s+on|(?:turn|switch|put)\s+on\s+focus(?:\s+mode)?|(?:turn|switch)\s+focus(?:\s+mode)?\s+on|(?:start|enter)\s+focus(?:\s+mode)?", "focus_mode", "on" },
+            { @"un-?focus|focus(?:\s+mode)?\s+off|(?:turn|switch)\s+off\s+focus(?:\s+mode)?|(?:turn|switch)\s+focus(?:\s+mode)?\s+off|(?:end|stop|exit|leave|quit|cancel)\s+focus(?:\s+mode)?", "focus_mode", "off" }
+        };
+
+        private static readonly Regex[] AloneAsks = AloneMade();
+
+        private static Regex[] AloneMade()
+        {
+            Regex[] made = new Regex[AloneWords.GetLength(0)];
+            for (int i = 0; i < made.Length; i++)
+                made[i] = new Regex(@"^(?:(?:hey\s+)?capri[\s,.!]*)?(?:(?:please|pls|ok(?:ay)?)[\s,]+)?(?:" + AloneWords[i, 0] + @")[\s,.!]*(?:please|pls|capri|now|thanks|thank\s+you)?[\s.!]*$", RegexOptions.IgnoreCase);
+            return made;
+        }
+
+        internal static bool Alone(string said, out string name, out string way)
+        {
+            name = way = null;
+            if (string.IsNullOrWhiteSpace(said)) return false;
+            string trimmed = said.Trim();
+            for (int i = 0; i < AloneAsks.Length; i++)
+                if (AloneAsks[i].IsMatch(trimmed)) { name = AloneWords[i, 1]; way = AloneWords[i, 2]; return true; }
+            return false;
+        }
 
         private const string GameModeName = @"(?:(?:the|your|ur|my)\s+)?(?:gaming|game|gamer)[\s-]?";
         private const string GameModeWords = GameModeName + @"(?:mode?|mood)";
@@ -4483,6 +4549,7 @@ namespace CapriDesktop
             string minutes;
             string switched = PowerFor(text, out minutes);
             if (switched != null) { tool = "power"; args.Action = switched; args.Minutes = minutes; return true; }
+            if (UninstallSelf.IsMatch(text)) { tool = "uninstall"; args.Action = "ask"; return true; }
             Match napped = Napping.Match(text);
             if (napped.Success) { tool = "nap"; args.Action = napped.Groups["wake"].Success ? "wake" : "sleep"; return true; }
             if (HologramOff.IsMatch(text)) { tool = "hologram"; args.Action = "off"; return true; }
@@ -5270,7 +5337,7 @@ namespace CapriDesktop
             if (tool == "mainframe") return args != null && (string.IsNullOrEmpty(args.Name) || Regex.IsMatch(args.Name, @"\A(main|settings|brain|voice|you|moves|keys|capri|watch|habits|games|clips|security|extras|layers|mixer|personality|memories|files|notes)\z"));
             if (tool == "workspace") return args != null && (string.IsNullOrEmpty(args.Action) || args.Action == "open" || args.Action == "status" || args.Action == "start" && Named(args.Task));
 #else
-            if (tool == "mainframe") return args != null && (string.IsNullOrEmpty(args.Name) || Regex.IsMatch(args.Name, @"\A(main|settings|brain|voice|you|moves|keys|capri|watch|habits|games|clips|security|extras|layers|mixer|personality|memories)\z"));
+            if (tool == "mainframe") return args != null && (string.IsNullOrEmpty(args.Name) || Regex.IsMatch(args.Name, @"\A(main|setup|fallback|settings|brain|voice|you|moves|keys|capri|watch|habits|games|clips|security|extras|layers|mixer|personality|memories)\z"));
             if (tool == "call_errand") return args != null && Regex.IsMatch(args.Action ?? "", @"\A(open_app|play_song|cancel)\z");
             if (tool == "call_say") return args != null && Named(args.Text);
 #endif
@@ -5370,6 +5437,7 @@ namespace CapriDesktop
                 || args.Action == "shuffle" || args.Action == "repeat_one" || args.Action == "repeat_all" || args.Action == "repeat_off"
                 || ((args.Action == "add_folder" || args.Action == "add_song") && Named(args.Path ?? args.Name ?? args.Song));
             if (tool == "do_again") return true;
+            if (tool == "files") return FileKeeper.Valid(args);
             if (tool == "find_file") return args.Action == "show" || args.Action == "open" || args.Action == "stop" || ((string.IsNullOrEmpty(args.Action) || args.Action == "search") && Named(args.Description));
             if (tool == "website_nickname") return args.Action == "list" || (Named(args.Name) && (args.Action == "forget" || args.Action == "save"));
             if (tool == "read_file") return Named(args.Path) && (!args.Page.HasValue || args.Page.Value >= 1) && (!args.Offset.HasValue || args.Offset.Value >= 0);
@@ -6124,139 +6192,24 @@ namespace CapriDesktop
             return info;
         }
 
-        // A generic look-up goes to their own search engine: SearchSite from settings.json, else the browser's default.
-        // A site they named, or "google X", is untouched.
-        internal static Func<string> SearchSite = delegate { return null; };
-        internal static Func<string, string> SearchEngine = BrowserEngine;
-
-        // Chromium browsers write the engine in use into Preferences, a JSON file, as soon as it isn't their built-in one.
-        private static readonly string[,] BrowserProfiles =
-        {
-            { "Chrome", @"Google\Chrome\User Data", "local" },
-            { "Edge", @"Microsoft\Edge\User Data", "local" },
-            { "Brave", @"BraveSoftware\Brave-Browser\User Data", "local" },
-            { "Vivaldi", @"Vivaldi\User Data", "local" },
-            { "Opera", @"Opera Software\Opera Stable", "roaming" },
-            { "Opera GX", @"Opera Software\Opera GX Stable", "roaming" }
-        };
-        private static readonly Dictionary<string, KeyValuePair<DateTime, string>> engines = new Dictionary<string, KeyValuePair<DateTime, string>>();
-
-        // The words put into a template like https://duckduckgo.com/?q={searchTerms}, or appended to a prefix like her own table's.
+        // The words appended to a search address from her own table, like Google's.
         private static string SearchUrl(string template, string words)
         {
             string query = Uri.EscapeDataString((words ?? "").Trim());
             return template.IndexOf("{searchTerms}", StringComparison.Ordinal) >= 0 ? template.Replace("{searchTerms}", query) : template + query;
         }
 
-        // A template holding placeholders she can't fill is no use: Google's own is {google:baseURL}search?q={searchTerms}, and
-        // others carry {inputEncoding}. Parameters still holding one are dropped, and a template whose address itself holds one
-        // is refused, which is how Google's own template falls back to her plain Google address.
-        private static string Filled(string template)
+        // A generic look-up goes to the browser's own search, started with the words, so she never picks an engine or reads
+        // the browser's settings: Chromium browsers take "? words", Firefox -search. A site they named, or "google X", is
+        // untouched.
+        internal static ProcessStartInfo SearchLaunch(string path, string words)
         {
-            if (string.IsNullOrWhiteSpace(template)) return null;
-            string whole = template.Trim().Replace("\\/", "/");
-            if (!whole.StartsWith("https://", StringComparison.OrdinalIgnoreCase) && !whole.StartsWith("http://", StringComparison.OrdinalIgnoreCase)) return null;
-            if (whole.IndexOf("{searchTerms}", StringComparison.Ordinal) < 0)
-                return whole.IndexOf('{') < 0 && (whole.EndsWith("=", StringComparison.Ordinal) || whole.EndsWith("/", StringComparison.Ordinal) || whole.EndsWith("?", StringComparison.Ordinal)) ? whole : null;
-            int mark = whole.IndexOf('?');
-            string head = mark < 0 ? whole : whole.Substring(0, mark);
-            if (head.IndexOf('{') >= 0) return null;
-            if (mark < 0) return whole;
-            List<string> kept = new List<string>();
-            foreach (string part in whole.Substring(mark + 1).Split('&'))
-                if (part.Length > 0 && part.Replace("{searchTerms}", "").IndexOf('{') < 0) kept.Add(part);
-            string query = string.Join("&", kept.ToArray());
-            return query.IndexOf("{searchTerms}", StringComparison.Ordinal) >= 0 ? head + "?" + query : null;
+            string plain = (words ?? "").Trim().Replace("\"", "");
+            bool firefox = string.Equals(Path.GetFileName(path), "firefox.exe", StringComparison.OrdinalIgnoreCase);
+            return new ProcessStartInfo(path, firefox ? "-search \"" + plain + "\"" : "\"? " + plain + "\"") { UseShellExecute = true };
         }
 
-        // Where that browser keeps its settings. Null for one she can't read: Firefox keeps its engines in a compressed
-        // search.json.mozlz4, so Firefox falls back to SearchSite or to Google.
-        private static string ProfileRoot(string browser)
-        {
-            for (int i = 0; i < BrowserProfiles.GetLength(0); i++)
-                if (BrowserProfiles[i, 0] == browser)
-                    return Path.Combine(Environment.GetFolderPath(BrowserProfiles[i, 2] == "local" ? Environment.SpecialFolder.LocalApplicationData : Environment.SpecialFolder.ApplicationData), BrowserProfiles[i, 1]);
-            return null;
-        }
-
-        // That browser's default engine, read once every ten minutes; anything unreadable leaves Google. Read shared,
-        // since the browser holds its settings open, with a size cap and a whole-file check, all from upstream.
-        private static string ReadSearchFile(string path)
-        {
-            try
-            {
-                using (FileStream input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
-                {
-                    if (input.Length > 4 * 1024 * 1024) return null;
-                    byte[] bytes = new byte[(int)input.Length];
-                    int offset = 0, got;
-                    while (offset < bytes.Length && (got = input.Read(bytes, offset, bytes.Length - offset)) > 0) offset += got;
-                    return offset == bytes.Length && input.Length == bytes.Length ? Encoding.UTF8.GetString(bytes) : null;
-                }
-            }
-            catch (Exception) { return null; }
-        }
-
-        // Which profile the browser is actually using, from Local State, rather than guessing at the usual names. Upstream
-        // reads this with a JSON contract; the one field wanted is pulled out here the same way the engine itself is.
-        private static string UsedProfile(string root)
-        {
-            string text = ReadSearchFile(Path.Combine(root, "Local State"));
-            if (string.IsNullOrEmpty(text)) return null;
-            Match last = Regex.Match(text, @"""last_used""\s*:\s*""([^""\\]+)""");
-            if (!last.Success) return null;
-            string profile = last.Groups[1].Value;
-            return profile == "." || profile == ".." || profile.IndexOfAny(new[] { '\\', '/', ':', '*', '?', '"', '<', '>', '|' }) >= 0 ? null : profile;
-        }
-
-        private static string BrowserEngine(string browser)
-        {
-            string root = ProfileRoot(browser);
-            if (root == null) return null;
-            lock (engines)
-            {
-                KeyValuePair<DateTime, string> remembered;
-                if (engines.TryGetValue(browser, out remembered) && DateTime.UtcNow - remembered.Key < TimeSpan.FromMinutes(10)) return remembered.Value;
-            }
-            // The profile in use first, then the usual names. Opera keeps its settings in the root itself.
-            List<string> folders = new List<string>();
-            string used = UsedProfile(root);
-            if (!string.IsNullOrEmpty(used)) folders.Add(used);
-            foreach (string guess in new[] { "Default", "", "Profile 1", "Profile 2" }) if (!folders.Contains(guess)) folders.Add(guess);
-            string found = null;
-            foreach (string profile in folders)
-            {
-                // Chromium writes the search provider to Secure Preferences on most setups and only sometimes to
-                // Preferences, so reading one of the two found nothing on a lot of machines.
-                foreach (string name in new[] { "Secure Preferences", "Preferences" })
-                {
-                    string text = ReadSearchFile(Path.Combine(Path.Combine(root, profile), name));
-                    if (string.IsNullOrEmpty(text)) continue;
-                    int at = text.IndexOf("\"default_search_provider_data\"", StringComparison.Ordinal);
-                    if (at < 0) continue;
-                    Match url = Regex.Match(text.Substring(at, Math.Min(4000, text.Length - at)), @"""url""\s*:\s*""([^""]+)""");
-                    if (url.Success) found = Filled(url.Groups[1].Value);
-                    if (found != null) break;
-                }
-                if (found != null) break;
-            }
-            lock (engines) engines[browser] = new KeyValuePair<DateTime, string>(DateTime.UtcNow, found);
-            return found;
-        }
-
-        // The engine a plain look-up uses: their own setting, then the browser's, then Google exactly as 0.8.9 did.
-        private static string LookupEngine(string browser)
-        {
-            string chosen = null;
-            try { chosen = Filled(SearchSite()); }
-            catch (Exception) { chosen = null; }
-            if (chosen != null) return chosen;
-            string named = BrowserName(browser) ?? DefaultBrowser();
-            string theirs = null;
-            try { theirs = named == null ? null : SearchEngine(named); }
-            catch (Exception) { theirs = null; }
-            return theirs ?? Searches[1, 1];
-        }
+        internal static Action<string, string> BrowseSearch = delegate(string path, string words) { using (Process.Start(SearchLaunch(path, words))) { } };
 
         // Which browser Windows opens links with, so a look-up that names no browser still uses that browser's engine.
         internal static string DefaultBrowser()
@@ -6289,8 +6242,19 @@ namespace CapriDesktop
                 site = Websites.Find(nickname);
                 if (string.IsNullOrWhiteSpace(search)) address = site;
             }
-            // A look-up she chose the engine for goes to the browser's engine; a site they named still goes through Address.
-            if (address == null && anyEngine && !string.IsNullOrWhiteSpace(search)) address = SearchUrl(LookupEngine(browser), search);
+            // A plain look-up: the browser's own search, the one named or the default; one she can't start that way gets
+            // Google as 0.8.9 did. A site they named still goes through Address.
+            if (address == null && anyEngine && !string.IsNullOrWhiteSpace(search))
+            {
+                string named = BrowserName(browser) ?? DefaultBrowser();
+                string path = named == null ? null : BrowserPath(named);
+                if (path != null)
+                {
+                    BrowseSearch(path, search);
+                    return "Searched for " + search.Trim() + " with " + named + "'s own search" + Opened(named) + ".";
+                }
+                address = SearchUrl(Searches[1, 1], search);
+            }
             if (address == null) address = Address(site, search);
             if (address == null) return "That isn't a website.";
             string browserName = BrowserName(browser);
@@ -6962,7 +6926,7 @@ namespace CapriDesktop
             @"^(?:cancel|stop|abort|undo)\s+(?:the |that |my )?(?:shut ?down|restart|reboot|sleep|sign ?out|log ?out)$|^(?:don'?t|do not)\s+(?:shut ?down|turn off|restart|reboot)(?:\s+(?:it|" + Machine + "))?$", "cancel"
         };
         private static DateTime powered = DateTime.MinValue;
-        private static System.Threading.Timer powerLater;
+        private static Clock.OffTimer powerLater;
         [DllImport("user32.dll")] private static extern bool LockWorkStation();
         [DllImport("user32.dll")] private static extern bool ExitWindowsEx(int flags, int reason);
         [DllImport("powrprof.dll")] private static extern bool SetSuspendState(bool hibernate, bool force, bool wakeEventsOff);
@@ -7020,8 +6984,8 @@ namespace CapriDesktop
             if (action == "shut_down" || action == "restart") return Shutdown((action == "restart" ? "/r" : "/s") + " /t " + seconds);
             if (action == "lock" && seconds == 0) return LockWorkStation();
             // Sleep, sign out and timed locks wait a moment so her line plays first.
-            System.Threading.Timer timer = null;
-            timer = new System.Threading.Timer(delegate
+            Clock.OffTimer timer = null;
+            timer = new Clock.OffTimer("Hands power later", delegate
             {
                 lock (gate) { if (powerLater != timer) return; powerLater = null; }
                 if (action == "lock") LockWorkStation();
@@ -7116,7 +7080,7 @@ namespace CapriDesktop
         private static readonly Regex Moon = new Regex(@"\bwish\s+(?:we|i|you\s+and\s+i|me\s+and\s+you)\s+could\s+(?:go|fly|get|run\s+away)\s+to\s+the\s+moon\b", RegexOptions.IgnoreCase);
         internal const string MoonSong = "I Really Want to Stay at Your House";
 
-        internal const string Home = "capriai.app";
+        internal const string Home = "github.com/YunoTheAlien/capri-abliterated-desktop";
 
         private static string PlayMusic(string song, string app, string kind, Func<bool> current = null, bool songOnly = false)
         {

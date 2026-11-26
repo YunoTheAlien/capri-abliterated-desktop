@@ -2,7 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
+using System.Reflection;
+using System.Text;
+using System.Text.RegularExpressions;
 
+#if CHECKS
 namespace CapriDesktop
 {
     internal partial class Companion
@@ -375,5 +379,447 @@ namespace CapriDesktop
                 catch (UnauthorizedAccessException) { }
             }
         }
+
+        // Her own notes sent back as a reply or a retry, and a lone bracketed aside, never reach her bubble or her history:
+        // they take the empty reply's path, as does a repeat whose retry repeats. Stand-in brains only.
+        private static void SmokeOwnNotes(List<string> checks)
+        {
+            string openAiWas = Brain.OpenAi;
+            TcpListener server = null;
+            Func<string[], Brain, string, string> ask = delegate(string[] replies, Brain talker, string words)
+            {
+                List<string> asked = new List<string>();
+                Brain.OpenAi = FakeServer(Array.ConvertAll(replies, one => LocalReply(one)), asked, out server);
+                try { return talker.Ask(words); }
+                catch (BrainException error) { return "!" + error.Message; }
+                finally { server.Stop(); server = null; }
+            };
+            Func<Brain> fresh = delegate { return new Brain { Remote = new Cloud("sk-proj-test", "gpt-5-mini"), Model = "gpt-5-mini" }; };
+            try
+            {
+                Func<string, bool> empty = delegate(string said) { return said == "!" + Brain.Wordless || said == "!" + Brain.Answerless; };
+                foreach (string note in new[] { "(For you, not from them: Right now it's 3 pm.)", "(That repeats your last answer. Answer what they just asked: \"hi\")", "\"(You called remember)\"", "(17 x 23 = 391)" })
+                {
+                    Brain talker = fresh();
+                    string said = ask(new[] { note }, talker, "hey");
+                    if (!empty(said) || talker.History.Count != 0) throw new Exception("Her own note reached her as a reply: " + note.Replace("\n", " ") + " -> " + said);
+                }
+                Brain repeating = fresh();
+                string first = ask(new[] { "I think we should get noodles tonight." }, repeating, "what should we eat");
+                string again = ask(new[] { "I think we should get noodles tonight.", "I think we should get noodles tonight." }, repeating, "where would we go");
+                if (first != "I think we should get noodles tonight." || !empty(again) || repeating.History.Count != 2) throw new Exception("A repeat the retry repeated was said, or didn't take the empty path: " + first + " / " + again + ", history " + repeating.History.Count);
+                Brain echoing = fresh();
+                ask(new[] { "I think we should get noodles tonight." }, echoing, "what should we eat");
+                string echoed = ask(new[] { "I think we should get noodles tonight.", "(That repeats your last answer. Answer what they just asked: \"where would we go\")" }, echoing, "where would we go");
+                if (!empty(echoed) || echoing.History.Count != 2) throw new Exception("A retry that was her own note reached her: " + echoed + ", history " + echoing.History.Count);
+                Brain mended = fresh();
+                ask(new[] { "Noodles, obviously, with extra chilli." }, mended, "what should we eat");
+                string retried = ask(new[] { "Noodles, obviously, with extra chilli.", "Somewhere with a view, then noodles." }, mended, "where would we go");
+                Brain plain = fresh();
+                string normal = ask(new[] { "Somewhere with good noodles and a window seat." }, plain, "where would we go");
+                if (retried != "Somewhere with a view, then noodles." || normal != "Somewhere with good noodles and a window seat." || plain.History.Count != 2)
+                    throw new Exception("A retried or normal reply was changed: " + retried + " / " + normal);
+                checks.Add("PASS her own notes (For you, the repeat note, a tool note) and a reply that is one bracketed aside never reach her bubble or history and take the empty reply's path, and so does a retry that is one of her notes or a repeat whose retry repeats too; a mended retry and a normal reply are untouched");
+            }
+            finally
+            {
+                if (server != null) server.Stop();
+                Brain.OpenAi = openAiWas;
+            }
+        }
+
+        // An empty reply, or one of only asides, is asked again once, reworded, tool asks too; an empty retry gives her
+        // "brain ain't braining" line. Her fallback is conversation only, on a PC that carries it. Stand-in brains only.
+        private void SmokeEmptyRetry(List<string> checks)
+        {
+            string openAiWas = Brain.OpenAi;
+            TcpListener server = null;
+            Func<string, string> thinkWas = Think;
+            Func<string, long> sizeWas = FallbackSize;
+            Func<Machine> machineWas = FallbackMachine;
+            bool onWas = preferences.LocalFallback, silentWas = preferences.Silent;
+            string brainWas = preferences.FallbackBrain, lastWas = preferences.LastLocalBrain;
+            try
+            {
+                Func<string[], Brain, List<string>, string, string> ask = delegate(string[] replies, Brain talker, List<string> heard, string words)
+                {
+                    Brain.OpenAi = FakeServer(Array.ConvertAll(replies, one => LocalReply(one)), heard, out server);
+                    try { return talker.Ask(words); }
+                    catch (BrainException error) { return "!" + error.Message; }
+                    finally { server.Stop(); server = null; }
+                };
+                Func<Brain> fresh = delegate { return new Brain { Remote = new Cloud("sk-proj-test", "gpt-5-mini"), Model = "gpt-5-mini" }; };
+                List<string> asked = new List<string>();
+                string retried = ask(new[] { "", "Noodles. Obviously noodles." }, fresh(), asked, "what should we eat tonight?");
+                bool reworded = asked.Count == 2 && asked[1].Contains("came back empty");
+                string asides = ask(new[] { "(sigh) (warm) (warm)", "Fine, noodles it is." }, fresh(), new List<string>(), "what should we eat tonight?");
+                asked = new List<string>();
+                Brain twice = fresh();
+                string blank = ask(new[] { "", "" }, twice, asked, "what should we eat tonight?");
+                int actions = 0;
+                Brain worker = fresh();
+                worker.OwnSteps = true;
+                worker.Act = delegate { actions++; return "Opened it."; };
+                List<string> working = new List<string>();
+                string tool = ask(new[] { "", "Call her Pixel." }, worker, working, "give my cat a name");
+                bool toolRetried = working.Count == 2 && working[0].Contains("\"tools\":") && working[1].Contains("came back empty") && tool == "Call her Pixel." && actions == 0;
+                if (retried != "Noodles. Obviously noodles." || !reworded || asides != "Fine, noodles it is." || blank != "!" + Brain.Wordless || asked.Count != 2 || twice.History.Count != 0 || !toolRetried)
+                    throw new Exception("An empty reply wasn't asked again once, reworded, or its retry wasn't used: " + retried + " / " + reworded + " / " + asides + " / " + blank + " (" + asked.Count + " asks) / tool " + tool + " (" + working.Count + " asks)");
+                checks.Add("PASS an empty reply, and one of only asides like \"(sigh) (warm) (warm)\", is asked again once on the same brain with a note that it came back empty, and the retry is used, a tool ask too; an empty retry takes the empty path and keeps nothing");
+
+                // Her fallback answers conversation only: asked to open something, it holds no tools and runs none.
+                List<string> local = new List<string>();
+                string address = FakeServer(new[] { LocalReply("I can't do that from here, but hi.") }, local, out server);
+                Brain fallen = fresh();
+                int fallActs = 0;
+                fallen.Act = delegate { fallActs++; return "Opened it."; };
+                string fellSaid = Brain.AskFallback(Brain.ServerMark + address + "|fake-local", null, null, delegate { return fallen.Ask("open the calculator"); });
+                server.Stop();
+                server = null;
+                bool chatOnly = fallActs == 0 && local.Count == 1 && !local[0].Contains("\"tools\":") && fellSaid.Length > 0;
+                bool toolAsks = ForTools("can you open the calculator") && ForTools("open spotify and play something") && !ForTools("how was your day?") && !ForTools("tell me a joke");
+                if (!chatOnly || !toolAsks) throw new Exception("Her fallback took a tool ask: chat only " + chatOnly + " (" + fallActs + " acts, " + local.Count + " asks), tool asks told " + toolAsks);
+                checks.Add("PASS her local fallback answers conversation only: it holds no tools and runs none, and an ask her hands read as one for a tool (open, play) never goes to it; talk does");
+
+                // Never a fallback this PC can't carry: the weights on the card with 1 GB spare, or in half the memory.
+                preferences.LocalFallback = true;
+                preferences.FallbackBrain = "big-local";
+                preferences.LastLocalBrain = null;
+                const long Gb = 1L << 30;
+                string to;
+                Pick pick;
+                FallbackSize = delegate { return 5 * Gb; };
+                FallbackMachine = delegate { return new Machine { Vram = 4 * Gb, Ram = 8 * Gb }; };
+                bool weak = !FallbackReady(out to, out pick);
+                FallbackMachine = delegate { return new Machine { Vram = 8 * Gb, Ram = 8 * Gb }; };
+                bool card = FallbackReady(out to, out pick);
+                FallbackMachine = delegate { return new Machine { Vram = 0, Ram = 16 * Gb }; };
+                bool memory = FallbackReady(out to, out pick);
+                FallbackSize = delegate { return -1; };
+                bool unknown = !FallbackReady(out to, out pick) && FallbackReady(out to, out pick, false);
+                if (!weak || !card || !memory || !unknown || !Engine.Carries(new Machine { Vram = 8 * Gb }, 7 * Gb) || Engine.Carries(new Machine { Vram = 8 * Gb, Ram = 8 * Gb }, 7 * Gb + 1))
+                    throw new Exception("Her fallback was ready on a PC that can't carry it, or not on one that can: weak " + weak + ", card " + card + ", memory " + memory + ", unknown " + unknown);
+                checks.Add("PASS her local fallback is never one this PC can't carry: its weights on the graphics card with 1 GB spare or in half the memory; an Ollama size not known counts against it when asking, and the Local light only looks");
+
+                // Asked again and still nothing: a line of hers in her voice, not the notice.
+                preferences.Silent = true;
+                foreach (string empty in new[] { Brain.Wordless, Brain.Answerless })
+                {
+                    CloseTalk();
+                    string thrown = empty;
+                    Think = delegate { throw new BrainException(thrown, true); };
+                    Hear("what should we eat tonight?");
+                    System.Diagnostics.Stopwatch waited = System.Diagnostics.Stopwatch.StartNew();
+                    while (reply == null && waited.ElapsedMilliseconds < 5000) { System.Windows.Forms.Application.DoEvents(); System.Threading.Thread.Sleep(10); }
+                    bool line = reply != null && Array.IndexOf(Personalities.Lines("brain empty", BrainEmptyLines), reply) >= 0;
+                    if (empty == Brain.Wordless ? !line : reply != Brain.Answerless || talkState != TalkState.Dormant)
+                        throw new Exception((empty == Brain.Wordless ? "Nothing she could say didn't give her brain-ain't-braining line: " : "A model that only thought lost its own words: ") + (reply ?? "no reply"));
+                }
+                checks.Add("PASS when her brain sends nothing she can say even asked again, she says a line of her own in her voice (\"My brain ain't braining today\" and the rest), the notice in her log only; a model that only thought still says to pick another model");
+            }
+            finally
+            {
+                if (server != null) server.Stop();
+                Brain.OpenAi = openAiWas;
+                Think = thinkWas;
+                FallbackSize = sizeWas;
+                FallbackMachine = machineWas;
+                preferences.LocalFallback = onWas; preferences.Silent = silentWas;
+                preferences.FallbackBrain = brainWas; preferences.LastLocalBrain = lastWas;
+                CloseTalk();
+            }
+        }
+
+        private static readonly Regex PauseMark = new Regex(@"#wait\s*\d+(?:[.,]\d+)?\s*s#", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        private static readonly Regex RoundAside = new Regex(@"\([^()]+\)");
+        private static readonly string[] Codewords = { "senpai", "extended", "abridged", "codex", "overdrive" };
+
+        // The marks a line carries: a pause, a silent part, a cue in square or round brackets, an aside, a face, the meme mark.
+        private static List<string> MarksOf(string line)
+        {
+            List<string> marks = new List<string>();
+            if (PauseMark.IsMatch(line)) marks.Add("pause");
+            if (line.IndexOf("**silent**", StringComparison.OrdinalIgnoreCase) >= 0) marks.Add("silent");
+            foreach (Match cue in Voice.Cue.Matches(line))
+            {
+                string kind = cue.Value.TrimStart().StartsWith("(", StringComparison.Ordinal) ? "round cue" : "square cue";
+                if (!marks.Contains(kind)) marks.Add(kind);
+            }
+            foreach (Match aside in RoundAside.Matches(line)) if (!Voice.Cue.IsMatch(aside.Value)) { marks.Add("aside"); break; }
+            if (Voice.Faceless(line) != line) marks.Add("face");
+            if (Sayings.IsMeme(line)) marks.Add("meme");
+            return marks;
+        }
+
+        // The mark left in a place that should not hold it, or null. A voice loses faces too; Fish keeps square cues.
+        private static string LeftIn(string text, bool spoken, bool fish)
+        {
+            if (string.IsNullOrEmpty(text)) return null;
+            if (PauseMark.IsMatch(text)) return "pause";
+            if (text.IndexOf("**", StringComparison.Ordinal) >= 0) return "silent";
+            if (Regex.IsMatch(text, @"(^|\|\s)~")) return "meme";
+            foreach (Match cue in Voice.Cue.Matches(text))
+            {
+                bool round = cue.Value.TrimStart().StartsWith("(", StringComparison.Ordinal);
+                if (!fish || round) return round ? "round cue" : "square cue";
+            }
+            if (spoken && Voice.Faceless(text) != text) return "face";
+            return null;
+        }
+
+        private static void GatherMarked(Dictionary<string, string> into, string text, string source)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+            string section = "";
+            foreach (string raw in text.Split('\n'))
+            {
+                string one = raw.Trim();
+                if (one.Length == 0 || one.StartsWith(">", StringComparison.Ordinal)) continue;
+                if (one.StartsWith("#", StringComparison.Ordinal) && !PauseMark.IsMatch(one)) { section = one.TrimStart('#').Trim(); continue; }
+                if (one.StartsWith("- ", StringComparison.Ordinal)) one = one.Substring(2).Trim();
+                if (one.Length > 1 && MarksOf(one).Count > 0 && !into.ContainsKey(one)) into[one] = source + (section.Length > 0 ? ": " + section : "");
+            }
+        }
+
+        // Her pools kept in code, from the classes that hold her lines; a field named for the gated side is left out.
+        private static void GatherFields(Dictionary<string, string> into, Type type)
+        {
+            foreach (FieldInfo field in type.GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                if (Array.Exists(Codewords, word => field.Name.IndexOf(word, StringComparison.OrdinalIgnoreCase) >= 0)) continue;
+                List<string> found = new List<string>();
+                object value = field.FieldType == typeof(string[]) || field.FieldType == typeof(string[,]) || field.FieldType == typeof(string[][]) ? field.GetValue(null) : null;
+                if (value is string[]) found.AddRange((string[])value);
+                else if (value is string[,]) foreach (string one in (string[,])value) found.Add(one);
+                else if (value is string[][]) foreach (string[] row in (string[][])value) if (row != null) found.AddRange(row);
+                foreach (string one in found)
+                    if (!string.IsNullOrEmpty(one) && one.IndexOf("(?", StringComparison.Ordinal) < 0 && one.IndexOf('\\') < 0 && one.IndexOf("[^", StringComparison.Ordinal) < 0)
+                        GatherMarked(into, one, type.Name + "." + field.Name);
+            }
+        }
+
+        private sealed class Went { internal string Bubble = "", History = "", Voice = "", Log = ""; }
+
+        // The steps her own line takes to each place, without showing it: for the senpai side, and held against the real run.
+        private static Went Stepped(string line)
+        {
+            bool meme = Sayings.IsMeme(line);
+            string said = meme ? Voice.Uncued(Sayings.Unmeme(line)) : Voice.Uncued(line);
+            return new Went { Bubble = Voice.Unsilenced(said), History = Voice.Uncued(Voice.Unsilenced(Sayings.Unmeme(line))).Trim(), Voice = Voice.Spoken(said) };
+        }
+
+        private static string Letters(string text)
+        {
+            StringBuilder kept = new StringBuilder();
+            foreach (char one in text ?? "") if (char.IsLetterOrDigit(one)) kept.Append(char.ToLowerInvariant(one));
+            return kept.ToString();
+        }
+
+        // Every shipped line with a mark goes through her bubble, history, line log, each voice kind and the parts of a
+        // line, as do brain replies and Twitch chat read aloud. One side at a time; the senpai side unshown, by count.
+        private void SmokeMarkupEverywhere(List<string> checks)
+        {
+            Dictionary<string, string> plain = new Dictionary<string, string>(), senpai = new Dictionary<string, string>();
+            bool senpaiWas = Brain.SenpaiOn;
+            string languageWas = Brain.Language, openAiWas = Brain.OpenAi;
+            Func<string, byte[]> speakWas = Speak, freeWas = FreeSpeak;
+            bool quietWas = preferences.Quiet, silentWas = preferences.Silent, serverWas = preferences.ServerVoice, brokeWas = voiceBroke, shushedWas = shushed;
+            string pack = Path.Combine(Path.GetTempPath(), "capri-markup-" + Guid.NewGuid().ToString("N") + ".pack");
+            TcpListener server = null;
+            Dictionary<string, int[]> table = new Dictionary<string, int[]>();
+            Dictionary<string, List<string>> named = new Dictionary<string, List<string>>();
+            Action<string, string, List<string>, string, string, bool, bool> place = delegate(string side, string line, List<string> marks, string where, string text, bool spoken, bool fish)
+            {
+                foreach (string mark in marks)
+                {
+                    string key = side + " | " + mark + " | " + where;
+                    if (!table.ContainsKey(key)) table[key] = new int[2];
+                    table[key][0]++;
+                }
+                string left = LeftIn(text, spoken, fish);
+                if (left == null) return;
+                string failed = side + " | " + left + " | " + where;
+                if (!table.ContainsKey(failed)) table[failed] = new int[2];
+                table[failed][1]++;
+                if (!named.ContainsKey(failed)) named[failed] = new List<string>();
+                if (named[failed].Count < 3) named[failed].Add(side == "senpai" ? "senpai line " + line : Voice.Short(line, 90) + " -> " + Voice.Short(text, 90));
+            };
+            try
+            {
+                Brain.SenpaiOn = false;
+                Brain.Language = null;
+                GatherMarked(plain, Sayings.Text, "lines.md");
+                foreach (KeyValuePair<string, string> file in new Dictionary<string, string> { { "interests", Interests.Text }, { "interests hers", Interests.HersText }, { "interests random", Interests.RandomText }, { "lore", Lore.Text }, { "moments", Moments.Text }, { "angles", Angles.Text }, { "touch", Touch.Text }, { "chess", ChessTalk.Text }, { "commands", Commands.Text } })
+                    GatherMarked(plain, file.Value, file.Key);
+                foreach (string spoken in SysLines.SpokenLines()) GatherMarked(plain, spoken, "sys lines");
+                foreach (Type type in new[] { typeof(Sayings), typeof(SysLines), typeof(Interests), typeof(Acts), typeof(Them), typeof(Lore), typeof(Moments), typeof(Angles), typeof(Touch), typeof(ChessTalk), typeof(Personalities), typeof(Care) })
+                    GatherFields(plain, type);
+                List<string> folders = new List<string> { Personalities.Plain };
+                if (!senpaiWas) folders.Add(Logs.DataOf(Brain.LogPath));
+                foreach (string folder in folders)
+                    if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder))
+                        foreach (string file in Directory.GetFiles(folder, "*.md"))
+                        {
+                            string name = Path.GetFileName(file).ToLowerInvariant();
+                            if (name != "me.md" && name != "memories.md" && name != "personality.backup.md") GatherMarked(plain, File.ReadAllText(file), name);
+                        }
+                if (Codex.Write(pack) > 0)
+                {
+                    Dictionary<string, string> sections = Codex.Unsealed(File.ReadAllBytes(pack));
+                    if (sections != null) foreach (string text in sections.Values) GatherMarked(senpai, text, "senpai");
+                    foreach (string one in plain.Keys) senpai.Remove(one);
+                }
+
+                List<string> voiced = new List<string>();
+                byte[] wav = Voice.Wave(new short[2400], 24000);
+                Speak = delegate(string words) { lock (voiced) voiced.Add(words); return wav; };
+                FreeSpeak = null;
+                preferences.Quiet = preferences.Silent = preferences.ServerVoice = voiceBroke = shushed = false;
+                string logFile = Path.Combine(Logs.DataOf(Brain.LogPath) ?? "", "lines-log.txt");
+                Func<int> logRows = delegate { try { return File.Exists(logFile) ? File.ReadAllLines(logFile).Length : 0; } catch (IOException) { return -1; } };
+                int logged = 0, waitedOut = 0, unlike = 0;
+                List<string> unlikeNamed = new List<string>();
+                Func<string, Went> shown = delegate(string part)
+                {
+                    CloseTalk();
+                    voiceUntil = 0;
+                    lock (voiced) voiced.Clear();
+                    List<ChatMessage> before = brain.History;
+                    ChatMessage last = before.Count > 0 ? before[before.Count - 1] : null;
+                    int rows = logRows();
+                    SayOwn("markup", part);
+                    System.Diagnostics.Stopwatch waited = System.Diagnostics.Stopwatch.StartNew();
+                    while (waited.ElapsedMilliseconds < 5000 && reply == null) { System.Windows.Forms.Application.DoEvents(); System.Threading.Thread.Sleep(10); }
+                    if (reply == null) waitedOut++;
+                    Sayings.Flush();
+                    Went went = new Went { Bubble = reply ?? "" };
+                    List<ChatMessage> history = brain.History;
+                    if (history.Count > 0 && !ReferenceEquals(history[history.Count - 1], last)) went.History = history[history.Count - 1].Content ?? "";
+                    lock (voiced) went.Voice = string.Join(" ", voiced.ToArray());
+                    if (rows >= 0 && File.Exists(logFile))
+                    {
+                        string[] now = File.ReadAllLines(logFile);
+                        if (now.Length > rows) { logged++; went.Log = string.Join(" / ", now, rows, now.Length - rows); }
+                    }
+                    return went;
+                };
+                int index = 0;
+                // A line with a pause is said in parts, as SayOwn does; any other goes whole. A real run is held against
+                // the steps, which are all the senpai side gets.
+                Action<string, string, string, bool> through = delegate(string side, string line, string source, bool real)
+                {
+                    List<string> parts = new List<string>();
+                    if (PauseMark.IsMatch(line)) foreach (KeyValuePair<double, string> part in Sayings.Parts(line)) parts.Add(part.Value);
+                    else parts.Add(line);
+                    if (real) Sayings.Built(line, "markup check");
+                    Went whole = new Went();
+                    string fish = "";
+                    foreach (string part in parts)
+                    {
+                        Went steps = Stepped(part), went = real ? shown(part) : steps;
+                        if (!real) went.Log = Letters(steps.Bubble).Contains(Letters(line)) ? line : steps.Bubble;
+                        string differs = !real ? "" : went.Bubble != steps.Bubble ? "bubble" : went.History != steps.History ? "chat kept" : went.Voice != steps.Voice ? "voice" : "";
+                        if (differs.Length > 0)
+                        {
+                            unlike++;
+                            if (unlikeNamed.Count < 3) unlikeNamed.Add(differs + " of " + Voice.Short(part, 50) + ": [" + (differs == "bubble" ? went.Bubble : differs == "chat kept" ? went.History : went.Voice) + "] not [" + (differs == "bubble" ? steps.Bubble : differs == "chat kept" ? steps.History : steps.Voice) + "]");
+                        }
+                        whole.Bubble += " " + went.Bubble; whole.History += " " + went.History; whole.Voice += " " + went.Voice; whole.Log += " " + went.Log;
+                        fish += " " + Voice.Spoken(Sayings.IsMeme(part) ? Sayings.Unmeme(part) : part, true);
+                    }
+                    string label = side == "senpai" ? (++index).ToString(System.Globalization.CultureInfo.InvariantCulture) : line;
+                    List<string> marks = MarksOf(line);
+                    place(side, label, marks, "bubble", whole.Bubble, false, false);
+                    place(side, label, marks, "chat kept", whole.History, false, false);
+                    place(side, label, marks, "line log", whole.Log, false, false);
+                    place(side, label, marks, "voice (ElevenLabs, free, HD)", Voice.Sayable(whole.Voice), true, false);
+                    place(side, label, marks, "voice server", Voice.Sayable(Voice.Uncued(whole.Voice)), true, false);
+                    place(side, label, marks, "Fish voice", fish, true, true);
+                    place(side, label, marks, "own note", Brain.OwnNote(line) || Brain.OwnNote(whole.Bubble.Trim()) ? "(caught as her note)" : "", false, false);
+                };
+                foreach (KeyValuePair<string, string> one in plain) through("plain", one.Key, one.Value, true);
+                // Lines as they might write them in lines.md, for the marks no shipped line carries.
+                foreach (string made in new[] { "**silent**:3**/silent** hey you", "[laughing] stop it, you", "(sighing) fine, have it your way", "Hold on #wait2s# done", "nice one ^_^", "(lol) that was a good one", "~(squeaky) QUASSO!" })
+                    through("made", made, "lines.md: check-ins", true);
+                List<string> split = new List<string>();
+                Action<string, string> partWas = partSaid;
+                try
+                {
+                    partSaid = delegate(string by, string part) { lock (split) split.Add(part); };
+                    SayOwn("markup", "Hold on #wait0.1s# done");
+                    for (int i = 0; i < 100 && split.Count < 2; i++) { System.Windows.Forms.Application.DoEvents(); System.Threading.Thread.Sleep(10); }
+                }
+                finally { partSaid = partWas; }
+                place("made", "Hold on #wait0.1s# done", new List<string> { "pause" }, "parts (SayOwn)", split.Count == 2 && split[0] == "Hold on" && split[1] == "done" ? "" : "#wait0.1s# not split: " + string.Join(" / ", split.ToArray()), false, false);
+                CloseTalk();
+                foreach (KeyValuePair<string, string> one in senpai) through("senpai", one.Key, one.Value, false);
+
+                // Her brain writing each mark, and a reply that is only asides; and Twitch chat read aloud.
+                string[] replies = { "Hold on. #wait5s# Done, choom.", "**silent**:3**/silent** Hey there, choom.", "[laughing] No way, that's wild.", "(sighs) Fine, I'll do it.", "That's adorable :3 honestly.", "~no u", "(Just kidding) You know I love it.", "(sigh) (warm) (warm)" };
+                string onlyAsides = "";
+                foreach (string written in replies)
+                {
+                    List<string> asked = new List<string>();
+                    Brain.OpenAi = FakeServer(new[] { LocalReply(written), LocalReply("Okay then.") }, asked, out server);
+                    Brain talker = new Brain { Remote = new Cloud("sk-proj-test", "gpt-5-mini"), Model = "gpt-5-mini" };
+                    string said;
+                    try { said = talker.Ask("hey"); }
+                    catch (BrainException) { said = ""; }
+                    server.Stop();
+                    server = null;
+                    List<ChatMessage> kept = talker.History;
+                    string history = kept.Count > 0 ? kept[kept.Count - 1].Content ?? "" : "";
+                    CloseTalk();
+                    voiceUntil = 0;
+                    lock (voiced) voiced.Clear();
+                    if (said.Length > 0)
+                    {
+                        Answer(++asking, said, TalkState.Talking);
+                        System.Diagnostics.Stopwatch waited = System.Diagnostics.Stopwatch.StartNew();
+                        while (waited.ElapsedMilliseconds < 5000 && reply == null) { System.Windows.Forms.Application.DoEvents(); System.Threading.Thread.Sleep(10); }
+                    }
+                    string bubble = said.Length > 0 ? reply ?? "" : "", words;
+                    lock (voiced) words = string.Join(" ", voiced.ToArray());
+                    if (written == "(sigh) (warm) (warm)") onlyAsides = bubble == "Okay then." ? "is asked again" : "shows \"" + bubble + "\"";
+                    List<string> marks = MarksOf(written);
+                    place("brain", written, marks, "bubble", bubble, false, false);
+                    place("brain", written, marks, "chat sent back", history, false, false);
+                    place("brain", written, marks, "voice (ElevenLabs, free, HD)", Voice.Sayable(words), true, false);
+                }
+                CloseTalk();
+                foreach (string chat in new[] { "hi chat :3", "**silent**psst**/silent** yo chat", "[laughing] that was close", "#wait5s# hey", "~no u", "(sighs) again?" })
+                {
+                    place("twitch read", chat, MarksOf(chat), "voice", Voice.Sayable(AloudWords(chat)), true, false);
+                }
+
+                List<string> keys = new List<string>(table.Keys);
+                keys.Sort(StringComparer.Ordinal);
+                int failures = 0;
+                foreach (string key in keys)
+                {
+                    if (table[key][0] > 0) checks.Add("TABLE markup | " + key + " | " + table[key][0] + " | " + table[key][1]);
+                    else if (table[key][1] > 0) checks.Add("TABLE markup | " + key + " | - | " + table[key][1]);
+                    if (table[key][1] == 0) continue;
+                    failures++;
+                    checks.Add("FAIL markup | " + key + " | " + table[key][1] + " left: " + string.Join(" // ", named[key].ToArray()));
+                }
+                checks.Add("TABLE markup lines: " + plain.Count + " plain, " + senpai.Count + " senpai; log rows for " + logged + "; no bubble for " + waitedOut + "; real run unlike the steps for " + unlike + (unlikeNamed.Count > 0 ? " (" + string.Join(" // ", unlikeNamed.ToArray()) + ")" : "") + "; a reply of only asides " + onlyAsides);
+                if (onlyAsides != "is asked again") { failures++; checks.Add("FAIL markup | brain | a reply of only asides " + onlyAsides); }
+                if (failures == 0) checks.Add("PASS every shipped line with a mark (pause, silent part, cue, aside, face, meme mark), both sides, and her brain's replies with each, show and say only what each place should: bubble, history, line log, each voice, the parts of a line, Twitch chat read aloud (shown as typed, said without cues or pauses); none is caught as her note");
+            }
+            finally
+            {
+                if (server != null) server.Stop();
+                Brain.OpenAi = openAiWas;
+                Brain.SenpaiOn = senpaiWas;
+                Brain.Language = languageWas;
+                Speak = speakWas;
+                FreeSpeak = freeWas;
+                preferences.Quiet = quietWas; preferences.Silent = silentWas; preferences.ServerVoice = serverWas; voiceBroke = brokeWas; shushed = shushedWas;
+                CloseTalk();
+                try { File.Delete(pack); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            }
+        }
     }
 }
+#endif

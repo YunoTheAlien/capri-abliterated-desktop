@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Ciúin go dtí {n}:{n}
 Quiet until turned off	Ciúin go múchtar é
 Export settings	Easpórtáil socruithe
 Import settings	Iompórtáil socruithe
-Save Mainframe position	Cuimhnigh ar shuíomh an phainéil
+Save Mainframe position	Sábháil suíomh an Mainframe
+Capri options	Roghanna Capri

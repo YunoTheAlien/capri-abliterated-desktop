@@ -22,7 +22,7 @@ namespace CapriDesktop
         // The monitor she's looking at, worked out on her thread every half second while a phone watches.
         private volatile string remoteLooking;
         private RemoteBadge remoteBadge;
-        private System.Windows.Forms.Timer remoteLookTimer;
+        private Clock.Ticker remoteLookTimer;
         // Her answers for a phone on a call go a sentence at a time; her smoke test turns it off to time it against before.
         private bool remotePieces = true;
         // The phone message the answer she's saying is for, and its ticket, so Interrupt on that phone can stop it.
@@ -129,14 +129,20 @@ namespace CapriDesktop
             return pieces.Count > 1 ? pieces : null;
         }
 
+        // Her answer in pieces when it has more than one.
+        private static List<string> ReplyPieces(string words)
+        {
+            List<string> pieces = RemoteCall.Pieces(words);
+            return pieces.Count > 1 ? pieces : null;
+        }
+
         private sealed class PieceRun
         {
             internal volatile bool Stopped;
         }
 
-        // Her answer for a phone on a call, voiced a piece at a time on one thread: each piece plays as soon as it's
-        // made, so the phone hears her first words early. A newer answer, being talked over or Interrupt stops the
-        // rest.
+        // Her answer voiced a piece at a time on one thread: each piece plays as soon as it's made, so her first words are
+        // heard early, on a phone on a call too. A newer answer, being talked over or Interrupt stops the rest.
         private void VoicePieces(int ticket, int turn, int audio, string said, TalkState state, Func<string, byte[]> speak, Func<string, byte[]> free, List<string> pieces)
         {
             int letters = 0;
@@ -186,12 +192,12 @@ namespace CapriDesktop
                 // The whole answer's length, from how long its first piece runs, paces her bubble.
                 double whole = seconds > 0 && share > 0 ? seconds / share : 0;
                 if (reply == null && talkState == TalkState.Thinking) Begin(ticket, said, state, audible ? wav : null, whole);
-                else if (audible && FollowDelivery(ticket) && talkState != TalkState.Off && box.Leaving < 0 && reply == said && (freeVoice || !preferences.Quiet)) PlayReply(said, wav);
+                else if (audible && FollowDelivery(ticket) && talkState != TalkState.Off && box.Leaving < 0 && Shows(said) && (freeVoice || !preferences.Quiet)) PlayReply(reply, wav);
                 played = audible && wav != null && voiceUntil > clock.Elapsed.TotalSeconds;
             }
-            else if (audible && wav != null && talkState != TalkState.Off && box.Leaving < 0 && reply == said)
+            else if (audible && wav != null && talkState != TalkState.Off && box.Leaving < 0 && Shows(said))
             {
-                PlayMore(said, wav);
+                PlayMore(reply, wav);
                 played = true;
             }
             // Nothing more of it plays once a piece didn't: the rest isn't voiced.
@@ -265,6 +271,7 @@ namespace CapriDesktop
         // A phone's call lines through her real ears hook with stand-ins timed like hers: a sentence at a time reaches
         // the phone sooner than whole, with no hush between, and call.hush stops it everywhere. A stale or foreign hush
         // changes nothing.
+#if CHECKS
         private void SmokeRemoteCall(List<string> checks)
         {
             const string Phone = "phoneC";
@@ -302,7 +309,7 @@ namespace CapriDesktop
             List<long> timed = new List<long>();
             List<string> voiced = new List<string>();
             int voicing = 0, heard = 0, thought = 0;
-            RemoteLink link = new RemoteLink(RemoteState.Fresh(), RemoteLink.RelayBase(null), "Smoke PC", "capri/smoke", null);
+            RemoteLink link = new RemoteLink(RemoteState.Fresh(), RemoteLink.RelayBase("relay.example"), "Smoke PC", "capri/smoke", null);
             RemoteCall call = new RemoteCall(link, delegate
             {
                 Thread.Sleep(300);
@@ -469,9 +476,11 @@ namespace CapriDesktop
                 }
             }
         }
+#endif
 
         // Her answer's pieces on a call: a sentence each, a short one joined to the next, a short or wordless last bit kept
         // with the one before, decimals left whole, and at most RemoteCall.MostPieces.
+#if CHECKS
         private static void SmokeCallPieces()
         {
             string[] cases =
@@ -494,9 +503,11 @@ namespace CapriDesktop
             List<string> many = RemoteCall.Pieces(all);
             if (many.Count != RemoteCall.MostPieces || string.Join(" ", many.ToArray()) != all) throw new Exception("Twelve sentences came in " + many.Count + " pieces, not " + RemoteCall.MostPieces + " holding them all.");
         }
+#endif
 
         // A phone's line on its call, as one call.audio part with end. Gives how long after it her first words went to the
         // phone, and where in sent that part is.
+#if CHECKS
         private static long SmokeCallLine(RemoteCall call, List<CallSent> sent, string phone, string id, out int at)
         {
             int from;
@@ -516,8 +527,10 @@ namespace CapriDesktop
             at = SmokeCallFind(sent, from, "call.voice", phone);
             lock (sent) return (sent[at].At - ended) * 1000 / Stopwatch.Frequency;
         }
+#endif
 
         // The first message from from on of type (any type when null) to device (any device when null), or -1.
+#if CHECKS
         private static int SmokeCallFind(List<CallSent> sent, int from, string type, string device)
         {
             lock (sent)
@@ -525,8 +538,10 @@ namespace CapriDesktop
                     if ((type == null || sent[i].Type == type) && (device == null || sent[i].Device == device)) return i;
             return -1;
         }
+#endif
 
         // Her voice's samples that went to device from from on.
+#if CHECKS
         private static int SmokeCallSamples(List<CallSent> sent, int from, string device)
         {
             int total = 0;
@@ -535,7 +550,9 @@ namespace CapriDesktop
                     if (sent[i].Device == device) total += sent[i].Samples;
             return total;
         }
+#endif
 
+#if CHECKS
         private static void SmokeCallWait(Func<bool> done, int ms, string problem)
         {
             Stopwatch waited = Stopwatch.StartNew();
@@ -546,7 +563,9 @@ namespace CapriDesktop
             }
             if (!done()) throw new Exception(problem);
         }
+#endif
 
+#if CHECKS
         private static void SmokeCallPump(int ms)
         {
             Stopwatch waited = Stopwatch.StartNew();
@@ -556,6 +575,7 @@ namespace CapriDesktop
                 Thread.Sleep(5);
             }
         }
+#endif
 
         // ---------- Auto: the monitor she's looking at ----------
 
@@ -689,7 +709,7 @@ namespace CapriDesktop
             {
                 if (remoteLookTimer == null)
                 {
-                    remoteLookTimer = new System.Windows.Forms.Timer { Interval = 500 };
+                    remoteLookTimer = new Clock.Ticker("RemoteLive remoteLookTimer") { Interval = 500 };
                     remoteLookTimer.Tick += delegate { RemoteLook(); };
                 }
                 if (!remoteLookTimer.Enabled)
@@ -728,6 +748,7 @@ namespace CapriDesktop
 
         // The live parts that run without a relay: the badge drawn at 100%, 150% and 200% to remote-watch-*.png, her monitors
         // numbered, Auto's look naming one of them, and one frame from a monitor's capture where this desktop gives one.
+#if CHECKS
         private void SmokeRemoteLive(List<string> checks, string output)
         {
             foreach (float zoom in new[] { 1f, 1.5f, 2f })
@@ -792,6 +813,7 @@ namespace CapriDesktop
             checks.Add(frame);
             checks.Add("PASS Capri Remote's watching, call and listening badges fit at 100%, 150% and 200%, " + monitors.Count + (monitors.Count == 1 ? " monitor is" : " monitors are") + " numbered as Windows counts them, and Auto looks at one of them");
         }
+#endif
     }
 
     // The badge on the PC while a phone watches or calls: the CAPRI IS CONTROLLING badge's slab with her face, at the top
@@ -851,5 +873,78 @@ namespace CapriDesktop
                 return picture;
             }
         }
+    }
+
+    internal sealed partial class Companion
+    {
+        // Her answer's words show as it arrives and her voice follows a sentence at a time: her bubble is never left empty
+        // while the voice is made, her first sentence plays before the rest is voiced, and the bubble waits for her voice.
+#if CHECKS
+        private void SmokeWordsFirst(List<string> checks)
+        {
+            Func<string, byte[]> speakWas = Speak, freeWas = FreeSpeak;
+            bool silentWas = preferences.Silent, quietWas = preferences.Quiet, hdWas = preferences.HdVoice, servedWas = preferences.ServerVoice;
+            bool hiddenWas = hidden, dockedWas = docked, shushedWas = shushed, chattingWas = chatting, localWas = local;
+            Job jobWas = job;
+            string workingWas = working;
+            List<string> voiced = new List<string>();
+            // Her stand-in voice: 700 ms to make each piece, a second of sound.
+            Func<string, byte[]> standIn = delegate(string words)
+            {
+                lock (voiced) voiced.Add(words);
+                Thread.Sleep(700);
+                short[] samples = new short[24000];
+                for (int i = 0; i < samples.Length; i++) samples[i] = (short)(6000 * Math.Sin(i * 0.06));
+                return Voice.Wave(samples, 24000);
+            };
+            const string line = "That's the first thing I'd say. And here is the second sentence, after it.";
+            try
+            {
+                CloseTalk();
+                hidden = docked = shushed = chatting = local = false;
+                preferences.Silent = preferences.Quiet = preferences.HdVoice = preferences.ServerVoice = false;
+                job = null;
+                working = null;
+                Speak = FreeSpeak = standIn;
+                int ticket = ++asking;
+                Stopwatch took = Stopwatch.StartNew();
+                Answer(ticket, line, TalkState.Talking);
+                SmokeCallWait(delegate { return reply != null; }, 3000, "Her answer's words never showed.");
+                long shown = took.ElapsedMilliseconds;
+                bool waiting = hdSpeaking == ticket && voiceUntil == 0;
+                SmokeCallWait(delegate { return voiceUntil > 0; }, 4000, "Her voice never followed her shown words.");
+                long heard = took.ElapsedMilliseconds;
+                double firstEnds = voiceUntil;
+                string first;
+                lock (voiced) first = voiced.Count > 0 ? voiced[0] : "";
+                SmokeCallWait(delegate { return voiceUntil > firstEnds + 0.5; }, 4000, "Her answer's second sentence never followed the first.");
+                SmokeCallWait(delegate { return hdSpeaking != ticket; }, 4000, "Her bubble kept waiting for a voice that had played.");
+                List<string> wrong = new List<string>();
+                if (shown > 400) wrong.Add("her words waited " + shown + " ms for her voice");
+                if (!waiting) wrong.Add("her bubble wasn't held for the voice on its way");
+                if (reply == null || talkState == TalkState.Off) wrong.Add("her bubble went before her voice had played");
+                if (first.Length == 0 || first.Length >= line.Length) wrong.Add("her voice was made for \"" + first + "\", not her first sentence");
+                if (wrong.Count > 0) throw new Exception("Her words first, her voice following, went wrong: " + string.Join("; ", wrong.ToArray()));
+                checks.Add("PASS her answer's words show as it arrives (" + shown + " ms), her voice following a sentence at a time: her first sentence is heard at " + heard + " ms with a stand-in voice that takes 700 ms a piece, the next runs on after it, and her bubble stays up for the voice on its way");
+            }
+            finally
+            {
+                CloseTalk();
+                Speak = speakWas;
+                FreeSpeak = freeWas;
+                preferences.Silent = silentWas;
+                preferences.Quiet = quietWas;
+                preferences.HdVoice = hdWas;
+                preferences.ServerVoice = servedWas;
+                hidden = hiddenWas;
+                docked = dockedWas;
+                shushed = shushedWas;
+                chatting = chattingWas;
+                local = localWas;
+                job = jobWas;
+                working = workingWas;
+            }
+        }
+#endif
     }
 }

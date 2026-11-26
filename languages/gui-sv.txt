@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Tyst till {n}:{n}
 Quiet until turned off	Tyst tills avstängt
 Export settings	Exportera inställningar
 Import settings	Importera inställningar
-Save Mainframe position	Kom ihåg panelens position
+Save Mainframe position	Spara Mainframe-position
+Capri options	Capri-alternativ

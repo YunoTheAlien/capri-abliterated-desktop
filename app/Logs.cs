@@ -18,7 +18,7 @@ namespace CapriDesktop
         internal const long TooBig = 10L * 1024 * 1024;
         internal static readonly TimeSpan BigAfter = TimeSpan.FromHours(12);
         internal static string Folder;
-        private static Timer hourly;
+        private static Clock.OffTimer hourly;
         private static readonly object gate = new object();
 
         internal static string FileFor(string folder, DateTime day)
@@ -57,7 +57,7 @@ namespace CapriDesktop
             MoveIn(Path.Combine(data, "errors.txt"), folder);
             string today = FileFor(folder, now);
             Rotate(folder, today, now);
-            if (watch && hourly == null) hourly = new Timer(delegate { Hour(); }, null, TimeSpan.FromHours(1), TimeSpan.FromHours(1));
+            if (watch && hourly == null) hourly = new Clock.OffTimer("Logs hourly", delegate { Hour(); }, null, TimeSpan.FromHours(1), TimeSpan.FromHours(1));
             return today;
         }
 

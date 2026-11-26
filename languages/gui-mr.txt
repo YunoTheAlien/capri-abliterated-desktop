@@ -219,4 +219,5 @@ Quiet until {n}:{n}	{n}:{n} पर्यंत शांत
 Quiet until turned off	बंद करेपर्यंत शांत
 Export settings	सेटिंग्ज निर्यात करा
 Import settings	सेटिंग्ज आयात करा
-Save Mainframe position	पॅनेलची जागा लक्षात ठेवा
+Save Mainframe position	Mainframe ची जागा जतन करा
+Capri options	Capri पर्याय

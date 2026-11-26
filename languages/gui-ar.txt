@@ -219,4 +219,5 @@ Quiet until {n}:{n}	الصمت حتى {n}:{n}
 Quiet until turned off	الصمت حتى الإيقاف
 Export settings	تصدير الإعدادات
 Import settings	استيراد الإعدادات
-Save Mainframe position	تذكّر موضع اللوحة
+Save Mainframe position	حفظ موضع Mainframe
+Capri options	خيارات Capri

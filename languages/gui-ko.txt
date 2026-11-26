@@ -219,4 +219,5 @@ Quiet until {n}:{n}	{n}:{n}까지 조용히
 Quiet until turned off	끌 때까지 조용히
 Export settings	설정 내보내기
 Import settings	설정 가져오기
-Save Mainframe position	패널 위치 기억
+Save Mainframe position	Mainframe 위치 저장
+Capri options	Capri 옵션

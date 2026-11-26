@@ -26,7 +26,7 @@ namespace CapriDesktop
             void Close();
         }
 
-        internal static Func<ICalls> Calls = delegate { return new Library(); };
+        internal static Func<ICalls> Calls = delegate { return new Apart(new Library()); };
 
         // Whether OBS's Spout2 plugin is on this PC; a check swaps it.
         internal static Func<bool> PluginFound = FindPlugin;
@@ -104,6 +104,50 @@ namespace CapriDesktop
             string usual = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "obs-studio");
             if (!found.Contains(usual)) found.Add(usual);
             return found;
+        }
+
+        // The library on a thread of its own, with a message loop for its hidden window. Its OpenGL window and the
+        // driver's hooks stay there; on her thread they left the file editor deaf to a change of screen scale.
+        internal sealed class Apart : ICalls
+        {
+            private readonly ICalls inner;
+            private System.Windows.Forms.Control host;
+            private readonly System.Threading.ManualResetEvent ready = new System.Threading.ManualResetEvent(false);
+
+            internal Apart(ICalls inner)
+            {
+                this.inner = inner;
+                System.Threading.Thread thread = new System.Threading.Thread(delegate()
+                {
+                    host = new System.Windows.Forms.Control();
+                    host.CreateControl();
+                    ready.Set();
+                    System.Windows.Forms.Application.Run();
+                });
+                thread.IsBackground = true;
+                thread.Name = "Spout";
+                thread.SetApartmentState(System.Threading.ApartmentState.STA);
+                thread.Start();
+                ready.WaitOne(5000);
+            }
+
+            // The thread the library runs on, for the check.
+            internal int Thread { get { return host == null ? 0 : (int)host.Invoke((Func<int>)delegate { return System.Threading.Thread.CurrentThread.ManagedThreadId; }); } }
+
+            private T Do<T>(Func<T> work) { return host == null ? work() : (T)host.Invoke(work); }
+
+            public bool Open() { return Do(delegate { return inner.Open(); }); }
+            public void Name(string name) { Do(delegate { inner.Name(name); return true; }); }
+            public bool Send(IntPtr pixels, int width, int height) { return Do(delegate { return inner.Send(pixels, width, height); }); }
+            public bool Ready() { return Do(delegate { return inner.Ready(); }); }
+            public void Release() { Do(delegate { inner.Release(); return true; }); }
+
+            public void Close()
+            {
+                Do(delegate { inner.Close(); return true; });
+                // Its loop ends with it; the thread is a background one either way.
+                if (host != null) { try { host.BeginInvoke((Action)delegate { System.Windows.Forms.Application.ExitThread(); }); } catch (InvalidOperationException) { } }
+            }
         }
 
         // SpoutLibrary.dll as built into her, laid once beside her exe and loaded from there.
@@ -193,6 +237,7 @@ namespace CapriDesktop
     {
         // With the plugin, a sender named Capri on a stand-in takes her frames and a colour stops it; without it,
         // Direct3D alone. Then the real SpoutLibrary opens a sender, takes a frame and says it is up.
+#if CHECKS
         private void SmokeSpout(System.Collections.Generic.List<string> checks)
         {
             Func<bool> foundWas = SpoutSender.PluginFound;
@@ -248,6 +293,7 @@ namespace CapriDesktop
                 StreamLabel();
             }
         }
+#endif
 
         private sealed class Stand : SpoutSender.ICalls
         {

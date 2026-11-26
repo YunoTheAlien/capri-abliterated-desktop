@@ -37,53 +37,135 @@ She sits on your windows, talks back, joins your calls, plays your games and get
 > [!NOTE]
 > Capri is an unofficial fan project and is not approved or endorsed by CD PROJEKT RED, the anime's rights holders or its voice actors.
 
+## What this build adds
+
+<p align="center"><sub>Everything in this part is in this build and not in Lachy's 0.9.7. For his own features, see <a href="https://github.com/lachydotmcg/capri-desktop">his original</a>.</sub></p>
+
+<h3 align="center">The Mainframe, rebuilt</h3>
+
+<p align="center">
+  <img src="assets/readme/ours/mainframe.png" alt="The Capri Mainframe on its CAPRI page" width="230">
+  <img src="assets/readme/ours/colours.png" alt="The Custom colours window with the CAPRI fold open and the colour picker" width="470">
+</p>
+
+- **Pages by section.** CAPRI, Fun, Learning, Productivity and Utility, each with its own tiles, and Settings and Mods always on the title bar
+- **Custom colours recolour everything.** Her speech bubble, the Mainframe, her player, menus and every window, with presets, your last colours and a dropper. Mods get their own folds
+- **Her whole interface in your language.** Menus, Mainframe and windows in French, Spanish, Italian, Portuguese, Brazilian Portuguese, Hindi and Polish, common labels in 72 more
+
+<h3 align="center">Personalities and moods that move</h3>
+
+<p align="center">
+  <img src="assets/readme/ours/personality.png" alt="Personality settings with Sassy picked and her How she reacts numbers" width="470">
+  <img src="assets/readme/ours/topics.png" alt="Her topics for Sassy, each with its branch and a Remove key" width="470">
+</p>
+
+- **She drifts and comes back.** Her mood and personality drift with how you treat her and ease back to the one you picked; Mood: Dynamic changes her mood every few hours
+- **Every number in one window.** Personality settings shows how each personality and mood reacts and what it likes, and your own changes sit on top of hers
+- **Her own topics.** Each personality picks its own interests, and she talks about them, and about yours
+- **She grows with you.** The personality and mood you talk to most grow the most new lines
+- **She gets to know you.** She notices how you've seemed lately, learns your routine, and goes through all her questions before one repeats
+
+<h3 align="center">Toggles</h3>
+
+<p align="center">
+  <img src="assets/readme/ours/toggles.png" alt="The Toggles window with General open and the Better conversations settings on the right" width="520">
+</p>
+
+- **Every switch in one place,** folded by section, each mod's switches under its own name
+- **Settings behind the >.** A switch with more to it opens its settings beside the list, like how long the screensaver waits
+- **Her screensaver, pranks and intros,** each look and prank switched on or off on its own
+
+<h3 align="center">Her memory</h3>
+
+<p align="center">
+  <img src="assets/readme/ours/memory.png" alt="The Memory window: Her memory with its Her GIFs and Her log keys" width="520">
+</p>
+
+- **Her memory, her GIFs and her log in one window.** Edit, forget or add any line she keeps about you; give her GIFs to send; watch every line she builds as she says it
+- **Kept on your PC.** Clear memory asks first, and nothing leaves your PC
+
+<h3 align="center">Her voice</h3>
+
+<p align="center">
+  <img src="assets/readme/ours/voice.png" alt="The Mainframe's voice settings" width="230">
+</p>
+
+- **A voice per personality and mood,** and a line's own feeling ("(joyful) You came back.")
+- **Her free voice in three sizes,** and her words show as she answers, her voice following a sentence at a time
+- **Words.** "spell check this" and "proofread this" with undo, plus "say <words>" and "read this aloud"
+
+<h3 align="center">Streaming</h3>
+
+<p align="center">
+  <img src="assets/readme/ours/streaming.png" alt="The Streaming window with its CAPTURE and GOING LIVE switches" width="420">
+</p>
+
+- **Streaming mode** keeps your file names and window titles off camera
+- **Twitch chat read aloud,** with banned words bleeped and never acted on
+
+<h3 align="center">Tamagotchi</h3>
+
+<p align="center">
+  <img src="assets/readme/ours/tamagotchi.png" alt="Her menu with Tamagotchi and Give gift open" width="360">
+  <img src="assets/readme/ours/pet-mode.png" alt="Tamagotchi mode in the Mainframe" width="230">
+</p>
+
+- **Points build while she runs.** Feed her and give her gifts she remembers, each personality with its own likes
+- **Touch that means something.** Head pats only on her head, her top, middle and bottom each their own reaction, and Ctrl and a click is a high five
+
+<h3 align="center">Mods</h3>
+
+<p align="center">
+  <img src="assets/readme/ours/mods.png" alt="The Mods page" width="230">
+  <img src="assets/readme/ours/mod-maker.png" alt="The Mod maker" width="520">
+</p>
+
+- **Read a mod before it runs.** The approve box groups what it reaches for by risk, shows what changed since you approved it, and turns packed code back into something readable without running it
+- **Mods that work together.** Collections, load order and Conflicts show which mod's file wins, and every mod sorts into its own type folder
+- **Make your own.** The Mod maker changes a part of her and puts it in your pack; Send it shares it with us for the directory
+- **Our mods ride on every release,** and Lachy's store mods are translated for this build when you import them
+
+<h3 align="center">Coming next</h3>
+
+<p align="center">
+  <img src="assets/readme/ours/planner.png" alt="The Planner with a StoryBoard template" width="560">
+</p>
+
+- **The Planner.** Plan a project or a game in cards, lines and workspaces, and plan it with her
+
+<details>
+<summary><b>And more</b></summary>
+
+- **Conversation comes first.** While you're talking, her jokes and pop-ins wait, and "no, I asked you to..." redoes it your way
+- **Quiet and focus that fit your day.** One click for Mute, the Quiet timer or Focus mode; she goes quiet by herself in calls and full-screen video
+- **A brain that doesn't drop out.** If your cloud brain fails, a brain on your PC takes over
+- **Story time.** Each story carries a mood that follows hers, and her voice goes with it
+- **Door intros.** A door that builds itself, and intro mods, one picked each start
+- **Meme lines,** said exactly as written
+- **Abliterated mode,** opt-in behind its own terms
+- **Your files stay yours.** Everything you edit is kept in personalSettings, an update keeps your edits, and Export and Import carry all of it
+
+</details>
+
 <p align="center"><sub>Press a title or picture to open that section.</sub></p>
 
 <details>
-<summary><h2><a name="mods"></a>Mods</h2><br><a name="mods-1"><img src="assets/readme/mods.png" alt="Preview cards for mods in the directory: the Bubblegum, Cyber Cyan, Royal and Toxic colour sets, Custom Names, Sharper Ears, Hearing Log, Hello Code and Startup Intros" width="800"></a></summary>
+<summary><h2><a name="mods"></a>Mods</h2><br><a name="mods-1"><img src="assets/readme/ours/mods.png" alt="The Mods page" width="230"></a></summary>
 
-Press **Mods** at the top of the Capri Mainframe, beside Settings. Browse the [mods directory](https://github.com/lachydotmcg/capri-mods) with previews, downloads and ratings, install one with a click, import your own, and publish yours.
+Press **Mods** at the top of the Capri Mainframe, beside Settings. Browse the mods directory with previews, install one with a click, import your own, and send yours to us.
 
-The directory has colour sets (Bubblegum, Cyber Cyan, Royal and Toxic), Custom Names, Sharper Ears, Hearing Log, Hello Code and Startup Intros. Her door intros come with her.
+The directory has our own mods: Tamagotchi, her Screensaver, Planning in the Planner and the hologram and bezel mods. Her door intros come with her.
 
-<p align="center">
-  <img src="assets/readme/intros.png" alt="The Startup Intros mod's card showing its three intros: Hijack, Shatter and Wake" width="640">
-  <br><sub>Startup Intros. Say "intro shatter" to lock one in, or "intro shuffle" to mix them up.</sub>
-</p>
 
 - **Settings mods** (`.capri-mod`) only change her settings, and **skins** (`.capri-skin`) change how she looks. Skins **stack**: turn on several and each goes on top, so a cat ears skin goes over any outfit
 - **Code mods** (`.capri-code`) run code on your PC, so she asks before one runs. One that has changed since you approved it asks again and shows what changed, and the approve box groups what it can do by risk. They can hook her chat, voice, memory, settings, skins, menu and drawing, give her brain new tools, add hotkeys and react when you're away. See [mods/MODDING.md](mods/MODDING.md)
 - A mod that stops her starting is switched off, and `Capri.exe --no-mods` starts her with none
-- **The directory is Lachy's.** Other people write and update its mods. We check some and flag the problems we find, and her mod panel shows an issue on the spot when she catches one, but we can't promise every mod is safe or works across versions
+- **The directory is ours.** It lists the mods on this build's latest release, each checked against its listing before it installs. Lachy's store mods still work: import one and it's translated for this build. Her mod panel shows an issue on the spot when she catches one
 - **Recolour her yourself:** press Custom colours on the Mods page and pick a colour for her Hair, Accents, Eyes, Edges or Body in the CAPRI fold. She saves it as a My Colors mod you can share
-- **Share yours:** fork [capri-mods](https://github.com/lachydotmcg/capri-mods), add a folder with the mod, a README and a `preview.png`, then open a pull request
+- **Share yours:** press Publish on its row, then Send it: a form opens on this repository, where you drop the mod zipped. It's checked before it goes in, and nothing goes in without our yes
 
 </details>
 
-<details>
-<summary><h2><a name="how-this-build-differs"></a>How this build differs from Lachy's 0.9.7</h2></summary>
-
-Everything here is in this build and not in his. For his own features, see [his original](https://github.com/lachydotmcg/capri-desktop).
-
-- **Moods and personalities that move.** Her mood and personality drift and ease back to the one you picked, Mood: Dynamic changes her mood every few hours, and each personality takes kindness, teasing and being ignored its own way.
-- **She gets to know you.** She notices how you've seemed lately, learns your routine so her morning and evening talk follows your day, and goes through all her questions before one repeats.
-- **Conversation comes first.** While you're talking, her jokes and pop-ins wait. A reply that only says your request back gets another go, and "no, I asked you to..." redoes it your way.
-- **Quiet and focus that fit your day.** One click for Mute, the Quiet timer or Focus mode; she goes quiet by herself in calls and full-screen video; Focus stretches her timers while the apps you pick are in front.
-- **A brain that doesn't drop out.** If your cloud brain fails, a brain on your PC takes over. Saved providers with your own names, local servers found for you, and Ollama started when it's installed.
-- **Her whole interface in your language.** Menus, Mainframe and windows in French, Spanish, Italian, Portuguese, Brazilian Portuguese, Hindi and Polish, common labels in 72 more, and her settings notes in your language.
-- **Mods you can read before you run them.** Drop a mod into her mods folder and she takes it in. Before it runs she shows what it reaches for and where, what changed since you approved it, and turns packed code back into something readable, without running any of it. Mod packs can change one part of her files without touching hers.
-- **Custom colours.** Her speech bubble, Mainframe, player, menus and file editor, with presets, your last colours, a dropper and see-through colours; mods get their own folds.
-- **Tamagotchi.** Points build while she runs; feed her and give her gifts she remembers, each personality with its own likes.
-- **Touch that means something.** Head pats only on her head, the same at every size. Her top, top middle, bottom middle and bottom each get their own reaction, liked or not by her personality and mood. Pick her up and carry her around, and a click with Ctrl held is a high five.
-- **Story time.** Each story carries a mood that follows hers, and her voice goes with it. Add your own.
-- **Her voice per personality and mood,** a line's own feeling ("(joyful) You came back.") and her free voice in three sizes.
-- **Words.** "spell check this" and "proofread this" with undo, plus "say <words>" and "read this aloud".
-- **Streaming.** Streaming mode keeps your file names and window titles off camera, and Twitch chat can be read aloud with banned words bleeped.
-- **Door intros.** A door that builds itself on her first start, and intro mods, one picked each start.
-- **Meme lines,** said exactly as written.
-- **Abliterated mode,** opt-in behind its own terms.
-
-</details>
 
 <details>
 <summary><h2><a name="what-she-does"></a>What she does</h2><br><a name="what-she-does-1"><img src="assets/readme/mini-player.png" alt="Capri perched on her cyberpunk mini player while a song plays" width="300"></a> <a name="what-she-does-2"><img src="assets/readme/bubble.png" alt="Capri's speech box with the pencil and wave buttons" width="220"></a> <a name="what-she-does-3"><img src="assets/readme/mainframe.png" alt="The Capri Mainframe with her BRAIN and VOICE rows" width="170"></a></summary>
@@ -169,9 +251,9 @@ A Linux `.run` is on each release too. It is made from the Windows build by itse
 
 Get this overhaul only from [its GitHub releases](https://github.com/YunoTheAlien/capri-abliterated-desktop/releases), and the original only from [Lachy's GitHub](https://github.com/lachydotmcg/capri-desktop/releases).
 
-**Zero telemetry.** No analytics, crash reports or usage pings. [SECURITY.md](SECURITY.md) lists what she connects to, what the website counts, and what to do if Windows or your antivirus warns you.
+**Zero telemetry.** No analytics, crash reports or usage pings. [SECURITY.md](SECURITY.md) lists what she connects to and what to do if Windows or your antivirus warns you.
 
-Stuck? Ask in the [Discord](https://discord.gg/capridesktop). [Windows or your antivirus may warn you](SECURITY.md#windows-or-your-antivirus-warned-me) because she's a new app. All the code is here.
+Stuck? Open an [issue](https://github.com/YunoTheAlien/capri-abliterated-desktop/issues). [Windows or your antivirus may warn you](SECURITY.md#windows-or-your-antivirus-warned-me) because she's a new app. All the code is here.
 
 <details>
 <summary><b>What your PC needs</b></summary>
@@ -259,7 +341,7 @@ Just ask her for things, like "open Spotify", "play Blinding Lights", "pause", "
 <details>
 <summary><a name="make-her-yours-1"><img src="site/assets/presence/dancing.gif" alt="Capri dancing" width="96" align="left"></a><h2><a name="make-her-yours"></a>Make her yours</h2><br>What she calls you, her language, her voice and who she is<br clear="left"></summary>
 
-Pick what she calls you, her language, her voice and what she does on your PC from the Capri Mainframe. To change who she is and how she talks, rewrite `personality.md`: Settings > YOU > Her personality > Edit personality.md. It starts as her default, and Reset to her default puts her back. For her colours, skins and new tricks, see [Mods](#mods).
+Pick what she calls you, her language, her voice and what she does on your PC from the Capri Mainframe. To change who she is and how she talks, set her up in Settings > YOU > Her personality > Personality editor, or rewrite `personality.md` in the MD editor under Personality files. It starts as her default, and Reset to her default puts her back. For her colours, skins and new tricks, see [Mods](#mods).
 
 - **Her safety rules are part of who she is.** They're fixed in her code, in `SafetyStock` in [app/Brain.cs](app/Brain.cs), right after her personality. If you build on her, please keep them as they are, out of respect for Capri's character
 - Her personality is `DefaultPersonality` in [app/Brain.cs](app/Brain.cs), so a pull request can suggest a change for everyone
@@ -280,7 +362,7 @@ Every feature this overhaul took or adapted from the original carries its credit
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to build her, test her and send a pull request. Made a mod? Share it in [capri-mods](https://github.com/lachydotmcg/capri-mods).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to build her, test her and send a pull request. Made a mod? Send it with Publish in her Mods page.
 
 ## Licence
 

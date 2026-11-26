@@ -6,9 +6,8 @@ using System.Text;
 
 namespace CapriDesktop
 {
-    // Colours a mod names for itself through Ui.Colour: one tree per mod in its own colours.md, kept apart from her
-    // palette. One left as the mod's own follows Mainframe colours; Custom colours lists each under the mod's fold-down,
-    // after her own items that keep colours the same way.
+    // Colours a mod names through Ui.Colour, kept with her settings apart from her palette; one left as the mod's own
+    // follows Mainframe colours. Custom colours lists them under the mod's fold. An old colours.md is carried in once.
     internal static class AddonColours
     {
         internal const string FileName = "colours.md";
@@ -31,6 +30,13 @@ namespace CapriDesktop
 
         private static readonly object gate = new object();
         private static readonly Dictionary<string, Tree> trees = new Dictionary<string, Tree>(StringComparer.OrdinalIgnoreCase);
+        private static List<string> memory = new List<string>();
+        private static long version;
+
+        // Where the rows are kept, "id<tab>name<tab>theirs<tab>usual" in hex: her settings, set by her window; a list of
+        // its own until then and for the checks.
+        internal static Func<List<string>> Load = delegate { return memory; };
+        internal static Action<List<string>> Store = delegate(List<string> rows) { memory = rows; };
 
         // A name as a colour's key: no line breaks, none of the marks presets and the file use, and kept short.
         internal static string Clean(string name)
@@ -67,15 +73,30 @@ namespace CapriDesktop
             bool known = trees.TryGetValue(id, out tree);
             if (!known) trees[id] = tree = new Tree();
             if (known && !look) return tree;
-            string path = PathOf(id);
-            if (path == null) return tree;
-            long stamp = StampOf(path);
-            if (stamp == tree.Stamp) return tree;
+            if (tree.Stamp == version) return tree;
             tree.Order.Clear();
             tree.Usual.Clear();
             tree.Theirs.Clear();
-            tree.Stamp = stamp;
-            if (stamp == 0) return tree;
+            tree.Stamp = version;
+            foreach (string row in Load() ?? new List<string>())
+            {
+                string[] parts = row.Split('\t');
+                if (parts.Length < 4 || !string.Equals(parts[0], id, StringComparison.OrdinalIgnoreCase) || tree.Order.Contains(parts[1]) || tree.Order.Count >= Most) continue;
+                tree.Order.Add(parts[1]);
+                Color? was = SysLines.Mixed(parts[3]);
+                tree.Usual[parts[1]] = was.HasValue ? Color.FromArgb(255, was.Value) : Color.Gray;
+                Color? theirs = parts[2].Length == 0 ? null : SysLines.Mixed(parts[2]);
+                if (theirs.HasValue) tree.Theirs[parts[1]] = theirs.Value;
+            }
+            if (tree.Order.Count == 0) Carry(id, tree);
+            return tree;
+        }
+
+        // The one carry for a mod: its colours.md from before into her settings, the file kept as colours.md.bak.
+        private static void Carry(string id, Tree tree)
+        {
+            string path = PathOf(id);
+            if (path == null || StampOf(path) == 0) return;
             try
             {
                 foreach (string raw in File.ReadAllLines(path))
@@ -95,34 +116,33 @@ namespace CapriDesktop
                     if (theirs.HasValue) tree.Theirs[name] = theirs.Value;
                 }
             }
+            catch (IOException caughtOne) { Brain.Caught(caughtOne); return; }
+            catch (UnauthorizedAccessException caughtOne) { Brain.Caught(caughtOne); return; }
+            if (tree.Order.Count > 0) Save(id, NameOf(id), tree);
+            try
+            {
+                // A .bak already there is theirs: this one takes a timed spare name, the newest three kept.
+                string old = path + ".bak";
+                File.Move(path, File.Exists(old) ? SpareFiles.Name(path) : old);
+                SpareFiles.Prune(path, Notes.MostSpares);
+            }
             catch (IOException caughtOne) { Brain.Caught(caughtOne); }
             catch (UnauthorizedAccessException caughtOne) { Brain.Caught(caughtOne); }
-            return tree;
         }
 
+        // A mod's tree into her settings, its rows in the order it named them.
         private static void Save(string id, string name, Tree tree)
         {
-            string path = PathOf(id);
-            if (path == null) return;
-            StringBuilder made = new StringBuilder();
-            made.AppendLine("# " + (name ?? id) + "'s colours");
-            made.AppendLine();
-            made.AppendLine(">! Set in Mainframe > Settings > GENERAL SETTINGS > Custom colours, or here. Blank follows the mod's own.");
-            made.AppendLine();
+            List<string> rows = new List<string>(Load() ?? new List<string>());
+            rows.RemoveAll(row => row.StartsWith(id + "\t", StringComparison.OrdinalIgnoreCase));
             foreach (string one in tree.Order)
             {
                 Color theirs;
-                string pad = one.Length >= 18 ? " " : new string(' ', 18 - one.Length);
-                made.AppendLine(one + ":" + pad + (tree.Theirs.TryGetValue(one, out theirs) ? ColourPresets.Hex(theirs) : "") + "    # usual: " + ColourPresets.Hex(tree.Usual[one]));
+                rows.Add(id + "\t" + one + "\t" + (tree.Theirs.TryGetValue(one, out theirs) ? ColourPresets.Hex(theirs) : "") + "\t" + ColourPresets.Hex(tree.Usual[one]));
             }
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(path));
-                File.WriteAllText(path, made.ToString(), new UTF8Encoding(false));
-                tree.Stamp = StampOf(path);
-            }
-            catch (IOException caughtOne) { Brain.Caught(caughtOne); }
-            catch (UnauthorizedAccessException caughtOne) { Brain.Caught(caughtOne); }
+            Store(rows);
+            version++;
+            tree.Stamp = version;
         }
 
         private static string NameOf(string id)
@@ -186,7 +206,7 @@ namespace CapriDesktop
         // does, as a preset may carry one.
         internal static bool Set(string id, IDictionary<string, Color?> colours)
         {
-            if (string.IsNullOrEmpty(id) || PathOf(id) == null || colours == null || colours.Count == 0) return false;
+            if (string.IsNullOrEmpty(id) || colours == null || colours.Count == 0) return false;
             bool moved = false;
             lock (gate)
             {
@@ -231,7 +251,7 @@ namespace CapriDesktop
         }
 
         // Forgets what was read, for the checks.
-        internal static void Forget() { lock (gate) trees.Clear(); }
+        internal static void Forget() { lock (gate) { trees.Clear(); version++; } }
 
         // Her own items that keep colours like a mod's, each a fold under ADD-ONS that doesn't follow the Mainframe's shift.
         // Their colours start as Night City drew them.
@@ -281,13 +301,19 @@ namespace CapriDesktop
 
         // Her own items' folds: listed first under ADD-ONS before any is drawn, in Night City's colours whatever the look while
         // a mod's own follows it, alpha kept, and the screensaver's two sys.md colours taken out once with their notes.
+#if CHECKS
         internal static void Check(List<string> checks, string output)
         {
             string folder = Path.Combine(output, "addon-colours-" + Guid.NewGuid().ToString("N").Substring(0, 6));
             Func<string, string> folderWas = FolderOf;
             Func<List<KeyValuePair<string, string>>> installedWas = Installed;
+            Func<List<string>> loadWas = Load;
+            Action<List<string>> storeWas = Store;
+            List<string> rows = new List<string>();
             try
             {
+                Load = delegate { return rows; };
+                Store = delegate(List<string> made) { rows = made; };
                 Directory.CreateDirectory(folder);
                 FolderOf = delegate(string id) { return Path.Combine(folder, id + "-data"); };
                 Installed = delegate { return new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("tint-test", "Tint Test") }; };
@@ -324,10 +350,13 @@ namespace CapriDesktop
             {
                 FolderOf = folderWas;
                 Installed = installedWas;
+                Load = loadWas;
+                Store = storeWas;
                 Forget();
                 Neon.UseLook(0);
             }
         }
+#endif
 
         // Her items' colours written to their files in order once her folders are known, so Custom colours lists each one
         // before it is first drawn.

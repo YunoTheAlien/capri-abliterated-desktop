@@ -33,7 +33,14 @@ namespace CapriDesktop
         internal static string BaseArt(string name, int width, int height) { return StandArt(name, width == OldIdleWide && height == OldIdleHigh); }
         internal Action SkinChanged;
 
-        private string SkinHome(string id) { return Path.Combine(folder, id + "-skin"); }
+        // A skin's folder: beside the installed one of that id, else in skinsCapri.
+        private string SkinPlace(string id)
+        {
+            Mod had = All == null ? null : All.Find(one => one.Skin && string.Equals(one.File.Id, id, StringComparison.OrdinalIgnoreCase));
+            return had != null && !string.IsNullOrEmpty(had.Path) ? Path.GetDirectoryName(had.Path) : Path.Combine(folder, SkinsCapri);
+        }
+
+        private string SkinHome(string id) { return Path.Combine(SkinPlace(id), id + "-skin"); }
 
         private Mod LoadSkin(string file, HashSet<string> off)
         {
@@ -89,10 +96,11 @@ namespace CapriDesktop
                 if (new FileInfo(file).Length > LargestSkin) throw new ModException("That skin is too big. The limit is " + LargestSkin / (1024 * 1024) + " MB.");
                 Directory.CreateDirectory(unpacking);
                 ModFile read = Unpack(file, unpacking);
-                string home = SkinHome(read.Id), kept = Path.Combine(folder, read.Id + SkinExtension);
+                string home = SkinHome(read.Id), kept = Path.Combine(SkinPlace(read.Id), read.Id + SkinExtension);
+                Directory.CreateDirectory(Path.GetDirectoryName(kept));
                 if (Directory.Exists(home)) Directory.Delete(home, true);
                 Directory.Move(unpacking, home);
-                if (!string.Equals(Path.GetFullPath(file), Path.GetFullPath(kept), StringComparison.OrdinalIgnoreCase)) File.Copy(file, kept, true);
+                if (!string.Equals(Path.GetFullPath(file), Path.GetFullPath(kept), StringComparison.OrdinalIgnoreCase)) { File.Copy(file, kept, true); LeftLoose(file, kept); }
                 if (turnOn)
                 {
                     HashSet<string> off = Off();
@@ -570,6 +578,7 @@ namespace CapriDesktop
             if (IsHandleCreated && !IsDisposed) RenderFrame();
         }
 
+#if CHECKS
         private void CheckSkins(List<string> checks, string output)
         {
             Mods mods = ModList;
@@ -679,7 +688,7 @@ namespace CapriDesktop
                 mods.Load();
                 if (at(1).G != 255 || mods.All.Find(mod => mod.File.Id == "skin-hat").On) throw new Exception("Accessories didn't stay as they were after a reload.");
                 foreach (Mod layer in mods.All.ToArray()) if (layer.File.Accessory) mods.Remove(layer);
-                if (SkinAccessories.Length != 0 || at(1).G == 255 && at(1).R == 0 || Directory.Exists(Path.Combine(mods.Folder, "skin-ears-skin"))) throw new Exception("Removing accessories left them drawn.");
+                if (SkinAccessories.Length != 0 || at(1).G == 255 && at(1).R == 0 || Directory.Exists(Path.Combine(mods.Folder, Mods.SkinsCapri, "skin-ears-skin"))) throw new Exception("Removing accessories left them drawn.");
                 mods.Set(mods.All.Find(mod => mod.File.Id == "skin-red"), true, null);
                 checks.Add("PASS skins: an accessory draws as it is over whatever is under it in the stack, or her own art, the newest is on top, the order lasts a reload, and removing it takes it away");
                 using (Bitmap wrong = new Bitmap(10, 10))
@@ -707,7 +716,7 @@ namespace CapriDesktop
                 if (Directory.GetDirectories(mods.Folder, "skin-import-*").Length != 0 || mods.All.FindAll(mod => mod.Skin).Count != 2) throw new Exception("A refused skin left something behind.");
                 checks.Add("PASS skins: wrong sizes, unknown names, paths out of the folder, fake pictures and broken zips are refused and leave nothing behind");
                 foreach (Mod left in mods.All.ToArray()) mods.Remove(left);
-                if (shown() != original || Directory.GetDirectories(mods.Folder, "skin-*").Length != 0) throw new Exception("Removing skins left them behind.");
+                if (shown() != original || Directory.Exists(Path.Combine(mods.Folder, Mods.SkinsCapri)) && Directory.GetDirectories(Path.Combine(mods.Folder, Mods.SkinsCapri), "skin-*").Length != 0) throw new Exception("Removing skins left them behind.");
                 checks.Add("PASS skins: removing a skin deletes it and restores her art");
                 string real = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath), "..", "..", "mods", "maid-suit" + Mods.SkinExtension));
                 if (!File.Exists(real)) { checks.Add("LIMIT skins: the Maid Suit file isn't beside this build, so it wasn't imported"); return; }
@@ -726,8 +735,11 @@ namespace CapriDesktop
             finally
             {
                 foreach (Mod left in mods.All.ToArray()) if (left.Skin) mods.Remove(left);
+                // Her own code mods it stopped, laid again and running, so no check after it finds them gone.
+                ModsBack();
             }
         }
+#endif
 
         private static void Put(ZipArchive zip, string name, byte[] bytes)
         {
@@ -802,6 +814,7 @@ namespace CapriDesktop
 
         // Legacy stand: off to start, her 0.8.5 strip byte for byte, a live swap each way through its row and her tool, saved, drawn
         // the way she stood in 0.8.5, colours on it, and a skin's own idle over it.
+#if CHECKS
         private void CheckLegacyStand(List<string> checks, string output)
         {
             Mods mods = ModList;
@@ -917,19 +930,17 @@ namespace CapriDesktop
 
                 bool settingsWas = mainframe.SettingsShown;
                 string reach = "";
-                Action<bool> fits = delegate (bool advanced)
+                Action fits = delegate
                 {
                     mainframe.ShowSettings(true);
-                    if (mainframe.AdvancedShown != advanced) throw new Exception("Settings didn't open " + (advanced ? "Advanced." : "Simple."));
-                    reach += (advanced ? "Advanced " : "Simple ") + mainframe.PageReach + "; ";
+                    reach += mainframe.PageReach + "; ";
                     if (!mainframe.LegacyStandInPage) throw new Exception("Legacy stand's row is off the page: " + reach);
                     string[] parts = mainframe.PageReach.Split('|');
                     if (Math.Max(int.Parse(parts[0].Trim()), int.Parse(parts[1].Trim())) > int.Parse(parts[2].Trim())) throw new Exception("The Settings page runs past its height: " + reach);
                 };
-                InSimpleSettings(delegate { fits(false); });
-                fits(true);
+                fits();
                 mainframe.ShowSettings(settingsWas);
-                checks.Add("PASS legacy stand: its row shows in Simple and Advanced Settings and everything below it still fits the page (" + reach.TrimEnd(' ', ';') + ")");
+                checks.Add("PASS legacy stand: its row shows in Settings and everything below it still fits the page (" + reach.TrimEnd(' ', ';') + ")");
 
                 mainframe.FlipLegacyStand();
                 Color accent = idle.Strip.GetPixel(120, 200);
@@ -1051,9 +1062,11 @@ namespace CapriDesktop
                 Play(clipWas);
             }
         }
+#endif
 
         // Her artist's standing set: its timing, its floor and body line against every clip she moves to and from, facing either
         // way, its blink and mouth, what's left in its files, and skins from before it.
+#if CHECKS
         private void CheckStanding(List<string> checks, string output)
         {
             Mods mods = ModList;
@@ -1366,6 +1379,7 @@ namespace CapriDesktop
                 Play(clipWas);
             }
         }
+#endif
     }
 #endif
 }

@@ -64,6 +64,14 @@ namespace CapriDesktop
         internal void SetRemote(bool on)
         {
             if (testing) return;
+            if (on && !RemoteLink.Available)
+            {
+                RemotePrefs.On = false;
+                SavePreferences();
+                remoteNote = RemoteLink.NoRemote;
+                mainframe.RemoteChanged();
+                return;
+            }
             RemotePrefs.On = on;
             SavePreferences();
             remoteNote = "";
@@ -92,6 +100,7 @@ namespace CapriDesktop
         private void RemoteConnect()
         {
             RemoteDisconnect();
+            if (!RemoteLink.Available) { remoteNote = RemoteLink.NoRemote; return; }
             RemoteSettings settings = RemotePrefs;
             string relay = RemoteLink.RelayBase(settings.Host);
             if (relay == null)
@@ -932,10 +941,30 @@ namespace CapriDesktop
         // Remote's own checks: off by default and in the test, the crypto against remote/test/vectors.json when it's there,
         // the QR a pairing URL makes, tool words that never carry arguments, and the REMOTE sheet at 100%, 150% and 200% in
         // each of its states, drawn to remote-*.png in the output folder.
+#if CHECKS
         private void SmokeRemote(List<string> checks, string output)
         {
             if (new Preferences().Remote != null) throw new Exception("Remote isn't off for a new install.");
             if (remoteLink != null) throw new Exception("Remote connected in her smoke test.");
+            // As shipped there's no relay or phone page of ours: Remote says so and connects nowhere.
+            string noteWas = remoteNote;
+            RemoteConnect();
+            bool unavailable = !RemoteLink.Available && RemoteLink.DefaultHost == "" && remoteLink == null && remoteNote == RemoteLink.NoRemote;
+            remoteNote = noteWas;
+            if (!unavailable) throw new Exception("Remote had somewhere to go with no server of ours: " + RemoteLink.DefaultHost + " " + RemoteCrypto.QrBase);
+            checks.Add("PASS with no relay or phone page of ours, Capri Remote says it isn't available and connects nowhere");
+            // The rest stands in for a relay and page of ours, the page's address as long as the last one so its QR is the same size.
+            string pageWas = RemoteCrypto.QrBase, hostWas = RemoteLink.DefaultHost;
+            RemoteCrypto.QrBase = "https://remote.example/qr1/";
+            RemoteLink.DefaultHost = "relay.example";
+            try { SmokeRemoteStood(checks, output); }
+            finally { RemoteCrypto.QrBase = pageWas; RemoteLink.DefaultHost = hostWas; }
+        }
+#endif
+
+#if CHECKS
+        private void SmokeRemoteStood(List<string> checks, string output)
+        {
             string vectors = RemoteVectors.Find();
             if (vectors != null)
             {
@@ -1022,7 +1051,9 @@ namespace CapriDesktop
             checks.Add("PASS all 16 phones have a reachable Revoke key across pages; Sure? follows the device after reordering; Remove all phones needs a second press; connected link phones keep BY LINK; the QR starts hidden on stream and a fresh code hides again; phone input strips control and format characters (remote-16-phones-*.png and remote-qr-streaming-*.png)");
             checks.Add("PASS Remote is off by default and in tests; a pairing URL makes a version 8 QR; tool summaries carry no arguments and keys stay out of replies; the REMOTE sheet fits at 100%, 150% and 200% with a QR, an Allow prompt, paired phones (one added by a phone's pairing link, whose open link shows as words, never a QR) and Remote off (remote-*.png)");
         }
+#endif
 
+#if CHECKS
         private void SmokeRemoteMark(List<string> checks, string output)
         {
             bool wasPage = mainframe.SettingsShown;
@@ -1049,7 +1080,9 @@ namespace CapriDesktop
             }
             checks.Add("PASS Remote's key draws its phone left of its label and keeps Support's size and row at 100%, 125% and 150% (" + string.Join("; ", seen.ToArray()) + "; remote-mark-*.png)");
         }
+#endif
 
+#if CHECKS
         private void SmokeRemoteRooms(List<string> checks)
         {
             RemoteSettings saved = preferences.Remote;
@@ -1098,6 +1131,7 @@ namespace CapriDesktop
             }
             checks.Add("PASS Remove all phones clears live and saved pairings and rotates the room and token; offline Revoke removes link children; real host changes rotate the room while equivalent or invalid hosts keep it; old queued saves cannot restore a room");
         }
+#endif
 
         // What the bridge would send a phone, for the smoke test.
         private sealed class RemoteTap : RemoteSink
@@ -1125,6 +1159,7 @@ namespace CapriDesktop
 
         // A phone's message through her real chat path with a stand-in brain: answer with its re, tools shown running
         // then done or failed, PC-typed lines staying on the PC, and a job's answer reaching the phone it heard.
+#if CHECKS
         private void SmokeRemoteBridge(List<string> checks)
         {
             RemoteTap tap = new RemoteTap();
@@ -1211,6 +1246,7 @@ namespace CapriDesktop
             }
             checks.Add("PASS a phone's message goes in like her TYPE box: her answer goes back to its message, tools she uses for it show running then done or failed, a line typed on the PC stays on the PC, an answer beside a job finds its phone, a message she moves on from closes (empty for the same phone's next message, busy for a line typed on the PC), and the same words heard again still answer the phone");
         }
+#endif
     }
 #endif
 

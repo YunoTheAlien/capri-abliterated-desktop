@@ -219,4 +219,5 @@ Quiet until {n}:{n}	سکوت تا {n}:{n}
 Quiet until turned off	سکوت تا خاموش شدن
 Export settings	خروجی تنظیمات
 Import settings	ورود تنظیمات
-Save Mainframe position	به خاطر سپردن جای پنل
+Save Mainframe position	ذخیره موقعیت Mainframe
+Capri options	گزینه‌های Capri

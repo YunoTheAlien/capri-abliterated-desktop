@@ -219,4 +219,5 @@ Quiet until {n}:{n}	{n}:{n} വരെ ശാന്തം
 Quiet until turned off	ഓഫാക്കുന്നതുവരെ ശാന്തം
 Export settings	ക്രമീകരണങ്ങൾ എക്സ്പോർട്ട് ചെയ്യുക
 Import settings	ക്രമീകരണങ്ങൾ ഇമ്പോർട്ട് ചെയ്യുക
-Save Mainframe position	പാനലിന്റെ സ്ഥാനം ഓർമ്മിക്കുക
+Save Mainframe position	Mainframe സ്ഥാനം സംരക്ഷിക്കുക
+Capri options	Capri ഓപ്ഷനുകൾ

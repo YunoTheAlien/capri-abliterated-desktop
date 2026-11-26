@@ -219,4 +219,5 @@ Quiet until {n}:{n}	ស្ងាត់រហូតដល់ {n}:{n}
 Quiet until turned off	ស្ងាត់រហូតដល់បិទ
 Export settings	នាំចេញការកំណត់
 Import settings	នាំចូលការកំណត់
-Save Mainframe position	ចងចាំទីតាំងផ្ទាំង
+Save Mainframe position	រក្សាទុកទីតាំង Mainframe
+Capri options	ជម្រើស Capri

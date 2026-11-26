@@ -294,6 +294,8 @@ namespace CapriDesktop
         internal static Action<string, bool> Show = delegate { };
         internal static Func<string, string, string> Ask;
         internal static Func<string, string, bool> Guard = delegate { return true; };
+        // A meme for a game moment when one is due, or null.
+        internal static Func<string, string> Meme = delegate { return null; };
 
         // Lines in her style for each kind of moment, shown to her brain as examples. None of them ever goes up itself.
         internal static readonly string[] Kills = { "did you SEE that??", "GET DOWN", "deleted.", "clean!!", "sit DOWN", "who's next??", "bodied, choom", "too easy", "no way you hit that", "oh that was filthy" };
@@ -399,7 +401,7 @@ namespace CapriDesktop
             string game = Commentary.Game();
             if (game == null) return false;
             int now = Clock();
-            string what;
+            string what, meme;
             string[] examples, recent;
             lock (gate)
             {
@@ -410,10 +412,16 @@ namespace CapriDesktop
                 last[key] = now;
                 int count;
                 string[] pool = PoolLocked(key, now, out count);
+                // A meme made for this moment goes up instead of a line from her brain, when one is due.
+                string moment = MemeMoment(pool);
+                meme = moment == null ? null : Meme(moment);
                 // The moment counts toward her mood even when four lines are already on their way, or her brain's too slow to ask.
-                if (asking >= Most || !quick.Due(now)) return false;
-                asking++;
-                quick.Asked(now);
+                if (meme == null && (asking >= Most || !quick.Due(now))) return false;
+                if (meme == null)
+                {
+                    asking++;
+                    quick.Asked(now);
+                }
                 // A line on its way holds small moments back like one that's up.
                 shown = true;
                 shownAt = now;
@@ -421,6 +429,7 @@ namespace CapriDesktop
                 examples = ExamplesLocked(pool, count);
                 recent = said.ToArray();
             }
+            if (meme != null) return Post(Sayings.Unpaused(Sayings.Unmeme(meme)), false);
             Stopwatch took = Stopwatch.StartNew();
             ThreadPool.QueueUserWorkItem(delegate { Answer(ask, key, game, what, detail, examples, recent, took); });
             return true;
@@ -568,6 +577,18 @@ namespace CapriDesktop
                 case "scene": return Scenes;
                 default: return Darks;
             }
+        }
+
+        // The moment a meme can wait for, by the run of the game, or null for one no meme fits.
+        private static string MemeMoment(string[] pool)
+        {
+            if (pool == Deaths) return "you die in a game";
+            if (pool == Again) return "you die again in a game";
+            if (pool == Wins) return "you win a game";
+            if (pool == Streaks) return "you are on a streak";
+            if (pool == Comebacks) return "you come back in a game";
+            if (pool == Ended) return "your streak ends";
+            return null;
         }
 
         // What happened, for her brain, with the count her mood came from.
@@ -754,7 +775,7 @@ namespace CapriDesktop
         }
 
         private readonly List<Line> lines = new List<Line>();
-        private readonly System.Windows.Forms.Timer ticks = new System.Windows.Forms.Timer();
+        private readonly Clock.Frames ticks = new Clock.Frames("ReactionFeed");
         private readonly Random random = new Random();
         private readonly object spot = new object();
         private Rectangle area, game;
@@ -1278,6 +1299,7 @@ namespace CapriDesktop
             Reactions.Show = delegate(string line, bool brain) { Post(delegate { ReactionShow(line, brain); }); };
             Reactions.Ask = delegate(string system, string ask) { return AskHead(system, ask, 60); };
             Reactions.Guard = delegate(string line, string game) { return ownSpeech.Take("game reaction", line, game); };
+            Reactions.Meme = MemeInContext;
         }
 
         // She reacts while the switch is on and she's awake and watching: not napping, not put away by a hide they asked for, and

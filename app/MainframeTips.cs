@@ -26,13 +26,20 @@ namespace CapriDesktop
             if (waitingHint != null && waitingHint.Control == screens) DismissHint();
         }
 
+        // A tip's first sentence, for a tip that adds one of its own and must stay within six lines.
+        private static string FirstSentence(string text)
+        {
+            int end = text.IndexOf(". ", StringComparison.Ordinal);
+            return end < 0 ? text : text.Substring(0, end + 1);
+        }
+
         private string HintFacts(SettingHint hint)
         {
             if (hint.Exact != null) return hint.Exact;
             return hint.Control == screens && screenNote != null ? screenNote + " " + HintCard.Unpathed(hint.Topic.Facts) : hint.Topic.Facts;
         }
 
-        private readonly Timer hintDelay = new Timer { Interval = 400 };
+        private readonly Clock.Ticker hintDelay = new Clock.Ticker("tip delay") { Interval = 400 };
         private HintCard hintCard;
         private SettingHint waitingHint, overHint, dismissedHint;
         private bool mouseHint, nonClientHint;
@@ -112,10 +119,15 @@ namespace CapriDesktop
             Explain(minimize, "Minimize");
             Explain(close, "Close");
             Explain(more, "Settings", "Mainframe.cs", null, "Settings / Back");
-            Explain(advancedKey, "Advanced Settings", "Mainframe.cs", null, "Simple / Advanced Settings");
+            Explain(advancedKey, "Setup", "Mainframe.cs", null, "Setup");
             Explain(models, "Brain model", "Mainframe.cs", null, "Brain model");
             Explain(refresh, "Refresh");
             Explain(provider, "Provider", "Mainframe.cs", null, "Provider");
+            Explain(refreshAll, "Refresh providers", "Mainframe.cs", null, "Refresh providers");
+            ExplainTools();
+            Explain(convoPick, "Conversation brain", "Mainframe.cs", null, "Conversation brain");
+            Explain(convoGet, "Conversation brain", "Mainframe.cs", null, "Get it");
+            Explain(convoSwitch, "Conversation brain", "Mainframe.cs", null, "Conversation brain");
             Explain(freeKey, "Free key", "Mainframe.cs", null, "Free key providers");
             Explain(planKey, "My plan", "Mainframe.cs", null, "My plan");
             Explain(setup, "Set up her brain", "Mainframe.cs", hint, "Set up her brain");
@@ -161,7 +173,7 @@ namespace CapriDesktop
             Explain(layersKey, "Voice layers", "Mainframe.cs", null, "Layers");
             layersKey.StateValue = true;
             Explain(remoteKey, "Remote", "MainframeRemote.cs", null, "Capri Remote");
-            Explain(personalityKey, "Edit personality.md", "Mainframe.cs", null, "Her personality");
+            Explain(personalityKey, "Personality editor", "Mainframe.cs", null, "Her personality");
             Explain(huskMode, "Code/Husk Mode", "Mainframe.cs", FindHintLabel("Code/Husk Mode"), "Code/Husk Mode");
             Explain(thinkingLevel, "Thinking", "Mainframe.cs", FindHintLabel("Thinking"), "Thinking");
             Explain(thinkingExtra, "Extra request JSON", "Mainframe.cs", FindHintLabel("Extra request JSON"), "Extra request JSON");
@@ -171,7 +183,6 @@ namespace CapriDesktop
             Explain(quietKeys, "Quiet: Ctrl + Alt + P", "Mainframe.cs", null, "Quiet key");
             Explain(frameKeys, "Mainframe: Ctrl + Alt + M", "Mainframe.cs", null, "Mainframe key");
             Explain(custom, "Custom model name", "Mainframe.cs", null, "Custom model name");
-            Explain(localServers, "Local servers", "Mainframe.cs", FindHintLabel("Local servers"), "Local servers");
             Explain(resourcesKey, "Resources", "MainframeSystem.cs", null, "Resources");
             Explain(abliterated, "Abliterated updates");
             Explain(localFallback, "Local fallback", "Mainframe.cs", null, "Local fallback");
@@ -195,8 +206,17 @@ namespace CapriDesktop
             // One sentence is the whole tip for Save Mainframe position; what it does is in SelfKnow.
             hints[rememberPanel].Exact = PanelTip;
             hints[rememberPanel].Title = "";
+            // Perch's cost past 30 fps is in its tip, after what it does.
+            SettingHint perchTip;
+            if (hints.TryGetValue(perchFps, out perchTip) && perchTip.Topic != null) perchTip.Exact = FirstSentence(HintCard.Unpathed(perchTip.Topic.Facts)) + " " + PerchCost;
+            // VB-CABLE's credit is in Get VB-CABLE's own tip, after what the key does.
+            SettingHint cableTip;
+            if (hints.TryGetValue(cableKey, out cableTip)) cableTip.Exact = (Packaged.Is ? "Opens VB-Audio's page to get VB-CABLE." : "Opens VB-Audio's setup for VB-CABLE; click Install Driver in it.") + " " + CableSetup.Credit;
             Explain(customColours, "Custom colours");
             hintDelay.Tick += delegate { ShowHint(); };
+            // Words cut short show whole in her tip card while the pointer stays on them, in every window of hers.
+            CutWords.Tip = delegate(Control control, string text) { TipAt(control, "", text); };
+            CutWords.Untip = DismissHint;
             Deactivate += delegate { DismissHint(); };
             VisibleChanged += delegate { if (!Visible) DismissHint(); };
             Resize += delegate { DismissHint(); };
@@ -268,7 +288,7 @@ namespace CapriDesktop
                 DismissHint();
                 return;
             }
-            if (hintCard == null) hintCard = new HintCard();
+            if (hintCard == null || hintCard.IsDisposed) hintCard = new HintCard();
             Rectangle area = Screen.FromRectangle(hint.Bounds).WorkingArea;
             if (!hintCard.Place(hint.Title, HintFacts(hint), Unit(), hint.Bounds, area))
             {
@@ -278,6 +298,15 @@ namespace CapriDesktop
             }
             hint.Text = hintCard.Body;
             DescribeHint(hint);
+            hintCard.Show(this);
+        }
+
+        // Her tip card beside a control with these words: a tip about the thing shown there rather than a setting of hers.
+        internal void TipAt(Control control, string title, string facts)
+        {
+            DismissHint();
+            if (hintCard == null || hintCard.IsDisposed) hintCard = new HintCard();
+            if (!hintCard.Place(title, string.IsNullOrEmpty(facts) ? title : facts, Unit(), control.RectangleToScreen(control.ClientRectangle), Fits.Area(control))) return;
             hintCard.Show(this);
         }
 

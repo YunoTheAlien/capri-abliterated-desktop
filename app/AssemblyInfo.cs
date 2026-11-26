@@ -7,5 +7,5 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyProduct("Capri")]
 [assembly: AssemblyCopyright("Copyright 2026 Lachy")]
 [assembly: AssemblyVersion("0.9.1")]
-[assembly: AssemblyFileVersion("0.9.517")]
+[assembly: AssemblyFileVersion("0.9.669")]
 [assembly: ComVisible(false)]

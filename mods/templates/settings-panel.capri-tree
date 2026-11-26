@@ -1,0 +1,25 @@
+// capri-tree: 1
+// id: settings-panel
+// name: Settings panel
+// author: Capri
+// version: 1.0.0
+// description: A panel on her Settings page, written as a tree. Copy it, give it your own id and file name, and change the rows.
+//
+// The first line under the header names the page: settings.
+// A line with one dash is a panel: its heading on her Settings page.
+// Two dashes is a row in it: its name, her piece in [brackets], and what it reaches in (round brackets).
+//   [switch]       her OFF / ON pair. (setting: wander) is one of hers by name; any other name is this mod's own value.
+//   [slider]       her slider, on the steps of one of her settings: (setting: size).
+//   [buttonLarge]  a key the panel's width; [buttonSmall] the right half. (command: preview voice) runs one of hers.
+//   [buttonRow]    keys side by side: each key is a line under it, three dashes.
+// Commands are hers only: preview voice, refresh providers. Nothing that deletes, uninstalls, updates, sends online or
+// opens a file picker. A line she can't read is left out, with a line in her log naming this mod.
+settings
+-MY PANEL
+--Wander [switch] (setting: wander)
+--My own switch [switch] (setting: my own switch)
+--Size [slider] (setting: size)
+--Hear her voice [buttonLarge] (command: preview voice)
+--Keys [buttonRow]
+---Hear her [buttonSmall] (command: preview voice)
+---Refresh providers [buttonSmall] (command: refresh providers)

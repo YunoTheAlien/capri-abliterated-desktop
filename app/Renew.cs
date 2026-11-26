@@ -31,12 +31,15 @@ namespace CapriDesktop
         // Whether the censored side's own files are the ones in use this start.
         internal static Func<bool> CensoredReady = delegate { return false; };
 
-        // Read once at the start, before anything of hers is written.
-        internal static void Begin(string settings, string built)
+        // Read once at the start, before anything of hers is written. Held: whether her settings folder had her files in
+        // it before this start wrote any, read from the folder when not given.
+        internal static void Begin(string settings, string built, bool? held = null)
         {
+            bool kept = held ?? Held(settings);
             lock (gate)
             {
                 stamp = string.IsNullOrEmpty(settings) ? null : Path.Combine(settings, StampName);
+                hadFiles = kept;
                 version = built ?? "";
                 Dictionary<string, string> had = Read();
                 string was;
@@ -90,7 +93,27 @@ namespace CapriDesktop
         private static string before;
         internal static string Before { get { lock (gate) return before; } }
 
-        internal static bool Changing { get { lock (gate) return stamp != null && (sharedDue || censoredDue || senpaiDue); } }
+        internal static bool Changing { get { lock (gate) return stamp != null && hadFiles && (sharedDue || censoredDue || senpaiDue); } }
+
+        private static bool hadFiles;
+
+        // Any file in her settings folder but her day logs, which a start writes before anything else of hers.
+        internal static bool Held(string settings)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(settings) || !Directory.Exists(settings)) return false;
+                foreach (string one in Directory.EnumerateFiles(settings)) return true;
+                foreach (string inner in Directory.EnumerateDirectories(settings))
+                {
+                    if (string.Equals(Path.GetFileName(inner), Logs.FolderName, StringComparison.OrdinalIgnoreCase)) continue;
+                    foreach (string one in Directory.EnumerateFiles(inner, "*", SearchOption.AllDirectories)) return true;
+                }
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            return false;
+        }
 
         internal static bool Due(string path)
         {
@@ -243,6 +266,7 @@ namespace CapriDesktop
         // On a version change: untouched replaced with no copy, edited kept as a .bak then replaced, no record counted as
         // edited, the senpai side only with the switch on, the side's record written once and the next start writing
         // nothing; files she writes for herself are never in it.
+#if CHECKS
         internal static void Check(List<string> checks, string folder)
         {
             string settings = Path.Combine(folder, "renew-" + Guid.NewGuid().ToString("N").Substring(0, 6), "personalSettings");
@@ -357,5 +381,6 @@ namespace CapriDesktop
                 try { Directory.Delete(Path.GetDirectoryName(settings), true); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
             }
         }
+#endif
     }
 }

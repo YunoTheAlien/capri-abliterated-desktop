@@ -26,7 +26,7 @@ namespace CapriDesktop
             Panel = CapriDesktop.Neon.Sheet; Cyan = CapriDesktop.Neon.SpokenEdge; Red = CapriDesktop.Neon.SpokenTitle; Yellow = CapriDesktop.Neon.Amber;
             Neon = CapriDesktop.Neon.SpokenInk; Ink = CapriDesktop.Neon.SheetInk; Dim = CapriDesktop.Neon.SheetDim; Pink = CapriDesktop.Neon.SpokenAccent;
         }
-        // Her music player's, set apart from her bubble's in layout.md.
+        // Her music player's, set apart from her bubble's.
         internal static Color PlayerEdge { get { return CapriDesktop.Neon.PlayerEdge; } }
         internal static Color PlayerAccent { get { return CapriDesktop.Neon.PlayerAccent; } }
         internal static Color PlayerTitle { get { return CapriDesktop.Neon.PlayerTitle; } }
@@ -909,7 +909,7 @@ namespace CapriDesktop
         internal static Color Caption { get { return CapriDesktop.Neon.BubbleTone(168, 174, 184); } }
         private const int WashAlpha = 40;
         private static readonly Random random = new Random();
-        private readonly Beat ticks = new Beat();
+        private readonly Clock.Frames ticks = new Clock.Frames("TalkPill");
         private int hover;
         private float scale = 1;
         private Point centre;
@@ -1451,7 +1451,7 @@ namespace CapriDesktop
         private static Color Hot { get { return Own("Hot pink"); } }
         // Its colours, from its fold under ADD-ONS in Custom colours.
         private static Color Own(string name) { return AddonColours.Hers(AddonColours.Tear, name); }
-        private readonly Beat ticks = new Beat();
+        private readonly Clock.Frames ticks = new Clock.Frames("Tear");
         private readonly System.Diagnostics.Stopwatch watch = new System.Diagnostics.Stopwatch();
         private readonly Random random = new Random();
         private Rectangle area;
@@ -1850,7 +1850,7 @@ namespace CapriDesktop
         internal static Color Mint { get { return Own("Mint"); } }
         // Its colours, from its fold under ADD-ONS in Custom colours.
         private static Color Own(string name) { return AddonColours.Hers(AddonColours.Shatter, name); }
-        private readonly Beat ticks = new Beat();
+        private readonly Clock.Frames ticks = new Clock.Frames("Shard");
         private readonly System.Diagnostics.Stopwatch watch = new System.Diagnostics.Stopwatch();
         private readonly Random random = new Random();
         private Bitmap picture;
@@ -2087,7 +2087,6 @@ namespace CapriDesktop
             Bitmap own = new Bitmap(w, h, PixelFormat.Format32bppPArgb), green = null, violet = null;
             try
             {
-                Rectangle whole = new Rectangle(0, 0, w, h);
                 using (Graphics paper = Graphics.FromImage(own))
                 {
                     paper.CompositingMode = CompositingMode.SourceCopy;
@@ -2097,25 +2096,36 @@ namespace CapriDesktop
                 }
                 green = new Bitmap(w, h, PixelFormat.Format32bppPArgb);
                 violet = new Bitmap(w, h, PixelFormat.Format32bppPArgb);
-                using (ImageAttributes tint = Tint(Mint, 0.15 + 0.75 * strength))
-                using (Graphics paper = Graphics.FromImage(green)) paper.DrawImage(own, whole, 0, 0, w, h, GraphicsUnit.Pixel, tint);
-                using (ImageAttributes tint = Tint(Violet, 0.15 + 0.75 * strength))
-                using (Graphics paper = Graphics.FromImage(violet)) paper.DrawImage(own, whole, 0, 0, w, h, GraphicsUnit.Pixel, tint);
-                // The bands go down whole pixels apart, copied pixel for pixel: a glitch's edges are meant to be hard.
-                GraphicsState kept = graphics.Save();
-                graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
-                graphics.PixelOffsetMode = PixelOffsetMode.Half;
-                float left = (float)Math.Round(target.X), high = (float)Math.Round(target.Y);
-                for (int top = 0; top < h; )
+                Tinted(own, green, Mint, violet, Violet, 0.15 + 0.75 * strength);
+                // The bands go down whole pixels apart on a flat sheet, then the sheet goes on her once. Each band drawn
+                // through her turn and size took two frames' time at her largest. A glitch's edges are meant to be hard.
+                int pad = (int)Math.Ceiling(shift + 22 * unit * strength) + 1;
+                Bitmap sheet = new Bitmap(w + 2 * pad, h, PixelFormat.Format32bppPArgb);
+                try
                 {
-                    int tall = Math.Min(h - top, Math.Max(3, (int)(h * (0.03 + pick.NextDouble() * 0.13))));
-                    float off = pick.Next(3) == 0 ? (float)((pick.NextDouble() * 2 - 1) * 22 * unit * strength) : 0;
-                    Rectangle from = new Rectangle(0, top, w, tall);
-                    foreach (KeyValuePair<Bitmap, float> layer in new[] { new KeyValuePair<Bitmap, float>(green, off - shift), new KeyValuePair<Bitmap, float>(violet, off + shift), new KeyValuePair<Bitmap, float>(off != 0 ? own : null, off) })
-                        if (layer.Key != null) graphics.DrawImage(layer.Key, new RectangleF(left + (float)Math.Round(layer.Value), high + top, w, tall), from, GraphicsUnit.Pixel);
-                    top += tall;
+                    using (Graphics paper = Graphics.FromImage(sheet))
+                    {
+                        paper.CompositingQuality = CompositingQuality.AssumeLinear;
+                        paper.InterpolationMode = InterpolationMode.NearestNeighbor;
+                        for (int top = 0; top < h; )
+                        {
+                            int tall = Math.Min(h - top, Math.Max(3, (int)(h * (0.03 + pick.NextDouble() * 0.13))));
+                            float off = pick.Next(3) == 0 ? (float)((pick.NextDouble() * 2 - 1) * 22 * unit * strength) : 0;
+                            Rectangle from = new Rectangle(0, top, w, tall);
+                            foreach (KeyValuePair<Bitmap, float> layer in new[] { new KeyValuePair<Bitmap, float>(green, off - shift), new KeyValuePair<Bitmap, float>(violet, off + shift), new KeyValuePair<Bitmap, float>(off != 0 ? own : null, off) })
+                                if (layer.Key != null) paper.DrawImage(layer.Key, new Rectangle(pad + (int)Math.Round(layer.Value), top, w, tall), from, GraphicsUnit.Pixel);
+                            top += tall;
+                        }
+                    }
+                    GraphicsState kept = graphics.Save();
+                    graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
+                    graphics.PixelOffsetMode = PixelOffsetMode.Half;
+                    graphics.CompositingQuality = CompositingQuality.AssumeLinear;
+                    float left = (float)Math.Round(target.X), high = (float)Math.Round(target.Y);
+                    graphics.DrawImage(sheet, new RectangleF(left - pad, high, sheet.Width, h), new RectangleF(0, 0, sheet.Width, h), GraphicsUnit.Pixel);
+                    graphics.Restore(kept);
                 }
-                graphics.Restore(kept);
+                finally { sheet.Dispose(); }
             }
             finally
             {
@@ -2123,14 +2133,73 @@ namespace CapriDesktop
                 if (green != null) green.Dispose();
                 if (violet != null) violet.Dispose();
             }
+            // Stray bars over her, never past her: each starts and ends inside her drawn width and fades in and out along
+            // its length, so no end lines up with another into a hard edge, in her window, Tamagotchi mode's well or the stream.
             Color[] bars = { Own("White"), Mint, Own("Red"), Violet };
-            float middle = target.X + target.Width / 2, room = target.Width / 2 + (UnderReach - 2) * unit;
+            float middle = target.X + target.Width / 2;
             for (int i = 0, count = (int)Math.Round(5 * strength); i < count; i++)
             {
                 float y = target.Y + target.Height * (float)(0.1 + pick.NextDouble() * 0.8);
-                float width = Math.Min(room * 2, target.Width * (float)(0.3 + pick.NextDouble() * 0.6));
-                float x = Math.Max(middle - room, Math.Min(middle + room - width, middle + target.Width * (float)((pick.NextDouble() - 0.5) * 0.6) - width / 2));
-                using (Brush bar = new SolidBrush(Color.FromArgb((int)(40 + 180 * strength), bars[pick.Next(bars.Length)]))) graphics.FillRectangle(bar, x, y, width, Math.Max(1.5f, (1 + pick.Next(3)) * 1.3f * unit));
+                float width = target.Width * (float)(0.25 + pick.NextDouble() * 0.45);
+                float x = middle + target.Width * (float)((pick.NextDouble() - 0.5) * 0.4) - width / 2;
+                x = Math.Max(target.X, Math.Min(target.Right - width, x));
+                float high = Math.Max(1.5f, (1 + pick.Next(3)) * 1.3f * unit);
+                Color ink = Color.FromArgb((int)(40 + 180 * strength), bars[pick.Next(bars.Length)]);
+                RectangleF bar = new RectangleF(x, y, Math.Max(2, width), high);
+                using (LinearGradientBrush fade = new LinearGradientBrush(new RectangleF(bar.X - 1, bar.Y, bar.Width + 2, bar.Height), Color.Transparent, Color.Transparent, LinearGradientMode.Horizontal))
+                {
+                    fade.InterpolationColors = new ColorBlend { Colors = new[] { Color.FromArgb(0, ink), ink, ink, Color.FromArgb(0, ink) }, Positions = new[] { 0f, 0.3f, 0.7f, 1f } };
+                    graphics.FillRectangle(fade, bar);
+                }
+            }
+        }
+
+#if CHECKS
+        // Under at full strength over twelve seeds, each on a canvas her cell's size plus UnderReach a side, as her window
+        // makes it: the sides and top of the canvas, or null when nothing reaches them. Four of them saved side by side.
+        internal static string UnderEdges(Bitmap strip, Rectangle cell, string picture)
+        {
+            float tall = 384, wide = tall * cell.Width / cell.Height, reach = UnderReach;
+            int w = (int)Math.Ceiling(wide + 2 * reach) + 2, h = (int)Math.Ceiling(tall) + 2;
+            List<string> found = new List<string>();
+            using (Bitmap sheet = new Bitmap(w * 4, h, PixelFormat.Format32bppArgb))
+            {
+                for (int seed = 1; seed <= 12; seed++)
+                    using (Bitmap canvas = new Bitmap(w, h, PixelFormat.Format32bppPArgb))
+                    {
+                        using (Graphics g = Graphics.FromImage(canvas)) Under(g, strip, cell, new RectangleF(reach + 1, 1, wide, tall), 1, seed);
+                        Rectangle lit = Mainframe.PetWell.Lit(canvas);
+                        if (!lit.IsEmpty && (lit.Left <= 0 || lit.Right >= w || lit.Top <= 0)) found.Add("seed " + seed + " " + lit + " in " + w + "x" + h);
+                        if (seed <= 4) using (Graphics g = Graphics.FromImage(sheet)) g.DrawImage(canvas, (seed - 1) * w, 0);
+                    }
+                try { if (picture != null) sheet.Save(picture, ImageFormat.Png); } catch (Exception caughtOne) { Brain.Caught(caughtOne); }
+            }
+            return found.Count == 0 ? null : string.Join("; ", found.ToArray());
+        }
+#endif
+
+        // Her frame in two flat colours at once, its alpha times alpha, in one pass over her pixels: what Tint's colour
+        // matrix gives, without GDI+ going round her picture twice.
+        private static void Tinted(Bitmap own, Bitmap one, Color first, Bitmap two, Color second, double alpha)
+        {
+            Rectangle whole = new Rectangle(0, 0, own.Width, own.Height);
+            int[] from = new int[own.Width * own.Height], a = new int[from.Length], b = new int[from.Length];
+            BitmapData read = own.LockBits(whole, ImageLockMode.ReadOnly, PixelFormat.Format32bppPArgb);
+            try { for (int row = 0; row < whole.Height; row++) System.Runtime.InteropServices.Marshal.Copy(read.Scan0 + row * read.Stride, from, row * whole.Width, whole.Width); }
+            finally { own.UnlockBits(read); }
+            int scale = (int)Math.Round(256 * Math.Max(0, Math.Min(1, alpha)));
+            for (int i = 0; i < from.Length; i++)
+            {
+                int kept = (((from[i] >> 24) & 0xFF) * scale + 128) >> 8;
+                if (kept == 0) continue;
+                a[i] = (kept << 24) | ((first.R * kept + 127) / 255 << 16) | ((first.G * kept + 127) / 255 << 8) | ((first.B * kept + 127) / 255);
+                b[i] = (kept << 24) | ((second.R * kept + 127) / 255 << 16) | ((second.G * kept + 127) / 255 << 8) | ((second.B * kept + 127) / 255);
+            }
+            foreach (KeyValuePair<Bitmap, int[]> into in new[] { new KeyValuePair<Bitmap, int[]>(one, a), new KeyValuePair<Bitmap, int[]>(two, b) })
+            {
+                BitmapData write = into.Key.LockBits(whole, ImageLockMode.WriteOnly, PixelFormat.Format32bppPArgb);
+                try { for (int row = 0; row < whole.Height; row++) System.Runtime.InteropServices.Marshal.Copy(into.Value, row * whole.Width, write.Scan0 + row * write.Stride, whole.Width); }
+                finally { into.Key.UnlockBits(write); }
             }
         }
 
@@ -2192,7 +2261,7 @@ namespace CapriDesktop
         internal static Bitmap Face;
         private static Bitmap painted, minted, bruised;
         private static RectangleF paintedFrom;
-        private readonly Beat ticks = new Beat();
+        private readonly Clock.Frames ticks = new Clock.Frames("Takeover");
         private readonly System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
         private readonly Random random = new Random();
         private IntPtr window;
@@ -2587,7 +2656,7 @@ namespace CapriDesktop
     // stops her." Click-through, never focused, kept out of her screenshots, or hidden for them before Windows 10 2004.
     internal sealed class ControlGlow : Overlay
     {
-        private readonly Beat ticks = new Beat();
+        private readonly Clock.Frames ticks = new Clock.Frames("ControlGlow");
         private Rectangle area;
         private bool excluded;
         private bool unseen;
@@ -2755,7 +2824,7 @@ namespace CapriDesktop
         private const int ClickTick = 15;
         // Lazy, so it's only in memory around her clicks, and a Clip, so colour mods and skins change it like the rest of her.
         internal readonly Clip ClickArt = new Clip("click", 20, 60, 1, 0, 0, true);
-        private readonly Beat ticks = new Beat();
+        private readonly Clock.Frames ticks = new Clock.Frames("HerPointer");
         private readonly System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
         private readonly object gate = new object();
         private IntPtr window;
@@ -2944,6 +3013,7 @@ namespace CapriDesktop
 
         // Her click effect: every frame loads and lands on her pointer's tip at 100% and 200%, one of her clicks plays
         // them at the clip's speed and stops, and a colour mod changes them with the rest of her. click-preview.png shows it.
+#if CHECKS
         private void SmokeClickEffect(List<string> checks, string output)
         {
             Clip art = herPointer.ClickArt;
@@ -3084,6 +3154,7 @@ namespace CapriDesktop
             checks.Add((drawn < 5 ? "LIMIT" : "PASS") + " her click effect: one of her clicks plays it in " + took + " ms for the clip's " + (int)(1000 * art.Count / art.Fps) + " ms (" + drawn + " pictures of its " + art.Count + " frames), then it stops");
             checks.Add("PASS her click effect: a colour mod turns its red and green into her new colours, and taking the mod off brings them back");
         }
+#endif
     }
 
     // "Capri is working on your task": each step of a mouse and keyboard job as it happens, in her speech box look.
@@ -3094,7 +3165,7 @@ namespace CapriDesktop
         private const int MostRows = 7;
         internal const int EndingRows = 5, SnagRows = 5;
         private const string Speaker = "CAPRI: ";
-        private readonly Beat ticks = new Beat();
+        private readonly Clock.Frames ticks = new Clock.Frames("TaskPanel");
         private readonly System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
         private readonly List<JobStep> steps = new List<JobStep>();
         private object owner;
@@ -3486,7 +3557,7 @@ namespace CapriDesktop
         {
             if (Choosing) Pick(yesButton.Contains(point));
         }
-        internal Action<string> Copying = delegate(string reply) { Clipboard.SetText(reply); };
+        internal Action<string> Copying = delegate(string reply) { if (!Recorders.CopyHeld(reply)) Clipboard.SetText(reply); };
         private const int Columns = 34;
         private const string Speaker = "CAPRI: ";
 
@@ -3647,6 +3718,7 @@ namespace CapriDesktop
 
         // The reply mark sits on the letters. Her bubble drawn with each mark, from small text to 200%: the middle of the mark's
         // ink comes within a pixel or so of the middle of the capitals after it. Pictures: reply-mark-<size>.png.
+#if CHECKS
         internal static void CheckMarks(List<string> checks, string output)
         {
             List<string> wrong = new List<string>(), seen = new List<string>();
@@ -3710,6 +3782,14 @@ namespace CapriDesktop
             if (wrong.Count > 0) throw new Exception("A reply mark doesn't sit on its letters: " + string.Join("; ", wrong.ToArray()));
             checks.Add("PASS the reply mark (this PC, cloud, server) sits on the prompt's letters, its middle against the capitals' middle, from small text to 200%: " + string.Join(", ", seen.ToArray()) + " px (reply-mark-*.png)");
         }
+#endif
+
+        // Her bubble as a picture for another place to draw it, as Tamagotchi mode's well does: the same drawing as on the desktop.
+        internal Bitmap Picture(double now, float s, Point head, Point feet, Rectangle area, out Point at)
+        {
+            bool cursor = State == TalkState.Thinking || State == TalkState.Talking ? (State == TalkState.Talking || (int)(now * 2.5) % 2 == 0) : (int)(now * 2) % 2 == 0;
+            return Render(s, head, feet, area, cursor, out at);
+        }
 
         internal Bitmap Render(float s, Point head, Point feet, Rectangle area, bool cursorOn, out Point at)
         {
@@ -3756,7 +3836,7 @@ namespace CapriDesktop
                     graphics.SmoothingMode = SmoothingMode.AntiAlias;
                     graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
                     graphics.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-                    // Theirs from layout.md, or hers; drawn at her alpha either way, since glow and fill aren't meant
+                    // Theirs as Custom colours keeps them, or hers; drawn at her alpha either way, since glow and fill aren't meant
                     // solid. Eight digits set it solid on purpose.
                     Color edgeColour = CapriDesktop.Neon.SpokenEdge;
                     Color backColour = CapriDesktop.Neon.BubbleBack;
@@ -4083,6 +4163,7 @@ namespace CapriDesktop
         // Her glitch on her artist's standing set through RenderFrame: every step her new frame whole over its own
         // underlay, cleared by the lighter drawing on both facings and two sizes; her loop resumes after; Legacy stand
         // plays the old strip.
+#if CHECKS
         private void SmokeGlitchUnder(List<string> checks, string output)
         {
             bool framesWas = frames.Enabled, signalsWas = signals.Enabled, motionWas = preferences.Motion, facingWas = facingLeft, veilWas = veiled, hologramWas = preferences.Hologram;
@@ -4279,9 +4360,11 @@ namespace CapriDesktop
                 if (signalsWas) signals.Start();
             }
         }
+#endif
 
         // Her glitch on her standing set as a film at real speed: her own RenderFrame off her real clock, about 30 times a
         // second, with a glitch partway in, facing right then left. Each frame is her window's picture.
+#if CHECKS
         private void SmokeGlitchFilm(List<string> checks, string output)
         {
             bool framesWas = frames.Enabled, signalsWas = signals.Enabled, motionWas = preferences.Motion, facingWas = facingLeft;
@@ -4339,12 +4422,14 @@ namespace CapriDesktop
                 if (signalsWas) signals.Start();
             }
         }
+#endif
     }
     internal sealed partial class Companion
     {
         // On her artist's standing set no frame of her old standing pose is ever drawn: every old-size strip must be
         // listed, every clip plays through RenderFrame both ways, and none may draw one. Legacy stand still plays them
         // exactly.
+#if CHECKS
         private void SmokeOldStand(List<string> checks, string output)
         {
             bool framesWas = frames.Enabled, signalsWas = signals.Enabled, motionWas = preferences.Motion, facingWas = facingLeft, veilWas = veiled;
@@ -4495,12 +4580,14 @@ namespace CapriDesktop
                 if (signalsWas) signals.Start();
             }
         }
+#endif
     }
 
     internal sealed partial class Companion
     {
         // Her teleporting out and back and standing up after a nap, filmed off the real app at real speed: her own timers run
         // her, and about 30 times a second her window's picture and her ribbons' are saved with where they sit on the screen.
+#if CHECKS
         private void SmokeStandFilm(List<string> checks, string output)
         {
             bool framesWas = frames.Enabled, motionWas = preferences.Motion, facingWas = facingLeft, legacyWas = preferences.LegacyStand, instantWas = instant;
@@ -4585,5 +4672,6 @@ namespace CapriDesktop
                 if (!framesWas) frames.Stop();
             }
         }
+#endif
     }
 }

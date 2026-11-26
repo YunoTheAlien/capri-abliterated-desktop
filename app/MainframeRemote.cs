@@ -120,7 +120,7 @@ namespace CapriDesktop
                         if (head == null || head.Span <= 0) continue;
                         RectangleF band = head.Band(s);
                         band.Offset(-strip.Left, -strip.Top);
-                        DrawBand(graphics, band, s);
+                        DrawBand(graphics, band, s, head);
                     }
                 }
                 foreach (Control control in row)
@@ -229,7 +229,7 @@ namespace CapriDesktop
             private readonly RemoteQrBox qr;
             private readonly Key pair, allow, deny, saveHost, back, next, removeAll, showQr;
             private readonly Entry host;
-            private readonly Timer clock = new Timer { Interval = 1000 };
+            private readonly Clock.Ticker clock = new Clock.Ticker("remote second") { Interval = 1000 };
             private RemoteView view = new RemoteView();
             private DateTime expires;
             private int first, armedAt;
@@ -305,7 +305,8 @@ namespace CapriDesktop
                 saveHost.AccessibleName = "Save relay host";
                 note = Words("", 28, 552, 544, 18, Font, Cyan);
                 clock.Tick += delegate { Tick(); };
-                if (live) clock.Start();
+                // Its second's tick runs only while it shows; made and hidden, it polls nothing.
+                VisibleChanged += delegate { if (live && Visible) clock.Start(); else clock.Stop(); };
                 Frame.Fit(this);
             }
 

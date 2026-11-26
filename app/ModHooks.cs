@@ -12,7 +12,7 @@ namespace CapriDesktop
     {
         private const int LongestModLine = 500, LongestModNote = 400, MostModNotes = 10;
         private readonly List<ModHost> modHosts = new List<ModHost>();
-        private System.Windows.Forms.Timer modWatch;
+        private Clock.Ticker modWatch;
         private ToolStripMenuItem modMenu;
         private string modState, modSettings;
         private bool modAloud, modMainframe, modSaved;
@@ -172,6 +172,45 @@ namespace CapriDesktop
         private void ModsPatted() { ModsFire(delegate(ModHost host) { if (host.patted != null) host.patted(); }); }
 
         private void ModsSaved() { modSaved = true; }
+
+#if CHECKS
+        // A try run's look at a mod's Toggles rows: each switch flipped and back, each slider moved a step and back. Says
+        // what it found; anything a row's change threw goes to her log and her guard as it would for them.
+        internal string TryToggles(string id)
+        {
+            ModHost host = Array.Find(LiveHosts(), one => one.Id == id);
+            if (host == null) return "no Toggles rows: not running";
+            List<string> switches = new List<string>(), sliders = new List<string>();
+            Dictionary<string, List<ToolStripMenuItem>> steps = new Dictionary<string, List<ToolStripMenuItem>>(StringComparer.Ordinal);
+            foreach (ToolStripItem row in host.ToggleRows)
+            {
+                ToolStripMenuItem item = row as ToolStripMenuItem;
+                // Its group's own row holds the rest, so it is opened, not flipped.
+                if (item == null || item.IsDisposed || item.HasDropDownItems) continue;
+                string tag = item.Tag as string;
+                if (tag != null && tag.StartsWith(Mainframe.StepTag, StringComparison.Ordinal))
+                {
+                    string slider = item.ToolTipText ?? "";
+                    if (!steps.ContainsKey(slider)) steps[slider] = new List<ToolStripMenuItem>();
+                    steps[slider].Add(item);
+                    continue;
+                }
+                bool was = item.Checked;
+                item.PerformClick();
+                bool flipped = item.Checked != was;
+                item.PerformClick();
+                switches.Add(item.Text + (flipped && item.Checked == was ? "" : " (did not flip)"));
+            }
+            foreach (KeyValuePair<string, List<ToolStripMenuItem>> slider in steps)
+            {
+                ToolStripMenuItem was = slider.Value.Find(one => one.Checked) ?? slider.Value[0];
+                ToolStripMenuItem other = slider.Value.Find(one => one != was);
+                if (other != null) { other.PerformClick(); was.PerformClick(); }
+                sliders.Add(slider.Key + " (" + slider.Value.Count + " steps" + (was.Checked ? "" : ", did not come back") + ")");
+            }
+            return switches.Count + " switch(es): " + string.Join(", ", switches.ToArray()) + "; " + sliders.Count + " slider(s): " + string.Join(", ", sliders.ToArray());
+        }
+#endif
 
         internal bool ModRunningNow(string id)
         {
@@ -525,7 +564,7 @@ namespace CapriDesktop
             lock (modHosts) modHosts.Add(host);
             if (modWatch == null)
             {
-                modWatch = new System.Windows.Forms.Timer { Interval = 250 };
+                modWatch = new Clock.Ticker("ModHooks modWatch") { Interval = 250 };
                 modWatch.Tick += delegate { WatchForMods(); };
             }
             if (modState == null) { modState = ModState(); modMainframe = mainframeOpen; modDragging = dragging; }
@@ -688,6 +727,7 @@ namespace CapriDesktop
             return true;
         }
 
+#if CHECKS
         private void CheckModHooks(List<string> checks, string output)
         {
             Mods mods = ModList;
@@ -733,7 +773,7 @@ namespace CapriDesktop
                     + "h.Settings.Changed += () => Mark(\"changed\", c.Settings.Size.ToString()); }\n"
                     + "public bool Heard(string w) { return false; } public void Stop() { } }";
                 if (!mainframe.ImportMod(write("hooks", "chat, voice, personality, settings", body))) throw new Exception("A mod using the hooks it asked for was refused: " + mainframe.ModStatusText);
-                string data = Path.Combine(mods.Folder, "hooks-data");
+                string data = Path.Combine(mods.HomeOf("hooks"), "hooks-data");
                 Func<string, string> mark = delegate(string name) { string file = Path.Combine(data, name); return File.Exists(file) ? File.ReadAllText(file) : null; };
                 if (asked == null || string.Join(",", asked.Permissions) != "chat,voice,personality,settings" || mark("api") != Mods.Api + " True False") throw new Exception("A mod's permissions weren't read, or it saw the wrong ones: " + mark("api"));
                 checks.Add("PASS mod hooks: the approve box gets the permissions a mod asks for, and the mod sees the API version and only those");
@@ -797,8 +837,10 @@ namespace CapriDesktop
                 foreach (Mod left in mods.All.ToArray()) mods.Remove(left);
             }
         }
+#endif
 
         // API 4: a mod's own submenu, its ticks and lines, the 30 item cap, and MenuOpening changing its words.
+#if CHECKS
         private void CheckModMenus(List<string> checks, Func<string, string, string, string> write, Func<Func<bool>, bool> until)
         {
             Mods mods = ModList;
@@ -812,7 +854,7 @@ namespace CapriDesktop
                 + "h.Ui.MenuOpening += () => { opened++; tick.Text = \"Tick \" + opened; }; }\n"
                 + "public bool Heard(string w) { return false; } public void Stop() { } }";
             if (!mainframe.ImportMod(write("menus", null, body))) throw new Exception("A mod making its own menu was refused: " + mainframe.ModStatusText);
-            string data = Path.Combine(mods.Folder, "menus-data");
+            string data = Path.Combine(mods.HomeOf("menus"), "menus-data");
             Func<string, string> mark = delegate(string name) { string file = Path.Combine(data, name); return File.Exists(file) ? File.ReadAllText(file) : null; };
             ToolStripMenuItem own = null;
             until(() => modMenu != null && modMenu.DropDownItems.Count == 1 && (own = modMenu.DropDownItems[0] as ToolStripMenuItem) != null && own.DropDownItems.Count == 29);
@@ -840,8 +882,10 @@ namespace CapriDesktop
             ModsMenuOpening();
             checks.Add("PASS mod menus: removing the mod takes its submenu, and her menu opening after that runs nothing of it");
         }
+#endif
 
         // API 4: Ui.Switch and Ui.Button are her own switch and key, in a mod's panel, and what they do reaches the mod.
+#if CHECKS
         private void CheckModControls(List<string> checks, Func<string, string, string, string> write, Func<Func<bool>, bool> until)
         {
             Mods mods = ModList;
@@ -852,7 +896,7 @@ namespace CapriDesktop
                 + "h.Mainframe.AddPanel(\"Button test\", \"right\", 4, () => { Control b = h.Ui.Button(\"Press test\", () => { Mark(\"button\", \"x\"); throw new InvalidOperationException(\"button threw\"); }); Mark(\"buttoned\", b.GetType().Name); return b; }); }\n"
                 + "public bool Heard(string w) { return false; } public void Stop() { } }";
             if (!mainframe.ImportMod(write("controls", null, body))) throw new Exception("A mod using her switch and key was refused: " + mainframe.ModStatusText);
-            string data = Path.Combine(mods.Folder, "controls-data");
+            string data = Path.Combine(mods.HomeOf("controls"), "controls-data");
             Func<string, string> mark = delegate(string name) { string file = Path.Combine(data, name); return File.Exists(file) ? File.ReadAllText(file) : null; };
             Func<string, Control> find = delegate(string text) { foreach (Control one in mainframe.Controls) if (one.Text == text) return one; return null; };
             CheckBox flip = null;
@@ -871,9 +915,11 @@ namespace CapriDesktop
             if (!until(() => find("Glow test") == null && find("Press test") == null)) throw new Exception("A mod's switch and key stayed after it was removed.");
             checks.Add("PASS mod controls: Ui.Switch and Ui.Button are her own OFF/ON switch and key at the column's width in a mod's panel, a flip or press reaches the mod, one that throws is the mod's failure, not hers, and both go with the mod");
         }
+#endif
 
         // API 5: Ui.Colour. Any mod names its colours and gets them back, kept in colours.md in its own data folder; setting one
         // tells it through ColoursChanged; its approval and Mods row say it has custom colours; removed, it lists none.
+#if CHECKS
         private void CheckModColours(List<string> checks, Func<string, string, string, string> write, Func<Func<bool>, bool> until)
         {
             Mods mods = ModList;
@@ -886,15 +932,22 @@ namespace CapriDesktop
             ModFile read = Mods.ReadCode(File.ReadAllText(file));
             if (!read.Colours || Mods.Consent(read, "x").IndexOf("Has custom colours", StringComparison.Ordinal) < 0) throw new Exception("A mod naming colours wasn't said to have custom colours on its approval.");
             if (!mainframe.ImportMod(file)) throw new Exception("A mod naming colours was refused: " + mainframe.ModStatusText);
-            string data = Path.Combine(mods.Folder, "tinted-data");
+            string data = Path.Combine(mods.HomeOf("tinted"), "tinted-data");
             Func<string, string> mark = delegate(string name) { string at = Path.Combine(data, name); return File.Exists(at) ? File.ReadAllText(at) : null; };
             try
             {
                 Color usual = Neon.Tone(10, 200, 120);
                 if (!until(() => mark("beam") == usual.R + "," + usual.G + "," + usual.B)) throw new Exception("Ui.Colour didn't hand back the mod's own colour in her look: " + mark("beam"));
                 List<string> names = AddonColours.Names("tinted");
-                if (names.Count != 2 || names[0] != "Beam" || names[1] != "Edge line" || !File.Exists(Path.Combine(data, AddonColours.FileName)))
-                    throw new Exception("A mod's colours weren't kept by their cleaned names in its own colours.md: " + string.Join(" / ", names.ToArray()));
+                Func<string, string> kept = delegate(string name)
+                {
+                    foreach (string one in AddonColours.Load() ?? new List<string>())
+                        if (one.StartsWith("tinted\t" + name + "\t", StringComparison.Ordinal)) return one;
+                    return null;
+                };
+                if (names.Count != 2 || names[0] != "Beam" || names[1] != "Edge line" || kept("Beam") == null || kept("Edge line") == null)
+                    throw new Exception("A mod's colours weren't kept by their cleaned names with her settings: " + string.Join(" / ", names.ToArray()));
+                if (File.Exists(Path.Combine(data, AddonColours.FileName))) throw new Exception("A mod's colours were written to a colours.md.");
                 if (!AddonColours.Trees().Exists(each => each.Key == "tinted")) throw new Exception("An installed mod's colours aren't listed for Custom colours.");
                 string row = mainframe.ModRowAbout("tinted");
                 if (row == null || row.IndexOf("Has custom colours.", StringComparison.Ordinal) < 0) throw new Exception("The Mods row doesn't say the mod has custom colours: " + row);
@@ -902,14 +955,18 @@ namespace CapriDesktop
                 set["Beam"] = Color.FromArgb(1, 2, 3);
                 AddonColours.Set("tinted", set);
                 if (!until(() => mark("told") == "yes" && mark("beam") == "1,2,3")) throw new Exception("Setting a mod's colour didn't reach it through ColoursChanged: " + mark("beam"));
-                if (File.ReadAllText(Path.Combine(data, AddonColours.FileName)).IndexOf("#010203", StringComparison.Ordinal) < 0) throw new Exception("A mod's colour wasn't saved in its colours.md.");
+                string beam = kept("Beam");
+                if (beam == null || beam.IndexOf("#010203", StringComparison.Ordinal) < 0 || File.Exists(Path.Combine(data, AddonColours.FileName)))
+                    throw new Exception("A mod's colour wasn't saved with her settings, or went to a colours.md: " + beam);
             }
             finally { mods.Remove(mods.All.Find(mod => mod.File.Id == "tinted")); }
             if (AddonColours.Trees().Exists(each => each.Key == "tinted")) throw new Exception("A removed mod's colours are still listed.");
-            checks.Add("PASS mod colours: Ui.Colour names a mod's colour and hands back its own in her look, kept by a cleaned name in colours.md in its own data folder, listed for Custom colours while it is installed and not once removed; a colour set reaches the mod through ColoursChanged; its approval and Mods row say it has custom colours");
+            checks.Add("PASS mod colours: Ui.Colour names a mod's colour and hands back its own in her look, kept by a cleaned name with her settings and never in a colours.md, listed for Custom colours while it is installed and not once removed; a colour set reaches the mod through ColoursChanged; its approval and Mods row say it has custom colours");
         }
+#endif
 
         // API 4: Ui.DrawScale draws her bigger within its limits, Motion off holds her still, and it goes with the mod.
+#if CHECKS
         private void CheckModScale(List<string> checks, Func<string, string, string, string> write, Func<Func<bool>, bool> until)
         {
             Mods mods = ModList;
@@ -924,7 +981,7 @@ namespace CapriDesktop
             byte least = (byte)Math.Round(255 * ModHost.LeastBubbleOpacity);
             if (least > 80 || !until(() => box.Alpha == least)) throw new Exception("BubbleOpacity wasn't held to its least, 0.3: alpha " + box.Alpha);
             bool gameWas = gameAhead;
-            string gameFile = Path.Combine(mods.Folder, "scale-data", "game");
+            string gameFile = Path.Combine(mods.HomeOf("scale"), "scale-data", "game");
             try
             {
                 gameAhead = true;
@@ -969,9 +1026,11 @@ namespace CapriDesktop
             finally { preferences.Motion = motionWas; Redraw(); }
             checks.Add("PASS mod draw scale: DrawScale draws her bigger from 1 to at most 1.15" + (hidden ? " (hidden, so not drawn)" : " in a drawn frame") + ", never under 1, not with Motion off, and goes with the mod; BubbleOpacity holds to 0.3 at least and goes with it too; System.GameInFront reads her own game check");
         }
+#endif
 
         // API 3: tools her brain picks by itself, tool vetoes, fresh context, the mod's store, system events, hotkeys, sounds,
         // pages, moving her, mods talking to each other, and // requires:.
+#if CHECKS
         private void CheckNewerHooks(List<string> checks, Func<string, string, string, string> write, Func<Func<bool>, bool> until)
         {
             // A mod's page brings her Mainframe up; the checks put it back how it was.
@@ -985,7 +1044,9 @@ namespace CapriDesktop
                 else if (mainframe.WindowState != frameWas) mainframe.WindowState = frameWas;
             }
         }
+#endif
 
+#if CHECKS
         private void CheckNewerHooksNow(List<string> checks, Func<string, string, string, string> write, Func<Func<bool>, bool> until)
         {
             Mods mods = ModList;
@@ -1011,7 +1072,7 @@ namespace CapriDesktop
                 + "Mark(\"sound\", h.Sounds.Play(\"beep.wav\", 0.5) + \" \" + h.Sounds.Play(\"nothing.wav\")); }\n"
                 + "public bool Heard(string w) { return false; } public void Stop() { } }";
             if (!mainframe.ImportMod(write("hooks3", "chat, tools, system, hotkeys", body))) throw new Exception("A mod using the API 3 hooks was refused: " + mainframe.ModStatusText);
-            string data = Path.Combine(mods.Folder, "hooks3-data");
+            string data = Path.Combine(mods.HomeOf("hooks3"), "hooks3-data");
             Func<string, string> mark = delegate(string name) { string file = Path.Combine(data, name); return File.Exists(file) ? File.ReadAllText(file) : null; };
             Hands.Kit kit = Hands.KitFor();
             string parsed;
@@ -1112,6 +1173,7 @@ namespace CapriDesktop
                 throw new Exception("Removing a mod left its tools, context, veto, hotkey or page behind.");
             checks.Add("PASS mod hooks: removing a mod takes its brain tools, context, vetoes, hotkeys and page with it");
         }
+#endif
 
         // A wait counts on its mod's While working row, so it stretches, pauses or keeps its pace while a work app is in
         // front; At(time) is wall-clock, like a reminder, and is left alone.
@@ -1122,7 +1184,7 @@ namespace CapriDesktop
             private readonly double every;
             private readonly DateTime when;
             private readonly string row;
-            private System.Threading.Timer timer;
+            private Clock.OffTimer timer;
             private volatile bool over;
             private double due;
 
@@ -1134,7 +1196,7 @@ namespace CapriDesktop
                 when = at;
                 row = Working.ModMark + owner.Id;
                 if (at == DateTime.MinValue) due = Working.Clock(row) + first;
-                timer = new System.Threading.Timer(delegate { Fire(); }, null, Wait(first), Timeout.Infinite);
+                timer = new Clock.OffTimer("mod timer", delegate { Fire(); }, null, Wait(first), Timeout.Infinite);
             }
 
             // Real seconds until its row has run what is left: checked again each second while it isn't at its own pace,
@@ -1153,7 +1215,7 @@ namespace CapriDesktop
             public void Cancel()
             {
                 over = true;
-                System.Threading.Timer was = timer;
+                Clock.OffTimer was = timer;
                 if (was != null) was.Dispose();
             }
 
@@ -1265,13 +1327,14 @@ namespace CapriDesktop
                 if (treeChanged != null) { AddonColours.Changed -= treeChanged; Neon.Repainted -= repainted; }
                 coloursChanged = null;
                 LetGo();
+                LetGoPet();
             }
 
             public string Folder
             {
                 get
                 {
-                    string home = Path.Combine(capri.ModList.Folder, id + "-data");
+                    string home = Path.Combine(capri.ModList.HomeOf(id), id + "-data");
                     Directory.CreateDirectory(home);
                     return home;
                 }
@@ -1592,10 +1655,23 @@ namespace CapriDesktop
                 internal readonly ToolStripMenuItem Item;
                 private int count;
 
-                internal ModMenu(ModHost owner, string label)
+                internal enum Inside { Top, Nested, Hers }
+                private readonly Inside inside;
+                private readonly List<ToolStripItem> put = new List<ToolStripItem>();
+
+                internal ModMenu(ModHost owner, string label, Inside where = Inside.Top)
                 {
                     host = owner;
+                    inside = where;
                     Item = new ToolStripMenuItem(label);
+                }
+
+                // One of her own lists, the mod's items put in beside hers: her Tamagotchi menu for a pet game.
+                internal ModMenu(ModHost owner, ToolStripMenuItem hers)
+                {
+                    host = owner;
+                    inside = Inside.Hers;
+                    Item = hers;
                 }
 
                 private bool Room() { return !host.over && System.Threading.Interlocked.Increment(ref count) <= MostItems; }
@@ -1610,7 +1686,7 @@ namespace CapriDesktop
                         try { clicked(); }
                         catch (Exception error) { host.Failed(error); }
                     };
-                    host.capri.OnWindow(delegate { if (!host.over) Item.DropDownItems.Add(made.Item); });
+                    host.capri.OnWindow(delegate { if (!host.over) Put(made.Item); });
                     return made;
                 }
 
@@ -1628,29 +1704,60 @@ namespace CapriDesktop
                         try { changed(made.on); }
                         catch (Exception error) { host.Failed(error); }
                     };
-                    host.capri.OnWindow(delegate { if (!host.over) Item.DropDownItems.Add(made.Item); });
+                    host.capri.OnWindow(delegate { if (!host.over) Put(made.Item); });
                     return made;
                 }
 
                 public void AddLine()
                 {
                     if (!Room()) return;
-                    host.capri.OnWindow(delegate { if (!host.over) Item.DropDownItems.Add(new ToolStripSeparator()); });
+                    host.capri.OnWindow(delegate { if (!host.over) Put(new ToolStripSeparator()); });
+                }
+
+                // A list inside this one: dressed as her own the moment it is made, so it opens where her menus open.
+                public ICapriMenu AddMenu(string text)
+                {
+                    string label = Clean(text, 60);
+                    ModMenu made = new ModMenu(host, label.Length == 0 ? "Menu" : label, Inside.Nested);
+                    if (!Room()) return made;
+                    host.capri.OnWindow(delegate
+                    {
+                        if (host.over) return;
+                        host.capri.LikeMenu(made.Item);
+                        Put(made.Item);
+                    });
+                    return made;
                 }
 
                 public void Clear()
                 {
                     System.Threading.Interlocked.Exchange(ref count, 0);
-                    host.capri.OnWindow(delegate { Item.DropDownItems.Clear(); });
+                    host.capri.OnWindow(delegate
+                    {
+                        // Her own Tamagotchi menu keeps what she put there; only the mod's goes.
+                        if (inside != Inside.Hers) Item.DropDownItems.Clear();
+                        else foreach (ToolStripItem one in put) { Item.DropDownItems.Remove(one); one.Dispose(); }
+                        put.Clear();
+                    });
                 }
 
                 public void Remove()
                 {
+                    if (inside == Inside.Hers) { Clear(); return; }
                     host.capri.OnWindow(delegate
                     {
+                        if (inside == Inside.Nested) { if (Item.Owner != null) Item.Owner.Items.Remove(Item); return; }
                         host.menuItems.Remove(Item);
                         host.capri.FillModMenu();
                     });
+                }
+
+                private void Put(ToolStripItem item)
+                {
+                    int at = inside == Inside.Hers ? host.capri.PetItemsAt : -1;
+                    if (at >= 0) Item.DropDownItems.Insert(at, item);
+                    else Item.DropDownItems.Add(item);
+                    put.Add(item);
                 }
             }
 
@@ -1691,6 +1798,27 @@ namespace CapriDesktop
                 {
                     get { return enabled; }
                     set { enabled = value; host.capri.OnWindow(delegate { Item.Enabled = value; }); }
+                }
+
+                private string note = "";
+                private Color colour = Color.Empty;
+
+                // In the shortcut column, so every note lines up on the right whatever the name's length.
+                public string Note
+                {
+                    get { return note; }
+                    set
+                    {
+                        string said = Clean(value, 20);
+                        note = said;
+                        host.capri.OnWindow(delegate { Item.ShortcutKeyDisplayString = said.Length == 0 ? null : said; Item.ShowShortcutKeys = said.Length > 0; });
+                    }
+                }
+
+                public Color Colour
+                {
+                    get { return colour; }
+                    set { colour = value; host.capri.OnWindow(delegate { Item.ForeColor = value; }); }
                 }
 
                 public void Remove()
@@ -1751,7 +1879,7 @@ namespace CapriDesktop
                     Control made;
                     try { made = make(); }
                     catch (Exception error) { Failed(error); return; }
-                    capri.mainframe.AddModPanel(id, heading, side, slot, made, simple);
+                    capri.mainframe.AddModPanel(id, heading, side, slot, made);
                 });
             }
 
@@ -1767,7 +1895,7 @@ namespace CapriDesktop
                     Control made;
                     try { made = make(); }
                     catch (Exception error) { Failed(error); return; }
-                    capri.mainframe.AddGroupPart(id, shared, heading, side, slot, made, simple);
+                    capri.mainframe.AddGroupPart(id, shared, heading, side, slot, made);
                 });
             }
 

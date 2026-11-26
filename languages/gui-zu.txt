@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Thula kuze kube ngu-{n}:{n}
 Quiet until turned off	Thula kuze kucishwe
 Export settings	Thumela izilungiselelo
 Import settings	Ngenisa izilungiselelo
-Save Mainframe position	Khumbula indawo yephaneli
+Save Mainframe position	Londoloza indawo ye-Mainframe
+Capri options	Izinketho ze-Capri

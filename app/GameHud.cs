@@ -507,7 +507,7 @@ namespace CapriDesktop
 
         private const int Inset = 14;
         private readonly HudLife life;
-        private readonly Timer ticks = new Timer();
+        private readonly Clock.Frames ticks = new Clock.Frames("HudWindow");
         private readonly Stopwatch clock = Stopwatch.StartNew();
         private readonly Stopwatch busy = new Stopwatch();
         private HudPaint paint;
@@ -1068,6 +1068,7 @@ namespace CapriDesktop
         private void DockOn(GameSeen game)
         {
             if (!gaming.Hud()) return;
+            PetGivesWay();
             GameHud.Offset = GameSpots.Find(preferences.GameSpots, game.Name);
             if (docked) { GameHud.Show(game.Bounds); return; }
             if (outro != null) { Action next = outro; outro = null; next(); }

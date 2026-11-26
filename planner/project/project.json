@@ -1,0 +1,2135 @@
+{
+ "version": 2,
+ "meta": {
+  "title": "StoryBoard template"
+ },
+ "settings": {
+  "globalsAdded": true,
+  "startNodeId": "tplS1",
+  "gridSnap": false,
+  "grid": 20,
+  "edgeStyle": "ortho",
+  "flowArrows": true,
+  "groups": [
+   {
+    "key": "tplGroupPlaces",
+    "label": "Locations",
+    "tab": "folios"
+   },
+   {
+    "key": "globals",
+    "label": "Globals",
+    "tab": "folios"
+   }
+  ],
+  "names": {
+   "items": "Quest Items"
+  },
+  "ui": null,
+  "css": "",
+  "starterAudio": true,
+  "templates": {}
+ },
+ "folders": [
+  {
+   "id": "tplF1",
+   "section": "characters",
+   "parentId": null,
+   "name": "Placeholder people"
+  },
+  {
+   "id": "tplF2",
+   "section": "items",
+   "parentId": null,
+   "name": "Placeholder things"
+  }
+ ],
+ "characters": [
+  {
+   "id": "tplChar1",
+   "folderId": "tplF1",
+   "name": "Alpha",
+   "color": "#E5A93A",
+   "role": "Placeholder",
+   "bio": "Stands in for somebody. Rename them, or delete them and make your own.",
+   "attrs": [
+    {
+     "id": "tplA1",
+     "name": "health",
+     "value": 10
+    },
+    {
+     "id": "tplA2",
+     "name": "luck",
+     "value": 3
+    }
+   ],
+   "images": [
+    {
+     "id": "tplPicA",
+     "name": "placeholder",
+     "file": "placeholder_alpha.png"
+    }
+   ],
+   "defaultImage": "tplPicA"
+  },
+  {
+   "id": "tplChar2",
+   "folderId": "tplF1",
+   "name": "Beta",
+   "color": "#6FA8DC",
+   "role": "Placeholder",
+   "bio": "The other half of the example conversation.",
+   "attrs": [
+    {
+     "id": "tplA3",
+     "name": "health",
+     "value": 10
+    },
+    {
+     "id": "tplA6",
+     "name": "fate",
+     "value": 0
+    }
+   ],
+   "images": [
+    {
+     "id": "tplPicB",
+     "name": "placeholder",
+     "file": "placeholder_beta.png"
+    }
+   ],
+   "defaultImage": "tplPicB"
+  }
+ ],
+ "items": [
+  {
+   "id": "tplItem1",
+   "folderId": "tplF2",
+   "name": "Keycard",
+   "color": "#f0c27a",
+   "description": "A thing to carry. An option hands it over, and another is locked until it is.",
+   "file": "placeholder_keycard.png",
+   "images": [],
+   "attrs": []
+  },
+  {
+   "id": "tplMedkit",
+   "folderId": "tplF2",
+   "name": "Medkit",
+   "color": "#e07a6a",
+   "description": "Sold in the shop on the second board, ten gold each, and they stack.",
+   "file": null,
+   "images": [],
+   "attrs": []
+  }
+ ],
+ "folios": [
+  {
+   "id": "tplComp1",
+   "group": "tplGroupPlaces",
+   "name": "The corridor",
+   "color": "#9ec7d8",
+   "description": "A place, to show what a group of your own holds.",
+   "file": null,
+   "images": [],
+   "attrs": []
+  },
+  {
+   "id": "tplGlobals",
+   "group": "globals",
+   "name": "Global variables",
+   "code": "globals",
+   "color": "#b8a57a",
+   "description": "Numbers that belong to the whole story rather than anybody in it. Give it attributes and read them anywhere, @globals day.",
+   "file": null,
+   "images": [],
+   "attrs": [
+    {
+     "id": "tplA4",
+     "name": "day",
+     "value": 1
+    },
+    {
+     "id": "tplA5",
+     "name": "alarm",
+     "value": 0
+    },
+    {
+     "id": "tplA7",
+     "name": "gold",
+     "value": 25
+    }
+   ]
+  }
+ ],
+ "docs": [
+  {
+   "id": "tplDoc1",
+   "folderId": null,
+   "name": "How a doc works",
+   "text": "# How a doc works\n\nA doc is writing that isn't the story: a place, a history, what somebody wants. **Nothing in a doc shows in Play.**\n\nWrite it in markdown, and the page beside it shows how it reads:\n\n- **bold**, *italic*, ~~struck~~, ~underlined~ and ==highlighted==\n- # at the start of a line is a heading, ## a smaller one\n- > a quote, --- a rule across, and ```code``` in the well\n\n## Things to try\n\n- [x] Open this doc\n- [ ] Tick this box\n- [ ] Follow the link to @doc TheCorridorsHistory\n\n| Card | What it's for |\n| --- | --- |\n| Scene | A beat of the story |\n| Note | A sticky note on the board |\n| Doc | Writing that isn't the story, kept in the library |\n\n> A link to another doc is ```@doc``` and its name run together. Rename a doc and every link to it follows.[^1]\n\n[^1]: The corridor's history is linked above as @doc TheCorridorsHistory: its spaces and its apostrophe taken out."
+  },
+  {
+   "id": "tplDoc2",
+   "folderId": null,
+   "name": "The corridor's history",
+   "text": "# The corridor's history\n\nSomebody built a door here and forgot to say why. The keycard opens it, most of the time.\n\n@picture Placeholderbackground(The corridor, from the door)\n\nBack to @doc HowADocWorks."
+  }
+ ],
+ "backgrounds": [
+  {
+   "id": "tplBg1",
+   "name": "Placeholder background",
+   "file": "placeholder_background.png"
+  }
+ ],
+ "audio": [
+  {
+   "id": "tplSnd1",
+   "folderId": null,
+   "name": "Crash",
+   "file": "crash_001.mp3",
+   "volume": 1,
+   "credit": "Logicogonist, CC0, https://freesound.org/people/Logicogonist/sounds/807437/"
+  },
+  {
+   "id": "tplSndCalm",
+   "folderId": null,
+   "name": "Calm loop",
+   "file": "calm_loop.mp3",
+   "volume": 1,
+   "credit": "wipics, CC0, https://opengameart.org/content/calm-loop"
+  },
+  {
+   "id": "tplSndTense",
+   "folderId": null,
+   "name": "Tension loop",
+   "file": "tension_loop.mp3",
+   "volume": 1,
+   "credit": "tapatilorenzo, CC0, https://opengameart.org/content/midi-2-tension-songs"
+  }
+ ],
+ "boards": [
+  {
+   "id": "tplB_main",
+   "code": "W1",
+   "name": "Start here",
+   "folderId": null,
+   "status": "",
+   "nodes": [
+    {
+     "id": "tplN1",
+     "type": "note",
+     "x": -1180,
+     "y": -640,
+     "w": 300,
+     "h": 280,
+     "title": "Start here",
+     "text": "This is the StoryBoard template: a board to learn on and nothing else. Everything here can be deleted.\n\nPress Play, top right, to read the little story to the right of these notes. Then come back and take it apart to see how it was made.\n\nThere is a third board, The tutorial story, in the Workspace list. It plays through the ways a scene can be coded, a card at a time.",
+     "color": "#1f4f5a",
+     "alpha": 1
+    },
+    {
+     "id": "tplN2",
+     "type": "note",
+     "x": -1180,
+     "y": -320,
+     "w": 300,
+     "h": 230,
+     "title": "Cards",
+     "text": "The rail down the side makes cards. A scene holds dialogue. A branch asks a question and sends the story one way or the other. A path to carries it to another card.\n\nDouble click empty board for a scene. Drag from the round handle on a card's edge to join one card to another.",
+     "color": "#2c3350",
+     "alpha": 1
+    },
+    {
+     "id": "tplN3",
+     "type": "note",
+     "x": -1180,
+     "y": -70,
+     "w": 300,
+     "h": 340,
+     "title": "Dialogue",
+     "text": "Click a scene and its lines are in the properties panel, under Dialogue. Each line can be said by somebody in the cast, or by nobody, which reads as narration.\n\nDrag a character from the library onto a card to put them in the scene, or onto a line to have them say it with that expression.\n\nSelect some words in a line and the bar at the foot of the screen makes them **bold**, *italic*, ~~struck~~, ~underlined~ or ==highlighted==, and Ctrl+B, I and U work too.",
+     "color": "#23452a",
+     "alpha": 1
+    },
+    {
+     "id": "tplN4",
+     "type": "note",
+     "x": -1180,
+     "y": 290,
+     "w": 300,
+     "h": 230,
+     "title": "Options and exits",
+     "text": "An arrow out of a scene is an option: what the arrow is labelled is what the reader picks.\n\nAn option can be locked until someone carries a thing, or hidden, or made to hand something over when it is taken. That is Options and exits in the properties panel.",
+     "color": "#5a2346",
+     "alpha": 1
+    },
+    {
+     "id": "tplN5",
+     "type": "note",
+     "x": -1180,
+     "y": 540,
+     "w": 300,
+     "h": 230,
+     "title": "Things to carry",
+     "text": "Quest items are in the library under Quest Items. Anything carried can lock an option, be given by one, and be tested for in a branch.\n\nA group can say its things are carried too, so a ship or a gadget behaves the same way. That is the cog beside New folder.",
+     "color": "#4a3f14",
+     "alpha": 1
+    },
+    {
+     "id": "tplN6",
+     "type": "note",
+     "x": -1180,
+     "y": 790,
+     "w": 300,
+     "h": 420,
+     "title": "Numbers and dice",
+     "text": "Anything in the library carries attributes: health, luck, fuel, whatever you need.\n\nA change is written as @Alpha luck + 2, and sums work: @Alpha health - (hit * 2).\n\n@roll 2d6 throws dice, and they roll across the screen in Play mode before the story goes on. What it lands on is kept: come back to this card in the same playthrough and the numbers are the ones you already got. Write @reroll 2d6 instead and it is thrown again every time.\n\nGlobals, in the library, holds the numbers that belong to the whole story rather than anybody in it: @globals day goes up each time round Back again.",
+     "color": "#3b3b3b",
+     "alpha": 1
+    },
+    {
+     "id": "tplN7",
+     "type": "note",
+     "x": -860,
+     "y": -640,
+     "w": 300,
+     "h": 230,
+     "title": "The library",
+     "text": "Down the side: Folios (people, places, things, and docs) and Media (pictures, sounds and fonts), with your boards underneath.\n\nMake groups and folders of your own. Drop image files straight onto a character to give them expressions.",
+     "color": "#1f4f5a",
+     "alpha": 1
+    },
+    {
+     "id": "tplN8",
+     "type": "note",
+     "x": -860,
+     "y": -390,
+     "w": 300,
+     "h": 250,
+     "title": "Where the panels sit",
+     "text": "Settings, bottom left, opens Where the panels sit. Panels go left, right, top or bottom, side by side or stacked.\n\nUnlock the interface and every panel gets a tile to drag it by. Across the top or bottom the library becomes columns you click through. Arrangements can be saved by name.",
+     "color": "#2c3350",
+     "alpha": 1
+    },
+    {
+     "id": "tplN9",
+     "type": "note",
+     "x": -860,
+     "y": -120,
+     "w": 300,
+     "h": 330,
+     "title": "Play mode",
+     "text": "Play, top right, reads the story from the start card. From selected starts at whatever is picked instead.\n\nIt keeps what is carried and every number as it goes. Three slots are yours to save into, and three more the story fills in itself: write @autosave into a line's changes and it saves there as the line is read. @save 2 writes a numbered slot.\n\nDebug, on Play's bar, has Restart scene and Restart last scene, to try the other option without playing the whole way back.",
+     "color": "#23452a",
+     "alpha": 1
+    },
+    {
+     "id": "tplN12",
+     "type": "note",
+     "x": -540,
+     "y": -640,
+     "w": 300,
+     "h": 280,
+     "title": "Your own menu",
+     "text": "The bar across the top of Play mode is yours to arrange: in the editor, under Interface, put it at the top, at the foot, or turn it off altogether.\n\nWith it off, draw your own. Any image layer can carry a command - @log, @saves, @config, @auto, @skip, @autosave, @goback - and becomes a button. Switch a layer to every card and it stands on every scene, so a menu is drawn once.",
+     "color": "#2c3350",
+     "alpha": 1
+    },
+    {
+     "id": "tplN13",
+     "type": "note",
+     "x": -540,
+     "y": -360,
+     "w": 300,
+     "h": 260,
+     "title": "A box of your own",
+     "text": "The dialogue box can be art. Put @dialogue on an image layer and it becomes the box: the words stay where they are and the standard background steps aside.\n\n@dialogue alpha uses that picture only while Alpha is speaking, and @dialogue allcharacters uses it for everybody. The cog beside each one styles it with your own CSS.",
+     "color": "#1f4f5a",
+     "alpha": 1
+    },
+    {
+     "id": "tplN10",
+     "type": "note",
+     "x": -860,
+     "y": 230,
+     "w": 300,
+     "h": 210,
+     "title": "Mission documents",
+     "text": "Missions, at the top, writes a board out as a document to read or hand round, and reads one back in as a board.\n\nPlanning cards - notes, to-dos, tables - travel with it.",
+     "color": "#5a2346",
+     "alpha": 1
+    },
+    {
+     "id": "tplN11",
+     "type": "note",
+     "x": -860,
+     "y": 460,
+     "w": 300,
+     "h": 230,
+     "title": "Make it yours",
+     "text": "Select these notes and delete them, empty the library, and the tool is yours with nothing in the way.\n\nYour work is saved to project/project.json beside the app as you go. Keep a copy of that file and you have kept your story.",
+     "color": "#4a3f14",
+     "alpha": 1
+    },
+    {
+     "id": "tplTodo",
+     "type": "todo",
+     "x": -860,
+     "y": 710,
+     "w": 300,
+     "title": "Try these",
+     "color": "#23452a",
+     "items": [
+      {
+       "id": "tplTd1",
+       "text": "Press Play and read the story through",
+       "done": false
+      },
+      {
+       "id": "tplTd2",
+       "text": "Add a line to a scene",
+       "done": false
+      },
+      {
+       "id": "tplTd3",
+       "text": "Lock an option behind the keycard",
+       "done": false
+      },
+      {
+       "id": "tplTd4",
+       "text": "Drop a picture onto Alpha",
+       "done": false
+      },
+      {
+       "id": "tplTd5",
+       "text": "Move a panel somewhere else",
+       "done": false
+      }
+     ]
+    },
+    {
+     "id": "tplS1",
+     "type": "scene",
+     "x": -180,
+     "y": -560,
+     "w": 300,
+     "title": "A door, and two people",
+     "color": "#1f6f63",
+     "bg": "tplBg1",
+     "cast": [
+      {
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "slot": "left",
+       "z": 0
+      },
+      {
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "slot": "right",
+       "z": 1
+      }
+     ],
+     "lines": [
+      {
+       "id": "tplL1",
+       "charId": null,
+       "imageId": null,
+       "text": "A corridor, somewhere. The door ahead does not open.",
+       "note": ""
+      },
+      {
+       "id": "tplL2",
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "text": "This is a placeholder. Every word here can go.",
+       "note": ""
+      },
+      {
+       "id": "tplL3",
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "text": "So can we. Is the keycard worth taking?",
+       "note": ""
+      }
+     ]
+    },
+    {
+     "id": "tplS2",
+     "type": "scene",
+     "x": 220,
+     "y": -710,
+     "w": 300,
+     "title": "Taking the keycard",
+     "color": "#8a5a14",
+     "bg": "tplBg1",
+     "cast": [
+      {
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "slot": "left",
+       "z": 0
+      },
+      {
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "slot": "right",
+       "z": 1
+      }
+     ],
+     "lines": [
+      {
+       "id": "tplL4",
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "text": "Alpha picks the card up. It is warm.",
+       "note": ""
+      },
+      {
+       "id": "tplL5",
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "text": "The option that brought us here handed it over. Look under ==Options and exits==.",
+       "note": ""
+      }
+     ]
+    },
+    {
+     "id": "tplS3",
+     "type": "scene",
+     "x": 220,
+     "y": -300,
+     "w": 300,
+     "title": "Leaving it where it is",
+     "color": "#7a2a26",
+     "bg": "tplBg1",
+     "cast": [
+      {
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "slot": "left",
+       "z": 0
+      },
+      {
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "slot": "right",
+       "z": 1
+      }
+     ],
+     "lines": [
+      {
+       "id": "tplL6",
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "text": "They leave it. The door will have to be talked into opening.",
+       "note": ""
+      },
+      {
+       "id": "tplL7",
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "text": "The next option is locked unless the keycard is carried, so this way round it is greyed out.",
+       "note": ""
+      }
+     ]
+    },
+    {
+     "id": "tplS4",
+     "type": "scene",
+     "x": 640,
+     "y": -560,
+     "w": 300,
+     "title": "The door",
+     "color": "#1f4f7a",
+     "bg": "tplBg1",
+     "cast": [
+      {
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "slot": "left",
+       "z": 0
+      },
+      {
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "slot": "right",
+       "z": 1
+      }
+     ],
+     "lines": [
+      {
+       "id": "tplL8",
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "text": "Alpha tries their luck with the lock.",
+       "note": ""
+      },
+      {
+       "id": "tplL9",
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "text": "Two dice, and whatever they say is what luck becomes.",
+       "note": "",
+       "sets": [
+        {
+         "id": "tplL9s0",
+         "text": "@Alpha luck = @roll 2d6"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "tplB1",
+     "type": "branch",
+     "x": 1040,
+     "y": -520,
+     "title": "Did the dice beat four?",
+     "color": "#3a4450",
+     "status": "",
+     "hasElse": true,
+     "conds": [
+      {
+       "id": "tplC1",
+       "requires": [],
+       "any": [],
+       "reqAny": false,
+       "lacks": [],
+       "expr": "@Alpha luck > 4"
+      }
+     ]
+    },
+    {
+     "id": "tplS5",
+     "type": "scene",
+     "x": 1360,
+     "y": -720,
+     "w": 300,
+     "title": "It opens",
+     "color": "#4a6a1e",
+     "bg": "tplBg1",
+     "cast": [
+      {
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "slot": "left",
+       "z": 0
+      },
+      {
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "slot": "right",
+       "z": 1
+      }
+     ],
+     "lines": [
+      {
+       "id": "tplL10",
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "text": "The lock gives. Beyond it: whatever you write next.",
+       "note": ""
+      }
+     ]
+    },
+    {
+     "id": "tplS6",
+     "type": "scene",
+     "x": 1360,
+     "y": -340,
+     "w": 300,
+     "title": "It holds",
+     "color": "#6a2c5e",
+     "bg": "tplBg1",
+     "cast": [
+      {
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "slot": "left",
+       "z": 0
+      },
+      {
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "slot": "right",
+       "z": 1
+      }
+     ],
+     "lines": [
+      {
+       "id": "tplL11",
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "text": "Nothing. Worth another try, with better dice.",
+       "note": ""
+      }
+     ]
+    },
+    {
+     "id": "tplH1",
+     "type": "highlight",
+     "x": -470,
+     "y": 160,
+     "w": 2440,
+     "h": 1060,
+     "title": "What else it does",
+     "hex": "#2C3350",
+     "alpha": 0.18,
+     "color": "#3b3b3b"
+    },
+    {
+     "id": "tplP1",
+     "type": "path",
+     "x": -420,
+     "y": 230,
+     "w": 220,
+     "targetId": "tplS7",
+     "color": "#5a2346"
+    },
+    {
+     "id": "tplS7",
+     "type": "scene",
+     "x": -60,
+     "y": 210,
+     "w": 300,
+     "title": "The vending machine",
+     "color": "#4a3f14",
+     "bg": "tplBg1",
+     "cast": [
+      {
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "slot": "left",
+       "z": 0
+      },
+      {
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "slot": "right",
+       "z": 1
+      }
+     ],
+     "lines": [
+      {
+       "id": "tplL12",
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "text": "Something heavy lands in the tray.",
+       "note": "",
+       "sounds": [
+        {
+         "audioId": "tplSnd1",
+         "mode": "once",
+         "delay": 0,
+         "vol": 1
+        }
+       ]
+      },
+      {
+       "id": "tplL12b",
+       "charId": null,
+       "imageId": null,
+       "text": "",
+       "note": "",
+       "kind": "fx",
+       "then": "next",
+       "hideBox": false,
+       "fx": [
+        {
+         "id": "tplL12bf0",
+         "type": "shake",
+         "delay": 0,
+         "strength": 2,
+         "ms": 400
+        }
+       ]
+      },
+      {
+       "id": "tplL13",
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "text": "A number nobody has a die for, so it turns like a slot machine.",
+       "note": "",
+       "sets": [
+        {
+         "id": "tplL13s0",
+         "text": "@Beta fate = @roll d500"
+        }
+       ]
+      },
+      {
+       "id": "tplL14",
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "text": "Two keycards this time, not one.",
+       "note": "",
+       "give": [
+        {
+         "id": "tplItem1",
+         "n": 2
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "tplS8",
+     "type": "scene",
+     "x": 420,
+     "y": 210,
+     "w": 300,
+     "title": "Back again",
+     "color": "#23452a",
+     "bg": null,
+     "cast": [
+      {
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "slot": "left",
+       "z": 0
+      },
+      {
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "slot": "right",
+       "z": 1
+      }
+     ],
+     "lines": [
+      {
+       "id": "tplL15",
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "text": "This card knows how often you have stood on it, and every time round another day goes by.",
+       "note": "",
+       "sets": [
+        {
+         "id": "tplL15s0",
+         "text": "@globals day + 1"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "tplS9",
+     "type": "scene",
+     "x": 820,
+     "y": 210,
+     "w": 300,
+     "title": "The dark",
+     "color": "#3b3b3b",
+     "bg": "none",
+     "cast": [],
+     "lines": [
+      {
+       "id": "tplL16",
+       "charId": "tplChar1",
+       "imageId": null,
+       "text": "No backdrop of its own and nothing carried over: a bare stage.",
+       "note": ""
+      },
+      {
+       "id": "tplL18",
+       "charId": "tplChar1",
+       "imageId": null,
+       "text": "Something moves out there. Run while you can, or the choice is made for you.",
+       "note": "",
+       "sets": [
+        {
+         "id": "tplL18s0",
+         "text": "@option1timer(4)"
+        },
+        {
+         "id": "tplL18s1",
+         "text": "@optiontimer(8) = 2"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "tplS11",
+     "type": "scene",
+     "x": 1220,
+     "y": 210,
+     "w": 300,
+     "title": "Ran for it",
+     "color": "#1f4f7a",
+     "bg": "tplBg1",
+     "cast": [
+      {
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "slot": "left",
+       "z": 0
+      },
+      {
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "slot": "right",
+       "z": 1
+      }
+     ],
+     "lines": [
+      {
+       "id": "tplL19",
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "text": "Out. That option had a clock of its own, four seconds, and then it was gone.",
+       "note": ""
+      }
+     ]
+    },
+    {
+     "id": "tplS12",
+     "type": "scene",
+     "x": 1220,
+     "y": 610,
+     "w": 300,
+     "title": "Held still",
+     "color": "#3b3b3b",
+     "bg": "none",
+     "cast": [],
+     "lines": [
+      {
+       "id": "tplL20",
+       "charId": "tplChar1",
+       "imageId": null,
+       "text": "Nobody moved. Leave it eight seconds and the story takes this one for you, the clock's on the last line of The dark.",
+       "note": ""
+      }
+     ]
+    },
+    {
+     "id": "tplND1",
+     "type": "note",
+     "x": 1720,
+     "y": -700,
+     "w": 380,
+     "h": 600,
+     "title": "",
+     "text": "",
+     "color": "#2c3350",
+     "alpha": 1,
+     "docId": "tplDoc1"
+    },
+    {
+     "id": "tplSH1",
+     "type": "shape",
+     "shape": "process",
+     "x": -60,
+     "y": 730,
+     "w": 200,
+     "h": 110,
+     "title": "A step",
+     "color": "#46566b"
+    },
+    {
+     "id": "tplSH2",
+     "type": "shape",
+     "shape": "decision",
+     "x": 260,
+     "y": 730,
+     "w": 200,
+     "h": 110,
+     "title": "A question?",
+     "color": "#46566b"
+    },
+    {
+     "id": "tplSH3",
+     "type": "shape",
+     "shape": "terminator",
+     "x": 580,
+     "y": 730,
+     "w": 200,
+     "h": 110,
+     "title": "And a stop",
+     "color": "#46566b"
+    },
+    {
+     "id": "tplC2",
+     "type": "container",
+     "x": 880,
+     "y": 510,
+     "w": 280,
+     "title": "A container holds cards",
+     "items": [
+      "tplN14",
+      "tplN15"
+     ],
+     "color": "#3a4450"
+    },
+    {
+     "id": "tplLK1",
+     "type": "link",
+     "x": -420,
+     "y": 900,
+     "w": 260,
+     "url": "https://storyboard.invalid/notes",
+     "title": "A link card",
+     "note": "Somewhere to keep a reference.",
+     "color": "#1f4f5a"
+    },
+    {
+     "id": "tplTB1",
+     "type": "table",
+     "x": -60,
+     "y": 900,
+     "w": 340,
+     "title": "A table",
+     "head": true,
+     "rows": [
+      [
+       "Who",
+       "Wants"
+      ],
+      [
+       "Alpha",
+       "Through the door"
+      ],
+      [
+       "Beta",
+       "To be left alone"
+      ]
+     ],
+     "color": "#2c3350"
+    },
+    {
+     "id": "tplCM1",
+     "type": "comment",
+     "x": 380,
+     "y": 900,
+     "w": 220,
+     "text": "A comment is a remark pinned to the board.",
+     "who": "you",
+     "color": "#5a2346"
+    },
+    {
+     "id": "tplBL1",
+     "type": "boardlink",
+     "x": 620,
+     "y": 900,
+     "w": 240,
+     "boardId": "tplB_side",
+     "note": "A door through to another board.",
+     "color": "#3a4450"
+    },
+    {
+     "id": "tplIM1",
+     "type": "image",
+     "x": 1300,
+     "y": 900,
+     "w": 260,
+     "h": 180,
+     "bgId": "tplBg1",
+     "title": "",
+     "caption": "A picture standing on the board, not in a scene.",
+     "fit": "cover",
+     "color": "#3a4450"
+    },
+    {
+     "id": "tplAR1",
+     "type": "arrow",
+     "x": 1600,
+     "y": 870,
+     "w": 180,
+     "h": 40,
+     "a": {
+      "x": 0,
+      "y": 40
+     },
+     "b": {
+      "x": 180,
+      "y": 0
+     },
+     "color": "#d8c9a8",
+     "ends": "end"
+    },
+    {
+     "id": "tplDR1",
+     "type": "draw",
+     "x": 1080,
+     "y": 940,
+     "w": 1,
+     "h": 1,
+     "color": "#e8d9b8",
+     "strokes": [
+      {
+       "color": "#e8d9b8",
+       "width": 3,
+       "nib": "pen",
+       "pts": [
+        [
+         0,
+         40
+        ],
+        [
+         60,
+         20
+        ],
+        [
+         120,
+         34
+        ],
+        [
+         170,
+         8
+        ]
+       ]
+      },
+      {
+       "color": "#e8d9b8",
+       "width": 3,
+       "nib": "pen",
+       "pts": [
+        [
+         170,
+         8
+        ],
+        [
+         150,
+         26
+        ]
+       ]
+      },
+      {
+       "color": "#e8d9b8",
+       "width": 3,
+       "nib": "pen",
+       "pts": [
+        [
+         170,
+         8
+        ],
+        [
+         148,
+         4
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "id": "tplN16",
+     "type": "note",
+     "x": 1600,
+     "y": 210,
+     "w": 330,
+     "h": 620,
+     "title": "What the second run shows",
+     "text": "Play from The vending machine to see these, or follow the door out of It opens.\n\nA Path to card is a door: it sends the player on to another card without a choice.\n\nThe vending machine plays a sound, throws a d500 and hands over two keycards. A d6 and a d20 are drawn as dice because you can hold one. Nobody sells a d500, so it turns like a slot machine instead of pretending to be an object.\n\nBack again asks how often you have stood on it, with @visit, so the way on changes the third time round, and every time round it moves @globals day on by one.\n\nThe dark asks for no backdrop at all, which is not the same as saying nothing: a card that says nothing keeps whatever is already showing. It also puts a clock on its options: Run for it has four seconds of its own, and after eight the story takes Hold still for you.\n\nThe shapes below are a flowchart, and the container beside them holds cards and takes them with it. Neither means anything in Play: they are for thinking on.",
+     "color": "#2c3350",
+     "alpha": 1
+    },
+    {
+     "id": "tplN14",
+     "type": "note",
+     "x": 0,
+     "y": 0,
+     "w": 240,
+     "h": 100,
+     "title": "",
+     "text": "Cards stand in a container and travel with it.",
+     "color": "#2c3350",
+     "alpha": 1
+    },
+    {
+     "id": "tplN15",
+     "type": "note",
+     "x": 0,
+     "y": 0,
+     "w": 240,
+     "h": 90,
+     "title": "",
+     "text": "Drag one out and it is loose again.",
+     "color": "#2c3350",
+     "alpha": 1
+    }
+   ],
+   "edges": [
+    {
+     "id": "tplE1",
+     "from": "tplS1",
+     "to": "tplS2",
+     "label": "Take the keycard",
+     "style": "ortho",
+     "give": [
+      "tplItem1"
+     ]
+    },
+    {
+     "id": "tplE2",
+     "from": "tplS1",
+     "to": "tplS3",
+     "label": "Leave it where it is",
+     "style": "ortho"
+    },
+    {
+     "id": "tplE3",
+     "from": "tplS2",
+     "to": "tplS4",
+     "label": "Try the door",
+     "style": "ortho"
+    },
+    {
+     "id": "tplE4",
+     "from": "tplS3",
+     "to": "tplS4",
+     "label": "Try the door anyway",
+     "style": "ortho",
+     "requires": [
+      "tplItem1"
+     ]
+    },
+    {
+     "id": "tplE5",
+     "from": "tplS4",
+     "to": "tplB1",
+     "label": "",
+     "style": "ortho"
+    },
+    {
+     "id": "tplE6",
+     "from": "tplB1",
+     "to": "tplS5",
+     "label": "",
+     "style": "ortho",
+     "cond": "tplC1"
+    },
+    {
+     "id": "tplE7",
+     "from": "tplB1",
+     "to": "tplS6",
+     "label": "",
+     "style": "ortho",
+     "cond": "else"
+    },
+    {
+     "id": "tplE8",
+     "from": "tplS6",
+     "to": "tplS4",
+     "label": "Try again",
+     "style": "ortho"
+    },
+    {
+     "id": "tplE9",
+     "from": "tplS5",
+     "to": "tplP1",
+     "label": "What else can it do?",
+     "style": "ortho"
+    },
+    {
+     "id": "tplE10",
+     "from": "tplS7",
+     "to": "tplS8",
+     "label": "Round again",
+     "style": "ortho"
+    },
+    {
+     "id": "tplE11",
+     "from": "tplS8",
+     "to": "tplS7",
+     "label": "Once more",
+     "style": "ortho",
+     "expr": "@visit <= 2"
+    },
+    {
+     "id": "tplE12",
+     "from": "tplS8",
+     "to": "tplS9",
+     "label": "Into the dark",
+     "style": "ortho",
+     "expr": "@visit > 2"
+    },
+    {
+     "id": "tplE15",
+     "from": "tplS9",
+     "to": "tplS11",
+     "label": "Run for it",
+     "style": "ortho"
+    },
+    {
+     "id": "tplE16",
+     "from": "tplS9",
+     "to": "tplS12",
+     "label": "Hold still",
+     "style": "ortho"
+    },
+    {
+     "id": "tplE17",
+     "from": "tplS11",
+     "to": "tplS7",
+     "label": "Back to the vending machine",
+     "style": "ortho"
+    },
+    {
+     "id": "tplE18",
+     "from": "tplS12",
+     "to": "tplS7",
+     "label": "Back to the vending machine",
+     "style": "ortho"
+    },
+    {
+     "id": "tplE13",
+     "from": "tplSH1",
+     "to": "tplSH2",
+     "label": "",
+     "style": "ortho"
+    },
+    {
+     "id": "tplE14",
+     "from": "tplSH2",
+     "to": "tplSH3",
+     "label": "yes",
+     "style": "ortho"
+    }
+   ]
+  },
+  {
+   "id": "tplB_side",
+   "code": "W2",
+   "name": "A second board",
+   "folderId": null,
+   "status": "",
+   "nodes": [
+    {
+     "id": "tplN20",
+     "type": "note",
+     "x": -200,
+     "y": -160,
+     "w": 320,
+     "h": 300,
+     "title": "A board of your own",
+     "text": "The Board card on Start here opens this one, and the one here goes back.\n\nA story of any size ends up on more than one: a chapter each, or the places apart from the people. A Path to card reaches a card on any board, so the story runs across all of them as one.\n\nSomewhere else has no way out, so it wears a red border: a dead end. An ending does too. The board's properties count them.",
+     "color": "#1f4f5a",
+     "alpha": 1
+    },
+    {
+     "id": "tplBL2",
+     "type": "boardlink",
+     "x": 180,
+     "y": -160,
+     "w": 240,
+     "boardId": "tplB_main",
+     "note": "Back to Start here.",
+     "color": "#3a4450"
+    },
+    {
+     "id": "tplS10",
+     "type": "scene",
+     "x": -200,
+     "y": 180,
+     "w": 300,
+     "title": "Somewhere else",
+     "color": "#1f6f63",
+     "bg": null,
+     "cast": [],
+     "lines": [
+      {
+       "id": "tplL17",
+       "charId": null,
+       "imageId": null,
+       "text": "A scene on the second board, reached by the door.",
+       "note": ""
+      }
+     ]
+    },
+    {
+     "id": "tplS20",
+     "type": "scene",
+     "x": 560,
+     "y": -160,
+     "w": 300,
+     "title": "The shop",
+     "color": "#4a3f14",
+     "bg": null,
+     "cast": [],
+     "lines": [
+      {
+       "id": "tplL30",
+       "charId": null,
+       "imageId": null,
+       "text": "Welcome in. Have a look round.",
+       "note": "",
+       "expr": "@visit == 1"
+      },
+      {
+       "id": "tplL31",
+       "charId": null,
+       "imageId": null,
+       "text": "You've @globals gold gold on you.",
+       "note": ""
+      }
+     ]
+    },
+    {
+     "id": "tplBR20",
+     "type": "branch",
+     "x": 600,
+     "y": 300,
+     "title": "Back to the counter",
+     "color": "#3a4450",
+     "status": "",
+     "hasElse": true,
+     "conds": []
+    },
+    {
+     "id": "tplN21",
+     "type": "note",
+     "x": 1000,
+     "y": -160,
+     "w": 360,
+     "h": 380,
+     "title": "A shop, built from options and a loop",
+     "text": "Each thing for sale is an option on the shop, locked until @globals gold is enough and taking the gold as it's bought, and it goes into the empty branch below, which leads straight back to the shop. So every purchase comes back to the counter, and there's one way out, Leave.\n\nA branch isn't only for picking a way by a condition. With nothing but its else it's where ways meet again, which is all this one does.\n\nThe welcome is only said the first time, since that line has @visit == 1 on it. A shop with a lot for sale can set its options out in columns with a Stack size in the scene builder, and more than fits is pages, a scene each, with options as the arrows.",
+     "color": "#4a3f14",
+     "alpha": 1
+    }
+   ],
+   "edges": [
+    {
+     "id": "tplE30",
+     "from": "tplS20",
+     "to": "tplBR20",
+     "label": "Buy a medkit, 10 gold",
+     "style": "ortho",
+     "expr": "@globals gold >= 10",
+     "sets": [
+      {
+       "id": "tplE30s0",
+       "text": "@globals gold - 10"
+      }
+     ],
+     "give": [
+      {
+       "id": "tplMedkit",
+       "n": 1
+      }
+     ]
+    },
+    {
+     "id": "tplE31",
+     "from": "tplBR20",
+     "to": "tplS20",
+     "label": "",
+     "style": "ortho",
+     "cond": "else",
+     "toSide": "right"
+    },
+    {
+     "id": "tplE32",
+     "from": "tplS20",
+     "to": "tplS10",
+     "label": "Leave",
+     "style": "ortho"
+    }
+   ]
+  },
+  {
+   "id": "tplB_tut",
+   "code": "W3",
+   "name": "The tutorial story",
+   "folderId": null,
+   "status": "",
+   "nodes": [
+    {
+     "id": "tplT1",
+     "type": "scene",
+     "x": -160,
+     "y": -520,
+     "w": 300,
+     "title": "The dock at dusk",
+     "color": "#1f6f63",
+     "bg": "tplBg1",
+     "cast": [
+      {
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "slot": "left",
+       "z": 0
+      },
+      {
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "slot": "right",
+       "z": 1
+      }
+     ],
+     "lines": [
+      {
+       "id": "tplU1",
+       "charId": null,
+       "imageId": null,
+       "text": "Rain on the dock, a crate, a gull, and somebody waiting.",
+       "note": ""
+      },
+      {
+       "id": "tplU2",
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "text": "You came. **Good**. I was starting to think you wouldn't.",
+       "note": ""
+      },
+      {
+       "id": "tplU3",
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "text": "Day @math(@globals day), and the tide is against us.",
+       "note": "quiet"
+      }
+     ],
+     "audio": [
+      {
+       "audioId": "tplSndCalm",
+       "mode": "loop",
+       "delay": 0,
+       "vol": 1
+      }
+     ]
+    },
+    {
+     "id": "tplT2",
+     "type": "scene",
+     "x": 260,
+     "y": -700,
+     "w": 300,
+     "title": "Asking about the quartermaster",
+     "color": "#1f4f7a",
+     "bg": "tplBg1",
+     "cast": [
+      {
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "slot": "left",
+       "z": 0
+      },
+      {
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "slot": "right",
+       "z": 1
+      }
+     ],
+     "lines": [
+      {
+       "id": "tplU4",
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "text": "Her name is Mara. Say I sent you and the gate opens.",
+       "note": ""
+      },
+      {
+       "id": "tplU5",
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "text": "Nothing is written down for that. The card counts its own visits, and further on a choice asks whether you were ever here.",
+       "note": ""
+      }
+     ]
+    },
+    {
+     "id": "tplT3",
+     "type": "scene",
+     "x": 680,
+     "y": -520,
+     "w": 300,
+     "title": "The gate",
+     "color": "#6a2c5e",
+     "bg": "tplBg1",
+     "cast": [
+      {
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "slot": "left",
+       "z": 0
+      },
+      {
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "slot": "right",
+       "z": 1
+      }
+     ],
+     "lines": [
+      {
+       "id": "tplU6",
+       "charId": null,
+       "imageId": null,
+       "text": "A gate, a guard, and a lamp swinging on its hook.",
+       "note": ""
+      },
+      {
+       "id": "tplU7",
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "text": "You've got a name for me, or coin, or a lock to argue with.",
+       "note": ""
+      }
+     ]
+    },
+    {
+     "id": "tplT4",
+     "type": "scene",
+     "x": 1100,
+     "y": -300,
+     "w": 300,
+     "title": "Arguing with the lock",
+     "color": "#8a5a14",
+     "bg": "tplBg1",
+     "cast": [
+      {
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "slot": "left",
+       "z": 0
+      },
+      {
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "slot": "right",
+       "z": 1
+      }
+     ],
+     "lines": [
+      {
+       "id": "tplU8",
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "text": "Two dice, and whatever they say is what luck is tonight.",
+       "note": "",
+       "sets": [
+        {
+         "id": "tplU8s0",
+         "text": "@Alpha luck = @roll 2d6"
+        }
+       ]
+      },
+      {
+       "id": "tplU9",
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "text": "Luck is @math(@Alpha luck).",
+       "note": ""
+      }
+     ],
+     "audio": [
+      {
+       "audioId": "tplSndTense",
+       "mode": "loop",
+       "delay": 0,
+       "vol": 1
+      }
+     ]
+    },
+    {
+     "id": "tplT5",
+     "type": "scene",
+     "x": 1520,
+     "y": -640,
+     "w": 300,
+     "title": "The yard",
+     "color": "#4a6a1e",
+     "bg": "tplBg1",
+     "cast": [
+      {
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "slot": "left",
+       "z": 0
+      },
+      {
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "slot": "right",
+       "z": 1
+      }
+     ],
+     "lines": [
+      {
+       "id": "tplU10",
+       "charId": null,
+       "imageId": null,
+       "text": "",
+       "note": "",
+       "kind": "fx",
+       "then": "next",
+       "hideBox": false,
+       "fx": [
+        {
+         "id": "tplU10f0",
+         "type": "shake",
+         "delay": 0,
+         "strength": 2,
+         "ms": 420
+        },
+        {
+         "id": "tplU10f1",
+         "type": "flash",
+         "delay": 0,
+         "ms": 220,
+         "color": "#ffffff"
+        }
+       ]
+      },
+      {
+       "id": "tplU11",
+       "charId": null,
+       "imageId": null,
+       "text": "The gate shuts behind you, and the yard is quiet.",
+       "note": "",
+       "sounds": [
+        {
+         "audioId": "tplSnd1",
+         "mode": "once",
+         "delay": 0,
+         "vol": 1
+        }
+       ]
+      },
+      {
+       "id": "tplU12",
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "text": "Far enough in to be worth keeping.",
+       "note": "",
+       "sets": [
+        {
+         "id": "tplU12s0",
+         "text": "@autosave"
+        }
+       ]
+      }
+     ],
+     "stopAudio": true
+    },
+    {
+     "id": "tplT6",
+     "type": "scene",
+     "x": 1940,
+     "y": -760,
+     "w": 300,
+     "title": "Mara's letter",
+     "color": "#2c3350",
+     "bg": "tplBg1",
+     "cast": [
+      {
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "slot": "center",
+       "z": 0
+      }
+     ],
+     "lines": [
+      {
+       "id": "tplU13",
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "text": "The letter is longer than the lamp light. Roll the wheel over it, or drag the card down its edge.",
+       "note": ""
+      }
+     ],
+     "props": [
+      {
+       "id": "tplUP1",
+       "bgId": "tplBg1",
+       "x": 38,
+       "y": 26,
+       "h": 20,
+       "w": 34,
+       "act": "@scrollable letter"
+      },
+      {
+       "id": "tplUP2",
+       "bgId": "tplBg1",
+       "x": 58,
+       "y": 42,
+       "h": 5,
+       "w": 2,
+       "act": "@scrollbar letter",
+       "slide": {
+        "from": {
+         "x": 58,
+         "y": 42
+        },
+        "to": {
+         "x": 58,
+         "y": 27
+        }
+       }
+      }
+     ]
+    },
+    {
+     "id": "tplT7",
+     "type": "scene",
+     "x": 1940,
+     "y": -300,
+     "w": 300,
+     "title": "The whistle",
+     "color": "#7a2a26",
+     "bg": "tplBg1",
+     "cast": [
+      {
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "slot": "left",
+       "z": 0
+      },
+      {
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "slot": "right",
+       "z": 1
+      }
+     ],
+     "lines": [
+      {
+       "id": "tplU14",
+       "charId": null,
+       "imageId": null,
+       "text": "A whistle, two streets off, and a lamp going out behind it.",
+       "note": "",
+       "sets": [
+        {
+         "id": "tplU14s0",
+         "text": "@optiontimer(6) = 2"
+        }
+       ]
+      },
+      {
+       "id": "tplU15",
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "text": "Pick, or the clock picks Stand still for you.",
+       "note": ""
+      }
+     ],
+     "audio": [
+      {
+       "audioId": "tplSndTense",
+       "mode": "loop",
+       "delay": 0,
+       "vol": 1
+      }
+     ],
+     "props": [
+      {
+       "id": "tplUP3",
+       "bgId": "tplBg1",
+       "x": 88,
+       "y": 70,
+       "h": 12,
+       "act": "@optiontimer"
+      }
+     ]
+    },
+    {
+     "id": "tplT8",
+     "type": "scene",
+     "x": 2360,
+     "y": -520,
+     "w": 300,
+     "title": "The end of the tour",
+     "color": "#1f6f63",
+     "bg": "tplBg1",
+     "cast": [
+      {
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "slot": "left",
+       "z": 0
+      },
+      {
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "slot": "right",
+       "z": 1
+      }
+     ],
+     "lines": [
+      {
+       "id": "tplU16",
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "text": "That is the lot: lines, a choice, a thing the story remembers, dice, an effect, a save, music, a page to read and a clock.",
+       "note": ""
+      },
+      {
+       "id": "tplU17",
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "text": "Take it apart, or delete the board and write your own.",
+       "note": ""
+      }
+     ],
+     "audio": [
+      {
+       "audioId": "tplSndCalm",
+       "mode": "loop",
+       "delay": 0,
+       "vol": 1
+      }
+     ]
+    },
+    {
+     "id": "tplT9",
+     "type": "scene",
+     "x": 1100,
+     "y": 160,
+     "w": 300,
+     "title": "Turned away",
+     "color": "#3b3b3b",
+     "bg": "tplBg1",
+     "cast": [
+      {
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "slot": "left",
+       "z": 0
+      },
+      {
+       "charId": "tplChar2",
+       "imageId": "tplPicB",
+       "slot": "right",
+       "z": 1
+      }
+     ],
+     "lines": [
+      {
+       "id": "tplU18",
+       "charId": "tplChar1",
+       "imageId": "tplPicA",
+       "text": "The lock wins. There is always the name, if you went and asked for it.",
+       "note": ""
+      }
+     ]
+    },
+    {
+     "id": "tplTB1",
+     "type": "branch",
+     "x": 1520,
+     "y": -60,
+     "title": "Did the dice beat six?",
+     "color": "#3a4450",
+     "status": "",
+     "hasElse": true,
+     "conds": [
+      {
+       "id": "tplTC1",
+       "requires": [],
+       "any": [],
+       "reqAny": false,
+       "lacks": [],
+       "expr": "@Alpha luck > 6"
+      }
+     ]
+    },
+    {
+     "id": "tplTBL",
+     "type": "boardlink",
+     "x": -160,
+     "y": 0,
+     "w": 240,
+     "boardId": "tplB_main",
+     "note": "Back to Start here.",
+     "color": "#3a4450"
+    },
+    {
+     "id": "tplTN1",
+     "type": "note",
+     "x": -640,
+     "y": -520,
+     "w": 300,
+     "h": 350,
+     "title": "The tutorial story",
+     "text": "Press Play here to read it, then come back and open each card to see how it was made. Every card on this board shows one way of coding a scene, and the note beside it says which.\n\nNothing here is precious. Change a line, take a choice off, and play it again.\n\nTwo things show in Dead ends and errors on purpose. The end of the tour has no way out, which is what an ending is, and The dock at dusk has nothing leading into it, which every board's first card has unless it is the Play start.",
+     "color": "#1f4f5a",
+     "alpha": 1
+    },
+    {
+     "id": "tplTN2",
+     "type": "note",
+     "x": 260,
+     "y": -240,
+     "w": 320,
+     "h": 330,
+     "title": "What the story remembers",
+     "text": "Asking about the quartermaster is a card of its own, and going there is the whole of the knowledge: no flag to set, no item to carry.\n\nAt the gate, the choice Say Mara sent you carries the condition @visit(W3S2) > 0, and it's ticked Hide when locked, so a player who never asked never sees it. Leave that tick off and it shows greyed out with what it wants, which suits a locked door rather than a secret.",
+     "color": "#23452a",
+     "alpha": 1
+    },
+    {
+     "id": "tplTN3",
+     "type": "note",
+     "x": 680,
+     "y": -80,
+     "w": 320,
+     "h": 290,
+     "title": "Locks, coin and dice",
+     "text": "Offer coin is locked on @globals gold >= 5 and takes the five as it's picked, so the Globals folio is the story's purse.\n\nArguing with the lock throws two dice into @Alpha luck, and the branch beside it reads the number. The throw happens before the branch picks, so the branch sees what the dice said.",
+     "color": "#2c3350",
+     "alpha": 1
+    },
+    {
+     "id": "tplTN4",
+     "type": "note",
+     "x": 1520,
+     "y": -940,
+     "w": 300,
+     "h": 280,
+     "title": "Effects, sound and a save",
+     "text": "The yard opens with an effect block, a shake and a flash on one line, and the line after it plays a sound. The card has Silence music carried over ticked, so the music from outside stops at the gate and the yard really is quiet.\n\nThe last line of the card carries @autosave, so the story saves itself where it matters. @save 2 writes a numbered slot instead, and a slot keeps every save made in it.",
+     "color": "#3b3b3b",
+     "alpha": 1
+    },
+    {
+     "id": "tplTN6",
+     "type": "note",
+     "x": -640,
+     "y": -140,
+     "w": 300,
+     "h": 400,
+     "title": "Music",
+     "text": "The dock at dusk starts the Calm loop, under Scene audio in its properties. The cards after it have no music of their own, so it carries on into them, and coming back to one doesn't start it again: it keeps going from where it was.\n\nMusic stops or changes only when a card says so. Arguing with the lock has the Tension loop of its own, so that takes over. The yard has Silence music carried over ticked, so everything stops there. The whistle starts the tension again, and the end of the tour goes back to calm.\n\nBoth loops are CC0, from the starter sounds, with the credit kept in the library.",
+     "color": "#5a2346",
+     "alpha": 1
+    },
+    {
+     "id": "tplTN5",
+     "type": "note",
+     "x": 2360,
+     "y": -860,
+     "w": 320,
+     "h": 320,
+     "title": "A page, and a clock",
+     "text": "Mara's letter is a picture with @scrollable in its Codeblock, shown as a window the size of its box, and the little card beside it is @scrollbar, dragged between the start and the end set in the scene builder.\n\nThe whistle puts a clock on its options with @optiontimer(6) = 2, six seconds and then option two. The picture in the corner says @optiontimer, so the clock is drawn as art rather than as a bar on the button.",
+     "color": "#4a3f14",
+     "alpha": 1
+    }
+   ],
+   "edges": [
+    {
+     "id": "tplTE1",
+     "from": "tplT1",
+     "to": "tplT2",
+     "label": "Ask about the quartermaster",
+     "style": "ortho"
+    },
+    {
+     "id": "tplTE2",
+     "from": "tplT1",
+     "to": "tplT3",
+     "label": "Walk straight to the gate",
+     "style": "ortho"
+    },
+    {
+     "id": "tplTE3",
+     "from": "tplT2",
+     "to": "tplT3",
+     "label": "On to the gate",
+     "style": "ortho"
+    },
+    {
+     "id": "tplTE4",
+     "from": "tplT3",
+     "to": "tplT5",
+     "label": "Say Mara sent you",
+     "style": "ortho",
+     "expr": "@visit(W3S2) > 0",
+     "hideLocked": true
+    },
+    {
+     "id": "tplTE5",
+     "from": "tplT3",
+     "to": "tplT5",
+     "label": "Offer coin",
+     "style": "ortho",
+     "expr": "@globals gold >= 5",
+     "sets": [
+      {
+       "id": "tplTE5s0",
+       "text": "@globals gold - 5"
+      }
+     ]
+    },
+    {
+     "id": "tplTE6",
+     "from": "tplT3",
+     "to": "tplT4",
+     "label": "Argue with the lock",
+     "style": "ortho"
+    },
+    {
+     "id": "tplTE7",
+     "from": "tplT4",
+     "to": "tplTB1",
+     "label": "",
+     "style": "ortho"
+    },
+    {
+     "id": "tplTE8",
+     "from": "tplTB1",
+     "to": "tplT5",
+     "label": "",
+     "style": "ortho",
+     "cond": "tplTC1"
+    },
+    {
+     "id": "tplTE9",
+     "from": "tplTB1",
+     "to": "tplT9",
+     "label": "",
+     "style": "ortho",
+     "cond": "else"
+    },
+    {
+     "id": "tplTE10",
+     "from": "tplT9",
+     "to": "tplT3",
+     "label": "Back to the gate",
+     "style": "ortho"
+    },
+    {
+     "id": "tplTE11",
+     "from": "tplT5",
+     "to": "tplT6",
+     "label": "Read the letter",
+     "style": "ortho"
+    },
+    {
+     "id": "tplTE12",
+     "from": "tplT5",
+     "to": "tplT7",
+     "label": "Out through the yard",
+     "style": "ortho"
+    },
+    {
+     "id": "tplTE13",
+     "from": "tplT6",
+     "to": "tplT7",
+     "label": "Fold it away",
+     "style": "ortho"
+    },
+    {
+     "id": "tplTE14",
+     "from": "tplT7",
+     "to": "tplT8",
+     "label": "Run for it",
+     "style": "ortho"
+    },
+    {
+     "id": "tplTE15",
+     "from": "tplT7",
+     "to": "tplT8",
+     "label": "Stand still",
+     "style": "ortho"
+    }
+   ]
+  }
+ ]
+}

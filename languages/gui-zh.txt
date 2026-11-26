@@ -219,4 +219,5 @@ Quiet until {n}:{n}	静默至 {n}:{n}
 Quiet until turned off	静默直到关闭
 Export settings	导出设置
 Import settings	导入设置
-Save Mainframe position	记住面板位置
+Save Mainframe position	保存 Mainframe 位置
+Capri options	Capri 选项

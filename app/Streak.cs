@@ -27,7 +27,8 @@ namespace CapriDesktop
         // What a run's first acts moved on her side: the sulk count, the drift timers and the acts' own waits.
         private sealed class StreakKept
         {
-            internal int Upset, StayedOut;
+            internal double Upset;
+            internal int StayedOut;
             internal DateTime DriftEnds;
             internal string DriftFlagged;
             internal double HighFived, Clicked;
@@ -127,6 +128,7 @@ namespace CapriDesktop
 
         // Its lines at their counts; slow clicks are ordinary acts; three runs in a row, in other moods, each put her mood,
         // tallies and timers back, keep her where she is, show only on the screen, keep the best and leave one callback.
+#if CHECKS
         private void SmokeStreak(List<string> checks)
         {
             List<KeyValuePair<int, string>> lines = Sayings.CountedLines();
@@ -140,11 +142,15 @@ namespace CapriDesktop
             Mood.Kept moodWas = Mood.Keep();
             bool silentWas = preferences.Silent;
             Point placeWas = Location;
+            TimeSpan offsetWas = SimTime.Offset;
             try
             {
                 preferences.Silent = true;
                 preferences.StreakBest = 0;
                 double t = clock.Elapsed.TotalSeconds + 100;
+                // Past the hour, so praise from checks before this one has left her act limits (an hourly cap on praise)
+                // and the slow clicks count as the acts they are.
+                SimTime.Advance(TimeSpan.FromHours(1.1));
                 Mood.Feel(10, 0);
                 Mood.Kept slowFrom = Mood.Keep();
                 foreach (double gap in new[] { 0.0, 0.8, 1.6 }) if (!StreakClick(t + gap)) HighFive(t + gap);
@@ -196,10 +202,13 @@ namespace CapriDesktop
                 preferences.Silent = silentWas;
                 Personalities.Attitude = attitudeWas;
                 Mood.PutBack(moodWas);
+                SimTime.Reset();
+                SimTime.Advance(offsetWas);
                 SavePreferences();
                 CloseTalk();
             }
         }
+#endif
     }
 
     // Large, in the middle of the screen, in the Mainframe's colours. Clicks go straight through it, and it never takes focus.

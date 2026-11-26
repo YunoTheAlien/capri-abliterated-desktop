@@ -479,6 +479,7 @@ namespace CapriDesktop
             GetFreeEars();
         }
 
+#if CHECKS
         private void SmokeHearingStatus(List<string> checks, string output)
         {
             Directory.CreateDirectory(output);
@@ -498,7 +499,6 @@ namespace CapriDesktop
             string languageWas = parakeet.Language;
             string voiceKeyWas = voice.Key, voiceIdWas = voice.VoiceId;
             bool pageWas = mainframe.SettingsShown;
-            bool simpleWas = simpleTest;
             // Its checks bring the Mainframe up, so it goes back down after: a minimized start stays minimized.
             bool mainframeShownWas = mainframe.Visible;
             System.Windows.Forms.FormWindowState mainframeStateWas = mainframe.WindowState;
@@ -823,14 +823,11 @@ namespace CapriDesktop
                 foreach (int dpi in new[] { 96, 144, 192 })
                 {
                     mainframe.LayoutScale(dpi, 100);
-                    foreach (bool advanced in new[] { false, true })
                     {
-                        preferences.AdvancedSettings = advanced;
-                        simpleTest = !advanced;
                         mainframe.ShowSettings(true);
                         string overlap = mainframe.Overlap(), outside = mainframe.PageClamped ? null : mainframe.Outside(), text = mainframe.TextFits();
                         if (overlap != null || outside != null || text != null || !mainframe.HearingChoiceFits)
-                            throw new Exception("Hearing layout " + dpi + " dpi, " + (advanced ? "Advanced" : "Simple") + ": overlap " + overlap + "; outside " + outside + "; text " + text + ".");
+                            throw new Exception("Hearing layout " + dpi + " dpi: overlap " + overlap + "; outside " + outside + "; text " + text + ".");
                         mainframe.ShowSettings(false);
                         foreach (HearingStatus state in new[] {
                             new HearingStatus("Hearing: her own ears · USB Mic · working", false),
@@ -853,7 +850,7 @@ namespace CapriDesktop
                     if (facts == null || facts.IndexOf("Hearing", StringComparison.OrdinalIgnoreCase) < 0 && facts.IndexOf("hearing line", StringComparison.Ordinal) < 0) throw new Exception("Hearing help didn't match: " + ask);
                     if (facts.IndexOf('\u2014') >= 0) throw new Exception("Hearing help has an em dash.");
                 }
-                checks.Add("PASS hearing controls, labels and buttons fit at 100%, 150% and 200%, in Simple and Advanced Settings; new controls are accessible, no rows overlap, help matches the three support questions, and eight previews show working, no mic, blocked and silent at 100% and 150%");
+                checks.Add("PASS hearing controls, labels and buttons fit at 100%, 150% and 200% on Settings; new controls are accessible, no rows overlap, help matches the three support questions, and eight previews show working, no mic, blocked and silent at 100% and 150%");
             }
             finally
             {
@@ -869,7 +866,6 @@ namespace CapriDesktop
                 settingUpEars = settingWas; SettingUpVoice = voiceSettingWas;
                 FreeChatOn = freeWas; parakeet.Language = languageWas;
                 voice.Key = voiceKeyWas; voice.VoiceId = voiceIdWas;
-                simpleTest = simpleWas;
                 hearingCaptureProblem = hearingSpeechProblem = hearingInstallProblem = null;
                 ResetHearingSignal();
                 ears.Chosen = preferences.Mic;
@@ -883,6 +879,7 @@ namespace CapriDesktop
                 else if (mainframe.WindowState != mainframeStateWas) mainframe.WindowState = mainframeStateWas;
             }
         }
+#endif
     }
 
     [ComVisible(true), Guid("7991EEC9-7E89-4D85-8390-6C703CEC60C0"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]

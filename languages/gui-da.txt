@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Stille til {n}:{n}
 Quiet until turned off	Stille til slået fra
 Export settings	Eksportér indstillinger
 Import settings	Importér indstillinger
-Save Mainframe position	Husk panelets placering
+Save Mainframe position	Gem Mainframe-placering
+Capri options	Capri-indstillinger

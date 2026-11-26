@@ -527,7 +527,7 @@ namespace CapriDesktop
 
         private void Serve(TcpClient client)
         {
-            System.Threading.Timer deadline = new System.Threading.Timer(delegate { try { client.Close(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }, null, 1200, Timeout.Infinite);
+            Clock.OffTimer deadline = new Clock.OffTimer("Husk deadline", delegate { try { client.Close(); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); } }, null, 1200, Timeout.Infinite);
             try
             {
                 client.ReceiveTimeout = client.SendTimeout = 800;

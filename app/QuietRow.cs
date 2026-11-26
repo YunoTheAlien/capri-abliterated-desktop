@@ -119,6 +119,8 @@ namespace CapriDesktop
             finally { syncing = was; }
             string said = capri.QuietLeft;
             if (quietSaid != said) quietSwitch.Text = quietSaid = said;
+            // The Toggles window's Mute, Quiet timer and Focus rows follow too, when it is open.
+            if (toggleSheet != null && !toggleSheet.IsDisposed && toggleSheet.Visible) toggleSheet.Sync();
         }
 
         internal bool QuietShown { get { return quietSwitch != null && quietSwitch.Checked; } }
@@ -367,6 +369,7 @@ namespace CapriDesktop
             Remark("", "Quiet's over. I'm back.", true);
         }
 
+#if CHECKS
         private void SmokeQuietRow(List<string> checks)
         {
             bool shushWas = shushed, mutedWas = muted;
@@ -375,6 +378,7 @@ namespace CapriDesktop
             bool foreverWas = preferences.QuietForever, callsWas = preferences.NoQuietCalls, videosWas = preferences.NoQuietVideos;
             string appsWas = preferences.CallApps;
             long fedWas = preferences.FedAt;
+            ICapriPet petWas = petStandIn;
             Func<Sight> aheadWas = Working.Ahead;
             string folder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "capri-quiet-" + Guid.NewGuid().ToString("N").Substring(0, 8));
             try
@@ -467,6 +471,7 @@ namespace CapriDesktop
                 double pop = PopWait(), wait = 300000 * PaceNow;
                 bool stretched = Working.Now(SimTime.UtcNow) && Math.Abs(ChatterStretch - 6) < 1e-9 && Math.Abs(Probes.Stretch() - 6) < 1e-9 && mainframe.WhileWorkingShown == 6
                     && pop >= PopMin * 60 * 6 - 1 && pop <= PopMax * 60 * 6 + 1 && !IgnoredNow(clock.Elapsed.TotalSeconds, (long)(wait * 5), true) && IgnoredNow(clock.Elapsed.TotalSeconds, (long)(wait * 7), true);
+                petStandIn = new StandInPet();
                 preferences.FedAt = SimTime.UtcNow.AddHours(-7).Ticks;
                 int hunger;
                 bool fedLater = Hunger("snack", out hunger) == null;
@@ -515,6 +520,7 @@ namespace CapriDesktop
                 preferences.CallApps = appsWas;
                 preferences.WhileWorking = workingWas;
                 preferences.FedAt = fedWas;
+                petStandIn = petWas;
                 Working.Times = WhileWorking;
                 Working.Ahead = aheadWas;
                 Working.Apps = preferences.WorkApps == null ? null : preferences.WorkApps.Split('\n');
@@ -524,5 +530,75 @@ namespace CapriDesktop
                 mainframe.Sync();
             }
         }
+#endif
+#if CHECKS
+        // A word alone switches its row through her settings tool, the way the switch does, and the Toggles row follows;
+        // "mute pc" and its kin still mute the PC.
+        private void SmokeOneWord(List<string> checks)
+        {
+            bool focusWas = FocusOn, keptWas = preferences.MuteKept;
+            List<string> wrong = new List<string>();
+            try
+            {
+                string[,] words =
+                {
+                    { "mute", "mute_her", "on" }, { "Mute.", "mute_her", "on" }, { "mute her", "mute_her", "on" }, { "mute capri", "mute_her", "on" }, { "Capri, mute yourself please", "mute_her", "on" },
+                    { "unmute her", "mute_her", "off" }, { "unmute", "mute_her", "off" }, { "unmute capri", "mute_her", "off" }, { "you can talk again", "mute_her", "off" }, { "mute her off", "mute_her", "off" },
+                    { "focus", "focus_mode", "on" }, { "focus mode", "focus_mode", "on" }, { "focus mode on", "focus_mode", "on" }, { "turn on focus mode", "focus_mode", "on" },
+                    { "focus off", "focus_mode", "off" }, { "focus mode off", "focus_mode", "off" }, { "unfocus", "focus_mode", "off" }, { "end focus mode", "focus_mode", "off" }
+                };
+                for (int i = 0; i < words.GetLength(0); i++)
+                {
+                    string tool;
+                    ToolArguments args;
+                    if (!Hands.Heard(words[i, 0], out tool, out args) || tool != "capri_settings" || args.Name != words[i, 1] || args.Action != words[i, 2])
+                        wrong.Add("\"" + words[i, 0] + "\" went to " + tool + " " + (args == null ? "" : args.Name + " " + args.Action));
+                }
+                foreach (string pc in new[] { "mute pc", "mute the pc", "mute my computer", "mute sound", "mute it", "mute everything", "Capri, mute the PC", "silence the pc" })
+                {
+                    string tool;
+                    ToolArguments args;
+                    if (!Hands.Heard(pc, out tool, out args) || tool != "media" || args.Action != "mute") wrong.Add("\"" + pc + "\" didn't mute the PC: " + tool);
+                }
+                foreach (string chat in new[] { "mute my mic", "should I mute discord", "focus on the game", "I can't focus", "mute her or not?", "the focus mode is nice" })
+                {
+                    string tool;
+                    ToolArguments args;
+                    string name, way;
+                    if (Hands.Alone(chat, out name, out way)) wrong.Add("\"" + chat + "\" was taken as " + name + " " + way);
+                }
+                // Through her settings tool, as a word heard runs it: her switch, her Mainframe and the Toggles row follow.
+                if (MuteOn) SetMute(false);
+                mainframe.OpenToggles();
+                Application.DoEvents();
+                string said = Hands.Do("capri_settings", new ToolArguments { Action = "on", Name = "mute_her" });
+                mainframe.Sync();
+                Application.DoEvents();
+                if (!MuteOn || !mainframe.MuteShown || !(mainframe.TogglesText ?? "").Contains("Mute her on") || said != "Turned Mute her on.") wrong.Add("mute_her on: " + MuteOn + " / " + mainframe.MuteShown + " / " + said);
+                said = Hands.Do("capri_settings", new ToolArguments { Action = "off", Name = "mute_her" });
+                mainframe.Sync();
+                Application.DoEvents();
+                if (MuteOn || mainframe.MuteShown || !(mainframe.TogglesText ?? "").Contains("Mute her off")) wrong.Add("mute_her off: " + MuteOn + " / " + said);
+                foreach (bool on in new[] { !focusWas, focusWas })
+                {
+                    said = Hands.Do("capri_settings", new ToolArguments { Action = on ? "on" : "off", Name = "focus_mode" });
+                    mainframe.Sync();
+                    Application.DoEvents();
+                    if (FocusOn != on || LoadPreferences().NoFocus == on || !(mainframe.TogglesText ?? "").Contains("Focus mode " + (on ? "on" : "off"))) wrong.Add("focus_mode " + on + ": " + FocusOn + " / " + said);
+                }
+                mainframe.CloseToggles();
+                if (wrong.Count > 0) throw new Exception("A word alone went wrong: " + string.Join("; ", wrong.ToArray()));
+                checks.Add("PASS a word alone, typed or heard: \"mute\", \"mute her\" and \"mute capri\" turn Mute her on, \"unmute her\" off; \"focus\" and \"focus mode\" turn Focus mode on, \"focus off\" off; each through her settings tool, with Toggles' row and her Mainframe following; \"mute pc\", \"mute the pc\", \"mute my computer\" and \"mute sound\" still mute the PC");
+            }
+            finally
+            {
+                if (MuteOn) SetMute(false);
+                if (FocusOn != focusWas) SetFocus(focusWas);
+                preferences.MuteKept = keptWas;
+                SavePreferences();
+                mainframe.CloseToggles();
+            }
+        }
+#endif
     }
 }

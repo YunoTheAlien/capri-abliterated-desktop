@@ -336,6 +336,8 @@ namespace CapriDesktop
         // Ctrl+V, and the clipboard back as it was.
         internal static bool Paste(IntPtr window, string text, bool whole)
         {
+            // A bench or shots run keeps the fix on its stand-in clipboard and pastes nothing.
+            if (Recorders.CopyHeld(text)) return false;
             string kept = null;
             bool done = false;
             Thread clip = new Thread(delegate()
@@ -514,6 +516,7 @@ namespace CapriDesktop
 
         private static string Normal(string text) { return (text ?? "").Replace("\r\n", "\n").Replace("\r", "\n"); }
 
+#if CHECKS
         private void SmokeProof(List<string> checks, string output)
         {
             // What she hears as a spell check, a proofread, fix it, undo and redo; not the asks that only look like them.
@@ -627,5 +630,6 @@ namespace CapriDesktop
             }
             checks.Add("PASS a text box checked: \"" + first + "\" listed with Yes and No, \"fix it\" writes \"" + firstFixed + "\" back and keeps it in grammar.md, \"undo\" and \"redo\" swap it, and she says she remembers her edits once in a day, not on the second fix");
         }
+#endif
     }
 }

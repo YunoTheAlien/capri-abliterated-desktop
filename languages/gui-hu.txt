@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Csend {n}:{n}-ig
 Quiet until turned off	Csend kikapcsolásig
 Export settings	Beállítások exportálása
 Import settings	Beállítások importálása
-Save Mainframe position	Panel helyének megjegyzése
+Save Mainframe position	Mainframe helyének mentése
+Capri options	Capri beállítások

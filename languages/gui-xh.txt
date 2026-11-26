@@ -219,4 +219,5 @@ Quiet until {n}:{n}	Ukuthula kude kube ngu-{n}:{n}
 Quiet until turned off	Ukuthula kude kucinywe
 Export settings	Thumela iisetingi
 Import settings	Ngenisa iisetingi
-Save Mainframe position	Khumbula indawo yephaneli
+Save Mainframe position	Gcina indawo ye-Mainframe
+Capri options	Ukhetho lwe-Capri
