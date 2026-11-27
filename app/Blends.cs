@@ -51,7 +51,7 @@ namespace CapriDesktop
         private static readonly object gate = new object();
         private static readonly HashSet<string> tried = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, KeyValuePair<DateTime, Dictionary<string, string[]>>> read = new Dictionary<string, KeyValuePair<DateTime, Dictionary<string, string[]>>>(StringComparer.OrdinalIgnoreCase);
-        private static readonly string[] Tokens = { "%boy%", "%he%", "%them%", "%their%", "%is%", "%name%", "%bits%", "%mate%", "%petname%" };
+        private static readonly string[] Tokens = { "%gender%", "%boy%", "%userPetName%", "%capriPetName%", "%he%", "%them%", "%their%", "%is%", "%name%", "%bits%", "%mate%", "%petname%" };
         private static readonly Regex Refusal = new Regex(@"\b(?:i can'?t|i cannot|i won'?t|i'm (?:sorry|unable|not able)|as an ai|i am an ai|language model|not appropriate|inappropriate|against (?:my|the) (?:guidelines|policy)|i'd rather not)\b", RegexOptions.IgnoreCase);
 
         internal static string PathFor(string personality, string mood)

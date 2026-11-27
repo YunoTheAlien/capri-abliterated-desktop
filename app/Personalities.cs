@@ -838,7 +838,7 @@ namespace CapriDesktop
                 }
                 if (loaded.TryGetValue(set, out said) && said != null && said.Length > 0)
                 {
-                    // Tokens like %boy% are filled in for whoever she is talking to, from me.md.
+                    // Tokens like %gender% are filled in for whoever she is talking to, from me.md.
                     string[] filled = new string[said.Length];
                     for (int one = 0; one < said.Length; one++) filled[one] = Them.Fill(said[one]);
                     return filled;
@@ -971,6 +971,15 @@ namespace CapriDesktop
         // What their words were worth to her. Every phrase of hers that appears is counted, so "good girl, little one"
         // lands twice, and a personality that dislikes a word is pulled down by it.
 
+        // A phrase of hers in what they said; one with %capriPetName% or %gender% in it matches each of its words.
+        private static bool Says(string plain, string phrase)
+        {
+            string[] words = Them.Heard(phrase);
+            if (words == null) return plain.IndexOf(phrase, StringComparison.Ordinal) >= 0;
+            foreach (string one in words) if (plain.IndexOf(one, StringComparison.Ordinal) >= 0) return true;
+            return false;
+        }
+
         internal static int Heard(string said)
         {
             if (string.IsNullOrEmpty(said)) return 0;
@@ -985,7 +994,7 @@ namespace CapriDesktop
                 {
                     any = words.Count > 0;
                     foreach (KeyValuePair<string, int> one in words)
-                        if (one.Key.Length > 0 && !WordOff(one.Key) && plain.IndexOf(one.Key, StringComparison.Ordinal) >= 0) { much += one.Value; heard.Add(one.Key); }
+                        if (one.Key.Length > 0 && !WordOff(one.Key) && Says(plain, one.Key)) { much += one.Value; heard.Add(one.Key); }
                 }
                 foreach (string added in WordsAdded())
                     if (added.Length > 0 && !heard.Contains(added) && plain.IndexOf(added.ToLowerInvariant(), StringComparison.Ordinal) >= 0) { much += 1; heard.Add(added); any = true; }

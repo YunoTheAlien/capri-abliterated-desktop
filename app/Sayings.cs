@@ -1876,7 +1876,7 @@ namespace CapriDesktop
                 made.AppendLine();
                 made.AppendLine(">! A line is an opener, a core and a tail, picked from the pools below.");
                 made.AppendLine(">! Add or change any of them. Nothing repeats until its pool runs out.");
-                made.AppendLine(">! Tokens: %boy% %he% %them% %their% %is% %name% %bits% %mate%");
+                made.AppendLine(">! Tokens: %gender% %he% %them% %their% %is% %name% %bits% %mate% %userPetName% %capriPetName%");
                 made.AppendLine(">! %mate% is a neutral way to address them, picked fresh each time.");
                 made.AppendLine(">! Start a line with " + MemeMark + " and she says it exactly as written: a meme, never corrected or translated.");
                 made.AppendLine(">! Put **silent** before and **/silent** after anything she shows but never says, like a text face.");

@@ -22,7 +22,7 @@ namespace CapriDesktop
 
         private static readonly string[] Tokens =
         {
-            "%boy%", "%he%", "%them%", "%their%", "%is%", "%name%", "%bits%", "%mate%", "%petname%", "%it%"
+            "%gender%", "%boy%", "%userPetName%", "%capriPetName%", "%he%", "%them%", "%their%", "%is%", "%name%", "%bits%", "%mate%", "%petname%", "%it%"
         };
 
         // Fault lines, worst first. Empty when the pools are clean.

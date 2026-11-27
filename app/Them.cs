@@ -5,14 +5,14 @@ using System.Text.RegularExpressions;
 
 namespace CapriDesktop
 {
-    // Fills the tokens in her written lines from me.md's "- Pronouns:" line: %boy% %them% %he% %their% %is% (they are)
-    // %name% %mate%, and %bits%, a zone by pronoun or "shins" while censored. Anything unclear goes neutral.
+    // Fills her lines' tokens from me.md: %gender% (boy or girl, else a pet name of theirs), %userPetName% (what she calls
+    // them), %capriPetName% (what they call her), %he% %them% %their% %is% %name% %mate% %bits%; %boy%, %petname% old names.
     internal static class Them
     {
         private static readonly object gate = new object();
         private static string path;
         private static long wasStamp = -1;
-        private static string he = "they", them = "them", their = "their", boy = "one", isAre = "are", bits = "lower mid b", name = "", awake = "", pets = "";
+        private static string he = "they", them = "them", their = "their", boy = "", isAre = "are", bits = "lower mid b", name = "", awake = "", pets = "";
 
         // What they wrote for awakeHours in me.md, or empty. Hours prefers this over what it counted.
         internal static string Awake { get { Fresh(); lock (gate) return awake; } }
@@ -32,13 +32,18 @@ namespace CapriDesktop
             lock (gate)
             {
                 string said = line;
-                said = Swap(said, "%boy%", boy);
+                // Boy or girl only; anyone else is called one of their pet names, never "good they".
+                string gender = boy.Length > 0 ? boy : Pet;
+                said = Swap(said, "%gender%", gender);
+                said = Swap(said, "%boy%", gender);
+                said = Swap(said, "%capriPetName%", CapriPet);
                 said = Swap(said, "%he%", he);
                 said = Swap(said, "%them%", them);
                 said = Swap(said, "%their%", their);
                 said = Swap(said, "%is%", isAre);
                 said = Swap(said, "%bits%", Bits);
                 said = Swap(said, "%mate%", Mate);
+                said = Swap(said, "%userPetName%", Pet);
                 said = Swap(said, "%petname%", Pet);
                 said = Swap(said, "%name%", name);
                 return said;
@@ -220,6 +225,77 @@ namespace CapriDesktop
             }
         }
 
+        // What they call her, for lines where she repeats it: one of hers, her other side's added when it is on.
+        internal static string[] CapriPets = { "girl", "kitten", "sweetheart", "princess" };
+        internal static string[] SenpaiCapriPets = new string[0];
+
+        internal static string[] CapriPetsNow
+        {
+            get
+            {
+                bool senpai = false;
+                try { senpai = Brain.SenpaiLive; } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                if (!senpai || SenpaiCapriPets.Length == 0) return CapriPets;
+                List<string> all = new List<string>(CapriPets);
+                all.AddRange(SenpaiCapriPets);
+                return all.ToArray();
+            }
+        }
+
+        private static string CapriPet { get { string[] all = CapriPetsNow; lock (gate) return all[dice.Next(all.Length)]; } }
+
+        // The words for a token in a phrase they might say to her, for matching what they said: her pet names for
+        // %capriPetName%, boy and girl for %gender%. Null when the phrase holds neither.
+        internal static string[] Heard(string phrase)
+        {
+            if (string.IsNullOrEmpty(phrase) || phrase.IndexOf('%') < 0) return null;
+            List<string> made = new List<string> { phrase.ToLowerInvariant() };
+            List<string> next = new List<string>();
+            foreach (KeyValuePair<string, string[]> token in new[] {
+                new KeyValuePair<string, string[]>("%capripetname%", CapriPetsNow), new KeyValuePair<string, string[]>("%gender%", new[] { "boy", "girl" }),
+                new KeyValuePair<string, string[]>("%boy%", new[] { "boy", "girl" }) })
+            {
+                next.Clear();
+                foreach (string one in made)
+                    if (one.IndexOf(token.Key, StringComparison.Ordinal) < 0) next.Add(one);
+                    else foreach (string word in token.Value) next.Add(one.Replace(token.Key, word.ToLowerInvariant()));
+                made = new List<string>(next);
+            }
+            return made.Count == 1 && made[0] == phrase.ToLowerInvariant() ? null : made.ToArray();
+        }
+
+#if CHECKS
+        // %gender% is boy or girl by their pronouns and one of their pet names otherwise, never "one" or "they"; %boy% the
+        // same; %userPetName% and %capriPetName% filled; a phrase with %capriPetName% matches "good girl".
+        internal static void TokensCheck(List<string> checks, string folder)
+        {
+            string was = Watched;
+            string me = Path.Combine(folder, "tokens-me-" + Guid.NewGuid().ToString("N").Substring(0, 6) + ".md");
+            try
+            {
+                File.WriteAllText(me, "# Me\r\n\r\n## About you\r\n\r\n- Name: Sam\r\n- Pronouns: she/her\r\n");
+                Watch(me);
+                string she = Fill("Good %gender%."), old = Fill("Good %boy%.");
+                File.WriteAllText(me, "# Me\r\n\r\n## About you\r\n\r\n- Name: Sam\r\n- Pronouns: they/them\r\n");
+                File.SetLastWriteTimeUtc(me, DateTime.UtcNow.AddMinutes(1));
+                Watch(me);
+                string they = Fill("Good %gender%.");
+                string hers = Fill("Who's my good %capriPetName%?"), theirs = Fill("Hi, %userPetName%.");
+                string[] heard = Heard("good %capriPetName%");
+                bool right = she == "Good girl." && old == "Good girl." && they.IndexOf('%') < 0 && they != "Good one." && they != "Good they." && they.Length > 6
+                    && Array.Exists(CapriPets, n => hers == "Who's my good " + n + "?") && theirs.IndexOf('%') < 0 && theirs.Length > 5
+                    && heard != null && Array.IndexOf(heard, "good girl") >= 0 && Heard("thank you") == null;
+                if (!right) throw new Exception("Her tokens went wrong: she/her " + she + " and " + old + ", they/them " + they + ", her pet name " + hers + ", theirs " + theirs + ", heard " + (heard == null ? "none" : string.Join("|", heard)));
+                checks.Add("PASS %gender% is girl for she/her (%boy% the same) and one of their pet names for they/them (\"" + they + "\"), never \"one\" or \"they\"; %userPetName% and %capriPetName% filled; \"good %capriPetName%\" matches good girl");
+            }
+            finally
+            {
+                Watch(was);
+                try { File.Delete(me); } catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+            }
+        }
+#endif
+
         //   %petname%  always one of their pet names, for lines written around one
         // Censored keeps it to shins whatever the pronouns say.
         private static string Bits
@@ -278,7 +354,7 @@ namespace CapriDesktop
                     else if (Regex.IsMatch(said, @"\bshe\b|\bher\b|\bhers\b"))
                         { he = "she"; them = "her"; their = "her"; boy = "girl"; isAre = "is"; bits = "top mid"; }
                     // "any pronouns", anything unreadable, and nothing at all all land here on purpose.
-                    else { he = "they"; them = "them"; their = "their"; boy = "one"; isAre = "are"; bits = "lower mid b"; }
+                    else { he = "they"; them = "them"; their = "their"; boy = ""; isAre = "are"; bits = "lower mid b"; }
                     wasStamp = stamp;
                 }
             }

@@ -174,6 +174,17 @@ namespace CapriDesktop
                 }
                 finally { SetYourOwn(who, Personalities.NeedsHeading, "energy rests", null); SetYourOwn(who, Personalities.NeedsHeading, "energy falls", null); preferences.PetFillCarried = carriedWas; }
 
+                // Left alone moves no need by itself; a disliked act takes at most MostHit off a bar, the other bar half.
+                rows.Clear();
+                foreach (string need in PetStats.Names) rows.Add(need + "=50");
+                PetStats.Took("ignored", -5);
+                PetStats.Took("called on", -3);
+                int socialAlone = PetStats.Level("social"), comfortAlone = PetStats.Level("comfort");
+                PetStats.Took("insulted", -5);
+                int comfortHit = PetStats.Level("comfort"), socialHit = PetStats.Level("social");
+                if (socialAlone != 50 || comfortAlone != 50 || comfortHit != 50 - (int)PetStats.MostHit || socialHit < 50 - (int)PetStats.MostHit || socialHit >= 50)
+                    wrong.Add("left alone took social to " + socialAlone + " and comfort to " + comfortAlone + "; an insult took comfort to " + comfortHit + " and social to " + socialHit);
+
                 // No pet game: nothing moves.
                 running = false;
                 rows.Clear();
@@ -183,7 +194,7 @@ namespace CapriDesktop
                 if (PetStats.Level("social") != 50 || PetStats.Low("social") || PetStats.MoodWeight("Clingy") != 1) wrong.Add("with no pet game her needs still moved");
 
                 if (wrong.Count > 0) throw new Exception("Her needs went wrong: " + string.Join("; ", wrong.ToArray()));
-                checks.Add("PASS her six needs: rates read from each pack's Her needs with her mood's added (Devoted 9, Feral 4, Feral Clingy 8), an hour runs each down by its rate, a repeated praise fills less, low needs weigh Clingy and Sleepy up, bring her asks and sulks sooner, what helps lists her acts worth most first, a Your Own rate is used, a Toggles rate at 3x fills each need three times as fast and drains it as before, energy drains 2 an hour and comes back 25 an hour resting in every pack (empty to full in four hours), needs gain 17 or more, an old untouched stock carried once, and with no pet game nothing moves");
+                checks.Add("PASS her six needs: rates read from each pack's Her needs with her mood's added (Devoted 9, Feral 4, Feral Clingy 8), an hour runs each down by its rate, a repeated praise fills less, low needs weigh Clingy and Sleepy up, bring her asks and sulks sooner, what helps lists her acts worth most first, a Your Own rate is used, a Toggles rate at 3x fills each need three times as fast and drains it as before, energy drains 2 an hour and comes back 25 an hour resting in every pack (empty to full in four hours), needs gain 17 or more, being left alone or spoken to moves no need by itself and a disliked act takes at most 15 off a bar, an old untouched stock carried once, and with no pet game nothing moves");
             }
             finally
             {

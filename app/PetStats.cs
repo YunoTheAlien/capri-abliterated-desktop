@@ -135,18 +135,18 @@ namespace CapriDesktop
 
         internal static bool High(string need) { return Running() && Level(need) > Rate("needs high"); }
 
-        // An act as it lands, worth already through her maths: the need it fills moves by its worth times her gain. One she
-        // disliked takes comfort and social down whatever it is, and harder than a liked one lifts: bad weighs more than
-        // good (Baumeister and others, 2001).
-        internal const double BadWeighs = 1.5;
+        // An act as it lands: the need it fills moves by its worth times her gain. A disliked one takes comfort and social
+        // down, harder than a liked one lifts but never past MostHit; being left alone or spoken to is left to the hourly fall.
+        internal const double BadWeighs = 1.5, MostHit = 15;
+        private static readonly string[] OnlyByTime = { "ignored", "called on" };
 
         internal static void Took(string act, int worth)
         {
             if (!Running()) return;
             string need = NeedOf(act);
-            if (worth < 0)
+            if (worth < 0 && Array.IndexOf(OnlyByTime, act) < 0)
             {
-                double hit = -worth * Rate("needs gain") * BadWeighs;
+                double hit = Math.Min(MostHit, -worth * Rate("needs gain") * BadWeighs);
                 bool social = need == "social";
                 Move(social ? "social" : "comfort", -hit);
                 Move(social ? "comfort" : "social", -hit / 2);

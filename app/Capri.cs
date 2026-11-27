@@ -54725,6 +54725,7 @@ namespace CapriDesktop
             Section(checks, "SmokeFields", delegate { Fields.Check(checks, output); });
             Section(checks, "SmokeScenes", delegate { Scenes.Check(checks); });
             Section(checks, "SmokeMoodNote", delegate { Dynamics.StaleNoteCheck(checks, output); });
+            Section(checks, "SmokeTokens", delegate { Them.TokensCheck(checks, output); });
             Section(checks, "SmokeRepeatGuard", delegate { Brain.RepeatGuardCheck(checks); });
             Section(checks, "SmokeLineKinds", delegate { Sayings.KindCheck(checks); Interests.KindCheck(checks); Sayings.LoggedJoinsCheck(checks); StyleLinesCheck(checks); });
             Section(checks, "SmokeLineSmoothing", delegate { Smooth.Check(checks); });
