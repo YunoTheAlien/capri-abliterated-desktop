@@ -187,6 +187,20 @@ namespace CapriDesktop
                 try { Glue(); } catch (Exception caughtOne) { Brain.Caught(caughtOne); }
             }
 
+            // Dragged by its title: Windows' move loop, and the pair kept on its screen only once it ends.
+            private bool moving;
+
+            protected override void WndProc(ref Message m)
+            {
+                if (m.Msg == 0x0231) moving = true;
+                base.WndProc(ref m);
+                if (m.Msg == 0x0232)
+                {
+                    moving = false;
+                    try { Glue(); } catch (Exception caughtOne) { Brain.Caught(caughtOne); }
+                }
+            }
+
             // Kept for the checks: the frame is one window now, so the options are never on the box's left.
             internal bool OnLeft { get { return false; } }
 
@@ -207,11 +221,24 @@ namespace CapriDesktop
                     if (CaptureBox.MinimumSize != least) CaptureBox.MinimumSize = least;
                     Rectangle boxAt = CaptureBox.Bounds;
                     Rectangle area = Screen.FromRectangle(boxAt).WorkingArea;
+                    // The box never so big that it and its options can't both fit the screen it's on.
+                    Size most = new Size(Math.Max(least.Width, area.Width - HoleLeft - Z(Wide) + Z(14) - Z(8)), Math.Max(least.Height, area.Height - HoleTop - Z(12) - Z(8)));
+                    if (!moving && (boxAt.Width > most.Width || boxAt.Height > most.Height))
+                    {
+                        CaptureBox.Size = new Size(Math.Min(boxAt.Width, most.Width), Math.Min(boxAt.Height, most.Height));
+                        boxAt = CaptureBox.Bounds;
+                    }
                     int offset = HoleLeft + boxAt.Width - Z(14);
                     Rectangle want = new Rectangle(boxAt.Left - HoleLeft, boxAt.Top - HoleTop, offset + Z(Wide), Math.Max(HoleTop + boxAt.Height + Z(12), natural));
-                    int dx = want.Right > area.Right ? area.Right - want.Right : 0, dy = want.Bottom > area.Bottom ? area.Bottom - want.Bottom : 0;
-                    if (want.Left + dx < area.Left) dx = area.Left - want.Left;
-                    if (want.Top + dy < area.Top) dy = area.Top - want.Top;
+                    // Kept whole on its screen once let go; while it's being dragged it goes where it's taken, another screen too.
+                    int dx = 0, dy = 0;
+                    if (!moving)
+                    {
+                        dx = want.Right > area.Right ? area.Right - want.Right : 0;
+                        dy = want.Bottom > area.Bottom ? area.Bottom - want.Bottom : 0;
+                        if (want.Left + dx < area.Left) dx = area.Left - want.Left;
+                        if (want.Top + dy < area.Top) dy = area.Top - want.Top;
+                    }
                     if (dx != 0 || dy != 0) { CaptureBox.Location = new Point(boxAt.Left + dx, boxAt.Top + dy); want.Offset(dx, dy); }
                     hole = new Rectangle(HoleLeft, HoleTop, boxAt.Width, boxAt.Height);
                     foreach (KeyValuePair<Control, int> part in lefts) if (part.Key.Left != part.Value + offset) part.Key.Left = part.Value + offset;
@@ -397,6 +424,18 @@ namespace CapriDesktop
                 box.WindowState = FormWindowState.Normal;
                 bool back = Native.IsWindowVisible(side.Handle);
                 glued("restored");
+                // A box too big for its screen is cut back so it and its options both fit; mid-drag nothing pulls it back.
+                Rectangle screenArea = Screen.FromControl(box).WorkingArea;
+                box.Size = new Size(screenArea.Width * 2, screenArea.Height * 2);
+                Application.DoEvents();
+                screenArea = Screen.FromRectangle(side.Bounds).WorkingArea;
+                if (side.Right > screenArea.Right + 1 || side.Bottom > screenArea.Bottom + 1 || side.Left < screenArea.Left - 1) unglued.Add("too big a box: options past the screen, " + side.Bounds + " on " + screenArea);
+                Native.SendMessage(side.Handle, 0x0231, IntPtr.Zero, IntPtr.Zero);
+                side.Location = new Point(screenArea.Right - side.Width / 3, side.Top);
+                bool free = side.Left == screenArea.Right - side.Width / 3;
+                Native.SendMessage(side.Handle, 0x0232, IntPtr.Zero, IntPtr.Zero);
+                if (!free) unglued.Add("dragged past the screen's edge it was pulled back mid-drag, at " + side.Left);
+                glued("dropped after a drag");
                 if (unglued.Count > 0 || !hidden || !back)
                     throw new Exception("The side came unglued from the box: " + string.Join("; ", unglued.ToArray()) + "; hidden with the box minimised " + hidden + ", back with it " + back);
 

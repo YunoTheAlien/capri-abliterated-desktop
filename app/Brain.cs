@@ -6217,8 +6217,16 @@ namespace CapriDesktop
         {
             if (text == null) return "";
             text = Visible(text);
+            // Her words a brain wrapped as JSON, as she says them.
+            if (spoken) text = Glances.Unwrapped(text);
+            // A refusal in place of a scene's part: her quiet close, and the scene ends.
+            if (spoken) text = Scenes.Spoken(text);
             if (spoken) text = Leaks.Spoken(text);
+            // The silent tag round a text face is kept whole through the stage-direction cut, so her voice skips the face
+            // instead of saying "silent".
+            text = Regex.Replace(text, @"\*\*(/?)silent\*\*", "\u0002$1silent\u0002", RegexOptions.IgnoreCase);
             text = Regex.Replace(text, @"\*[^*]{0,80}\*", Hole);
+            text = Regex.Replace(text, "\u0002(/?)silent\u0002", "**$1silent**");
             text = Regex.Replace(text, @"[\uD800-\uDFFF☀-➿️]+", Hole);
             text = Unholed(text);
             text = Regex.Replace(text, @"\s+", " ").Trim();
@@ -7289,10 +7297,30 @@ namespace CapriDesktop
         // A glance answers "SAW: what's on screen SAY: her line", folded onto one line by See(). Without the labels the whole reply is her line.
         private static readonly Regex Label = new Regex(@"(?<![\p{L}\p{N}'])(?:(?<label>SAW|SAY)[*_]*\s*(?::|\p{Pd}(?=\s))|(?<label>[Ss]aw|[Ss]ay)[*_]*\s*:)[*_]*");
 
+        // A reply wrapped as JSON, {"dialogue": "..."} or in a fenced block, is its words: the strings in it, joined. Anything
+        // else is left as it came.
+        internal static string Unwrapped(string raw)
+        {
+            string text = (raw ?? "").Trim();
+            text = Regex.Replace(text, @"^(```|~~~)[A-Za-z]*\s*", "");
+            text = Regex.Replace(text, @"\s*(```|~~~)\s*$", "");
+            bool wrapped = (text.StartsWith("{", StringComparison.Ordinal) && text.EndsWith("}", StringComparison.Ordinal)) || (text.StartsWith("[", StringComparison.Ordinal) && text.EndsWith("]", StringComparison.Ordinal));
+            // A tool call is never words to say.
+            if (!wrapped || Regex.IsMatch(text, "\"(tool|tool_calls|function|arguments|name)\"\\s*:")) return raw;
+            List<string> words = new List<string>();
+            foreach (Match one in Regex.Matches(text, "\"((?:[^\"\\\\]|\\\\.)*)\"\\s*(?=[,\\]}])"))
+            {
+                string value;
+                try { value = Regex.Unescape(one.Groups[1].Value); } catch (ArgumentException) { value = one.Groups[1].Value; }
+                if (value.Trim().Length > 0) words.Add(value.Trim());
+            }
+            return words.Count == 0 ? raw : string.Join(" ", words.ToArray());
+        }
+
         internal static string Reply(string raw, out string saw)
         {
             saw = null;
-            string text = raw ?? "";
+            string text = Unwrapped(raw ?? "");
             Match sawLabel = null, sayLabel = null;
             foreach (Match label in Label.Matches(text))
             {

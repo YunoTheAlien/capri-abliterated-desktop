@@ -103,15 +103,45 @@ namespace CapriDesktop
                 personalitySheet.ShowPart(true);
                 Application.DoEvents();
                 if (!personalitySheet.TopicsShown || personalitySheet.Rows.Length == 0) wrong.Add("Topics showed nothing for Sassy: " + personalitySheet.Rows);
-                if (personalitySheet.TopicFolds != "HER TOPICS + add | YOUR TOPICS + add") wrong.Add("the Topics page's folds: " + personalitySheet.TopicFolds);
+                if (personalitySheet.TopicFolds != "HER TOPICS + add | HER LOVE LANGUAGES + add | HER PET NAMES + add | YOUR TOPICS + add | YOUR LOVE LANGUAGES + add") wrong.Add("the Topics page's folds: " + personalitySheet.TopicFolds);
                 foreach (Control one in personalitySheet.Controls) if (one is Key && (one.Text == "Hear her" || one.Text == "Defaults" || one.Text == "Default all") && one.Visible) wrong.Add("the settings page's " + one.Text + " shows on Her topics");
                 Companion.Snap(personalitySheet, Path.Combine(output, "joined-topics.png"));
                 // Her baseline picked, as the window opens: the personality she is in now shows its topics and their Add.
                 personalitySheet.Pick("");
                 Application.DoEvents();
-                if (personalitySheet.Rows.Length == 0 || personalitySheet.TopicFolds != "HER TOPICS + add | YOUR TOPICS + add") wrong.Add("Topics on her baseline showed nothing, or no Add: " + personalitySheet.TopicFolds);
+                if (personalitySheet.Rows.Length == 0 || personalitySheet.TopicFolds != "HER TOPICS + add | HER LOVE LANGUAGES + add | HER PET NAMES + add | YOUR TOPICS + add | YOUR LOVE LANGUAGES + add") wrong.Add("Topics on her baseline showed nothing, or no Add: " + personalitySheet.TopicFolds);
+                // Random: a personality and mood from the side's own lists, and she becomes them; put back after.
+                string chosenWas = Personalities.Chosen, moodWas = Personalities.Attitude;
+                bool heldWas = Dynamics.Held;
+                personalitySheet.RerollRandom();
+                string landed = (personalitySheet.Rolled ?? "").Split('|')[0].Trim();
+                if (landed.Length == 0 || Array.IndexOf(Personalities.Names, landed) < 0 || Personalities.Chosen != landed)
+                    wrong.Add("Random in Reroll Capri landed on " + personalitySheet.Rolled + " with her as " + Personalities.Chosen);
+                capri.PickPersonality(chosenWas == Personalities.Stock ? "" : chosenWas);
+                Personalities.Attitude = moodWas;
+                Dynamics.Held = heldWas;
                 personalitySheet.ShowPart(false);
                 if (personalitySheet.TopicsShown || personalitySheet.Rows.IndexOf("Flirt", StringComparison.OrdinalIgnoreCase) < 0) wrong.Add("Personality settings didn't come back: " + personalitySheet.Rows);
+                personalitySheet.Pick("Caregiver");
+                Application.DoEvents();
+                if (personalitySheet.Rows.IndexOf("Pet names", StringComparison.OrdinalIgnoreCase) >= 0 || personalitySheet.Rows.IndexOf("Her character", StringComparison.OrdinalIgnoreCase) >= 0)
+                    wrong.Add("Personality settings showed her file's words: " + personalitySheet.Rows);
+                Companion.Snap(personalitySheet, Path.Combine(output, "joined-personality.png"));
+                // Every personality's settings against the list kept in the code: a setting gone or new fails until the list is
+                // changed on purpose, so nothing changes unrecorded.
+                string listed = personalitySheet.SettingsList();
+                File.WriteAllText(Path.Combine(output, "settings-now.txt"), listed);
+                if (listed.Replace("\r", "") != PersonalitySettingsList.Kept.Replace("\r", "")) wrong.Add("Personality settings changed from the list kept in PersonalitySettingsList.cs (now in settings-now.txt)");
+                // Every zone and setting, on this side and with her other side on, for the owner's list.
+                bool sideWas = Brain.SenpaiOn;
+                try
+                {
+                    File.WriteAllText(Path.Combine(output, "zones-plain.md"), personalitySheet.Zones());
+                    Brain.SenpaiOn = true;
+                    File.WriteAllText(Path.Combine(output, "zones-other.md"), personalitySheet.Zones());
+                }
+                finally { Brain.SenpaiOn = sideWas; }
+                personalitySheet.Pick("Caregiver");
             }
             finally
             {

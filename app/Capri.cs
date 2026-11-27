@@ -3906,6 +3906,19 @@ namespace CapriDesktop
             Angles.Kept = Side(data, Angles.FileName);
             // Topics and hobbies she can pick up on; her own picks from them are kept with her settings.
             Topics.Kept = Side(data, Topics.FileName);
+            // How far she and they are into each topic and love language, beside them.
+            Fields.Kept = Path.Combine(data, Fields.FileName);
+            // Her scenes: a personality's settings as Personality settings keeps them, and whether she's all in on her other side.
+            Scenes.Setting = delegate(string who, string key) { return Personalities.OwnValue(who, Scenes.Section, key); };
+            Scenes.AllIn = delegate { return OwnSet.AllIn(Personalities.Under ?? Personalities.Chosen, Personalities.Attitude); };
+            Scenes.Grown = Keyless.Grown;
+            Scenes.MoodNow = delegate { return Personalities.Attitude; };
+            // Her pet names on the Topics page: one taken out there, ones added there, and how often each was said to her.
+            Personalities.WordOff = delegate(string word) { return Fields.IsOut(Fields.Word, Personalities.Under ?? Personalities.Chosen, word); };
+            Personalities.WordsAdded = delegate { return Fields.Added(Fields.Word, Personalities.Under ?? Personalities.Chosen); };
+            Personalities.WordSaid = delegate(string word) { Fields.Did(Fields.Word, Personalities.Under ?? Personalities.Chosen, word, 0); };
+            // Once a day she runs, what hasn't been used for a week fades a little.
+            Clock.Every("fields fall", TimeSpan.FromHours(1), delegate { Fields.Fall(); OwnSet.Fall(); }, true);
             Topics.Saved = HerTopicsFor;
             Topics.Save = KeepHerTopics;
             Topics.Theirs = delegate { return preferences.TheirTopics ?? (preferences.TheirTopics = new List<string>()); };
@@ -3915,7 +3928,10 @@ namespace CapriDesktop
                 Topics.Heard(said, SimTime.Now.Date);
                 string now = Personalities.Under ?? Personalities.Chosen;
                 OwnSet.Heard(said, now);
-                return Topics.Note(said, now, Personalities.Attitude) + OwnSet.Note(now);
+                if (Fields.TimeTogether()) Loved("Quality time", now);
+                string scene = Scenes.Note(said);
+                Scenes.Heard();
+                return Topics.Note(said, now, Personalities.Attitude) + (now == Personalities.Dynamic ? "" : LoveLanguages.Note(now)) + OwnSet.Note(now) + scene;
             };
             glancedKept = Path.Combine(data, "glances.txt");
             // Beside her files, since it is about her files: what a mod can take over, written by her.
@@ -5092,6 +5108,7 @@ namespace CapriDesktop
                 if (!testing) CheckInkEsc(signalNow);
                 if (!testing && background) RestArt(signalNow, Environment.TickCount);
                 if (!testing) CheckPopIn(signalNow, signalIdle);
+                if (!testing) CheckScene();
                 if (!testing) lookout.Deliver();
                 if (!testing) CheckNudge(signalNow, signalIdle);
                 if (!testing && background) CheckCare(signalNow, signalIdle);
@@ -9077,6 +9094,21 @@ namespace CapriDesktop
             mainframe.Sync();
         }
 
+        // Her scenes: left quiet she may ask to start one; while one runs and they're quiet she carries on with it.
+        private void CheckScene()
+        {
+            if (quitting || hidden || Hushed || talkState != TalkState.Off || speech != null || typer.Visible || Sulking) return;
+            try
+            {
+                string next = Scenes.Next();
+                if (next != null) { Hear(next, "scene", "> sys: "); return; }
+                if (InChat) return;
+                string asked = Scenes.Starter(Personalities.Under ?? Personalities.Chosen);
+                if (asked != null) SayOwn("check-in", asked);
+            }
+            catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+        }
+
         private void CheckPopIn(double now, long quiet)
         {
             // Her own hello in her bubble isn't them stopping her, and she goes once it's done.
@@ -11702,6 +11734,12 @@ namespace CapriDesktop
 
         internal void Did(string act) { Did(act, int.MinValue, int.MinValue); }
 
+        private static void Loved(string language, string now)
+        {
+            Fields.Did(Fields.Love, Fields.Yours, language, 5);
+            if (!string.IsNullOrEmpty(now) && now != Personalities.Dynamic && Array.IndexOf(LoveLanguages.Hers(now), language) >= 0) Fields.Did(Fields.Love, now, language, 2);
+        }
+
         // worth is normally worked out from her personality and mood. It is passed in only when the thing that
         // happened already carries its own weight, like the words they chose.
         internal void Did(string act, int given) { Did(act, given, int.MinValue); }
@@ -11712,8 +11750,16 @@ namespace CapriDesktop
             try
             {
                 Acts.Sum sum = Scored(act, given, least);
+                OwnSet.TheyDid(act);
                 if (!sum.Counted) return;
                 int worth = sum.Worth;
+                // A liked act speaks a love language: theirs, since they gave it, and hers when it is one of hers.
+                if (worth > 0)
+                {
+                    Acts.Act known = Acts.Find(act);
+                    string language = Fields.LanguageOf(act, known == null ? null : known.Kind);
+                    if (language != null) Loved(language, Personalities.Under ?? Personalities.Chosen);
+                }
 
                 // Anything she dislikes builds up, and enough of it puts her in a sulk, the same way three throws
                 // does. Being treated well works it off again. Throwing is left out because Grudge already counts it,
@@ -11947,6 +11993,10 @@ namespace CapriDesktop
             int hunger;
             string hungry = Hunger(act, out hunger);
             int much = Personalities.Likes(act, sum, hungry, hunger);
+            // On her other side, what she's into turns the acts it covers around.
+            string turnedBy;
+            int turned = OwnSet.Turned(act, much, Personalities.Under ?? Personalities.Chosen, sum != null, out turnedBy);
+            if (turnedBy != null) { much = turned; if (sum != null) sum.Then("into it: " + turnedBy, much); }
             string how = FirstRunHandling;
             bool rough = act == "thrown" || act == "insulted" || Personalities.SenpaiSet(act);
             if (how == "Both") return much;
@@ -17279,6 +17329,8 @@ namespace CapriDesktop
             Angles.Kept = Side(data, Angles.FileName);
             // Topics and hobbies she can pick up on; her own picks from them are kept with her settings.
             Topics.Kept = Side(data, Topics.FileName);
+            // How far she and they are into each topic and love language, beside them.
+            Fields.Kept = Path.Combine(data, Fields.FileName);
             Topics.Saved = HerTopicsFor;
             Topics.Save = KeepHerTopics;
             glancedKept = Path.Combine(data, "glances.txt");
@@ -17777,21 +17829,48 @@ namespace CapriDesktop
         {
             private Bitmap copy;
 
-            // Transparent: drawn through Direct3D with her alpha (ClearFrame) instead of on the colour. Null when it's off, or
-            // when Direct3D wouldn't start, and then she is on the colour as before.
+            // Drawn through Direct3D (ClearFrame) whatever is behind her, so OBS's Game Capture takes her on a colour as well as
+            // on nothing; Transparent only decides what's behind her. Null when Direct3D wouldn't start, and then she is drawn
+            // on the colour the plain way.
             private ClearFrame clear;
             private Bitmap framed;
-
+            private bool see, refused;
+            private readonly string resend = Clock.Named("capture resend");
             internal bool Clear
             {
-                get { return clear != null; }
+                get { return see && clear != null; }
                 set
                 {
-                    if (value == (clear != null)) return;
-                    if (value) clear = new ClearFrame(Handle);
-                    else { try { clear.Dispose(); } catch (Exception caughtOne) { Brain.Caught(caughtOne); } clear = null; }
+                    see = value;
+                    Direct();
                     Invalidate();
                 }
+            }
+
+            internal bool Drawn3D { get { return clear != null; } }
+
+            private void Direct()
+            {
+                if (clear != null || refused) return;
+                try { clear = new ClearFrame(Handle); }
+                catch (Exception error)
+                {
+                    refused = true;
+                    Brain.Log("stream", -1, "Direct3D wouldn't start, so she is drawn on the colour the plain way: " + error.GetType().Name + ": " + error.Message);
+                }
+            }
+
+            // Shown: Direct3D from the start, and her last frame sent again about ten times a second, so a Game Capture that
+            // hooks on later, or while she's still, still has her.
+            protected override void OnShown(EventArgs e)
+            {
+                base.OnShown(e);
+                Direct();
+                Clock.Every(resend, TimeSpan.FromMilliseconds(100), delegate
+                {
+                    if (IsDisposed || clear == null || framed == null) return;
+                    try { clear.Show(framed, true); } catch (Exception caughtOne) { Brain.Caught(caughtOne); }
+                });
             }
 
             // For the checks: the window's Direct3D picture, one pixel.
@@ -17864,7 +17943,8 @@ namespace CapriDesktop
                 catch (Exception) { return; }
                 Grow();
                 if (spout != null) { try { spout.Send(copy); } catch (Exception caughtOne) { Brain.Caught(caughtOne); } }
-                if (clear != null) { ShowClear(true); return; }
+                Direct();
+                if (clear != null && see) { ShowClear(true); return; }
                 Invalidate();
             }
 
@@ -17881,7 +17961,7 @@ namespace CapriDesktop
             // on the colour.
             internal void ShowClear(bool present)
             {
-                if (copy == null || ClientSize.Width < 1 || ClientSize.Height < 1) return;
+                if (clear == null || copy == null || ClientSize.Width < 1 || ClientSize.Height < 1) return;
                 try
                 {
                     if (framed == null || framed.Size != ClientSize)
@@ -17891,7 +17971,7 @@ namespace CapriDesktop
                     }
                     using (Graphics into = Graphics.FromImage(framed))
                     {
-                        into.Clear(Color.Transparent);
+                        into.Clear(see ? Color.Transparent : BackColor);
                         Fit(into);
                     }
                     clear.Show(framed, present);
@@ -17899,9 +17979,10 @@ namespace CapriDesktop
                 // Anything Direct3D throws, on a paint as much as a new picture: she goes back on the colour rather than out.
                 catch (Exception error)
                 {
-                    Brain.Log("stream", -1, "Transparent couldn't start Direct3D, so she is on the colour: " + error.GetType().Name + ": " + error.Message);
+                    Brain.Log("stream", -1, "Direct3D stopped, so she is on the colour the plain way: " + error.GetType().Name + ": " + error.Message);
                     try { if (clear != null) clear.Dispose(); } catch (Exception caughtOne) { Brain.Caught(caughtOne); }
                     clear = null;
+                    refused = true;
                     Invalidate();
                 }
             }
@@ -17916,23 +17997,26 @@ namespace CapriDesktop
                 into.DrawImage(copy, (ClientSize.Width - wide) / 2, ClientSize.Height - high, wide, high);
             }
 
+            // Transparent is Direct3D alone; on a colour the window paints as ever and Direct3D carries the same frame for OBS.
             protected override void OnPaintBackground(PaintEventArgs e)
             {
-                if (clear != null) return;
+                if (clear != null && see) return;
                 using (Brush fill = new SolidBrush(BackColor)) e.Graphics.FillRectangle(fill, ClientRectangle);
             }
 
             protected override void OnPaint(PaintEventArgs e)
             {
-                if (clear != null) { ShowClear(true); return; }
+                if (clear != null && see) { ShowClear(true); return; }
                 if (copy == null) return;
                 Fit(e.Graphics);
+                if (clear != null) ShowClear(true);
             }
 
             protected override void Dispose(bool disposing)
             {
                 if (disposing && copy != null) { copy.Dispose(); copy = null; }
                 if (disposing && framed != null) { framed.Dispose(); framed = null; }
+                if (disposing) Clock.Stop(resend);
                 if (disposing && clear != null) { clear.Dispose(); clear = null; }
                 if (disposing && spout != null) { spout.Dispose(); spout = null; }
                 base.Dispose(disposing);
@@ -54637,6 +54721,10 @@ namespace CapriDesktop
             Section(checks, "SmokeInterestList", delegate { Interests.ListCheck(checks); });
             Section(checks, "SmokeTopics", delegate { Topics.Check(checks); });
             Section(checks, "SmokeOwnSet", delegate { OwnSet.Check(checks, output); });
+            Section(checks, "SmokeLoveLanguages", delegate { LoveLanguages.Check(checks); });
+            Section(checks, "SmokeFields", delegate { Fields.Check(checks, output); });
+            Section(checks, "SmokeScenes", delegate { Scenes.Check(checks); });
+            Section(checks, "SmokeMoodNote", delegate { Dynamics.StaleNoteCheck(checks, output); });
             Section(checks, "SmokeRepeatGuard", delegate { Brain.RepeatGuardCheck(checks); });
             Section(checks, "SmokeLineKinds", delegate { Sayings.KindCheck(checks); Interests.KindCheck(checks); Sayings.LoggedJoinsCheck(checks); StyleLinesCheck(checks); });
             Section(checks, "SmokeLineSmoothing", delegate { Smooth.Check(checks); });

@@ -43,6 +43,7 @@ namespace CapriDesktop
         // buffer first.
         internal void Show(Bitmap picture, bool present = true)
         {
+            if (Refused) throw new ExternalException("Direct3D failed", unchecked((int)0x887A0004));
             Ready(picture.Width, picture.Height);
             BitmapData bits = picture.LockBits(new Rectangle(Point.Empty, picture.Size), ImageLockMode.ReadOnly, PixelFormat.Format32bppPArgb);
             try { Method<UpdateFn>(context, 48)(context, back, 0, IntPtr.Zero, bits.Scan0, (uint)bits.Stride, 0); }
@@ -53,6 +54,7 @@ namespace CapriDesktop
         // For the checks: one pixel of the back buffer, as blue, green, red and alpha.
         internal Color Pixel(int x, int y)
         {
+            if (swap == IntPtr.Zero || device == IntPtr.Zero) return Color.Empty;
             if (staging == IntPtr.Zero)
             {
                 TexDesc desc = new TexDesc { Width = (uint)wide, Height = (uint)high, MipLevels = 1, ArraySize = 1, Format = Bgra, SampleCount = 1, Usage = Staging, CpuAccess = CpuRead };
@@ -165,13 +167,27 @@ namespace CapriDesktop
                     own.Close();
                 }
                 bool alpha = corner.A == 0 && middle.A == 255 && middle.R > 200 && middle.G < 40;
+                // On a colour she is still drawn through Direct3D, the colour behind her, so Game Capture takes her too.
+                Color onColour;
+                using (StreamWindow own = new StreamWindow(Color.FromArgb(0, 177, 64)))
+                using (Bitmap her = new Bitmap(100, 100, System.Drawing.Imaging.PixelFormat.Format32bppArgb))
+                {
+                    own.Location = new Point(-4000, -4000);
+                    own.Show();
+                    using (Graphics paint = Graphics.FromImage(her)) { paint.Clear(Color.Transparent); paint.FillRectangle(Brushes.Red, 30, 30, 40, 40); }
+                    own.Took(her, new Rectangle(0, 0, 100, 100), null);
+                    own.ShowClear(false);
+                    onColour = own.Drawn3D ? own.ClearPixel(2, 2) : Color.Empty;
+                    own.Close();
+                }
+                bool colour3D = onColour.A == 255 && onColour.G > 150 && onColour.R < 40;
                 SetBackdrop(Color.FromArgb(0, 177, 64));
                 bool coloured = !streamClear && !streamWindow.Clear && streamWindow.BackColor.ToArgb() == Color.FromArgb(0, 177, 64).ToArgb();
                 SetStreamWindow();
                 bool letGo = !streamLocked;
-                if (!opened || !alpha || !coloured || !letGo)
-                    throw new Exception("Transparent went wrong: opened held and clear " + opened + ", alpha kept (corner " + corner + ", middle " + middle + ") " + alpha + ", a colour puts her back on it " + coloured + ", closing lets her go " + letGo);
-                checks.Add("PASS Transparent sits first in the Streaming window's colours; picked, it opens the capture window held and draws her through Direct3D with her alpha (a clear corner reads alpha 0, she reads solid); a colour puts her back on it, and closing the window lets her go");
+                if (!opened || !alpha || !coloured || !letGo || !colour3D)
+                    throw new Exception("Transparent went wrong: opened held and clear " + opened + ", alpha kept (corner " + corner + ", middle " + middle + ") " + alpha + ", a colour puts her back on it " + coloured + ", closing lets her go " + letGo + ", on a colour still through Direct3D (" + onColour + ") " + colour3D);
+                checks.Add("PASS Transparent sits first in the Streaming window's colours; picked, it opens the capture window held and draws her through Direct3D with her alpha (a clear corner reads alpha 0, she reads solid); a colour puts her back on it, still drawn through Direct3D with the colour behind her so Game Capture takes her on any setting, and closing the window lets her go");
             }
             finally
             {

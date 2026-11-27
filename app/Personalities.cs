@@ -963,8 +963,14 @@ namespace CapriDesktop
             return held;
         }
 
+        // The Topics page's say over her words: one taken out there, ones added there (worth one each), and each one heard.
+        internal static Func<string, bool> WordOff = delegate { return false; };
+        internal static Func<string[]> WordsAdded = delegate { return new string[0]; };
+        internal static Action<string> WordSaid = delegate { };
+
         // What their words were worth to her. Every phrase of hers that appears is counted, so "good girl, little one"
         // lands twice, and a personality that dislikes a word is pulled down by it.
+
         internal static int Heard(string said)
         {
             if (string.IsNullOrEmpty(said)) return 0;
@@ -973,15 +979,18 @@ namespace CapriDesktop
             if (Chosen != Stock)
             {
                 Fresh();
+                List<string> heard = new List<string>();
+                bool any;
                 lock (gate)
                 {
-                    if (words.Count > 0)
-                    {
-                        foreach (KeyValuePair<string, int> one in words)
-                            if (one.Key.Length > 0 && plain.IndexOf(one.Key, StringComparison.Ordinal) >= 0) much += one.Value;
-                        return Math.Max(-5, Math.Min(5, much));
-                    }
+                    any = words.Count > 0;
+                    foreach (KeyValuePair<string, int> one in words)
+                        if (one.Key.Length > 0 && !WordOff(one.Key) && plain.IndexOf(one.Key, StringComparison.Ordinal) >= 0) { much += one.Value; heard.Add(one.Key); }
                 }
+                foreach (string added in WordsAdded())
+                    if (added.Length > 0 && !heard.Contains(added) && plain.IndexOf(added.ToLowerInvariant(), StringComparison.Ordinal) >= 0) { much += 1; heard.Add(added); any = true; }
+                foreach (string one in heard) WordSaid(one);
+                if (any) return Math.Max(-5, Math.Min(5, much));
             }
             for (int word = 0; word < OwnWords.GetLength(0); word++)
                 if (plain.IndexOf(OwnWords[word, 0], StringComparison.Ordinal) >= 0) much += int.Parse(OwnWords[word, 1]);

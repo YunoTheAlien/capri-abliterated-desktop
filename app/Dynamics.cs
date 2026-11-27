@@ -585,6 +585,49 @@ namespace CapriDesktop
             Remember();
         }
 
+        // A note her mood files carried while their numbers were in them; the numbers moved to Personality settings, so the
+        // note goes, that line only. 1 a file it came out of.
+        internal const string StaleNote = ">! Numbers here are added to her personality's, not instead of them.";
+
+        internal static int DropStaleNote(string folder)
+        {
+            int changed = 0;
+            if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) return 0;
+            foreach (string path in Directory.GetFiles(folder, "*.md"))
+            {
+                try
+                {
+                    string had = Notes.ReadAll(path);
+                    if (had.IndexOf(StaleNote, StringComparison.Ordinal) < 0) continue;
+                    string newline = had.Contains("\r\n") ? "\r\n" : "\n";
+                    List<string> kept = new List<string>();
+                    foreach (string line in had.Replace("\r\n", "\n").Split('\n')) if (line.Trim() != StaleNote) kept.Add(line);
+                    Notes.Put(path, string.Join(newline, kept.ToArray()));
+                    changed++;
+                }
+                catch (Exception caughtOne) { Brain.Caught(caughtOne); }
+            }
+            return changed;
+        }
+
+#if CHECKS
+        // The stale note comes out of a mood file and nothing else moves; a file without it is left as it was.
+        internal static void StaleNoteCheck(List<string> checks, string output)
+        {
+            string folder = Path.Combine(output, "mood-note");
+            Directory.CreateDirectory(folder);
+            string with = "# Clingy\r\nreset to stock: 0\r\n>! Set that to 1 and this file goes back.\r\n\r\n>! Does not want to be put down.\r\n" + StaleNote + "\r\n\r\n## When you pet her\r\n\r\nMore, please.\r\n";
+            string without = "# Sleepy\r\nreset to stock: 0\r\n\r\n## When you pet her\r\n\r\nMm.\r\n";
+            File.WriteAllText(Path.Combine(folder, "Clingy.md"), with);
+            File.WriteAllText(Path.Combine(folder, "Sleepy.md"), without);
+            int first = DropStaleNote(folder), again = DropStaleNote(folder);
+            string clingy = File.ReadAllText(Path.Combine(folder, "Clingy.md")), sleepy = File.ReadAllText(Path.Combine(folder, "Sleepy.md"));
+            bool right = first == 1 && again == 0 && clingy == with.Replace(StaleNote + "\r\n", "") && sleepy == without && Settings.IndexOf(StaleNote, StringComparison.Ordinal) < 0 && MoodText("Clingy").IndexOf(StaleNote, StringComparison.Ordinal) < 0;
+            if (!right) throw new Exception("The stale mood note went wrong: taken out of " + first + " then " + again + ", the rest kept " + (clingy == with.Replace(StaleNote + "\r\n", "")) + ", an untouched file kept " + (sleepy == without));
+            checks.Add("PASS the note about numbers comes out of a mood file once, that line only, with the rest and a file without it as they were; no stock mood text carries it");
+        }
+#endif
+
         // Rolls a new mood now, whatever the timer says.
         internal static void Again() { Held = false; lock (gate) until = DateTime.MinValue; Turn(true); Remember(); }
 
@@ -922,6 +965,8 @@ namespace CapriDesktop
                 Slots.Renamed(Senpais);
                 if (senpaiOn && !Directory.Exists(Senpais)) Directory.CreateDirectory(Senpais);
                 Moved();
+                DropStaleNote(Plain);
+                if (Directory.Exists(Senpais)) DropStaleNote(Senpais);
                 if (senpaiOn) WholeCopies();
                 for (int mood = 0; mood < Moods.GetLength(0); mood++)
                 {
@@ -1348,7 +1393,6 @@ namespace CapriDesktop
                 @"# Sleepy
 
 >! Heavy eyed and slow. Being called on is an imposition; being left alone is bliss.
->! Numbers here are added to her personality's, not instead of them.
 
 ## What she likes
 
@@ -1460,7 +1504,6 @@ don't make me get up.
                 @"# Hyper
 
 >! Wired. Wants everything at once and does not want to be left alone.
->! Numbers here are added to her personality's, not instead of them.
 
 ## What she likes
 
@@ -1569,7 +1612,6 @@ again, again!
                 @"# Moody
 
 >! Short tempered and easily set off. Nothing is quite right today.
->! Numbers here are added to her personality's, not instead of them.
 
 ## What she likes
 
@@ -1685,7 +1727,6 @@ just so you know.
                 @"# Clingy
 
 >! Does not want to be put down. Attention is the whole point today.
->! Numbers here are added to her personality's, not instead of them.
 
 ## What she likes
 
@@ -1797,7 +1838,6 @@ I missed you already.
             { "Needy", @"# Needy
 
 >! Wants reassurance, and asks for it.
->! Numbers here are added to her personality's, not instead of them.
 
 ## What she likes
 
@@ -1901,7 +1941,6 @@ right?
             { "Playful", @"# Playful
 
 >! Everything is a game and she wants in.
->! Numbers here are added to her personality's, not instead of them.
 
 
 ## When she wants attention
@@ -2010,7 +2049,6 @@ no takebacks.
                 @"# Touchy
 
 >! Does not want to be handled today.
->! Numbers here are added to her personality's, not instead of them.
 
 ## What she likes
 
@@ -2108,7 +2146,6 @@ I mean it.
             { "Affectionate", @"# Affectionate
 
 >! Soft and close, wants to be near you.
->! Numbers here are added to her personality's, not instead of them.
 
 ## What she likes
 
@@ -2208,7 +2245,6 @@ all warm and fuzzy.
             { "Mischievous", @"# Mischievous
 
 >! Looking for trouble and hoping you join in.
->! Numbers here are added to her personality's, not instead of them.
 
 ## What she likes
 
@@ -2303,7 +2339,6 @@ trust me.
                 @"# Focused
 
 >! Deep in something and does not want interrupting.
->! Numbers here are added to her personality's, not instead of them.
 
 ## What she likes
 
@@ -2408,7 +2443,6 @@ nearly there.
             { "Melancholy", @"# Melancholy
 
 >! Low and quiet. Wants company, not noise.
->! Numbers here are added to her personality's, not instead of them.
 
 ## What she likes
 
@@ -2515,7 +2549,6 @@ it'll pass.
                 @"# Furious
 
 >! Past angry. She wants to make a mess of your desktop about it.
->! Numbers here are added to her personality's, not instead of them.
 >! Pranks only happen if Mood pranks is switched on in the Personality menu.
 
 ## What she likes
@@ -2641,7 +2674,6 @@ not forgiven.
                 @"# Jealous
 
 >! She does not like you talking to other AIs, and she will say so.
->! Numbers here are added to her personality's, not instead of them.
 
 ## What she likes
 
@@ -2760,7 +2792,6 @@ just me, okay?
                 @"# Smug
 
 >! Thoroughly pleased with herself. Being needed is delicious.
->! Numbers here are added to her personality's, not instead of them.
 
 ## What she likes
 

@@ -227,7 +227,7 @@ namespace CapriDesktop
 
         private string Folder { get { return Path.Combine(root, "engine-" + Build); } }
         private string Server { get { return Path.Combine(Folder, "llama-server.exe"); } }
-        private string ModelPath(Pick pick) { return Path.Combine(Path.Combine(root, "models"), pick.File); }
+        internal string ModelPath(Pick pick) { return Path.Combine(Path.Combine(root, "models"), pick.File); }
 
         internal bool Has(Pick pick) { return File.Exists(Server) && File.Exists(ModelPath(pick)); }
         private string EyesPath(Pick pick) { return pick.EyesFile == null ? null : Path.Combine(Path.Combine(root, "models"), pick.EyesFile); }

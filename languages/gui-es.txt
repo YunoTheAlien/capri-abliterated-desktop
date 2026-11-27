@@ -546,3 +546,6 @@ Folding	Plegado
 Panels	Paneles
 Chat pace	Ritmo del chat
 Increases gain rates by multiplier	Aumenta las tasas de ganancia por el multiplicador
+Reroll Capri	Volver a tirar Capri
+No mood	Sin estado de ánimo
+Random	Aleatorio

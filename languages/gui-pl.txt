@@ -542,3 +542,6 @@ Folding	Zwijanie
 Panels	Panele
 Chat pace	Tempo czatu
 Increases gain rates by multiplier	Zwiększa tempo przyrostu o mnożnik
+Reroll Capri	Losuj Capri ponownie
+No mood	Bez nastroju
+Random	Losowo

@@ -185,6 +185,39 @@ namespace CapriDesktop
 
         internal string ConvoProblem { get { return convoProblem; } }
 
+        // Since when it has been on this PC: her engine's file, or Ollama's own list read off her window's thread.
+        private static string convoSince;
+        private static DateTime sinceAsked = DateTime.MinValue;
+
+        internal string ConvoSince
+        {
+            get
+            {
+                try { if (engine.Has(Engine.Gemma3)) return File.GetLastWriteTime(engine.ModelPath(Engine.Gemma3)).ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture); }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); }
+                if (DateTime.UtcNow - sinceAsked > TimeSpan.FromMinutes(10))
+                {
+                    sinceAsked = DateTime.UtcNow;
+                    ThreadPool.QueueUserWorkItem(delegate
+                    {
+                        try
+                        {
+                            using (System.Net.WebClient web = new System.Net.WebClient())
+                            {
+                                string tags = web.DownloadString(Brain.Ollama + "/api/tags");
+                                System.Text.RegularExpressions.Match found = System.Text.RegularExpressions.Regex.Match(tags, "\"name\":\"" + System.Text.RegularExpressions.Regex.Escape(ConvoOllama) + "(?::latest)?\"[^}]*?\"modified_at\":\"([0-9-]{10})");
+                                DateTime at;
+                                if (found.Success && DateTime.TryParse(found.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out at))
+                                    convoSince = at.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+                            }
+                        }
+                        catch (Exception) { }
+                    });
+                }
+                return convoSince;
+            }
+        }
+
         internal void GetConversationBrain()
         {
             if (convoGetting >= 0 || ConvoKey == null || ConvoKey == "Ready") return;

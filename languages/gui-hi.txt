@@ -544,3 +544,6 @@ Folding	समेटना
 Panels	पैनल
 Chat pace	चैट की गति
 Increases gain rates by multiplier	गुणक से लाभ दर बढ़ाता है
+Reroll Capri	Capri फिर से चुनें
+No mood	कोई मूड नहीं
+Random	यादृच्छिक

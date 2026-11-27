@@ -542,3 +542,6 @@ Folding	Recolher
 Panels	Painéis
 Chat pace	Ritmo do chat
 Increases gain rates by multiplier	Aumenta as taxas de ganho pelo multiplicador
+Reroll Capri	Sortear Capri de novo
+No mood	Sem humor
+Random	Aleatório

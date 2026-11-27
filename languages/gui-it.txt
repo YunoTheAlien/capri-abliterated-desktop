@@ -546,3 +546,6 @@ Folding	Compressione
 Panels	Pannelli
 Chat pace	Ritmo della chat
 Increases gain rates by multiplier	Aumenta i tassi di guadagno del moltiplicatore
+Reroll Capri	Rilancia Capri
+No mood	Nessun umore
+Random	Casuale

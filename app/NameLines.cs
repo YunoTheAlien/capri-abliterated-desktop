@@ -210,7 +210,8 @@ namespace CapriDesktop
             string quiet = "**silent**XD**/silent** hi :<";
             bool spoken = Voice.Spoken(quiet) == "hi" && Voice.Spoken(":3") == "" && Voice.Spoken("hi **silent** never said") == "hi" && Voice.Spoken(">:3") == ""
                 && Voice.Spoken("[laughing] **silent**:3**/silent** ha", true) == "[laughing] ha" && Voice.Sayable("hi :< **silent**x**/silent**") == "hi"
-                && Voice.Unsilenced(quiet) == "XD hi :<" && Voice.Unsilenced("ok **silent**:3**/silent**.") == "ok :3.";
+                && Voice.Unsilenced(quiet) == "XD hi :<" && Voice.Unsilenced("ok **silent**:3**/silent**.") == "ok :3."
+                && Voice.Spoken(Brain.Clean("**silent**:3**/silent** Look at that, *waves* disaster.")) == "Look at that, disaster.";
             bool kept = Said.SameTokens("a **silent**x**/silent**", "b **silent**x**/silent**") && !Said.SameTokens("a **silent**x**/silent**", "b x");
             if (!spoken || !kept) throw new Exception("A silent part or a face reached her voice, or its marks reached her bubble: spoken " + spoken + " (" + Voice.Spoken(quiet) + " / " + Voice.Unsilenced(quiet) + "), translation " + kept);
             checks.Add("PASS text faces (:< :3 >:3 ^_^ T_T <3 and the like) stay in her bubble and no voice says them, a time, a ratio, a link and XD, uwu and rawr are left alone; **silent** parts show without their marks and are never said, Fish Audio's cue path too; a translation that drops a mark isn't kept");

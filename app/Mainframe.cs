@@ -2759,13 +2759,30 @@ namespace CapriDesktop
             base.WndProc(ref message);
             if (message.Msg == 0x0084 && message.Result == new IntPtr(1)) message.Result = new IntPtr(2);
             if (message.Msg == 0x001A && loaded) { Rezoom(Wanted()); ShowFrameSize(); }
+            // A drag let go: the monitor she ended on is checked once, whatever the two-second wait said.
+            if (message.Msg == 0x0232 && loaded) CheckScreen(true);
         }
+
+        // The monitor her size was last fitted to, looked at no more than every two seconds while she moves.
+        private string zoomScreen;
+        private readonly System.Diagnostics.Stopwatch screenLooked = System.Diagnostics.Stopwatch.StartNew();
 
         protected override void OnLocationChanged(EventArgs e)
         {
             DismissHint();
             base.OnLocationChanged(e);
-            if (loaded && !sizing) { Rezoom(Wanted()); ShowFrameSize(); }
+            CheckScreen(false);
+        }
+
+        private void CheckScreen(bool now)
+        {
+            if (!loaded || sizing || (!now && screenLooked.ElapsedMilliseconds < 2000)) return;
+            screenLooked.Restart();
+            string screen = Screen.FromControl(this).DeviceName;
+            if (screen == zoomScreen) return;
+            zoomScreen = screen;
+            Rezoom(Wanted());
+            ShowFrameSize();
         }
 
         protected override void OnLoad(EventArgs e)
@@ -2773,6 +2790,7 @@ namespace CapriDesktop
             base.OnLoad(e);
             monitorDpi = (int)Math.Round(DeviceScale() * 96);
             loaded = true;
+            zoomScreen = Screen.FromControl(this).DeviceName;
             Rezoom(Wanted());
             ShowFrameSize();
             Arrange(expanded);
@@ -3565,6 +3583,8 @@ namespace CapriDesktop
             graphics.Clear(Ground);
             Form window = control as Form ?? control.FindForm();
             if (window == null) return;
+            // Inside a box that scrolls, the box's own plain ground is what's behind it.
+            for (Control at = control.Parent; at != null && at != window; at = at.Parent) if (at is ScrollPanel) return;
             int x = 0, y = 0;
             for (Control at = control; at != null && at != window; at = at.Parent) { x += at.Left; y += at.Top; }
             GraphicsState state = graphics.Save();
@@ -3859,7 +3879,11 @@ namespace CapriDesktop
                 string state = capri.ConvoKey;
                 convoGet.Text = state == null ? "Get it" : state.StartsWith("Get it", StringComparison.Ordinal) ? "Get it" : state;
                 convoGet.AccessibleName = state ?? "Get it: too big for this PC's memory";
-                convoGet.Dimmed = state == null || state == "Ready";
+                // Ready lights up, and says since when it has been on this PC.
+                convoGet.Dimmed = state == null;
+                convoGet.Accent = state == "Ready" ? Cyan : Rose;
+                string since = state == "Ready" ? capri.ConvoSince : null;
+                convoGet.AccessibleDescription = state == "Ready" ? "Gemma 3 1B is on this PC" + (since != null ? " since " + since : "") + "." : "Downloads Gemma 3 1B (0.8 GB) from Ollama's library, or from Hugging Face when Ollama isn't on this PC. Gemma's terms apply.";
                 foreach (ToolStripItem item in convoMenu.Items) { ToolStripMenuItem choice = item as ToolStripMenuItem; if (choice != null) choice.Checked = choice.Text == convoPick.Text; }
             }
             huskMode.Text = HuskWatch.Names[HuskWatch.Choice(capri.HuskMode)];

@@ -162,18 +162,22 @@ namespace CapriDesktop
         }
 
         internal const string Instructions = "You write short dialogue lines for a companion character in a cozy desktop role-playing game. Reply with only the JSON asked for.";
+        // Her other side's own role-play instruction, from its file: the free ones grow that side's lines too.
+        internal static string SenpaiInstructions = "";
+        private static string InstructionsNow { get { return Brain.SenpaiLive && SenpaiInstructions.Length > 0 ? SenpaiInstructions : Instructions; } }
 
         // Each in turn while it isn't resting; on a drop, a refusal or a limit, the next. One that fails rests 1 minute, then
         // 2, 4 and on to an hour, and says so in her log as a PROBLEM line. Null when nobody gave a usable reply.
         internal static string Ask(string words, out string who)
         {
             who = null;
-            if (!Brain.SenpaiLive)
+            // Both sides go to the free ones; her other side only with its own instruction.
+            if (!Brain.SenpaiLive || SenpaiInstructions.Length > 0)
                 foreach (Engine one in Engines)
                 {
                     if (Now() < one.WaitUntil || !Slot(one)) continue;
                     string reply = null, why = null;
-                    try { reply = Send(one, Instructions, words); }
+                    try { reply = Send(one, InstructionsNow, words); }
                     catch (Limited limit) { Rested(one, limit); continue; }
                     catch (Exception bad) { why = bad.Message; }
                     if (Usable(reply)) { one.Fails = 0; one.LimitSaid = false; who = one.Name; return reply; }
@@ -185,7 +189,7 @@ namespace CapriDesktop
             if (own == null) return null;
             try
             {
-                string reply = own(Instructions, words);
+                string reply = own(InstructionsNow, words);
                 if (Usable(reply)) { who = "her own brain"; return reply; }
             }
             catch (Exception caughtOne) { Brain.Caught(caughtOne); }
@@ -301,7 +305,7 @@ namespace CapriDesktop
             words.Append("Their mood: ").Append(string.IsNullOrEmpty(mood) ? "calm" : mood).Append(".\n");
             words.Append("How much they want the player's attention: ").Append(band * 2).Append(" out of 10.\n\n");
             words.Append("For the situation below, write ").Append(many).Append(" new short lines this character would say, in their own voice coloured by this mood. ");
-            words.Append("Keep any word in percent signs, like %petname%, exactly as it is, and use only the ones shown. One or two sentences each, no quotes, no emoji, no stage directions, all of it wholesome.\n");
+            words.Append("Keep any word in percent signs, like %petname%, exactly as it is, and use only the ones shown. One or two sentences each, no quotes, no emoji, no stage directions").Append(Brain.SenpaiLive ? ".\n" : ", all of it wholesome.\n");
             words.Append("\nSituation: ").Append(set).Append('\n');
             List<string> shown = Blends.Sample(lines);
             if (shown.Count > 0) words.Append("Usually they say: ").Append(string.Join(" | ", shown.ToArray())).Append('\n');

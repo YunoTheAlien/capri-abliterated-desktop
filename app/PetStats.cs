@@ -135,18 +135,26 @@ namespace CapriDesktop
 
         internal static bool High(string need) { return Running() && Level(need) > Rate("needs high"); }
 
-        // An act as it lands, worth already through her maths: the need it fills moves by its worth times her gain. Only
-        // comfort goes down for an act she disliked; the others only fill.
+        // An act as it lands, worth already through her maths: the need it fills moves by its worth times her gain. One she
+        // disliked takes comfort and social down whatever it is, and harder than a liked one lifts: bad weighs more than
+        // good (Baumeister and others, 2001).
+        internal const double BadWeighs = 1.5;
+
         internal static void Took(string act, int worth)
         {
             if (!Running()) return;
             string need = NeedOf(act);
+            if (worth < 0)
+            {
+                double hit = -worth * Rate("needs gain") * BadWeighs;
+                bool social = need == "social";
+                Move(social ? "social" : "comfort", -hit);
+                Move(social ? "comfort" : "social", -hit / 2);
+            }
             if (need == null) return;
             // Eating fills her and a wash cleans her whatever she thinks of it; liking it fills more.
             if (need == "fullness" || need == "cleanliness") { Move(need, Math.Max(1, worth) * Rate("needs gain") * Times(need)); return; }
-            if (worth == 0) return;
-            if (worth < 0 && need != "comfort") return;
-            Move(need, worth * Rate("needs gain") * (worth > 0 ? Times(need) : 1));
+            if (worth > 0) Move(need, worth * Rate("needs gain") * Times(need));
         }
 
         // Something that isn't an act raised a need: a game, a story, music.

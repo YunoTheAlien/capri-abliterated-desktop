@@ -87,8 +87,14 @@ namespace CapriDesktop
                 { "gives up at", new double[] { 0, 0, 120, 5 } }, { "gives up minutes", new double[] { 45, 0, 240, 5 } },
                 { "rotate min hours", new double[] { 4, 0.25, 24, 0.25 } }, { "rotate max hours", new double[] { 8, 0.25, 24, 0.25 } },
                 { "forward min", new double[] { 2, 0, 10, 1 } }, { "forward max", new double[] { 8, 0, 10, 1 } },
-                { "mood share", new double[] { 50, 0, 100, 5 } }, { "forget after", new double[] { 0, 0, 600, 10 } }
+                { "mood share", new double[] { 50, 0, 100, 5 } }, { "forget after", new double[] { 0, 0, 600, 10 } },
+                { SceneOften, new double[] { SceneOftenStock, 0, 100, 5 } }, { SceneMinutes, new double[] { SceneMinutesStock, 1, 15, 1 } }
             };
+
+            // Her scenes' two settings, kept with the personality's own settings.
+            internal const string Scenes = "Scenes", SceneOften = "how often", SceneMinutes = "runtime minutes", SceneOn = "scenes on";
+            internal const double SceneOftenStock = 25, SceneMinutesStock = 8;
+            internal const string SceneNote = "She can start a scene that involves her interests or desires for a while, starts with her asking you.";
 
             internal PersonalitySheet(Mainframe owner, float zoom)
             {
@@ -122,7 +128,21 @@ namespace CapriDesktop
                 parts[1].AccessibleName = "Her topics: what each personality of hers is into";
                 pageKeys.Add(Make("Hear her", Wide - 248, 78, 100, 22, delegate { HearPicked(); }));
                 pageKeys.Add(Make("Defaults", Wide - 128, 78, 100, 22, delegate { owner.capri.ResetYourOwn(picked); Fill(); }));
-                Heading(this, "CAPRI >", new Point(Z(24), Z(84)), Type(10f * zoom, true), White, Picks - 90);
+                capriHead = Heading(this, "CAPRI >", new Point(Z(24), Z(84)), Type(10f * zoom, true), White, Picks - 90);
+                // Topics' own line, at the right edge: a personality and a mood to roll by, then Reroll Capri.
+                rollKey = Make("Reroll Capri", Wide - 28 - 160, 78, 160, 22, delegate { Reroll(); });
+                rollKey.AccessibleName = "Reroll Capri: her topics picked again for the personality and mood chosen";
+                moodMenu = owner.Dropdown();
+                moodKey = Make("", Wide - 28 - 160 - 8 - 170, 78, 170, 22, delegate { moodMenu.Show(moodKey, new Point(0, moodKey.Height)); });
+                moodKey.Chevron = true;
+                moodKey.AccessibleName = "The mood to roll her topics by";
+                whoMenu = owner.Dropdown();
+                whoKey = Make("", Wide - 28 - 160 - 8 - 170 - 8 - 170, 78, 170, 22, delegate { whoMenu.Show(whoKey, new Point(0, whoKey.Height)); });
+                whoKey.Chevron = true;
+                whoKey.AccessibleName = "The personality to roll her topics by";
+                rollKeys.AddRange(new[] { whoKey, moodKey, rollKey });
+                Disposed += delegate { whoMenu.Dispose(); moodMenu.Dispose(); };
+                FillRollMenus();
                 // Ends on the column's frame.
                 pageKeys.Add(Make("Default all", LeftColumn.Rim - 88, 78, 88, 22, delegate { owner.capri.ResetYourOwn(null); Fill(); }));
                 ShowPart(false);
@@ -138,6 +158,70 @@ namespace CapriDesktop
 
             // Which part shows: her settings, or Her topics for the one picked. The settings page's own keys go on Her topics.
             private bool topicsShown;
+            private Head capriHead;
+            private Key whoKey, moodKey, rollKey;
+            private ContextMenuStrip whoMenu, moodMenu;
+            private readonly List<Key> rollKeys = new List<Key>();
+            private string rollWho, rollMood;
+
+            // The side's own personalities and moods, the ones the list on the left shows.
+            private void FillRollMenus()
+            {
+                if (rollWho == null) rollWho = Personalities.Under ?? Personalities.Chosen ?? "";
+                if (rollWho == Personalities.Dynamic || rollWho == Personalities.Stock) rollWho = "";
+                whoMenu.Items.Clear();
+                whoMenu.Items.Add(Choice(RandomPick, rollWho == RandomPick, delegate { rollWho = RandomPick; FillRollMenus(); }));
+                foreach (string named in Personalities.Names)
+                {
+                    if (named == Personalities.Stock || named == Personalities.Dynamic) continue;
+                    string one = named;
+                    if (rollWho.Length == 0) rollWho = one;
+                    whoMenu.Items.Add(Choice(one, one == rollWho, delegate { rollWho = one; FillRollMenus(); }));
+                }
+                moodMenu.Items.Clear();
+                moodMenu.Items.Add(Choice("No mood", string.IsNullOrEmpty(rollMood), delegate { rollMood = null; FillRollMenus(); }));
+                foreach (string named in Dynamics.Allowed) { string one = named; moodMenu.Items.Add(Choice(one, one == rollMood, delegate { rollMood = one; FillRollMenus(); })); }
+                whoKey.Text = rollWho;
+                moodKey.Text = rollWho == RandomPick ? RandomPick : string.IsNullOrEmpty(rollMood) ? "No mood" : rollMood;
+                moodKey.Enabled = rollWho != RandomPick;
+            }
+
+            // Her topics, love languages and, on the side that has it, her own set, picked again for the personality and
+            // mood chosen. Random: she picks both from the side's own lists and becomes them.
+            internal const string RandomPick = "Random";
+            internal static Random Dice = new Random();
+
+            private void Reroll()
+            {
+                if (string.IsNullOrEmpty(rollWho)) return;
+                string who = rollWho, mood = rollMood;
+                if (who == RandomPick)
+                {
+                    List<string> names = new List<string>(Personalities.Names);
+                    names.RemoveAll(n => n == Personalities.Stock || n == Personalities.Dynamic);
+                    List<string> moods = Dynamics.Allowed;
+                    if (names.Count == 0) return;
+                    who = names[Dice.Next(names.Count)];
+                    int at = Dice.Next(moods.Count + 1);
+                    mood = at == moods.Count ? null : moods[at];
+                }
+                Topics.Reroll(who, mood);
+                LoveLanguages.Reroll(who, mood);
+                OwnSet.Reroll(who, mood);
+                if (rollWho == RandomPick)
+                {
+                    owner.capri.PickPersonality(who);
+                    Dynamics.Hold(mood ?? "");
+                    owner.ShowPersonality();
+                    Rolled = who + (mood == null ? "" : " | " + mood);
+                }
+                if (picked != who) Pick(who); else Fill();
+            }
+
+            // What Random last landed on, for the checks.
+            internal string Rolled { get; private set; }
+
+            internal void RerollRandom() { rollWho = RandomPick; FillRollMenus(); Reroll(); }
             private readonly Key[] parts = new Key[2];
             private readonly List<Key> pageKeys = new List<Key>();
 
@@ -155,44 +239,160 @@ namespace CapriDesktop
                     parts[i].Invalidate();
                 }
                 foreach (Key one in pageKeys) one.Visible = !topics;
+                foreach (Key one in rollKeys) one.Visible = topics;
+                // The list again, without the moods on the Topics page; a mood picked there goes back to her baseline.
+                BuildWho();
+                if (topics && pickedMood) { picked = ""; pickedMood = false; }
+                foreach (WhoRow one in whoRows) one.Ticked = string.Equals((string)one.Tag, picked ?? "", StringComparison.OrdinalIgnoreCase);
+                // The CAPRI band runs the column's width where Default all isn't on its line.
+                if (capriHead != null) { capriHead.Span = topics ? Picks + 18 : Picks - 90; Invalidate(); }
                 if (picked != null) Fill();
             }
 
-            // Topics: her own for the personality picked, then theirs, each a fold of rows (name, kind in one column, Remove) with
-            // an add row under it. A mood, her baseline and Dynamic have no topics of hers; theirs show whoever is picked.
+            // Topics: hers (interests, love languages, her set) then theirs the same, each a fold of name, %, this week and
+            // Remove with an add row. Her baseline and Dynamic show the personality she is in now.
             private void TopicsPage(int wide)
             {
                 List<string> hers = new List<string>();
-                // Her baseline, Dynamic and a mood have no topics of their own: the personality she is in now shows instead.
                 string who = picked.Length > 0 && picked != Personalities.Dynamic && !pickedMood ? picked : Personalities.Under ?? Personalities.Chosen ?? "";
                 bool personality = who.Length > 0 && who != Personalities.Dynamic;
-                if (personality) { string[] kept = Topics.Saved(who); hers.AddRange(kept != null && kept.Length > 0 ? kept : Topics.Hers(who, null)); }
-                List<Topics.Topic> all = Topics.All();
+                // Her topics are one set whoever she is; the personality she is in leans the first picks.
+                if (personality) hers.AddRange(Topics.Hers(who, null));
+                else { string[] kept = Topics.Saved(Topics.Shared); if (kept != null) hers.AddRange(kept); }
                 int y = 0;
                 topicFolds.Clear();
-                TopicFold("HER TOPICS", hers, all, wide, ref y, delegate(string one)
+                Random start = new Random();
+                List<string> theirs = new List<string>(Topics.TheirFlagged());
                 {
-                    List<string> left = new List<string>(Topics.Saved(who) ?? new string[0]);
-                    left.RemoveAll(t => string.Equals(t, one, StringComparison.OrdinalIgnoreCase));
-                    Topics.Save(who, left.ToArray());
-                }, personality ? (Action<string>)delegate(string one)
+                    TopicFold("HER TOPICS", hers, Pct(hers, delegate(string one) { return Fields.Level(Fields.Topic, Topics.Shared, one, 40 + start.Next(31)); }), wide, ref y, delegate(string one)
+                    {
+                        List<string> left = new List<string>(Topics.Saved(Topics.Shared) ?? new string[0]);
+                        left.RemoveAll(t => string.Equals(t, one, StringComparison.OrdinalIgnoreCase));
+                        Topics.Save(Topics.Shared, left.ToArray());
+                        List<string> hand = new List<string>(Topics.Saved(Topics.ByHand + Topics.Shared) ?? new string[0]);
+                        if (hand.RemoveAll(t => string.Equals(t, one, StringComparison.OrdinalIgnoreCase)) > 0) Topics.Save(Topics.ByHand + Topics.Shared, hand.ToArray());
+                    }, delegate(string one)
+                    {
+                        one = Canon(one);
+                        List<string> mine = new List<string>(Topics.Saved(Topics.Shared) ?? hers.ToArray());
+                        if (!mine.Exists(t => string.Equals(t, one, StringComparison.OrdinalIgnoreCase))) mine.Add(one);
+                        Topics.Save(Topics.Shared, mine.ToArray());
+                        Topics.AddedByHand(who, one);
+                        Fields.In(Fields.Topic, Topics.Shared, one, 60);
+                    }, "A topic of hers", delegate(string one) { return Fields.Interactions(Fields.Topic, Topics.Shared, one); }, TopicNames(), delegate(string one, double level) { Fields.Set(Fields.Topic, Topics.Shared, Canon(one), level); });
+                }
+                if (personality)
                 {
-                    List<string> mine = new List<string>(Topics.Saved(who) ?? hers.ToArray());
-                    if (!mine.Exists(t => string.Equals(t, one, StringComparison.OrdinalIgnoreCase))) mine.Add(one);
-                    Topics.Save(who, mine.ToArray());
-                } : null, "A topic for " + who);
+                    // Her love languages, both sides: strongest first, the first one furthest in.
+                    List<string> loves = new List<string>(LoveLanguages.Hers(who));
+                    y += 10;
+                    TopicFold(LoveLanguages.Title, loves, Pct(loves, delegate(string one) { return Fields.Level(Fields.Love, who, one, Math.Max(30, 80 - 20 * loves.IndexOf(one))); }), wide, ref y,
+                        delegate(string one) { LoveLanguages.Remove(who, one); }, delegate(string one) { LoveLanguages.Add(who, one); string named = LoveLanguages.Match(one); if (named != null) Fields.In(Fields.Love, who, named, 60); },
+                        "A love language for " + who, delegate(string one) { return Fields.Interactions(Fields.Love, who, one); }, LoveNames(),
+                        delegate(string one, double level) { string named = LoveLanguages.Match(one); if (named != null) Fields.Set(Fields.Love, who, named, level); });
+                }
+                // Her pet names: the words of hers she likes hearing, how often each was said to her this week, no %.
+                if (personality)
+                {
+                    List<string> names = PetNames(who);
+                    y += 10;
+                    TopicFold("HER PET NAMES", names, Pct(names, delegate(string one) { return -1; }), wide, ref y,
+                        delegate(string one) { Fields.Out(Fields.Word, who, one); }, delegate(string one) { Fields.In(Fields.Word, who, one.ToLowerInvariant(), 0); },
+                        "A pet name for " + who, delegate(string one) { return Fields.Interactions(Fields.Word, who, one); }, AllPetNames());
+                }
+                // Her set, on her other side only: its title and names are the side's data.
+                if (personality && OwnSet.Shown)
+                {
+                    List<string> set = new List<string>();
+                    List<Topics.Topic> levels = new List<Topics.Topic>();
+                    foreach (KeyValuePair<string, double> one in OwnSet.Hers(who)) { set.Add(one.Key); levels.Add(new Topics.Topic { Name = one.Key, Heading = Percent(one.Value) }); }
+                    y += 10;
+                    TopicFold(OwnSet.Title, set, levels, wide, ref y, delegate(string one) { OwnSet.Remove(who, one); }, delegate(string one) { OwnSet.Add(who, one); }, "Add one for " + who, delegate(string one) { return OwnSet.Interactions(who, one); }, OwnSet.Items, delegate(string one, double level) { OwnSet.Set(who, one, level); });
+                }
                 y += 10;
-                TopicFold("YOUR TOPICS", new List<string>(Topics.TheirFlagged()), all, wide, ref y, Topics.Unflag, Topics.AddTheirs, "A topic of yours");
-                // The side's own set, only there: its title and names are the side's data; a level beside each.
-                if (!OwnSet.Shown || !personality) return;
-                List<Topics.Topic> levels = new List<Topics.Topic>();
-                List<string> set = new List<string>();
-                foreach (KeyValuePair<string, double> one in OwnSet.Hers(who)) { set.Add(one.Key); levels.Add(new Topics.Topic { Name = one.Key, Heading = one.Value.ToString("0.#", CultureInfo.InvariantCulture) }); }
+                TopicFold("YOUR TOPICS", theirs, Pct(theirs, delegate(string one) { return Fields.Level(Fields.Topic, Fields.Yours, one, 30); }), wide, ref y, Topics.Unflag,
+                    delegate(string one) { one = Canon(one); Topics.AddTheirs(one); Fields.In(Fields.Topic, Fields.Yours, one, 60); }, "A topic of yours", delegate(string one) { return Fields.Interactions(Fields.Topic, Fields.Yours, one); }, TopicNames(), delegate(string one, double level) { Fields.Set(Fields.Topic, Fields.Yours, Canon(one), level); });
+                List<string> given = Fields.Shown(Fields.Love, Fields.Yours);
                 y += 10;
-                TopicFold(OwnSet.Title, set, levels, wide, ref y, delegate(string one) { OwnSet.Remove(who, one); }, delegate(string one) { OwnSet.Add(who, one); }, "Add one for " + who);
+                TopicFold(LoveLanguages.TitleYours, given, Pct(given, delegate(string one) { return Fields.Level(Fields.Love, Fields.Yours, one, 0); }), wide, ref y,
+                    delegate(string one) { Fields.Out(Fields.Love, Fields.Yours, one); }, delegate(string one) { string named = LoveLanguages.Match(one); if (named != null) Fields.In(Fields.Love, Fields.Yours, named, 60); },
+                    "A love language of yours", delegate(string one) { return Fields.Interactions(Fields.Love, Fields.Yours, one); }, LoveNames(),
+                    delegate(string one, double level) { string named = LoveLanguages.Match(one); if (named != null) Fields.Set(Fields.Love, Fields.Yours, named, level); });
+                if (!OwnSet.Shown || OwnSet.YoursTitle.Length == 0) return;
+                List<string> theirSet = new List<string>();
+                List<Topics.Topic> theirLevels = new List<Topics.Topic>();
+                foreach (KeyValuePair<string, double> one in OwnSet.Hers(OwnSet.Yours)) { theirSet.Add(one.Key); theirLevels.Add(new Topics.Topic { Name = one.Key, Heading = Percent(one.Value) }); }
+                y += 10;
+                TopicFold(OwnSet.YoursTitle, theirSet, theirLevels, wide, ref y, delegate(string one) { OwnSet.Remove(OwnSet.Yours, one); }, delegate(string one) { OwnSet.Add(OwnSet.Yours, one); }, "One of yours", delegate(string one) { return OwnSet.Interactions(OwnSet.Yours, one); }, OwnSet.Items, delegate(string one, double level) { OwnSet.Set(OwnSet.Yours, one, level); });
             }
 
-            private void TopicFold(string title, List<string> names, List<Topics.Topic> all, int wide, ref int y, Action<string> remove, Action<string> add, string cue)
+            // A typed topic as her list spells it, when it is one of hers.
+            private static string Canon(string typed)
+            {
+                Topics.Topic known = Topics.All().Find(t => string.Equals(t.Name, typed, StringComparison.OrdinalIgnoreCase));
+                return known != null ? known.Name : typed;
+            }
+
+            private static string[] TopicNames() { return Topics.All().ConvertAll(t => t.Name).ToArray(); }
+
+            private static string[] LoveNames()
+            {
+                string[] names = new string[LoveLanguages.Five.GetLength(0)];
+                for (int i = 0; i < names.Length; i++) names[i] = LoveLanguages.Five[i, 0];
+                return names;
+            }
+
+            private static string Percent(double level) { return level < 0 ? "" : Math.Round(level).ToString(CultureInfo.InvariantCulture) + "%"; }
+
+            // The words a personality's file says she likes hearing (worth above nought), less any taken out, and any added.
+            private static List<string> PetNames(string who)
+            {
+                List<string> names = new List<string>();
+                List<KeyValuePair<string, string>> liked = Find(Sections(TextOf(who)), Personalities.WordsHeading);
+                if (liked != null)
+                    foreach (KeyValuePair<string, string> one in liked)
+                    {
+                        double worth;
+                        if (one.Value != null && double.TryParse(one.Value.TrimStart('+'), NumberStyles.Float, CultureInfo.InvariantCulture, out worth) && worth > 0
+                            && !Fields.IsOut(Fields.Word, who, one.Key.ToLowerInvariant()) && !names.Contains(one.Key.ToLowerInvariant())) names.Add(one.Key.ToLowerInvariant());
+                    }
+                foreach (string one in Fields.Added(Fields.Word, who)) if (!names.Contains(one)) names.Add(one);
+                return names;
+            }
+
+            // Every personality's liked words, for the add row to fill in.
+            private static string[] AllPetNames()
+            {
+                List<string> all = new List<string>();
+                foreach (string named in Personalities.Names)
+                {
+                    if (named == Personalities.Stock || named == Personalities.Dynamic) continue;
+                    List<KeyValuePair<string, string>> liked = Find(Sections(TextOf(named)), Personalities.WordsHeading);
+                    if (liked != null) foreach (KeyValuePair<string, string> one in liked) if (!all.Contains(one.Key.ToLowerInvariant())) all.Add(one.Key.ToLowerInvariant());
+                }
+                return all.ToArray();
+            }
+
+            private static string TextOf(string named)
+            {
+                try
+                {
+                    string path = Personalities.PathOf(named);
+                    return path != null && File.Exists(path) ? FileSlots.ReadText(path) : Personalities.Written(named);
+                }
+                catch (Exception caughtOne) { CapriDesktop.Brain.Caught(caughtOne); return ""; }
+            }
+
+            // Each name with its % where the fold's middle column reads it.
+            private static List<Topics.Topic> Pct(List<string> names, Func<string, double> level)
+            {
+                List<Topics.Topic> made = new List<Topics.Topic>();
+                foreach (string one in names) made.Add(new Topics.Topic { Name = one, Heading = Percent(level(one)) });
+                return made;
+            }
+
+            // With counts: its % and what was done for it this week stand in its middle column, side by side.
+            private void TopicFold(string title, List<string> names, List<Topics.Topic> all, int wide, ref int y, Action<string> remove, Action<string> add, string cue, Func<string, int> counts = null, string[] suggest = null, Action<string, double> set = null)
             {
                 FoldHead head = new FoldHead { Text = title + "  (" + names.Count + ")", Font = Type(9.5f * Zoom, true), Bounds = new Rectangle(0, Z(y), Z(wide), Z(25)), Open = true };
                 setBox.Controls.Add(head);
@@ -203,7 +403,10 @@ namespace CapriDesktop
                     Topics.Topic found = all.Find(t => string.Equals(t.Name, one, StringComparison.OrdinalIgnoreCase));
                     rows.Add(one);
                     setBox.Controls.Add(new Note { Text = one, Font = Font, ForeColor = Rose, BackColor = Ground, AutoSize = false, UseMnemonic = false, Bounds = new Rectangle(Z(2), Z(y + 3), Z(176), Z(18)), Cuts = true });
-                    setBox.Controls.Add(new Note { Text = found == null ? "" : found.Heading, Font = Font, ForeColor = Cyan, BackColor = Ground, AutoSize = false, UseMnemonic = false, TextAlign = ContentAlignment.MiddleLeft, Bounds = new Rectangle(Z(186), Z(y + 3), Z(Math.Max(40, wide - 88 - 8 - 186)), Z(18)), Cuts = true });
+                    int middle = Math.Max(40, wide - 88 - 8 - 186);
+                    setBox.Controls.Add(new Note { Text = found == null ? "" : found.Heading, Font = Font, ForeColor = Cyan, BackColor = Ground, AutoSize = false, UseMnemonic = false, TextAlign = ContentAlignment.MiddleLeft, Bounds = new Rectangle(Z(186), Z(y + 3), Z(counts == null ? middle : 56), Z(18)), Cuts = true });
+                    if (counts != null)
+                        setBox.Controls.Add(new Note { Text = counts(one) + " this week", Font = Font, ForeColor = Rose, BackColor = Ground, AutoSize = false, UseMnemonic = false, TextAlign = ContentAlignment.MiddleLeft, Bounds = new Rectangle(Z(186 + 64), Z(y + 3), Z(Math.Max(40, middle - 64)), Z(18)), Cuts = true });
                     Key off = new Key { Text = "Remove", Font = Type(9f * Zoom, true), Bounds = new Rectangle(Z(wide - 88), Z(y), Z(88), Z(22)) };
                     off.AccessibleName = "Remove " + one + " from " + title.ToLowerInvariant();
                     off.Click += delegate { remove(one); Fill(); };
@@ -215,13 +418,25 @@ namespace CapriDesktop
                 // Her add row, as Her memory has it: a box and an Add key.
                 Entry adding = new Entry { Bounds = new Rectangle(Z(2), Z(y), Z(wide - 88 - 10), Z(24)), Cue = cue };
                 adding.Box.AccessibleName = cue;
+                // The names it knows fill in as they type, the rest marked; typing on or Backspace keeps their own words.
+                if (suggest != null && suggest.Length > 0)
+                {
+                    adding.Box.AutoCompleteCustomSource.AddRange(suggest);
+                    adding.Box.AutoCompleteSource = AutoCompleteSource.CustomSource;
+                    adding.Box.AutoCompleteMode = AutoCompleteMode.Append;
+                }
                 Key plus = new Key { Text = "Add", Font = Type(9f * Zoom, true), Bounds = new Rectangle(Z(wide - 88), Z(y), Z(88), Z(24)) };
                 Action adds = delegate
                 {
                     string words = System.Text.RegularExpressions.Regex.Replace(adding.Box.Text ?? "", @"\s+", " ").Trim();
                     if (words.Length == 0) return;
+                    // A % after the name sets how far into it: "Concerts 80%".
+                    double level = -1;
+                    System.Text.RegularExpressions.Match part = System.Text.RegularExpressions.Regex.Match(words, @"^(.+?)\s+(\d{1,3})\s*%?$");
+                    if (set != null && part.Success) { words = part.Groups[1].Value.Trim(); level = Math.Min(100, int.Parse(part.Groups[2].Value, CultureInfo.InvariantCulture)); }
                     Topics.Topic known = all.Find(t => string.Equals(t.Name, words, StringComparison.OrdinalIgnoreCase));
                     add(known != null ? known.Name : words);
+                    if (level >= 0) set(known != null ? known.Name : words, level);
                     Fill();
                 };
                 plus.Click += delegate { adds(); };
@@ -267,15 +482,19 @@ namespace CapriDesktop
                 return made;
             }
 
-            // Her baseline, Dynamic, then every personality and every mood there are, as her own lists name them.
+            // Her baseline, Dynamic, then every personality and every mood there are, as her own lists name them. Moods have
+            // nothing on the Topics page, so it lists the rest.
             private void BuildWho()
             {
+                whoRows.Clear();
+                while (whoBox.Controls.Count > 0) whoBox.Controls[0].Dispose();
                 int y = 0;
                 AddWho("Her baseline", "", false, ref y);
                 AddWho("Dynamic", Personalities.Dynamic, false, ref y);
                 Divider("PERSONALITIES", ref y);
                 foreach (string named in Personalities.Names)
                     if (named != Personalities.Stock && named != Personalities.Dynamic) AddWho(named, named, false, ref y);
+                if (topicsShown) return;
                 Divider("MOODS", ref y);
                 foreach (string named in Dynamics.Allowed) AddWho(named, named, true, ref y);
             }
@@ -358,6 +577,64 @@ namespace CapriDesktop
             }
 
 #if CHECKS
+            // Every zone of every personality and mood on this side, each setting with its value, and whether the page
+            // showed it before settings-only and shows it now, as a list to look over before anything goes.
+            internal string Zones()
+            {
+                System.Text.StringBuilder said = new System.Text.StringBuilder();
+                List<string> who = new List<string> { "" };
+                foreach (string named in Personalities.Names) if (named != Personalities.Stock && named != Personalities.Dynamic) who.Add(named);
+                int people = who.Count;
+                who.AddRange(Dynamics.Allowed);
+                for (int at = 0; at < who.Count; at++)
+                {
+                    picked = who[at];
+                    pickedMood = at >= people;
+                    List<KeyValuePair<string, List<KeyValuePair<string, string>>>> sections = Sections(FileText());
+                    said.Append("\n### ").Append(picked.Length == 0 ? "Her baseline" : picked).Append(pickedMood ? " (mood)" : "").Append("\n\n");
+                    foreach (KeyValuePair<string, List<KeyValuePair<string, string>>> part in sections)
+                    {
+                        bool before = part.Key == "How she reacts" || part.Key == "What she likes" || WantedBefore(part.Value);
+                        bool now = part.Key == "How she reacts" || part.Key == "What she likes" || ((part.Key == Personalities.NeedsHeading || part.Key == Personalities.SwitchHeading) && Wanted(part.Value));
+                        List<KeyValuePair<string, string>> valued = part.Value.FindAll(one => one.Value != null);
+                        int words = part.Value.Count - valued.Count;
+                        if (!before && !now) continue;
+                        said.Append("1. ").Append(part.Key).Append(": ").Append(before ? "shown" : "not shown").Append(" before, ").Append(now ? "shown" : "not shown").Append(" now");
+                        if (words > 0) said.Append("; ").Append(words).Append(" lines of words with no value");
+                        said.Append("\n");
+                        foreach (KeyValuePair<string, string> one in valued)
+                            said.Append("   1. ").Append(one.Key).Append(": ").Append(one.Value).Append(Settable(one.Value) ? "" : " (words, no slider)").Append("\n");
+                    }
+                }
+                picked = "";
+                pickedMood = false;
+                return said.ToString();
+            }
+
+            // Every personality's and mood's settings as the page shows them, a line each: "name: setting|setting|...".
+            internal string SettingsList()
+            {
+                System.Text.StringBuilder said = new System.Text.StringBuilder();
+                List<string> who = new List<string> { "" };
+                foreach (string named in Personalities.Names) if (named != Personalities.Stock && named != Personalities.Dynamic) who.Add(named);
+                who.AddRange(Dynamics.Allowed);
+                foreach (string one in who)
+                {
+                    Pick(one);
+                    said.Append(one.Length == 0 ? "Her baseline" : one).Append(": ").Append(string.Join("|", rows.ToArray())).Append("\n");
+                }
+                Pick("");
+                return said.ToString();
+            }
+
+            // The rule the page had before settings-only, kept for that list.
+            private static bool WantedBefore(List<KeyValuePair<string, string>> lines)
+            {
+                if (lines.Count == 0) return false;
+                foreach (KeyValuePair<string, string> one in lines) if (one.Value != null) return true;
+                return lines.Count <= 40 && lines.TrueForAll(one => one.Key.Split(' ').Length <= 3);
+            }
+
             internal string BarSays()
             {
                 bool over = setBox.DisplayRectangle.Height > setBox.ClientSize.Height + 1;
@@ -392,24 +669,106 @@ namespace CapriDesktop
                 }
                 else
                 {
-                    // How she reacts first, as her own numbers where a file doesn't say.
-                    List<KeyValuePair<string, string>> reacts = Find(sections, "How she reacts") ?? new List<KeyValuePair<string, string>>();
-                    if (picked.Length == 0) foreach (KeyValuePair<string, double[]> one in Known) if (!one.Key.Contains("hours") && !one.Key.StartsWith("forward ") && one.Key != "mood share" && one.Key != "forget after") reacts.Add(new KeyValuePair<string, string>(one.Key, Number(one.Value[0])));
+                    // Her scenes first, a personality's own on both sides: a long run of her talking (a poem, a story, history, one
+                    // of her interests, on her other side a scene); on or off, how often, how long.
+                    if (!pickedMood && picked != Personalities.Dynamic)
+                        Section(Scenes, new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>(SceneOften, Number(SceneOftenStock)), new KeyValuePair<string, string>(SceneMinutes, Number(SceneMinutesStock)), new KeyValuePair<string, string>(SceneOn, "yes") }, false, ref y, wide);
+                    // A mood shows every setting too, 0 (or off) where it changes nothing, so every row sits in the same place.
+                    List<KeyValuePair<string, string>> reacts = Ordered(Find(sections, "How she reacts"), ReactsOrder, true, pickedMood ? (Func<string, string>)MoodNothing : null);
                     Section("How she reacts", reacts, false, ref y, wide);
                     Likes(Find(sections, "What she likes"), ref y, wide);
-                    foreach (KeyValuePair<string, List<KeyValuePair<string, string>>> part in sections)
-                        if (part.Key != "How she reacts" && part.Key != "What she likes" && Wanted(part.Value)) Section(part.Key, part.Value, false, ref y, wide);
+                    // Settings only: her character, pet names, word lists and lines stay in her file.
+                    // Every personality has the same folds with the same settings in the same places; a mood only what it changes.
+                    string who = picked;
+                    // A mood's needs where its file says none are its stock ones, added to the personality's.
+                    List<KeyValuePair<string, string>> needs = Ordered(Find(sections, Personalities.NeedsHeading), Personalities.NeedKeys, true, pickedMood ?
+                        (Func<string, string>)delegate(string key) { double v = Personalities.StockNeed(who, key, 0); return (v >= 0 ? "+" : "") + Number(v); } :
+                        delegate(string key) { return Number(Personalities.StockNeed(who.Length == 0 ? Personalities.Stock : who, key, Personalities.StockNeed(Personalities.Stock, key, 0))); });
+                    if (Wanted(needs)) Section(Personalities.NeedsHeading, needs, false, ref y, wide);
+                    List<KeyValuePair<string, string>> switches = Ordered(Find(sections, Personalities.SwitchHeading), SwitchKeys, true, delegate { return "no"; });
+                    if (Wanted(switches)) Section(Personalities.SwitchHeading, switches, false, ref y, wide);
                 }
                 setBox.ResumeLayout();
                 setBar.Sync();
             }
 
-            // A section worth a fold: settings, not a list of her lines.
+            // How she reacts, the same for every personality: each setting there is, the file's value or her stock one, and
+            // any others the file adds. A mood shows only what it changes.
+            private static readonly string[] ReactsOrder =
+            {
+                "flirt", "cringe", "sulks after", "sulks at upset", "sulk alone", "dodges", "ignored dodge", "ignored either",
+                "kind returns", "mean scale", "drift push", "repeat window", "like fades", "like least", "dislike grows",
+                "dislike most", "willing pull", "willing slows", "pranks", "prank minutes", "gives up at", "gives up minutes"
+            };
+
+            private static readonly Dictionary<string, string> WordsStock = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "dodges", "yes" }, { "ignored either", "no" }, { "repeat window", "20 to 60" }, { "pranks", "no" }
+            };
+
+            // What a mood shows for a setting it doesn't change: off for an on or off one, nothing added for the rest.
+            private static string MoodNothing(string key)
+            {
+                string words;
+                if (WordsStock.TryGetValue(key, out words)) return words == "yes" || words == "no" ? "no" : "0 to 0";
+                return "+0";
+            }
+
+            // What a personality can switch on while she is that way, each shown, off where the file says nothing.
+            private static readonly string[] SwitchKeys = { "check-ins", "jealous", "watch my screen" };
+
+            private static List<KeyValuePair<string, string>> Ordered(List<KeyValuePair<string, string>> lines, string[] order, bool every, Func<string, string> stock = null)
+            {
+                Dictionary<string, string> had = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                if (lines != null) foreach (KeyValuePair<string, string> one in lines) if (one.Value != null) had[one.Key] = one.Value;
+                List<KeyValuePair<string, string>> made = new List<KeyValuePair<string, string>>();
+                foreach (string key in order)
+                {
+                    // Giving up is her other side's only.
+                    if (key.StartsWith("gives up", StringComparison.Ordinal) && !Brain.SenpaiLive) continue;
+                    string value;
+                    double[] spec;
+                    if (!had.TryGetValue(key, out value) && every)
+                    {
+                        if (stock != null) value = stock(key);
+                        else if (WordsStock.TryGetValue(key, out value)) { }
+                        else if (Known.TryGetValue(key, out spec)) value = Number(spec[0]);
+                    }
+                    if (value != null) made.Add(new KeyValuePair<string, string>(key, value));
+                }
+                List<string> rest = new List<string>();
+                // The same setting by its other spelling counts as that one; the marker that keeps a pack to her other side is
+                // never a setting.
+                string spelt;
+                if (had.TryGetValue("checkins", out spelt)) { had.Remove("checkins"); if (!had.ContainsKey("check-ins")) had["check-ins"] = spelt; }
+                foreach (string key in new List<string>(had.Keys)) if (key.EndsWith(" only", StringComparison.OrdinalIgnoreCase) || key == Legacy.OnlyKey) had.Remove(key);
+                foreach (string key in had.Keys) if (Array.FindIndex(order, k => string.Equals(k, key, StringComparison.OrdinalIgnoreCase)) < 0) rest.Add(key);
+                foreach (string key in rest) made.Add(new KeyValuePair<string, string>(key, had[key]));
+                // Only what a slider or a switch can set, by name from A to Z.
+                made.RemoveAll(one => !Settable(one.Value));
+                made.Sort(delegate(KeyValuePair<string, string> a, KeyValuePair<string, string> b) { return string.Compare(a.Key, b.Key, StringComparison.OrdinalIgnoreCase); });
+                return made;
+            }
+
+            // One layout for every row: its name from the left, its value right-aligned before the slider column, the slider
+            // across that column to the right edge (a switch's OFF and ON at that edge), 28 a row, 22 high.
+            private const int ValueAt = 180, SliderAt = 276;
+
+            // About ten ticks on every slider, whatever its steps, so they all look alike.
+            private static int Ticks(int steps) { return Math.Max(1, (int)Math.Round((steps - 1) / 10.0)); }
+
+            private static bool Settable(string value)
+            {
+                double number;
+                return value != null && (double.TryParse(value.TrimStart('+'), NumberStyles.Float, CultureInfo.InvariantCulture, out number)
+                    || string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase) || string.Equals(value, "no", StringComparison.OrdinalIgnoreCase)
+                    || System.Text.RegularExpressions.Regex.IsMatch(value, @"^\d+ to \d+$"));
+            }
+
+            // A section worth a fold: settings with values, never words.
             private static bool Wanted(List<KeyValuePair<string, string>> lines)
             {
-                if (lines.Count == 0) return false;
-                foreach (KeyValuePair<string, string> one in lines) if (one.Value != null) return true;
-                return lines.Count <= 40 && lines.TrueForAll(one => one.Key.Split(' ').Length <= 3);
+                return lines.Exists(one => one.Value != null);
             }
 
             private static List<KeyValuePair<string, string>> Find(List<KeyValuePair<string, List<KeyValuePair<string, string>>>> sections, string heading)
@@ -463,10 +822,13 @@ namespace CapriDesktop
                 }
                 Heading(setBox, "WHAT SHE LIKES >", new Point(Z(0), Z(y)), Type(10f * Zoom, true), White, wide);
                 y += 26;
-                Caption("Each act -5 to +5" + (pickedMood ? ", added to the personality's." : ", her own where a file says nothing."), 2, y, Small, Faint, setBox);
-                y += 20;
                 if (placeRows.Count > 0) kinds["Touch"].InsertRange(Math.Min(kinds["Touch"].Count, 1), placeRows);
-                foreach (string kind in order) Section(kind, kinds[kind], true, ref y, wide);
+                // Each kind's acts by name from A to Z, the same in every personality.
+                foreach (string kind in order)
+                {
+                    kinds[kind].Sort(delegate(KeyValuePair<string, string> a, KeyValuePair<string, string> b) { return string.Compare(a.Key, b.Key, StringComparison.OrdinalIgnoreCase); });
+                    Section(kind, kinds[kind], true, ref y, wide);
+                }
             }
 
             private static string Kind(string kind)
@@ -499,10 +861,16 @@ namespace CapriDesktop
                 setBox.Controls.Add(head);
                 y += 30;
                 if (!open) return;
+                // Scenes alone carries a line under its fold saying what a scene is.
+                if (title == Scenes)
+                {
+                    Caption(SceneNote, 2, y, Small, Faint, setBox);
+                    y += 20;
+                }
                 List<string> items = new List<string>();
                 foreach (KeyValuePair<string, string> one in lines)
                 {
-                    if (one.Value == null && !likes) { items.Add(one.Key); continue; }
+                    if (one.Value == null && !likes) continue;
                     Row(one.Key, one.Value, likes, ref y, wide);
                 }
                 if (items.Count > 0)
@@ -527,10 +895,51 @@ namespace CapriDesktop
                 if (yours != null && modded != null && modded(PickedPath(), section).Contains(targets[0])) yours = null;
                 if (yours != null) value = yours;
                 string kept = section;
-                Caption(Shown(name), 2, y + 3, Font, Rose, setBox);
                 rows.Add(name);
                 rowValues.Add(name + "=" + value);
-                int from = 180;
+                // On or off: a switch, its name drawn by it, as every on or off setting has.
+                if (!likes && (string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase) || string.Equals(value, "no", StringComparison.OrdinalIgnoreCase)))
+                {
+                    Toggle flip = new Toggle { Text = Shown(name), Font = Font, Checked = string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase), Bounds = new Rectangle(Z(2), Z(y), Z(wide - 2), Z(22)) };
+                    flip.CheckedChanged += delegate { foreach (string key in targets) owner.capri.SetYourOwn(picked, kept, key, flip.Checked ? "yes" : "no"); };
+                    setBox.Controls.Add(flip);
+                    y += 28;
+                    return;
+                }
+                // A span, "20 to 60": a slider for each end, kept as one.
+                System.Text.RegularExpressions.Match span = System.Text.RegularExpressions.Regex.Match(value ?? "", @"^(\d+) to (\d+)$");
+                if (!likes && span.Success)
+                {
+                    string[] ends = { span.Groups[1].Value, span.Groups[2].Value };
+                    for (int end = 0; end < 2; end++)
+                    {
+                        int which = end;
+                        int least = pickedMood ? 0 : 5;
+                        string[] marks = new string[36];
+                        for (int i = 0; i < marks.Length; i++) marks[i] = Number(least + 5 * i);
+                        int at0 = Math.Max(0, Math.Min(marks.Length - 1, (int.Parse(ends[end], CultureInfo.InvariantCulture) - least) / 5));
+                        Caption(Shown(name) + (end == 0 ? " from" : " to"), 2, y + 3, Font, Rose, setBox);
+                        Label endShown = new Note { Text = marks[at0], Font = Font, ForeColor = yours != null ? Rose : Cyan, BackColor = Ground, AutoSize = false, TextAlign = ContentAlignment.MiddleRight, Bounds = new Rectangle(Z(ValueAt), Z(y), Z(SliderAt - ValueAt - 10), Z(22)) };
+                        endShown.UseMnemonic = false;
+                        setBox.Controls.Add(endShown);
+                        Slider endBar = new Slider(marks) { Font = Font, Bounds = new Rectangle(Z(SliderAt), Z(y), Z(wide - SliderAt), Z(22)), Value = at0, Shown = "", TickEvery = Ticks(marks.Length) };
+                        endBar.Changed += delegate
+                        {
+                            ends[which] = marks[endBar.Value];
+                            endShown.Text = ends[which];
+                            endShown.ForeColor = Rose;
+                            endBar.Shown = "";
+                            int low = int.Parse(ends[0], CultureInfo.InvariantCulture), high = int.Parse(ends[1], CultureInfo.InvariantCulture);
+                            foreach (string key in targets) owner.capri.SetYourOwn(picked, kept, key, Math.Min(low, high) + " to " + Math.Max(low, high));
+                        };
+                        endBar.AccessibleName = Shown(name) + (end == 0 ? " from" : " to");
+                        setBox.Controls.Add(endBar);
+                        y += 28;
+                    }
+                    return;
+                }
+                Caption(Shown(name), 2, y + 3, Font, Rose, setBox);
+                int from = ValueAt;
                 string[] steps;
                 int at;
                 // A yes or no setting, whatever its name: read from its value, so a new one shows as one too.
@@ -562,21 +971,17 @@ namespace CapriDesktop
                 }
                 else
                 {
-                    // Words rather than a number, in the same column the numbers use.
-                    Label words = new Note { Text = value ?? "", Font = Font, ForeColor = Cyan, BackColor = Ground, AutoSize = false, TextAlign = ContentAlignment.MiddleRight,
-                        Bounds = new Rectangle(Z(from - 60), Z(y), Z(146), Z(22)) };
-                    words.UseMnemonic = false;
-                    setBox.Controls.Add(words);
-                    y += 28;
+                    // Words with nothing to set: not a row here.
+                    rows.Remove(name);
                     return;
                 }
                 // Its number in a column of its own beside the slider, so the thumb never covers it, the same in every row.
-                const int column = 96;
-                Label shown = new Note { Text = value == null && likes && pickedMood ? "nothing added" : steps[at], Font = Font, ForeColor = Cyan, BackColor = Ground,
+                const int column = SliderAt - ValueAt;
+                Label shown = new Note { Text = steps[at], Font = Font, ForeColor = Cyan, BackColor = Ground,
                     AutoSize = false, TextAlign = ContentAlignment.MiddleRight, Bounds = new Rectangle(Z(from), Z(y), Z(column - 10), Z(22)) };
                 shown.UseMnemonic = false;
                 setBox.Controls.Add(shown);
-                Slider bar = new Slider(steps) { Font = Font, Bounds = new Rectangle(Z(from + column), Z(y), Z(wide - from - column), Z(22)) };
+                Slider bar = new Slider(steps) { Font = Font, Bounds = new Rectangle(Z(from + column), Z(y), Z(wide - from - column), Z(22)), TickEvery = Ticks(steps.Length) };
                 bar.Value = at;
                 bar.Shown = "";
                 if (yours != null) shown.ForeColor = Rose;

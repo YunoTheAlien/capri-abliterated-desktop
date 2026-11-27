@@ -462,6 +462,9 @@ namespace CapriDesktop
             foreach (Topic one in named)
             {
                 bool own = Array.Exists(hers, h => string.Equals(h, one.Name, StringComparison.OrdinalIgnoreCase));
+                // Talked about: counted for theirs, and for hers when it is one of hers.
+                Fields.Did(Fields.Topic, Fields.Yours, one.Name, 2);
+                if (own) Fields.Did(Fields.Topic, Shared, one.Name, 2);
                 note.Append("\nThey mentioned ").Append(one.Name).Append(own ? ", one of your interests: be keen about it." : ": not your thing, but show polite interest.");
                 string[] facts = Facts(one.Name);
                 if (facts.Length > 0) note.Append(" What you know about it: ").Append(string.Join(" ", facts, 0, Math.Min(3, facts.Length)));
@@ -477,12 +480,14 @@ namespace CapriDesktop
             List<string> hers = new List<string>();
             if (string.IsNullOrEmpty(personality)) return hers.ToArray();
             List<Topic> all = All();
-            string[] kept = Saved(personality);
+            string[] kept = Saved(Shared);
+            // One set for her whoever she is: the first time, the list the personality she is in had is hers.
+            if (kept == null || kept.Length == 0) { kept = Saved(personality); if (kept != null && kept.Length > 0) Save(Shared, kept); }
             if (kept == null || kept.Length == 0)
             {
                 Random dice = new Random();
                 kept = Pick(all, Personalities.TopicLeans(personality) ?? Lean(Leans, personality), 6 + dice.Next(5), dice);
-                if (kept.Length > 0) Save(personality, kept);
+                if (kept.Length > 0) Save(Shared, kept);
             }
             hers.AddRange(kept);
             Dictionary<string, int> moodLean = string.IsNullOrEmpty(mood) ? null : Dynamics.TopicLeans(mood) ?? (MoodLeans.ContainsKey(mood) ? MoodLeans[mood] : null);
@@ -493,6 +498,31 @@ namespace CapriDesktop
                 foreach (string one in Pick(all.FindAll(t => !hers.Contains(t.Name)), moodLean, 2, today)) hers.Add(one);
             }
             return hers.ToArray();
+        }
+
+        // Picked again by hand for a personality and a mood: fresh picks by both leanings, the ones added by hand kept.
+        internal static string[] Reroll(string personality, string mood)
+        {
+            if (string.IsNullOrEmpty(personality)) return new string[0];
+            Dictionary<string, int> lean = new Dictionary<string, int>(Personalities.TopicLeans(personality) ?? Lean(Leans, personality), StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, int> moodLean = string.IsNullOrEmpty(mood) ? null : Dynamics.TopicLeans(mood) ?? (MoodLeans.ContainsKey(mood) ? MoodLeans[mood] : null);
+            if (moodLean != null) foreach (KeyValuePair<string, int> one in moodLean) { int had; lean.TryGetValue(one.Key, out had); lean[one.Key] = had + one.Value; }
+            List<string> kept = new List<string>(Saved(ByHand + Shared) ?? Saved(ByHand + personality) ?? new string[0]);
+            Random dice = new Random();
+            foreach (string one in Pick(All().FindAll(t => !kept.Exists(k => string.Equals(k, t.Name, StringComparison.OrdinalIgnoreCase))), lean, 6 + dice.Next(5), dice)) kept.Add(one);
+            Save(Shared, kept.ToArray());
+            return kept.ToArray();
+        }
+
+        // Topics added by hand, kept apart so a reroll leaves them.
+        internal const string ByHand = "hand:";
+        // Her topics are one set whoever she is, kept under this name; a personality only leans what is picked.
+        internal const string Shared = "~her";
+
+        internal static void AddedByHand(string personality, string name)
+        {
+            List<string> mine = new List<string>(Saved(ByHand + Shared) ?? new string[0]);
+            if (!mine.Exists(t => string.Equals(t, name, StringComparison.OrdinalIgnoreCase))) { mine.Add(name); Save(ByHand + Shared, mine.ToArray()); }
         }
 
         private static Dictionary<string, int> Lean(Dictionary<string, Dictionary<string, int>> table, string name)

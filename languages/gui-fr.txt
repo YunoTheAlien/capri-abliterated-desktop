@@ -546,3 +546,6 @@ Folding	Repli
 Panels	Panneaux
 Chat pace	Rythme du chat
 Increases gain rates by multiplier	Augmente les taux de gain par le multiplicateur
+Reroll Capri	Relancer Capri
+No mood	Sans humeur
+Random	Aléatoire
